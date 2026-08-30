@@ -26,7 +26,7 @@ subprojects {
     project.evaluationDependsOn(':app')
 }
 
-// flutter_inappwebview 5.x must remain in use for iOS 11 support, but its
+// flutter_inappwebview 5.x is pinned by the app; its older Android module
 // Android module predates AGP 8's mandatory namespace declaration. Apply the
 // package name declared by the plugin's AndroidManifest without modifying the
 // Pub cache, so this compatibility fix is reproducible in CI and locally.

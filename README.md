@@ -1,6 +1,6 @@
 # OViewer
 
-OViewer (Old Viewer): Flutter Android/iOS 跨平台 E-Hentai/ExHentai 漫画阅读器，兼容 iOS 11+。
+OViewer (Old Viewer): Flutter Android/iOS 跨平台 E-Hentai/ExHentai 漫画阅读器，兼容 iOS 12+。
 
 ## 技术栈
 
@@ -113,7 +113,7 @@ flutter build ios --release --no-codesign
 | Workflow | 产物 | Runner |
 |----------|------|--------|
 | `build_android.yml` | `app-release.apk` | ubuntu-latest |
-| `build_ios.yml` | `OViewer.ipa` (unsigned) | macos-13 |
+| `build_ios.yml` | `OViewer.ipa` (unsigned) | macos-14 / Xcode 15.4 |
 
 **手动触发**：Actions → 选择 workflow → Run workflow
 
@@ -130,13 +130,13 @@ git push origin v1.0.0
 2. **Sideloadly** — GUI 自签工具
 3. **TrollStore** — 如果设备支持（iOS 14.0–16.6.1）
 
-## iOS 11 兼容性
+## iOS 12 兼容性
 
-- Flutter 3.13.9–3.16.x（支持 iOS 11 的项目版本线）
+- Flutter 3.13.9–3.16.x（项目当前版本线）
 - `flutter_inappwebview` 锁定 `^5.8.0`（6.x 需要 iOS 13+）
 - 不使用 Firebase（需要 iOS 13+）
-- Podfile 强制所有 Pod 部署目标为 `11.0`
-- 所有依赖包均验证兼容 iOS 11
+- Podfile 强制所有 Pod 部署目标为 `12.0`
+- 所有依赖包均验证兼容 iOS 12
 
 ## 许可证
 
