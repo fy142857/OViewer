@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get_it/get_it.dart';
 import '../../blocs/auth/auth_bloc.dart';
@@ -10,6 +9,7 @@ import '../../blocs/settings/settings_event.dart';
 import '../../blocs/settings/settings_state.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/l10n/s.dart';
+import '../../core/network/eh_image_cache_manager.dart';
 import '../../repositories/download_repository.dart';
 import 'my_tags_screen.dart';
 
@@ -68,8 +68,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.view_list),
                 title: Text(s.galleryDisplay),
-                subtitle: Text(
-                    state.displayMode == 0 ? s.listView : s.gridView),
+                subtitle:
+                    Text(state.displayMode == 0 ? s.listView : s.gridView),
                 trailing: Switch(
                   value: state.displayMode == 1,
                   onChanged: (val) {
@@ -87,17 +87,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   state.useExHentai ? Icons.lock : Icons.public,
                   color: state.useExHentai ? Colors.deepPurple : null,
                 ),
-                title: Text(
-                    state.useExHentai ? 'ExHentai' : 'E-Hentai'),
+                title: Text(state.useExHentai ? 'ExHentai' : 'E-Hentai'),
                 subtitle: Text(state.useExHentai
                     ? s.exhentaiRequiresIgneous
                     : 'e-hentai.org'),
                 trailing: Switch(
                   value: state.useExHentai,
                   onChanged: (val) {
-                    context
-                        .read<SettingsBloc>()
-                        .add(ToggleSiteMode(val));
+                    context.read<SettingsBloc>().add(ToggleSiteMode(val));
                   },
                 ),
               ),
@@ -140,8 +137,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => _UConfigScreen(
-                                    title: s.titleLanguage),
+                                builder: (_) =>
+                                    _UConfigScreen(title: s.titleLanguage),
                               ),
                             );
                           }
@@ -162,8 +159,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => _UConfigScreen(
-                                    title: s.imageSizeSettings),
+                                builder: (_) =>
+                                    _UConfigScreen(title: s.imageSizeSettings),
                               ),
                             );
                           }
@@ -179,8 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: Text(s.defaultReadingMode),
                 subtitle: Text(_readingModeLabel(state.readingMode, s)),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () =>
-                    _showReadingModeDialog(context, state.readingMode),
+                onTap: () => _showReadingModeDialog(context, state.readingMode),
               ),
 
               // ---- Network ----
@@ -199,9 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 value: state.autoProxy,
                 onChanged: (val) {
-                  context
-                      .read<SettingsBloc>()
-                      .add(ToggleAutoProxy(val));
+                  context.read<SettingsBloc>().add(ToggleAutoProxy(val));
                 },
               ),
               ListTile(
@@ -225,9 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    state.vpnActive
-                        ? s.vpnModeNoProxy
-                        : s.noProxyActive,
+                    state.vpnActive ? s.vpnModeNoProxy : s.noProxyActive,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: state.vpnActive
                               ? Theme.of(context).colorScheme.primary
@@ -244,7 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: Text(s.tapToClear),
                 trailing: TextButton(
                   onPressed: () async {
-                    await DefaultCacheManager().emptyCache();
+                    await EhImageCacheManager.instance.emptyCache();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(s.cacheCleared)),
@@ -259,8 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: Text(s.cacheSizeLimit),
                 subtitle: Text('${state.cacheLimitMB} MB'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () =>
-                    _showCacheLimitDialog(context, state.cacheLimitMB),
+                onTap: () => _showCacheLimitDialog(context, state.cacheLimitMB),
               ),
               ListTile(
                 leading: const Icon(Icons.download),
@@ -297,17 +288,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _themeLabel(int mode, S s) {
     switch (mode) {
-      case 1: return s.light;
-      case 2: return s.dark;
-      default: return s.followSystem;
+      case 1:
+        return s.light;
+      case 2:
+        return s.dark;
+      default:
+        return s.followSystem;
     }
   }
 
   String _readingModeLabel(int mode, S s) {
     switch (mode) {
-      case 1: return s.rightToLeft;
-      case 2: return s.verticalScroll;
-      default: return s.leftToRight;
+      case 1:
+        return s.rightToLeft;
+      case 2:
+        return s.verticalScroll;
+      default:
+        return s.leftToRight;
     }
   }
 
@@ -380,9 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               groupValue: current,
               title: Text(entry.value),
               onChanged: (val) {
-                context
-                    .read<SettingsBloc>()
-                    .add(UpdateReadingMode(val!));
+                context.read<SettingsBloc>().add(UpdateReadingMode(val!));
                 Navigator.pop(ctx);
               },
             ),
@@ -419,9 +414,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              context
-                  .read<SettingsBloc>()
-                  .add(const UpdateProxy(null));
+              context.read<SettingsBloc>().add(const UpdateProxy(null));
               Navigator.pop(ctx);
             },
             child: Text(s.clear),
@@ -454,9 +447,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               groupValue: current,
               title: Text('$mb MB'),
               onChanged: (val) {
-                context
-                    .read<SettingsBloc>()
-                    .add(UpdateCacheLimit(val!));
+                context.read<SettingsBloc>().add(UpdateCacheLimit(val!));
                 Navigator.pop(ctx);
               },
             ),

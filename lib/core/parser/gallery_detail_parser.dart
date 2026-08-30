@@ -18,14 +18,17 @@ class GalleryDetailParser {
     var thumbUrl = '';
     final coverImg = document.querySelector('#gd1 img');
     if (coverImg != null) {
-      thumbUrl = coverImg.attributes['src'] ?? '';
+      final source = coverImg.attributes['src'] ?? '';
+      thumbUrl = source;
     }
     if (thumbUrl.isEmpty) {
       final coverDiv = document.querySelector('#gd1 div');
       final style = coverDiv?.attributes['style'] ?? '';
       final bgMatch = RegExp(r'url\(([^)]+)\)').firstMatch(style);
       if (bgMatch != null) {
-        thumbUrl = bgMatch.group(1)!.trim().replaceAll(RegExp(r'''['"]'''), '');
+        final source =
+            bgMatch.group(1)!.trim().replaceAll(RegExp(r'''['"]'''), '');
+        thumbUrl = source;
       }
     }
 
@@ -35,8 +38,7 @@ class GalleryDetailParser {
         'Misc';
 
     // Uploader
-    final uploader =
-        document.querySelector('#gdn a')?.text.trim() ?? 'Unknown';
+    final uploader = document.querySelector('#gdn a')?.text.trim() ?? 'Unknown';
 
     // ---- Metadata table (#gdd) ----
     final metaRows = document.querySelectorAll('#gdd tr');
@@ -94,8 +96,8 @@ class GalleryDetailParser {
 
     // ---- Archive URL ----
     final archiveLink = document.querySelector('a[onclick*="archiver"]');
-    final archiveUrl = archiveLink?.attributes['href'] ??
-        archiveLink?.attributes['onclick'];
+    final archiveUrl =
+        archiveLink?.attributes['href'] ?? archiveLink?.attributes['onclick'];
 
     return GalleryDetail(
       gid: gid,
@@ -140,8 +142,7 @@ class GalleryDetailParser {
     final links = document.querySelectorAll('#gdt a');
     for (final a in links) {
       final href = a.attributes['href'] ?? '';
-      final tokenMatch =
-          RegExp(r'/s/([a-f0-9]+)/(\d+)-(\d+)').firstMatch(href);
+      final tokenMatch = RegExp(r'/s/([a-f0-9]+)/(\d+)-(\d+)').firstMatch(href);
       if (tokenMatch == null) continue;
 
       final pageToken = tokenMatch.group(1)!;
@@ -156,9 +157,8 @@ class GalleryDetailParser {
 
       // Try large-mode: img with a real src
       final img = a.querySelector('img');
-      final imgSrc = img?.attributes['data-src'] ??
-          img?.attributes['src'] ??
-          '';
+      final imgSrc =
+          img?.attributes['data-src'] ?? img?.attributes['src'] ?? '';
       if (imgSrc.isNotEmpty &&
           !imgSrc.contains('blank.gif') &&
           !imgSrc.contains('data:')) {
@@ -232,7 +232,8 @@ class GalleryDetailParser {
       final namespace =
           (nsEl?.text ?? 'misc').trim().replaceAll(':', '').toLowerCase();
 
-      final tagLinks = row.querySelectorAll('td:last-child div a, td:last-child a');
+      final tagLinks =
+          row.querySelectorAll('td:last-child div a, td:last-child a');
       for (final link in tagLinks) {
         final tagKey = link.text.trim();
         if (tagKey.isEmpty) continue;
@@ -308,8 +309,8 @@ class GalleryDetailParser {
 
     // If favorited, try to determine slot from style or text
     final style = favDiv.attributes['style'] ?? '';
-    final bgPos = RegExp(r'background-position:\s*0px\s+(-?\d+)px')
-        .firstMatch(style);
+    final bgPos =
+        RegExp(r'background-position:\s*0px\s+(-?\d+)px').firstMatch(style);
     if (bgPos != null) {
       final y = int.parse(bgPos.group(1)!).abs();
       return (y ~/ 19).clamp(0, 9);
@@ -342,15 +343,19 @@ class GalleryDetailParser {
   }
 
   static int _parseFileSize(String text) {
-    final match = RegExp(r'([\d.]+)\s*(KB|MB|GB)', caseSensitive: false)
-        .firstMatch(text);
+    final match =
+        RegExp(r'([\d.]+)\s*(KB|MB|GB)', caseSensitive: false).firstMatch(text);
     if (match == null) return 0;
     final value = double.parse(match.group(1)!);
     switch (match.group(2)!.toUpperCase()) {
-      case 'KB': return (value * 1024).round();
-      case 'MB': return (value * 1024 * 1024).round();
-      case 'GB': return (value * 1024 * 1024 * 1024).round();
-      default: return value.round();
+      case 'KB':
+        return (value * 1024).round();
+      case 'MB':
+        return (value * 1024 * 1024).round();
+      case 'GB':
+        return (value * 1024 * 1024 * 1024).round();
+      default:
+        return value.round();
     }
   }
 }

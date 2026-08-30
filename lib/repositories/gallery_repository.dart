@@ -14,6 +14,7 @@ import '../models/gallery_image.dart';
 class GalleryRepository {
   static final _log = Logger();
   final DioClient _dio;
+  final Map<int, _ApiCredentials> _apiCredentials = {};
 
   GalleryRepository(this._dio);
 
@@ -31,7 +32,9 @@ class GalleryRepository {
     int page = 0,
     String? nextUrl,
   }) async {
-    final url = nextUrl != null ? _resolve(nextUrl) : ApiEndpoints.galleryList(page: page);
+    final url = nextUrl != null
+        ? _resolve(nextUrl)
+        : ApiEndpoints.galleryList(page: page);
     _log.i('[fetchGalleryList] requesting url=$url');
     final html = await _dio.get(url);
     final galleries = GalleryListParser.parse(html);
@@ -61,7 +64,8 @@ class GalleryRepository {
     int page = 0,
     String? nextUrl,
   }) async {
-    final url = nextUrl != null ? _resolve(nextUrl) : ApiEndpoints.watched(page: page);
+    final url =
+        nextUrl != null ? _resolve(nextUrl) : ApiEndpoints.watched(page: page);
     final html = await _dio.get(url);
     final galleries = GalleryListParser.parse(html);
     final pageCount = GalleryListParser.parsePageCount(html);
@@ -78,7 +82,9 @@ class GalleryRepository {
     int page = 0,
     String? nextUrl,
   }) async {
-    final url = nextUrl != null ? _resolve(nextUrl) : ApiEndpoints.favorites(page: page);
+    final url = nextUrl != null
+        ? _resolve(nextUrl)
+        : ApiEndpoints.favorites(page: page);
     final html = await _dio.get(url);
     final galleries = GalleryListParser.parse(html);
     final pageCount = GalleryListParser.parsePageCount(html);
@@ -96,6 +102,7 @@ class GalleryRepository {
   Future<GalleryDetail> fetchGalleryDetail(int gid, String token) async {
     final url = ApiEndpoints.galleryDetail(gid, token);
     final html = await _dio.get(url);
+    _cacheApiCredentials(gid, html);
     final detail = GalleryDetailParser.parse(html, gid, token);
 
     if (detail.titleJpn == null) {
@@ -185,36 +192,35 @@ class GalleryRepository {
     int pageIndex,
     String nlKey,
   ) async {
-    final url = '${ApiEndpoints.imagePage(pageToken, gid, pageIndex)}?nl=$nlKey';
+    final url =
+        '${ApiEndpoints.imagePage(pageToken, gid, pageIndex)}?nl=$nlKey';
     final html = await _dio.get(url);
     return GalleryImageParser.parse(html, pageIndex);
   }
 
   /// Rate a gallery (requires login)
   /// [rating] is 0.5 to 5.0 in 0.5 increments (sent as 2-10 integer)
-  Future<RatingResult> rateGallery(
-      int gid, String token, double rating) async {
+  Future<RatingResult> rateGallery(int gid, String token, double rating) async {
+    final credentials = await _ensureApiCredentials(gid, token);
     final apiRating = (rating * 2).round().clamp(2, 10);
     final response = await _dio.post(
       ApiEndpoints.apiEndpoint,
       data: {
         'method': 'rategallery',
-        'apiuid': -1, // filled by cookie
-        'apikey': '',  // filled by cookie
+        'apiuid': credentials.apiUid,
+        'apikey': credentials.apiKey,
         'gid': gid,
         'token': token,
         'rating': apiRating,
       },
     );
     // Response: {"rating_avg":4.56,"rating_cnt":123}
-    final avgMatch = RegExp(r'"rating_avg"\s*:\s*([\d.]+)')
-        .firstMatch(response);
-    final cntMatch = RegExp(r'"rating_cnt"\s*:\s*(\d+)')
-        .firstMatch(response);
+    final avgMatch =
+        RegExp(r'"rating_avg"\s*:\s*([\d.]+)').firstMatch(response);
+    final cntMatch = RegExp(r'"rating_cnt"\s*:\s*(\d+)').firstMatch(response);
     return RatingResult(
-      averageRating: avgMatch != null
-          ? double.parse(avgMatch.group(1)!)
-          : rating,
+      averageRating:
+          avgMatch != null ? double.parse(avgMatch.group(1)!) : rating,
       ratingCount: cntMatch != null ? int.parse(cntMatch.group(1)!) : 0,
     );
   }
@@ -230,12 +236,13 @@ class GalleryRepository {
   /// Vote on a comment (requires login)
   Future<void> voteComment(
       int gid, String token, int commentId, bool isUpvote) async {
+    final credentials = await _ensureApiCredentials(gid, token);
     await _dio.post(
       ApiEndpoints.apiEndpoint,
       data: {
         'method': 'votecomment',
-        'apiuid': -1,
-        'apikey': '',
+        'apiuid': credentials.apiUid,
+        'apikey': credentials.apiKey,
         'gid': gid,
         'token': token,
         'comment_id': commentId,
@@ -243,11 +250,49 @@ class GalleryRepository {
       },
     );
   }
+
+  Future<_ApiCredentials> _ensureApiCredentials(
+    int gid,
+    String token,
+  ) async {
+    final cached = _apiCredentials[gid];
+    if (cached != null) return cached;
+
+    final html = await _dio.get(ApiEndpoints.galleryDetail(gid, token));
+    _cacheApiCredentials(gid, html);
+    final credentials = _apiCredentials[gid];
+    if (credentials == null) {
+      throw StateError(
+        'The logged-in session did not provide API credentials.',
+      );
+    }
+    return credentials;
+  }
+
+  void _cacheApiCredentials(int gid, String html) {
+    final uidMatch = RegExp(r'apiuid\s*=\s*(-?\d+)').firstMatch(html);
+    final keyMatch = RegExp(
+      r'''apikey\s*=\s*["']([^"']+)["']''',
+    ).firstMatch(html);
+    final apiUid = int.tryParse(uidMatch?.group(1) ?? '');
+    final apiKey = keyMatch?.group(1);
+    if (apiUid != null && apiUid >= 0 && apiKey != null && apiKey.isNotEmpty) {
+      _apiCredentials[gid] = _ApiCredentials(apiUid, apiKey);
+    }
+  }
+
   /// Fetch hidden tags from the user's My Tags page
   Future<List<String>> fetchMyTags() async {
     final html = await _dio.get(ApiEndpoints.myTags);
     return MyTagsParser.parseHiddenTags(html);
   }
+}
+
+class _ApiCredentials {
+  final int apiUid;
+  final String apiKey;
+
+  const _ApiCredentials(this.apiUid, this.apiKey);
 }
 
 class GalleryListResult {

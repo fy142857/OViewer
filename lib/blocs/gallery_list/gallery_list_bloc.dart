@@ -28,7 +28,18 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
     FetchGalleries event,
     Emitter<GalleryListState> emit,
   ) async {
-    emit(state.copyWith(status: GalleryListStatus.loading));
+    if (event.clearExisting) {
+      emit(state.copyWith(
+        status: GalleryListStatus.loading,
+        galleries: const [],
+        currentPage: 0,
+        totalPages: 1,
+        hasReachedEnd: false,
+        nextPageUrl: null,
+      ));
+    } else {
+      emit(state.copyWith(status: GalleryListStatus.loading));
+    }
     try {
       final result = await _fetchForTab(state.currentTab);
       _log.i('[FetchGalleries] tab=${state.currentTab} '
@@ -47,8 +58,7 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
         galleries: marked,
         currentPage: 0,
         totalPages: result.totalPages,
-        hasReachedEnd: result.galleries.isEmpty &&
-            result.nextPageUrl == null,
+        hasReachedEnd: result.galleries.isEmpty && result.nextPageUrl == null,
         nextPageUrl: nextUrl,
         errorMessage: null,
       ));
@@ -76,8 +86,7 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
         galleries: marked,
         currentPage: 0,
         totalPages: result.totalPages,
-        hasReachedEnd: result.galleries.isEmpty &&
-            result.nextPageUrl == null,
+        hasReachedEnd: result.galleries.isEmpty && result.nextPageUrl == null,
         nextPageUrl: nextUrl,
         errorMessage: null,
       ));
@@ -144,9 +153,8 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
         for (final g in accumulated) {
           existingGids.add(g.gid);
         }
-        final unique = newGalleries
-            .where((g) => !existingGids.contains(g.gid))
-            .toList();
+        final unique =
+            newGalleries.where((g) => !existingGids.contains(g.gid)).toList();
         final filtered = _filterHiddenTags(unique);
         _log.i('[LoadMore] after dedup: ${unique.length} new '
             '(${newGalleries.length - unique.length} duplicates)');
@@ -194,9 +202,8 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
     // Exhausted duplicate retries — emit what we have
     _log.w('[LoadMore] exhausted $duplicateRetries duplicate retries');
     emit(state.copyWith(
-      galleries: accumulated.isNotEmpty
-          ? [...state.galleries, ...accumulated]
-          : null,
+      galleries:
+          accumulated.isNotEmpty ? [...state.galleries, ...accumulated] : null,
       currentPage: page,
       isLoadingMore: false,
       nextPageUrl: currentNextUrl,
@@ -231,8 +238,7 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
     final favGids = await GetIt.I<FavoritesRepository>().getLocalFavoriteGids();
     if (favGids.isEmpty) return galleries;
     return galleries
-        .map((g) =>
-            favGids.contains(g.gid) ? g.copyWith(isFavorited: true) : g)
+        .map((g) => favGids.contains(g.gid) ? g.copyWith(isFavorited: true) : g)
         .toList();
   }
 

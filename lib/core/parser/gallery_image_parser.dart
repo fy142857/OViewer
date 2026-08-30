@@ -15,7 +15,8 @@ class GalleryImageParser {
 
     // Main image: <img id="img" src="...">
     final imgEl = document.querySelector('#img');
-    final imageUrl = imgEl?.attributes['src'] ?? '';
+    final imageSource = imgEl?.attributes['src'] ?? '';
+    final imageUrl = imageSource;
 
     // Dimensions: prefer original size from #i2 info line ":: 1200 x 1800 ::"
     var width = 0;
@@ -23,8 +24,7 @@ class GalleryImageParser {
     final infoDiv = document.querySelector('#i2');
     if (infoDiv != null) {
       for (final div in infoDiv.querySelectorAll('div')) {
-        final dimMatch =
-            RegExp(r'(\d+)\s*x\s*(\d+)').firstMatch(div.text);
+        final dimMatch = RegExp(r'(\d+)\s*x\s*(\d+)').firstMatch(div.text);
         if (dimMatch != null) {
           width = int.parse(dimMatch.group(1)!);
           height = int.parse(dimMatch.group(2)!);

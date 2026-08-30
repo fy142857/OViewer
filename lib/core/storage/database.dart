@@ -1,8 +1,5 @@
-import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
+import 'database_connection_io.dart';
 
 part 'database.g.dart';
 
@@ -57,16 +54,15 @@ class DownloadTasks extends Table {
 
 @DriftDatabase(tables: [HistoryEntries, LocalFavorites, DownloadTasks])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : super(openConnection());
 
   @override
   int get schemaVersion => 1;
 
   // History operations
-  Future<List<HistoryEntry>> getAllHistory() =>
-      (select(historyEntries)
-            ..orderBy([(t) => OrderingTerm.desc(t.lastReadAt)]))
-          .get();
+  Future<List<HistoryEntry>> getAllHistory() => (select(historyEntries)
+        ..orderBy([(t) => OrderingTerm.desc(t.lastReadAt)]))
+      .get();
 
   Future<HistoryEntry?> getHistoryEntry(int gid) =>
       (select(historyEntries)..where((t) => t.gid.equals(gid)))
@@ -86,8 +82,7 @@ class AppDatabase extends _$AppDatabase {
 
   // Local favorites operations
   Future<List<LocalFavorite>> getAllLocalFavorites() =>
-      (select(localFavorites)
-            ..orderBy([(t) => OrderingTerm.desc(t.addedAt)]))
+      (select(localFavorites)..orderBy([(t) => OrderingTerm.desc(t.addedAt)]))
           .get();
 
   Future<LocalFavorite?> getLocalFavorite(int gid) =>
@@ -117,8 +112,7 @@ class AppDatabase extends _$AppDatabase {
 
   // Download operations
   Future<List<DownloadTask>> getAllDownloads() =>
-      (select(downloadTasks)
-            ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+      (select(downloadTasks)..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
 
   Future<void> upsertDownload(DownloadTasksCompanion task) =>
@@ -136,12 +130,4 @@ class AppDatabase extends _$AppDatabase {
       (update(downloadTasks)..where((t) => t.gid.equals(gid))).write(
         DownloadTasksCompanion(status: Value(status)),
       );
-}
-
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'oviewer.db'));
-    return NativeDatabase.createInBackground(file);
-  });
 }

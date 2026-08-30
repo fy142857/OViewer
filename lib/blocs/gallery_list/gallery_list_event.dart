@@ -10,9 +10,10 @@ abstract class GalleryListEvent extends Equatable {
 
 class FetchGalleries extends GalleryListEvent {
   final int page;
-  const FetchGalleries({this.page = 0});
+  final bool clearExisting;
+  const FetchGalleries({this.page = 0, this.clearExisting = false});
   @override
-  List<Object?> get props => [page];
+  List<Object?> get props => [page, clearExisting];
 }
 
 class RefreshGalleries extends GalleryListEvent {

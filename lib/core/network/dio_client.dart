@@ -1,11 +1,9 @@
-import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
-import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:logger/logger.dart';
 import '../constants/app_constants.dart';
 import 'cookie_manager.dart' as app;
 import 'api_exception.dart';
+import 'dio_proxy_io.dart';
 
 class DioClient {
   static final _log = Logger();
@@ -17,18 +15,14 @@ class DioClient {
       connectTimeout: const Duration(milliseconds: AppConstants.connectTimeout),
       receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
       headers: {
-        'User-Agent':
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
-                'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 '
-                'Mobile/15E148 Safari/604.1',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
+            'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 '
+            'Mobile/15E148 Safari/604.1',
       },
       responseType: ResponseType.plain,
     ));
 
-    // Cookie interceptor
-    _dio.interceptors.add(
-      CookieManager(_cookieManager.cookieJar),
-    );
+    _cookieManager.configureDio(_dio);
 
     // Logging interceptor (debug only)
     _dio.interceptors.add(InterceptorsWrapper(
@@ -37,7 +31,8 @@ class DioClient {
         handler.next(options);
       },
       onResponse: (response, handler) {
-        _log.d('RESPONSE: ${response.statusCode} ${response.requestOptions.uri}');
+        _log.d(
+            'RESPONSE: ${response.statusCode} ${response.requestOptions.uri}');
         handler.next(response);
       },
       onError: (error, handler) {
@@ -49,9 +44,10 @@ class DioClient {
 
   Future<String> get(String url, {Map<String, dynamic>? queryParams}) async {
     try {
+      final targetUrl = _appendQueryParameters(url, queryParams);
+      _ensureCurrentSite(targetUrl);
       final response = await _dio.get(
-        url,
-        queryParameters: queryParams,
+        targetUrl,
       );
       return response.data as String;
     } on DioException catch (e) {
@@ -65,10 +61,11 @@ class DioClient {
     Map<String, dynamic>? queryParams,
   }) async {
     try {
+      final targetUrl = _appendQueryParameters(url, queryParams);
+      _ensureCurrentSite(targetUrl);
       final response = await _dio.post(
-        url,
+        targetUrl,
         data: data,
-        queryParameters: queryParams,
       );
       return response.data as String;
     } on DioException catch (e) {
@@ -76,39 +73,37 @@ class DioClient {
     }
   }
 
+  String _appendQueryParameters(
+    String url,
+    Map<String, dynamic>? queryParams,
+  ) {
+    if (queryParams == null || queryParams.isEmpty) return url;
+    final uri = Uri.parse(url);
+    return uri.replace(queryParameters: {
+      ...uri.queryParameters,
+      ...queryParams.map((key, value) => MapEntry(key, value.toString())),
+    }).toString();
+  }
+
+  void _ensureCurrentSite(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || AppConstants.useExHentai) return;
+    final host = uri.host.toLowerCase();
+    if (host == 'exhentai.org' || host.endsWith('.exhentai.org')) {
+      throw const ApiException(
+        message:
+            'ExHentai requests are disabled while E-Hentai mode is active.',
+      );
+    }
+  }
+
   /// Set HTTP/SOCKS5 proxy for all requests.
   /// Format: "http://host:port" or "socks5://host:port"
   void setProxy(String? proxyUrl) {
-    if (proxyUrl == null || proxyUrl.isEmpty) {
-      // Remove proxy - use default adapter
-      _dio.httpClientAdapter = IOHttpClientAdapter();
-      _log.i('Proxy cleared');
-      return;
-    }
-
-    String proxyAddress;
-    if (proxyUrl.startsWith('socks5://')) {
-      // For SOCKS5: PROXY host:port
-      proxyAddress = 'PROXY ${proxyUrl.replaceFirst('socks5://', '')}';
-    } else if (proxyUrl.startsWith('http://') ||
-        proxyUrl.startsWith('https://')) {
-      proxyAddress =
-          'PROXY ${proxyUrl.replaceFirst(RegExp(r'https?://'), '')}';
-    } else {
-      proxyAddress = 'PROXY $proxyUrl';
-    }
-
-    _dio.httpClientAdapter = IOHttpClientAdapter(
-      createHttpClient: () {
-        final client = HttpClient();
-        client.findProxy = (uri) => proxyAddress;
-        // Allow self-signed certs for proxy
-        client.badCertificateCallback =
-            (X509Certificate cert, String host, int port) => true;
-        return client;
-      },
-    );
-    _log.i('Proxy set to: $proxyAddress');
+    configureProxy(_dio, proxyUrl);
+    _log.i(proxyUrl == null || proxyUrl.isEmpty
+        ? 'Proxy cleared'
+        : 'Proxy set to: $proxyUrl');
   }
 
   ApiException _handleDioError(DioException error) {

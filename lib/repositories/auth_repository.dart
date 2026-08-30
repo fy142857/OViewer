@@ -29,11 +29,21 @@ class AuthRepository {
   Future<bool> validateLogin() async {
     try {
       final html = await _dio.get(ApiEndpoints.userConfig);
-      // If we get redirected to login page, cookies are invalid
-      return !html.contains('Please log in');
+      return !isLoginPageHtml(html);
     } catch (_) {
       return false;
     }
+  }
+
+  static bool isLoginPageHtml(String html) {
+    return RegExp(
+          r'<title>\s*E-Hentai\.org Login\s*</title>',
+          caseSensitive: false,
+        ).hasMatch(html) ||
+        RegExp(
+          r'''<form[^>]+action=["'][^"']*act=Login''',
+          caseSensitive: false,
+        ).hasMatch(html);
   }
 
   /// Get user profile info

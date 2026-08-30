@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/network/cookie_manager.dart' as app;
 import '../../core/network/dio_client.dart';
+import '../../core/network/eh_image_cache_manager.dart';
 import '../../core/network/system_proxy_detector.dart';
 import '../../repositories/gallery_repository.dart';
 import '../../repositories/settings_repository.dart';
@@ -42,9 +43,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     }
 
     // Apply: manual proxy > auto-detected > direct
-    final effectiveProxy = (proxy != null && proxy.isNotEmpty)
-        ? proxy
-        : detectedProxy;
+    final effectiveProxy =
+        (proxy != null && proxy.isNotEmpty) ? proxy : detectedProxy;
     GetIt.I<DioClient>().setProxy(effectiveProxy);
 
     emit(SettingsState(
@@ -91,7 +91,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     Emitter<SettingsState> emit,
   ) async {
     await _repository.setProxy(event.proxyUrl);
-    final effective = event.proxyUrl ?? (state.autoProxy ? state.detectedProxy : null);
+    final effective =
+        event.proxyUrl ?? (state.autoProxy ? state.detectedProxy : null);
     GetIt.I<DioClient>().setProxy(effective);
     emit(state.copyWith(proxyUrl: event.proxyUrl));
   }
@@ -136,6 +137,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     AppConstants.useExHentai = event.useExHentai;
     await _repository.setUseExHentai(event.useExHentai);
+    // Site-specific image URLs must not survive a mode switch.
+    await EhImageCacheManager.instance.emptyCache();
     // Sync login cookies to ExHentai domain when switching to EX
     if (event.useExHentai) {
       await GetIt.I<app.CookieManager>().syncCookiesToExHentai();

@@ -24,7 +24,8 @@ class GalleryListParser {
     // Strategy 2: Compact mode (table.itg.gltc)
     rows = document.querySelectorAll('table.itg.gltc > tbody > tr');
     if (rows.isNotEmpty) {
-      for (final row in rows.skip(1)) { // skip header row
+      for (final row in rows.skip(1)) {
+        // skip header row
         final g = _parseCompactRow(row);
         if (g != null) galleries.add(g);
       }
@@ -62,15 +63,14 @@ class GalleryListParser {
       if (seen.contains(gid)) continue;
       seen.add(gid);
 
-      final title = link.querySelector('.glink')?.text.trim() ??
-          link.text.trim();
+      final title =
+          link.querySelector('.glink')?.text.trim() ?? link.text.trim();
       if (title.isEmpty) continue;
 
       // Try to find thumbnail near this link
       final parent = link.parent;
       final img = parent?.querySelector('img') ?? link.querySelector('img');
-      final thumbUrl =
-          img?.attributes['data-src'] ?? img?.attributes['src'] ?? '';
+      final thumbUrl = _extractImgSrc(img);
 
       galleries.add(GalleryPreview(
         gid: gid,
@@ -114,7 +114,9 @@ class GalleryListParser {
           if (href != null && href.isNotEmpty) {
             // Verify this is the "next" link, not the current page
             final text = lastLink.text.trim();
-            if (text == '>' || text == '\u203A' || text.contains('Next') ||
+            if (text == '>' ||
+                text == '\u203A' ||
+                text.contains('Next') ||
                 RegExp(r'page=\d+').hasMatch(href)) {
               return href;
             }
@@ -343,8 +345,11 @@ class GalleryListParser {
       var uploader = '';
       final postedAt = _extractPostedAt(row, parsed.$1);
 
-      uploader = row.querySelector('td:last-child a, a[href*="uploader"]')
-              ?.text.trim() ?? '';
+      uploader = row
+              .querySelector('td:last-child a, a[href*="uploader"]')
+              ?.text
+              .trim() ??
+          '';
 
       return GalleryPreview(
         gid: parsed.$1,
@@ -372,8 +377,8 @@ class GalleryListParser {
       final parsed = _parseGalleryUrl(link.attributes['href'] ?? '');
       if (parsed == null) return null;
 
-      final title = row.querySelector('.glink')?.text.trim() ??
-          link.text.trim();
+      final title =
+          row.querySelector('.glink')?.text.trim() ?? link.text.trim();
 
       final img = row.querySelector('img');
       final thumbUrl = _extractImgSrc(img);
@@ -455,9 +460,8 @@ class GalleryListParser {
 
   static String _extractImgSrc(Element? img) {
     if (img == null) return '';
-    return img.attributes['data-src'] ??
-        img.attributes['src'] ??
-        '';
+    final url = img.attributes['data-src'] ?? img.attributes['src'] ?? '';
+    return url;
   }
 
   /// Parse E-Hentai star rating from inline CSS style.
@@ -557,7 +561,8 @@ class GalleryListParser {
   /// Extract all tags from an element's div.gt[title] and div.gtl[title] elements.
   /// Returns a list of tag strings (e.g., "language:chinese", "other:ai generated").
   static List<String> _extractTags(Element element) {
-    final tagElements = element.querySelectorAll('div.gt[title], div.gtl[title]');
+    final tagElements =
+        element.querySelectorAll('div.gt[title], div.gtl[title]');
     final tags = <String>[];
     for (final el in tagElements) {
       final title = el.attributes['title']?.trim();
@@ -570,7 +575,8 @@ class GalleryListParser {
 
   /// Extract language from div.gt[title^="language:"] tag element.
   static String? _extractLanguage(Element element) {
-    final langTag = element.querySelector('div.gt[title^="language:"], div.gtl[title^="language:"]');
+    final langTag = element.querySelector(
+        'div.gt[title^="language:"], div.gtl[title^="language:"]');
     if (langTag == null) return null;
     final title = langTag.attributes['title'] ?? '';
     // title format: "language:english"
@@ -585,8 +591,8 @@ class GalleryListParser {
       return _parseDate(postedDiv.text.trim());
     }
     // Fallback: try date pattern in text
-    final dateMatch = RegExp(r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}')
-        .firstMatch(element.text);
+    final dateMatch =
+        RegExp(r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}').firstMatch(element.text);
     if (dateMatch != null) {
       return _parseDate(dateMatch.group(0)!);
     }

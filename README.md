@@ -6,7 +6,7 @@ OViewer (Old Viewer): Flutter Android/iOS 跨平台 E-Hentai/ExHentai 漫画阅�
 
 | 类别 | 选型 |
 |------|------|
-| 框架 | Flutter 3.16.0 / Dart 3.2 |
+| 框架 | Flutter 3.13.9–3.16.x / Dart 3.1+ |
 | 状态管理 | flutter_bloc 8.x + equatable |
 | 依赖注入 | get_it |
 | 网络 | dio 5.x + cookie_jar |
@@ -62,8 +62,8 @@ lib/
 
 ## 环境要求
 
-- Flutter 3.16.0+
-- Dart 3.2.0+
+- Flutter 3.13.0–3.16.x
+- Dart 3.1.0+
 - Android Studio / VS Code
 - (iOS 编译) macOS 或 GitHub Actions
 
@@ -132,7 +132,7 @@ git push origin v1.0.0
 
 ## iOS 11 兼容性
 
-- Flutter 3.16.0（最后支持 iOS 11 的版本线）
+- Flutter 3.13.9–3.16.x（支持 iOS 11 的项目版本线）
 - `flutter_inappwebview` 锁定 `^5.8.0`（6.x 需要 iOS 13+）
 - 不使用 Firebase（需要 iOS 13+）
 - Podfile 强制所有 Pod 部署目标为 `11.0`

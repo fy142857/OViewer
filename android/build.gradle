@@ -1,12 +1,12 @@
 buildscript {
-    ext.kotlin_version = '1.7.10'
+    ext.kotlin_version = '1.9.24'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.0'
+        classpath 'com.android.tools.build:gradle:8.6.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -24,6 +24,22 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(':app')
+}
+
+// flutter_inappwebview 5.x must remain in use for iOS 11 support, but its
+// Android module predates AGP 8's mandatory namespace declaration. Apply the
+// package name declared by the plugin's AndroidManifest without modifying the
+// Pub cache, so this compatibility fix is reproducible in CI and locally.
+subprojects { subproject ->
+    if (subproject.name == 'flutter_inappwebview') {
+        subproject.plugins.withId('com.android.library') {
+            def androidExtension = subproject.extensions.findByName('android')
+            if (androidExtension != null && !androidExtension.namespace) {
+                androidExtension.namespace =
+                    'com.pichillilorenzo.flutter_inappwebview'
+            }
+        }
+    }
 }
 
 tasks.register("clean", Delete) {

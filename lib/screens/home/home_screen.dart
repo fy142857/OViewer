@@ -100,8 +100,8 @@ class _HomeScreenState extends State<HomeScreen>
                 if (settings.useExHentai) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
                       color: Colors.deepPurple,
                       borderRadius: BorderRadius.circular(4),
@@ -124,8 +124,7 @@ class _HomeScreenState extends State<HomeScreen>
           BlocBuilder<GalleryListBloc, GalleryListState>(
             buildWhen: (p, c) => p.currentTab != c.currentTab,
             builder: (context, galleryState) {
-              final isHistory =
-                  galleryState.currentTab == GalleryTab.watched;
+              final isHistory = galleryState.currentTab == GalleryTab.watched;
               if (isHistory) {
                 // History tab: show clear-all button instead of view toggle
                 return BlocBuilder<HistoryBloc, HistoryState>(
@@ -143,8 +142,7 @@ class _HomeScreenState extends State<HomeScreen>
               }
               // Other tabs: show view toggle
               return BlocBuilder<SettingsBloc, SettingsState>(
-                buildWhen: (prev, curr) =>
-                    prev.displayMode != curr.displayMode,
+                buildWhen: (prev, curr) => prev.displayMode != curr.displayMode,
                 builder: (context, settings) {
                   return IconButton(
                     icon: Icon(
@@ -152,9 +150,8 @@ class _HomeScreenState extends State<HomeScreen>
                           ? Icons.grid_view_rounded
                           : Icons.view_list_rounded,
                     ),
-                    tooltip: settings.displayMode == 0
-                        ? s.gridView
-                        : s.listView,
+                    tooltip:
+                        settings.displayMode == 0 ? s.gridView : s.listView,
                     onPressed: () {
                       context.read<SettingsBloc>().add(
                             UpdateDisplayMode(
@@ -186,55 +183,61 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
       body: BlocListener<SettingsBloc, SettingsState>(
-        listenWhen: (prev, curr) => prev.useExHentai != curr.useExHentai,
-        listener: (context, _) {
-          // Re-fetch current tab when site switches
-          context.read<GalleryListBloc>().add(const FetchGalleries());
-        },
-        child: BlocBuilder<GalleryListBloc, GalleryListState>(
-        builder: (context, state) {
-          // History tab: show local browsing history
-          if (state.currentTab == GalleryTab.watched) {
-            return _buildHistoryContent(context);
-          }
+          listenWhen: (prev, curr) => prev.useExHentai != curr.useExHentai,
+          listener: (context, _) {
+            // Drop stale images and list entries from the previous site before
+            // fetching the current tab from the newly selected site.
+            PaintingBinding.instance.imageCache
+              ..clear()
+              ..clearLiveImages();
+            context
+                .read<GalleryListBloc>()
+                .add(const FetchGalleries(clearExisting: true));
+          },
+          child: BlocBuilder<GalleryListBloc, GalleryListState>(
+            builder: (context, state) {
+              // History tab: show local browsing history
+              if (state.currentTab == GalleryTab.watched) {
+                return _buildHistoryContent(context);
+              }
 
-          // Login guard for Favorites tab (reactive to auth changes)
-          if (state.currentTab == GalleryTab.favorites) {
-            return BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, authState) {
-                if (authState.status == AuthStatus.unknown) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!authState.isLoggedIn) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.favorite_border,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.outline),
-                        const SizedBox(height: 16),
-                        Text(s.loginToFavorite,
-                            style: Theme.of(context).textTheme.bodyLarge),
-                        const SizedBox(height: 16),
-                        FilledButton.icon(
-                          onPressed: () =>
-                              Navigator.pushNamed(context, '/login'),
-                          icon: const Icon(Icons.login),
-                          label: Text(s.login),
+              // Login guard for Favorites tab (reactive to auth changes)
+              if (state.currentTab == GalleryTab.favorites) {
+                return BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    if (authState.status == AuthStatus.unknown) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!authState.isLoggedIn) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.favorite_border,
+                                size: 64,
+                                color: Theme.of(context).colorScheme.outline),
+                            const SizedBox(height: 16),
+                            Text(s.loginToFavorite,
+                                style: Theme.of(context).textTheme.bodyLarge),
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              onPressed: () =>
+                                  Navigator.pushNamed(context, '/login'),
+                              icon: const Icon(Icons.login),
+                              label: Text(s.login),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                }
-                return _buildGalleryContent(context, state);
-              },
-            );
-          }
+                      );
+                    }
+                    return _buildGalleryContent(context, state);
+                  },
+                );
+              }
 
-          return _buildGalleryContent(context, state);
-        },
-      )),
+              return _buildGalleryContent(context, state);
+            },
+          )),
       drawer: _buildDrawer(),
     );
   }
@@ -242,8 +245,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildGalleryContent(BuildContext context, GalleryListState state) {
     final s = S.of(context);
     // Loading state with shimmer
-    if (state.status == GalleryListStatus.loading &&
-        state.galleries.isEmpty) {
+    if (state.status == GalleryListStatus.loading && state.galleries.isEmpty) {
       return BlocBuilder<SettingsBloc, SettingsState>(
         buildWhen: (p, c) => p.displayMode != c.displayMode,
         builder: (_, settings) {
@@ -255,13 +257,11 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     // Error state
-    if (state.status == GalleryListStatus.error &&
-        state.galleries.isEmpty) {
+    if (state.status == GalleryListStatus.error && state.galleries.isEmpty) {
       return AppErrorWidget(
         message: state.errorMessage ?? s.failedToLoad,
-        onRetry: () => context
-            .read<GalleryListBloc>()
-            .add(const FetchGalleries()),
+        onRetry: () =>
+            context.read<GalleryListBloc>().add(const FetchGalleries()),
       );
     }
 
@@ -271,8 +271,9 @@ class _HomeScreenState extends State<HomeScreen>
       child: RefreshIndicator(
         onRefresh: () {
           final completer = Completer<void>();
-          context.read<GalleryListBloc>().add(
-              RefreshGalleries(completer: completer));
+          context
+              .read<GalleryListBloc>()
+              .add(RefreshGalleries(completer: completer));
           return completer.future;
         },
         child: state.galleries.isEmpty
@@ -282,35 +283,31 @@ class _HomeScreenState extends State<HomeScreen>
                     height: MediaQuery.of(context).size.height * 0.5,
                     child: Center(
                       child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.inbox_outlined,
-                                    size: 64,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outline),
-                                const SizedBox(height: 16),
-                                Text(
-                                  s.noGalleriesFound,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge,
-                                ),
-                              ],
-                            ),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.inbox_outlined,
+                              size: 64,
+                              color: Theme.of(context).colorScheme.outline),
+                          const SizedBox(height: 16),
+                          Text(
+                            s.noGalleriesFound,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               )
             : BlocBuilder<SettingsBloc, SettingsState>(
-          buildWhen: (p, c) => p.displayMode != c.displayMode,
-          builder: (_, settings) {
-            if (settings.displayMode == 1) {
-              return _buildGridView(state);
-            }
-            return _buildListView(state);
-          },
-        ),
+                buildWhen: (p, c) => p.displayMode != c.displayMode,
+                builder: (_, settings) {
+                  if (settings.displayMode == 1) {
+                    return _buildGridView(state);
+                  }
+                  return _buildListView(state);
+                },
+              ),
       ),
     );
   }
@@ -328,11 +325,9 @@ class _HomeScreenState extends State<HomeScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.history,
-                    size: 64, color: theme.colorScheme.outline),
+                Icon(Icons.history, size: 64, color: theme.colorScheme.outline),
                 const SizedBox(height: 16),
-                Text(s.noHistoryRecords,
-                    style: theme.textTheme.titleMedium),
+                Text(s.noHistoryRecords, style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Text(
                   s.historyHint,
@@ -350,9 +345,8 @@ class _HomeScreenState extends State<HomeScreen>
           itemBuilder: (context, index) {
             final entry = state.entries[index];
             final hasProgress = entry.totalPages > 0;
-            final progressPercent = hasProgress
-                ? (entry.lastReadPage + 1) / entry.totalPages
-                : 0.0;
+            final progressPercent =
+                hasProgress ? (entry.lastReadPage + 1) / entry.totalPages : 0.0;
             final progressText = hasProgress
                 ? '${entry.lastReadPage + 1} / ${entry.totalPages}'
                 : '';
@@ -376,65 +370,65 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
               child: ListTile(
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: SizedBox(
-                  width: 50,
-                  height: 68,
-                  child: CachedNetworkImage(
-                    imageUrl: entry.thumbUrl,
-                    fit: BoxFit.cover,
-                    cacheManager: EhImageCacheManager.instance,
-                    errorWidget: (_, __, ___) => Container(
-                      color: theme.colorScheme.surfaceVariant,
-                      child: const Icon(Icons.broken_image, size: 20),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    width: 50,
+                    height: 68,
+                    child: CachedNetworkImage(
+                      imageUrl: entry.thumbUrl,
+                      fit: BoxFit.cover,
+                      cacheManager: EhImageCacheManager.instance,
+                      errorWidget: (_, __, ___) => Container(
+                        color: theme.colorScheme.surfaceVariant,
+                        child: const Icon(Icons.broken_image, size: 20),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              title: Text(
-                entry.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall,
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (progressText.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: LinearProgressIndicator(
-                              value: progressPercent,
-                              minHeight: 3,
-                              backgroundColor:
-                                  theme.colorScheme.surfaceVariant,
+                title: Text(
+                  entry.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (progressText.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: progressPercent,
+                                minHeight: 3,
+                                backgroundColor:
+                                    theme.colorScheme.surfaceVariant,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          progressText,
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            progressText,
+                            style: theme.textTheme.labelSmall,
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 2),
+                    Text(
+                      _timeAgo(entry.lastReadAt),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
                     ),
                   ],
-                  const SizedBox(height: 2),
-                  Text(
-                    _timeAgo(entry.lastReadAt),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ],
+                ),
+                onTap: () => _navigateToGallery(entry.gid, entry.token),
               ),
-              onTap: () => _navigateToGallery(entry.gid, entry.token),
-            ),
             );
           },
         );
@@ -530,8 +524,7 @@ class _HomeScreenState extends State<HomeScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.refresh,
-                    color: Theme.of(context).colorScheme.error),
+                Icon(Icons.refresh, color: Theme.of(context).colorScheme.error),
                 const SizedBox(height: 4),
                 Text(
                   s.loadFailedTapRetry,
@@ -581,9 +574,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Text(
                   'OViewer',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onPrimaryContainer,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                 ),
                 const SizedBox(height: 4),

@@ -101,8 +101,7 @@ class _LoginScreenState extends State<LoginScreen>
             children: [
               CircleAvatar(
                 radius: 40,
-                backgroundColor:
-                    Theme.of(context).colorScheme.primaryContainer,
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                 child: Icon(
                   Icons.person,
                   size: 40,
@@ -136,9 +135,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         TextButton(
                           onPressed: () {
-                            context
-                                .read<AuthBloc>()
-                                .add(LogoutRequested());
+                            context.read<AuthBloc>().add(LogoutRequested());
                             Navigator.pop(ctx);
                           },
                           child: Text(s.logout),
@@ -191,9 +188,7 @@ class _LoginScreenState extends State<LoginScreen>
           if (cookieMap.containsKey(AppConstants.cookieIpbMemberId) &&
               cookieMap.containsKey(AppConstants.cookieIpbPassHash)) {
             if (mounted) {
-              context
-                  .read<AuthBloc>()
-                  .add(LoginFromWebView(cookieMap));
+              context.read<AuthBloc>().add(LoginFromWebView(cookieMap));
             }
           }
         }
@@ -246,6 +241,9 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 16),
           TextField(
             controller: _passHashController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
             decoration: const InputDecoration(
               labelText: 'ipb_pass_hash *',
               hintText: 'e.g., abcdef1234567890...',
@@ -255,6 +253,9 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(height: 16),
           TextField(
             controller: _igneousController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
             decoration: InputDecoration(
               labelText: s.igneousOptional,
               hintText: 'e.g., abcdef1234...',
@@ -282,8 +283,7 @@ class _LoginScreenState extends State<LoginScreen>
                     context.read<AuthBloc>().add(LoginWithCookies(
                           memberId: memberId,
                           passHash: passHash,
-                          igneous:
-                              igneous.isNotEmpty ? igneous : null,
+                          igneous: igneous.isNotEmpty ? igneous : null,
                         ));
                   },
             child: state.status == AuthStatus.loading

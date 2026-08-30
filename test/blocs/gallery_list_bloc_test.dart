@@ -6,26 +6,35 @@ import 'package:oviewer/blocs/gallery_list/gallery_list_bloc.dart';
 import 'package:oviewer/blocs/gallery_list/gallery_list_event.dart';
 import 'package:oviewer/blocs/gallery_list/gallery_list_state.dart';
 import 'package:oviewer/repositories/gallery_repository.dart';
+import 'package:oviewer/repositories/favorites_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/models/gallery_preview.dart';
 
 class MockGalleryRepository extends Mock implements GalleryRepository {}
+
+class MockFavoritesRepository extends Mock implements FavoritesRepository {}
+
 class MockSettingsRepository extends Mock implements SettingsRepository {}
 
 void main() {
   late MockGalleryRepository mockRepo;
+  late MockFavoritesRepository mockFavoritesRepo;
   late MockSettingsRepository mockSettingsRepo;
 
   setUp(() {
     mockRepo = MockGalleryRepository();
+    mockFavoritesRepo = MockFavoritesRepository();
     mockSettingsRepo = MockSettingsRepository();
     when(() => mockSettingsRepo.getHiddenTags()).thenReturn([]);
+    when(() => mockFavoritesRepo.getLocalFavoriteGids())
+        .thenAnswer((_) async => <int>{});
 
     final sl = GetIt.instance;
     if (sl.isRegistered<SettingsRepository>()) {
       sl.unregister<SettingsRepository>();
     }
     sl.registerSingleton<SettingsRepository>(mockSettingsRepo);
+    sl.registerSingleton<FavoritesRepository>(mockFavoritesRepo);
   });
 
   tearDown(() {
@@ -82,6 +91,38 @@ void main() {
           currentPage: 0,
           totalPages: 5,
           nextPageUrl: nextUrl,
+        ),
+      ],
+    );
+
+    blocTest<GalleryListBloc, GalleryListState>(
+      'clears stale galleries before reloading after a site switch',
+      setUp: () {
+        when(() => mockRepo.fetchGalleryList(nextUrl: any(named: 'nextUrl')))
+            .thenAnswer(
+          (_) async => GalleryListResult(
+            galleries: [testGallery2],
+            totalPages: 1,
+          ),
+        );
+      },
+      build: () => GalleryListBloc(mockRepo),
+      seed: () => GalleryListState(
+        status: GalleryListStatus.loaded,
+        galleries: [testGallery],
+        currentPage: 2,
+        totalPages: 5,
+        nextPageUrl: nextUrl,
+      ),
+      act: (bloc) => bloc.add(const FetchGalleries(clearExisting: true)),
+      expect: () => [
+        const GalleryListState(status: GalleryListStatus.loading),
+        GalleryListState(
+          status: GalleryListStatus.loaded,
+          galleries: [testGallery2],
+          currentPage: 0,
+          totalPages: 1,
+          nextPageUrl: 'https://e-hentai.org/?page=1',
         ),
       ],
     );

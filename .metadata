@@ -21,7 +21,6 @@ migration:
     - platform: ios
       create_revision: db7ef5bf9f59442b0e200a90587e8fa5e0c6336a
       base_revision: db7ef5bf9f59442b0e200a90587e8fa5e0c6336a
-
   # User provided section
 
   # List of Local paths (relative to this file) that should be

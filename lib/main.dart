@@ -30,7 +30,7 @@ Future<void> _initDependencies() async {
   sl.registerSingleton<CookieManager>(cookieManager);
 
   // Core - Image cache (must be before any image loading)
-  EhImageCacheManager.init(cookieManager.cookieJar);
+  EhImageCacheManager.init(cookieManager);
 
   // Core - Network
   final dioClient = DioClient(cookieManager);
