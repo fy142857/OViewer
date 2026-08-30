@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 30
     instance_type: mac_mini_m2
     environment:
-      flutter: 3.13.9
+      flutter: 3.16.0
       xcode: 14.3.1
       cocoapods: default
     scripts:
@@ -28,7 +28,7 @@ workflows:
     max_build_duration: 30
     instance_type: linux_x2
     environment:
-      flutter: 3.13.9
+      flutter: 3.16.0
       java: 17
     scripts:
       - name: Get dependencies
