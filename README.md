@@ -71,7 +71,7 @@ lib/
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/aaa142857/OViewer.git
+git clone https://github.com/fy142857/OViewer.git
 cd OViewer
 
 # 2. 安装依赖
