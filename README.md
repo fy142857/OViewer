@@ -133,8 +133,8 @@ git push origin v1.0.0
 ## iOS 12 兼容性
 
 - Flutter 3.13.9–3.16.x（项目当前版本线）
-- `flutter_inappwebview` 锁定 `^5.8.0`（6.x 需要 iOS 13+）
-- 不使用 Firebase（需要 iOS 13+）
+- `flutter_inappwebview` 锁定 `^5.8.0`
+- 不使用 Firebase
 - Podfile 强制所有 Pod 部署目标为 `12.0`
 - 所有依赖包均验证兼容 iOS 12
 
