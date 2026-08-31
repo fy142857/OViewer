@@ -4,8 +4,18 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    # Documentation-only commits do not need a mobile build. Tag pushes are
+    # unaffected by path filters, so release builds still always run.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE*'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE*'
   workflow_dispatch:
 
 jobs:

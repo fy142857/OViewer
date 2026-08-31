@@ -117,6 +117,8 @@ flutter build ios --release --no-codesign
 
 **手动触发**：Actions → 选择 workflow → Run workflow
 
+仅修改 Markdown、`docs/` 或许可证文件的推送和 PR 会跳过构建；发布标签和手动触发不受影响。
+
 **发布 Release**：
 ```bash
 git tag v1.0.0
