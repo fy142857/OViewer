@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     tags: ['v*']
     # Documentation-only commits do not need a mobile build. Tag pushes are
     # unaffected by path filters, so release builds still always run.
