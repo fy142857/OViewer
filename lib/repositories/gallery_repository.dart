@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import '../core/network/dio_client.dart';
 import '../core/parser/gallery_list_parser.dart';
@@ -99,14 +100,22 @@ class GalleryRepository {
   /// Fetch gallery detail page.
   /// If the HTML `#gj` element is empty (common on ExHentai), falls back to
   /// a single gdata API call to retrieve the Japanese title.
-  Future<GalleryDetail> fetchGalleryDetail(int gid, String token) async {
+  Future<GalleryDetail> fetchGalleryDetail(
+    int gid,
+    String token, {
+    CancelToken? cancelToken,
+  }) async {
     final url = ApiEndpoints.galleryDetail(gid, token);
-    final html = await _dio.get(url);
+    final html = await _dio.get(url, cancelToken: cancelToken);
     _cacheApiCredentials(gid, html);
     final detail = GalleryDetailParser.parse(html, gid, token);
 
     if (detail.titleJpn == null) {
-      final titleJpn = await _fetchTitleJpnFromApi(gid, token);
+      final titleJpn = await _fetchTitleJpnFromApi(
+        gid,
+        token,
+        cancelToken: cancelToken,
+      );
       if (titleJpn != null && titleJpn.isNotEmpty) {
         return GalleryDetail(
           gid: detail.gid,
@@ -137,10 +146,15 @@ class GalleryRepository {
   }
 
   /// Fetch Japanese title for a single gallery via gdata API.
-  Future<String?> _fetchTitleJpnFromApi(int gid, String token) async {
+  Future<String?> _fetchTitleJpnFromApi(
+    int gid,
+    String token, {
+    CancelToken? cancelToken,
+  }) async {
     try {
       final response = await _dio.post(
         ApiEndpoints.apiEndpoint,
+        cancelToken: cancelToken,
         data: {
           'method': 'gdata',
           'gidlist': [
@@ -165,9 +179,10 @@ class GalleryRepository {
     int gid,
     String token, {
     int page = 0,
+    CancelToken? cancelToken,
   }) async {
     final url = ApiEndpoints.galleryThumbnails(gid, token, page: page);
-    final html = await _dio.get(url);
+    final html = await _dio.get(url, cancelToken: cancelToken);
     final thumbnails = GalleryDetailParser.parseThumbnails(html);
     final totalPages = GalleryDetailParser.parseThumbnailPageCount(html);
     return ThumbnailResult(thumbnails: thumbnails, totalPages: totalPages);
@@ -177,10 +192,11 @@ class GalleryRepository {
   Future<GalleryImage> fetchImage(
     String pageToken,
     int gid,
-    int pageIndex,
-  ) async {
+    int pageIndex, {
+    CancelToken? cancelToken,
+  }) async {
     final url = ApiEndpoints.imagePage(pageToken, gid, pageIndex);
-    final html = await _dio.get(url);
+    final html = await _dio.get(url, cancelToken: cancelToken);
     return GalleryImageParser.parse(html, pageIndex);
   }
 
@@ -190,11 +206,12 @@ class GalleryRepository {
     String pageToken,
     int gid,
     int pageIndex,
-    String nlKey,
-  ) async {
+    String nlKey, {
+    CancelToken? cancelToken,
+  }) async {
     final url =
         '${ApiEndpoints.imagePage(pageToken, gid, pageIndex)}?nl=$nlKey';
-    final html = await _dio.get(url);
+    final html = await _dio.get(url, cancelToken: cancelToken);
     return GalleryImageParser.parse(html, pageIndex);
   }
 

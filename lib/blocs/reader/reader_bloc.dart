@@ -3,6 +3,7 @@ import '../../repositories/gallery_repository.dart';
 import '../../repositories/history_repository.dart';
 import '../../repositories/settings_repository.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/network/reader_request_controller.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 import '../../models/gallery_image.dart';
 import 'reader_event.dart';
@@ -12,10 +13,16 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final GalleryRepository _galleryRepo;
   final HistoryRepository _historyRepo;
   final SettingsRepository _settingsRepo;
+  final ReaderRequestController _requests;
   final Set<int> _loadingIndices = {};
 
-  ReaderBloc(this._galleryRepo, this._historyRepo, this._settingsRepo)
-      : super(ReaderState(readingMode: _settingsRepo.getReadingMode())) {
+  ReaderBloc(
+    this._galleryRepo,
+    this._historyRepo,
+    this._settingsRepo, {
+    ReaderRequestController? requestController,
+  })  : _requests = requestController ?? ReaderRequestController(),
+        super(ReaderState(readingMode: _settingsRepo.getReadingMode())) {
     on<LoadReaderImages>(_onLoadImages);
     on<LoadImageAtIndex>(_onLoadImageAtIndex);
     on<RetryImageAtIndex>(_onRetryImageAtIndex);
@@ -28,6 +35,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     LoadReaderImages event,
     Emitter<ReaderState> emit,
   ) async {
+    if (_requests.isCancelled) return;
     // Resolve starting page: use explicit initialPage, or fall back to saved progress
     var startPage = event.initialPage;
     if (startPage == 0) {
@@ -36,6 +44,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         startPage = progress.lastReadPage;
       }
     }
+    if (_requests.isCancelled || isClosed) return;
 
     emit(state.copyWith(
       status: ReaderStatus.loading,
@@ -50,9 +59,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
       // Fetch first page to get thumbnails and page count
       final detail =
-          await _galleryRepo.fetchGalleryDetail(event.gid, event.token);
-      final firstPageResult =
-          await _galleryRepo.fetchThumbnails(event.gid, event.token);
+          await _galleryRepo.fetchGalleryDetail(event.gid, event.token,
+              cancelToken: _requests.cancelToken);
+      final firstPageResult = await _galleryRepo.fetchThumbnails(
+        event.gid,
+        event.token,
+        cancelToken: _requests.cancelToken,
+      );
+      if (_requests.isCancelled) return;
       allThumbnails.addAll(firstPageResult.thumbnails);
 
       // Calculate how many thumbnail pages we need
@@ -64,9 +78,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         for (var p = 1; p < numThumbPages; p++) {
           futures.add(_galleryRepo.fetchThumbnails(
               event.gid, event.token,
-              page: p));
+              page: p,
+              cancelToken: _requests.cancelToken));
         }
         final results = await Future.wait(futures);
+        if (_requests.isCancelled) return;
         for (final result in results) {
           allThumbnails.addAll(result.thumbnails);
         }
@@ -74,6 +90,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
       // Sort by page index
       allThumbnails.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
+      if (_requests.isCancelled) return;
 
       // Clamp startPage to valid range
       final clampedStart = startPage.clamp(0, allThumbnails.length - 1);
@@ -91,8 +108,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           event.gid, clampedStart, allThumbnails.length);
 
       // Start preloading from current page
-      add(LoadImageAtIndex(clampedStart));
+      if (!_requests.isCancelled && !isClosed) {
+        add(LoadImageAtIndex(clampedStart));
+      }
     } catch (e) {
+      if (_requests.isCancelled) return;
       emit(state.copyWith(
         status: ReaderStatus.error,
         errorMessage: e.toString(),
@@ -104,6 +124,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     LoadImageAtIndex event,
     Emitter<ReaderState> emit,
   ) async {
+    if (_requests.isCancelled) return;
     // Skip if already loaded or already loading
     if (state.loadedImages.containsKey(event.index)) return;
     if (event.index < 0 || event.index >= state.thumbnails.length) return;
@@ -117,7 +138,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         thumb.pageToken,
         state.gid,
         event.index,
+        cancelToken: _requests.cancelToken,
       );
+      if (_requests.isCancelled) return;
 
       // Add thumb URL from thumbnail info
       final imageWithThumb = GalleryImage(
@@ -152,6 +175,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     RetryImageAtIndex event,
     Emitter<ReaderState> emit,
   ) async {
+    if (_requests.isCancelled) return;
     if (event.index < 0 || event.index >= state.thumbnails.length) return;
     if (_loadingIndices.contains(event.index)) return;
 
@@ -170,6 +194,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           state.gid,
           event.index,
           nlKey,
+          cancelToken: _requests.cancelToken,
         );
       } else {
         // Normal retry
@@ -177,8 +202,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           thumb.pageToken,
           state.gid,
           event.index,
+          cancelToken: _requests.cancelToken,
         );
       }
+      if (_requests.isCancelled) return;
 
       final imageWithThumb = GalleryImage(
         index: image.index,
@@ -203,6 +230,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   void _preloadAdjacent(int index) {
+    if (_requests.isCancelled || isClosed) return;
     for (var i = 1; i <= AppConstants.preloadPageCount; i++) {
       if (index + i < state.totalPages &&
           !state.loadedImages.containsKey(index + i)) {
@@ -219,6 +247,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     PageChanged event,
     Emitter<ReaderState> emit,
   ) async {
+    if (_requests.isCancelled) return;
     emit(state.copyWith(currentPage: event.page));
 
     // Save reading progress
@@ -227,6 +256,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       event.page,
       state.totalPages,
     );
+    if (_requests.isCancelled || isClosed) return;
 
     // Load current page image if not loaded
     add(LoadImageAtIndex(event.page));
@@ -242,5 +272,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ) async {
     await _settingsRepo.setReadingMode(event.mode);
     emit(state.copyWith(readingMode: event.mode));
+  }
+
+  @override
+  Future<void> close() {
+    _requests.cancel();
+    return super.close();
   }
 }

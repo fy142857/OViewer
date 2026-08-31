@@ -10,6 +10,7 @@ import '../../blocs/reader/reader_bloc.dart';
 import '../../blocs/reader/reader_event.dart';
 import '../../blocs/reader/reader_state.dart';
 import '../../core/network/eh_image_cache_manager.dart';
+import '../../core/network/reader_request_controller.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 import '../../repositories/gallery_repository.dart';
 import '../../repositories/history_repository.dart';
@@ -36,11 +37,19 @@ class ReaderScreen extends StatefulWidget {
 
 class _ReaderScreenState extends State<ReaderScreen> {
   int? _resolvedPage;
+  late final ReaderRequestController _requests;
 
   @override
   void initState() {
     super.initState();
+    _requests = ReaderRequestController();
     _resolveStartPage();
+  }
+
+  @override
+  void dispose() {
+    _requests.cancel();
+    super.dispose();
   }
 
   Future<void> _resolveStartPage() async {
@@ -71,19 +80,24 @@ class _ReaderScreenState extends State<ReaderScreen> {
         GetIt.I<GalleryRepository>(),
         GetIt.I<HistoryRepository>(),
         GetIt.I<SettingsRepository>(),
+        requestController: _requests,
       )..add(LoadReaderImages(
           gid: widget.gid,
           token: widget.token,
           initialPage: page,
         )),
-      child: _ReaderView(initialPage: page),
+      child: _ReaderView(initialPage: page, requests: _requests),
     );
   }
 }
 
 class _ReaderView extends StatefulWidget {
   final int initialPage;
-  const _ReaderView({required this.initialPage});
+  final ReaderRequestController requests;
+  const _ReaderView({
+    required this.initialPage,
+    required this.requests,
+  });
 
   @override
   State<_ReaderView> createState() => _ReaderViewState();
@@ -262,9 +276,12 @@ class _ReaderViewState extends State<_ReaderView> {
             ),
           );
         }
+        widget.requests.registerImageUrl(image.imageUrl);
         return PhotoViewGalleryPageOptions(
-          imageProvider: CachedNetworkImageProvider(image.imageUrl,
-              cacheManager: EhImageCacheManager.instance),
+          imageProvider: CachedNetworkImageProvider(
+            image.imageUrl,
+            cacheManager: EhImageCacheManager.instance,
+          ),
           filterQuality: FilterQuality.medium,
           initialScale: PhotoViewComputedScale.contained,
           minScale: PhotoViewComputedScale.contained,
@@ -328,6 +345,7 @@ class _ReaderViewState extends State<_ReaderView> {
               : 0.7; // default portrait ratio
           final screenWidth = MediaQuery.of(context).size.width;
           final imageHeight = screenWidth / aspectRatio;
+          widget.requests.registerImageUrl(image.imageUrl);
 
           return SizedBox(
             width: screenWidth,
@@ -581,6 +599,7 @@ class _ReaderViewState extends State<_ReaderView> {
         ),
       );
     }
+    widget.requests.registerImageUrl(thumb.thumbUrl);
 
     if (thumb.isSprite) {
       return LayoutBuilder(

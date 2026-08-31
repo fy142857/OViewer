@@ -1,9 +1,11 @@
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import '../constants/app_constants.dart';
 import 'cookie_manager.dart';
 import 'image_http_client.dart';
 import 'network_proxy_io.dart';
+import 'reader_request_controller.dart';
 
 /// Custom [CacheManager] that injects cookies from the app [CookieManager]
 /// into every image request. This is required for ExHentai, which returns
@@ -33,15 +35,21 @@ class EhImageCacheManager extends CacheManager {
         ));
 }
 
-class _CookieHttpFileService extends HttpFileService {
+class _CookieHttpFileService extends FileService {
   static final _log = Logger();
   final CookieManager _cookieManager;
+  final http.Client _defaultHttpClient;
 
-  _CookieHttpFileService(this._cookieManager, {super.httpClient});
+  _CookieHttpFileService(
+    this._cookieManager, {
+    http.Client? httpClient,
+  }) : _defaultHttpClient = httpClient ?? createImageHttpClient();
 
   @override
   Future<FileServiceResponse> get(String url,
       {Map<String, String>? headers}) async {
+    final readerRequest = ReaderImageRequestRegistry.controllerFor(url);
+    _ensureReaderRequestActive(readerRequest);
     final requestUri = Uri.tryParse(url);
     if (requestUri != null &&
         !AppConstants.useExHentai &&
@@ -54,7 +62,11 @@ class _CookieHttpFileService extends HttpFileService {
 
     final preferredUrl = _ehgtPreferredUrl(url);
     if (preferredUrl == null) {
-      return _getWithRetries(url, headers: headers);
+      return _getWithRetries(
+        url,
+        headers: headers,
+        readerRequest: readerRequest,
+      );
     }
 
     try {
@@ -64,6 +76,7 @@ class _CookieHttpFileService extends HttpFileService {
         preferredUrl,
         headers: headers,
         maxAttempts: 1,
+        readerRequest: readerRequest,
       );
       if (response.statusCode < 400) return response;
 
@@ -73,19 +86,25 @@ class _CookieHttpFileService extends HttpFileService {
         'retrying via s.exhentai.org proxy=${NetworkProxy.isEnabled}',
       );
     } catch (error) {
+      _ensureReaderRequestActive(readerRequest);
       _log.w(
         '[image] host=ehgt.org failed; retrying via s.exhentai.org '
         'proxy=${NetworkProxy.isEnabled} error=${error.runtimeType}',
       );
     }
 
-    return _getWithRetries(url, headers: headers);
+    return _getWithRetries(
+      url,
+      headers: headers,
+      readerRequest: readerRequest,
+    );
   }
 
   Future<FileServiceResponse> _getWithRetries(
     String url, {
     Map<String, String>? headers,
     int maxAttempts = 3,
+    ReaderRequestController? readerRequest,
   }) async {
     final uri = Uri.parse(url);
     final merged = Map<String, String>.from(headers ?? {});
@@ -98,8 +117,13 @@ class _CookieHttpFileService extends HttpFileService {
 
     var attempt = 0;
     while (true) {
+      _ensureReaderRequestActive(readerRequest);
       try {
-        final response = await super.get(url, headers: merged);
+        final response = await _send(
+          url,
+          headers: merged,
+          readerRequest: readerRequest,
+        );
         _log.d(
           '[image] host=${uri.host} status=${response.statusCode} '
           'proxy=${NetworkProxy.isEnabled} attempt=${attempt + 1}',
@@ -108,6 +132,7 @@ class _CookieHttpFileService extends HttpFileService {
           return response;
         }
       } catch (error) {
+        _ensureReaderRequestActive(readerRequest);
         _log.w(
           '[image] host=${uri.host} request failed '
           'proxy=${NetworkProxy.isEnabled} attempt=${attempt + 1} '
@@ -117,6 +142,25 @@ class _CookieHttpFileService extends HttpFileService {
       }
       attempt++;
       await Future<void>.delayed(Duration(milliseconds: 300 * attempt));
+    }
+  }
+
+  Future<FileServiceResponse> _send(
+    String url, {
+    required Map<String, String> headers,
+    ReaderRequestController? readerRequest,
+  }) async {
+    _ensureReaderRequestActive(readerRequest);
+    final request = http.Request('GET', Uri.parse(url));
+    request.headers.addAll(headers);
+    final client = readerRequest?.imageClient ?? _defaultHttpClient;
+    final response = await client.send(request);
+    return HttpGetResponse(response);
+  }
+
+  void _ensureReaderRequestActive(ReaderRequestController? readerRequest) {
+    if (readerRequest?.isCancelled ?? false) {
+      throw StateError('The reader image request has been cancelled.');
     }
   }
 

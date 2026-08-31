@@ -42,15 +42,21 @@ class DioClient {
     ));
   }
 
-  Future<String> get(String url, {Map<String, dynamic>? queryParams}) async {
+  Future<String> get(
+    String url, {
+    Map<String, dynamic>? queryParams,
+    CancelToken? cancelToken,
+  }) async {
     try {
       final targetUrl = _appendQueryParameters(url, queryParams);
       _ensureCurrentSite(targetUrl);
       final response = await _dio.get(
         targetUrl,
+        cancelToken: cancelToken,
       );
       return response.data as String;
     } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) rethrow;
       throw _handleDioError(e);
     }
   }
@@ -59,6 +65,7 @@ class DioClient {
     String url, {
     dynamic data,
     Map<String, dynamic>? queryParams,
+    CancelToken? cancelToken,
   }) async {
     try {
       final targetUrl = _appendQueryParameters(url, queryParams);
@@ -66,9 +73,11 @@ class DioClient {
       final response = await _dio.post(
         targetUrl,
         data: data,
+        cancelToken: cancelToken,
       );
       return response.data as String;
     } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) rethrow;
       throw _handleDioError(e);
     }
   }
