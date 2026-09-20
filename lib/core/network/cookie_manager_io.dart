@@ -1,6 +1,7 @@
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart' as dio_cookie;
+import 'package:flutter_inappwebview/flutter_inappwebview.dart' as webview;
 import 'package:path_provider/path_provider.dart';
 import 'package:logger/logger.dart';
 import '../constants/app_constants.dart';
@@ -24,6 +25,42 @@ class CookieManager {
 
   void configureDio(Dio dio) {
     dio.interceptors.add(dio_cookie.CookieManager(_cookieJar));
+  }
+
+  /// Install the app's login session before a settings WebView navigates.
+  /// WKWebView has its own cookie store; the Dio cookie jar is not shared with it.
+  Future<void> syncToWebView(Uri uri) async {
+    if (uri.scheme != 'https' ||
+        (uri.host != 'e-hentai.org' && uri.host != 'exhentai.org')) {
+      throw ArgumentError.value(uri, 'uri', 'Expected an E-Hentai site URL');
+    }
+
+    final cookies = await _cookieJar.loadForRequest(uri);
+    final webCookies = webview.CookieManager.instance();
+    for (final cookie in cookies) {
+      // Keep WebView-owned preferences (such as uconfig) intact. Only copy
+      // authentication cookies that apply to this exact destination site.
+      if (!_isAuthenticationCookie(cookie.name) ||
+          (uri.host == 'e-hentai.org' &&
+              cookie.name == AppConstants.cookieIgneous)) {
+        continue;
+      }
+      // The app jar uses ignoreExpires. Mirror an older login cookie as a
+      // session cookie instead of asking the native store to delete it.
+      final expires = cookie.expires;
+      await webCookies.setCookie(
+        url: uri,
+        name: cookie.name,
+        value: cookie.value,
+        domain: cookie.domain ?? uri.host,
+        path: cookie.path ?? '/',
+        expiresDate: expires != null && expires.isAfter(DateTime.now())
+            ? expires.millisecondsSinceEpoch
+            : null,
+        isSecure: cookie.secure,
+        isHttpOnly: cookie.httpOnly,
+      );
+    }
   }
 
   Future<String> getCookieHeader(Uri uri) async {

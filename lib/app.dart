@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'core/router/app_router.dart';
+import 'core/router/route_observer.dart';
 import 'core/theme/app_theme.dart';
 import 'blocs/gallery_list/gallery_list_bloc.dart';
 import 'blocs/search/search_bloc.dart';
@@ -76,6 +77,7 @@ class OViewerApp extends StatelessWidget {
             ],
             initialRoute: AppRouter.home,
             onGenerateRoute: AppRouter.generateRoute,
+            navigatorObservers: [appRouteObserver],
           );
         },
       ),

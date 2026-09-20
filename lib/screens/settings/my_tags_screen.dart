@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/settings/settings_event.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../../core/l10n/s.dart';
+import '../../widgets/site_settings_webview.dart';
 
 class MyTagsScreen extends StatefulWidget {
   const MyTagsScreen({super.key});
@@ -29,16 +30,7 @@ class _MyTagsScreenState extends State<MyTagsScreen> {
         appBar: AppBar(
           title: Text(S.of(context).myTags),
         ),
-        body: InAppWebView(
-          initialUrlRequest: URLRequest(
-            url: Uri.parse('https://e-hentai.org/mytags'),
-          ),
-          initialOptions: InAppWebViewGroupOptions(
-            crossPlatform: InAppWebViewOptions(
-              javaScriptEnabled: true,
-            ),
-          ),
-        ),
+        body: SiteSettingsWebView(url: Uri.parse(ApiEndpoints.myTags)),
       ),
     );
   }

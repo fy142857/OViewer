@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
@@ -11,6 +11,9 @@ import '../../blocs/reader/reader_event.dart';
 import '../../blocs/reader/reader_state.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../core/network/reader_request_controller.dart';
+import '../../core/network/reader_image_provider.dart';
+import '../../core/network/cookie_manager.dart' as app;
+import '../../core/router/route_observer.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 import '../../repositories/gallery_repository.dart';
 import '../../repositories/history_repository.dart';
@@ -35,7 +38,7 @@ class ReaderScreen extends StatefulWidget {
   State<ReaderScreen> createState() => _ReaderScreenState();
 }
 
-class _ReaderScreenState extends State<ReaderScreen> {
+class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
   int? _resolvedPage;
   late final ReaderRequestController _requests;
 
@@ -43,12 +46,33 @@ class _ReaderScreenState extends State<ReaderScreen> {
   void initState() {
     super.initState();
     _requests = ReaderRequestController();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _resolveStartPage();
   }
 
   @override
-  void dispose() {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) appRouteObserver.subscribe(this, route);
+  }
+
+  @override
+  void didPop() {
+    // Route disposal waits for the exit animation. Stop network work as soon
+    // as the pop is accepted, including the system back and iOS swipe gesture.
     _requests.cancel();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    final wasActive = !_requests.isCancelled;
+    _requests.cancel();
+    if (wasActive) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
     super.dispose();
   }
 
@@ -61,7 +85,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         page = progress.lastReadPage;
       }
     }
-    if (mounted) {
+    if (mounted && !_requests.isCancelled) {
       setState(() => _resolvedPage = page);
     }
   }
@@ -75,18 +99,21 @@ class _ReaderScreenState extends State<ReaderScreen> {
         body: LoadingIndicator(message: S.of(context).loadingReader),
       );
     }
-    return BlocProvider(
-      create: (_) => ReaderBloc(
-        GetIt.I<GalleryRepository>(),
-        GetIt.I<HistoryRepository>(),
-        GetIt.I<SettingsRepository>(),
-        requestController: _requests,
-      )..add(LoadReaderImages(
-          gid: widget.gid,
-          token: widget.token,
-          initialPage: page,
-        )),
-      child: _ReaderView(initialPage: page, requests: _requests),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: BlocProvider(
+        create: (_) => ReaderBloc(
+          GetIt.I<GalleryRepository>(),
+          GetIt.I<HistoryRepository>(),
+          GetIt.I<SettingsRepository>(),
+          requestController: _requests,
+        )..add(LoadReaderImages(
+            gid: widget.gid,
+            token: widget.token,
+            initialPage: page,
+          )),
+        child: _ReaderView(initialPage: page, requests: _requests),
+      ),
     );
   }
 }
@@ -105,20 +132,23 @@ class _ReaderView extends StatefulWidget {
 
 class _ReaderViewState extends State<_ReaderView> {
   late PageController _pageController;
-  final ItemScrollController _verticalScrollController =
-      ItemScrollController();
+  final ItemScrollController _verticalScrollController = ItemScrollController();
   final ItemPositionsListener _verticalPositionsListener =
       ItemPositionsListener.create();
   final ScrollController _thumbnailScrollController = ScrollController();
   final TransformationController _zoomController = TransformationController();
   bool _isZoomed = false;
+  late final FileService _imageFiles;
+  final Map<String, int> _thumbnailAttempts = {};
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: widget.initialPage);
-    // Immersive mode
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _imageFiles = EhImageCacheManager.readerFileService(
+      GetIt.I<app.CookieManager>(),
+      widget.requests,
+    );
     // Listen for vertical scroll position changes
     _verticalPositionsListener.itemPositions.addListener(_onVerticalScroll);
     _zoomController.addListener(_onZoomChanged);
@@ -157,11 +187,11 @@ class _ReaderViewState extends State<_ReaderView> {
 
   @override
   void dispose() {
+    _verticalPositionsListener.itemPositions.removeListener(_onVerticalScroll);
     _zoomController.removeListener(_onZoomChanged);
     _zoomController.dispose();
     _pageController.dispose();
     _thumbnailScrollController.dispose();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -173,8 +203,10 @@ class _ReaderViewState extends State<_ReaderView> {
     final maxScroll = _thumbnailScrollController.position.maxScrollExtent;
     // Center the current thumbnail in the visible area
     final viewportWidth = _thumbnailScrollController.position.viewportDimension;
-    final targetOffset =
-        (currentPage * _thumbItemWidth) - (viewportWidth / 2) + (_thumbItemWidth / 2) + 8; // +8 for horizontal padding
+    final targetOffset = (currentPage * _thumbItemWidth) -
+        (viewportWidth / 2) +
+        (_thumbItemWidth / 2) +
+        8; // +8 for horizontal padding
     final clampedOffset = targetOffset.clamp(0.0, maxScroll);
     _thumbnailScrollController.animateTo(
       clampedOffset,
@@ -192,9 +224,16 @@ class _ReaderViewState extends State<_ReaderView> {
           prev.currentPage != curr.currentPage ||
           prev.showUI != curr.showUI,
       listener: (context, state) {
+        if (widget.requests.isCancelled) return;
+        SystemChrome.setEnabledSystemUIMode(
+          state.showUI || state.status == ReaderStatus.error
+              ? SystemUiMode.edgeToEdge
+              : SystemUiMode.immersiveSticky,
+        );
         if (state.showUI) {
           // When UI is re-shown, wait for layout then scroll to current page
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || widget.requests.isCancelled) return;
             _scrollThumbnailToCurrentPage(state.currentPage, state.totalPages);
           });
         } else {
@@ -217,6 +256,11 @@ class _ReaderViewState extends State<_ReaderView> {
             ),
             body: AppErrorWidget(
               message: state.errorMessage ?? S.of(context).failedToLoadReader,
+              onRetry: () => context.read<ReaderBloc>().add(LoadReaderImages(
+                    gid: state.gid,
+                    token: state.token,
+                    initialPage: state.currentPage,
+                  )),
             ),
           );
         }
@@ -236,8 +280,8 @@ class _ReaderViewState extends State<_ReaderView> {
             children: [
               // Main content
               GestureDetector(
-                onTap: () =>
-                    context.read<ReaderBloc>().add(ToggleReaderUI()),
+                behavior: HitTestBehavior.opaque,
+                onTap: state.readingMode == 2 ? _toggleUI : null,
                 onDoubleTap: state.readingMode == 2 && _isZoomed
                     ? () => _zoomController.value = Matrix4.identity()
                     : null,
@@ -260,6 +304,39 @@ class _ReaderViewState extends State<_ReaderView> {
   }
 
   // ---- Horizontal PageView Reader (LR / RL) ----
+  void _toggleUI() => context.read<ReaderBloc>().add(ToggleReaderUI());
+
+  ReaderImageProvider _imageProvider(String url, {int attempt = 0}) =>
+      ReaderImageProvider(url,
+          requests: widget.requests,
+          fileService: _imageFiles,
+          cache: ReaderImageCache(EhImageCacheManager.instance),
+          attempt: attempt);
+
+  Widget _imageError(int index) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.broken_image, color: Colors.white54, size: 48),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () =>
+                  context.read<ReaderBloc>().add(RetryImageAtIndex(index)),
+              child: Text(S.of(context).retry,
+                  style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _pendingImage(ReaderState state, int index) {
+    if (state.failedIndices.contains(index)) return _imageError(index);
+    if (!state.loadingIndices.contains(index)) {
+      context.read<ReaderBloc>().add(LoadImageAtIndex(index));
+    }
+    return const Center(child: CircularProgressIndicator(color: Colors.white));
+  }
+
   Widget _buildHorizontalReader(ReaderState state) {
     return PhotoViewGallery.builder(
       pageController: _pageController,
@@ -267,21 +344,18 @@ class _ReaderViewState extends State<_ReaderView> {
       reverse: state.readingMode == 1, // RTL
       builder: (context, index) {
         final image = state.loadedImages[index];
-        if (image == null) {
-          // Trigger loading
-          context.read<ReaderBloc>().add(LoadImageAtIndex(index));
+        if (image == null ||
+            state.loadingIndices.contains(index) ||
+            state.failedIndices.contains(index)) {
           return PhotoViewGalleryPageOptions.customChild(
-            child: const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
+            onTapUp: (_, __, ___) => _toggleUI(),
+            child: _pendingImage(state, index),
           );
         }
-        widget.requests.registerImageUrl(image.imageUrl);
         return PhotoViewGalleryPageOptions(
-          imageProvider: CachedNetworkImageProvider(
-            image.imageUrl,
-            cacheManager: EhImageCacheManager.instance,
-          ),
+          onTapUp: (_, __, ___) => _toggleUI(),
+          imageProvider: _imageProvider(image.imageUrl,
+              attempt: state.imageAttempts[index] ?? 0),
           filterQuality: FilterQuality.medium,
           initialScale: PhotoViewComputedScale.contained,
           minScale: PhotoViewComputedScale.contained,
@@ -290,13 +364,11 @@ class _ReaderViewState extends State<_ReaderView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.broken_image,
-                    color: Colors.white54, size: 48),
+                const Icon(Icons.broken_image, color: Colors.white54, size: 48),
                 const SizedBox(height: 8),
                 TextButton(
-                  onPressed: () => context
-                      .read<ReaderBloc>()
-                      .add(RetryImageAtIndex(index)),
+                  onPressed: () =>
+                      context.read<ReaderBloc>().add(RetryImageAtIndex(index)),
                   child: Text(S.of(context).retry,
                       style: const TextStyle(color: Colors.white)),
                 ),
@@ -329,13 +401,12 @@ class _ReaderViewState extends State<_ReaderView> {
         initialScrollIndex: state.currentPage,
         itemBuilder: (context, index) {
           final image = state.loadedImages[index];
-          if (image == null) {
-            context.read<ReaderBloc>().add(LoadImageAtIndex(index));
+          if (image == null ||
+              state.loadingIndices.contains(index) ||
+              state.failedIndices.contains(index)) {
             return SizedBox(
               height: MediaQuery.of(context).size.height * 0.8,
-              child: const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
+              child: _pendingImage(state, index),
             );
           }
 
@@ -345,22 +416,23 @@ class _ReaderViewState extends State<_ReaderView> {
               : 0.7; // default portrait ratio
           final screenWidth = MediaQuery.of(context).size.width;
           final imageHeight = screenWidth / aspectRatio;
-          widget.requests.registerImageUrl(image.imageUrl);
 
           return SizedBox(
             width: screenWidth,
             height: imageHeight.clamp(200.0, screenWidth * 3),
-            child: CachedNetworkImage(
-              imageUrl: image.imageUrl,
+            child: Image(
+              image: _imageProvider(image.imageUrl,
+                  attempt: state.imageAttempts[index] ?? 0),
               fit: BoxFit.fitWidth,
-              cacheManager: EhImageCacheManager.instance,
-              placeholder: (_, __) => SizedBox(
-                height: imageHeight,
-                child: const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-              ),
-              errorWidget: (_, __, ___) => SizedBox(
+              loadingBuilder: (_, child, progress) => progress == null
+                  ? child
+                  : SizedBox(
+                      height: imageHeight,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    ),
+              errorBuilder: (_, __, ___) => SizedBox(
                 height: 300,
                 child: Center(
                   child: Column(
@@ -421,23 +493,20 @@ class _ReaderViewState extends State<_ReaderView> {
               ),
             ),
             PopupMenuButton<int>(
-              icon:
-                  const Icon(Icons.auto_stories, color: Colors.white),
+              icon: const Icon(Icons.auto_stories, color: Colors.white),
               tooltip: S.of(context).readingMode,
               onSelected: (mode) {
-                context
-                    .read<ReaderBloc>()
-                    .add(ChangeReadingMode(mode));
+                context.read<ReaderBloc>().add(ChangeReadingMode(mode));
               },
               itemBuilder: (_) {
                 final s = S.of(context);
                 return [
-                  _modeMenuItem(0, s.leftToRight, Icons.arrow_forward,
-                      state.readingMode),
-                  _modeMenuItem(1, s.rightToLeft, Icons.arrow_back,
-                      state.readingMode),
-                  _modeMenuItem(2, s.verticalScroll,
-                      Icons.swap_vert, state.readingMode),
+                  _modeMenuItem(
+                      0, s.leftToRight, Icons.arrow_forward, state.readingMode),
+                  _modeMenuItem(
+                      1, s.rightToLeft, Icons.arrow_back, state.readingMode),
+                  _modeMenuItem(
+                      2, s.verticalScroll, Icons.swap_vert, state.readingMode),
                 ];
               },
             ),
@@ -509,9 +578,7 @@ class _ReaderViewState extends State<_ReaderView> {
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isCurrent
-                                ? Colors.blue
-                                : Colors.transparent,
+                            color: isCurrent ? Colors.blue : Colors.transparent,
                             width: 2,
                           ),
                           borderRadius: BorderRadius.circular(4),
@@ -532,8 +599,7 @@ class _ReaderViewState extends State<_ReaderView> {
                 children: [
                   Text(
                     '${state.currentPage + 1}',
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 13),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   Expanded(
                     child: Slider(
@@ -556,8 +622,7 @@ class _ReaderViewState extends State<_ReaderView> {
                   ),
                   Text(
                     '${state.totalPages}',
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 13),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
               ),
@@ -573,8 +638,7 @@ class _ReaderViewState extends State<_ReaderView> {
       bottom: MediaQuery.of(context).padding.bottom + 8,
       right: 16,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: Colors.black54,
           borderRadius: BorderRadius.circular(12),
@@ -599,7 +663,6 @@ class _ReaderViewState extends State<_ReaderView> {
         ),
       );
     }
-    widget.requests.registerImageUrl(thumb.thumbUrl);
 
     if (thumb.isSprite) {
       return LayoutBuilder(
@@ -610,61 +673,53 @@ class _ReaderViewState extends State<_ReaderView> {
           final scaleY = cellH / thumb.spriteHeight;
           final scale = scaleX > scaleY ? scaleX : scaleY;
 
-          return ClipRect(
-            child: SizedBox(
-              width: cellW,
-              height: cellH,
-              child: OverflowBox(
-                maxWidth: double.infinity,
-                maxHeight: double.infinity,
-                alignment: Alignment.topLeft,
-                child: Transform.translate(
-                  offset: Offset(
-                    -thumb.spriteOffsetX * scale,
-                    -thumb.spriteOffsetY * scale,
-                  ),
-                  child: Transform.scale(
-                    scale: scale,
-                    alignment: Alignment.topLeft,
-                    child: CachedNetworkImage(
-                      imageUrl: thumb.thumbUrl,
-                      cacheManager: EhImageCacheManager.instance,
-                      placeholder: (_, __) => Container(
-                        color: Colors.grey[800],
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        color: Colors.grey[800],
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 10),
+          return Image(
+            image: _imageProvider(thumb.thumbUrl,
+                attempt: _thumbnailAttempts[thumb.thumbUrl] ?? 0),
+            errorBuilder: (_, __, ___) => _thumbnailError(thumb.thumbUrl),
+            frameBuilder: (_, child, frame, __) => frame == null
+                ? Container(color: Colors.grey[800])
+                : ClipRect(
+                    child: SizedBox(
+                      width: cellW,
+                      height: cellH,
+                      child: OverflowBox(
+                        maxWidth: double.infinity,
+                        maxHeight: double.infinity,
+                        alignment: Alignment.topLeft,
+                        child: Transform.translate(
+                          offset: Offset(
+                            -thumb.spriteOffsetX * scale,
+                            -thumb.spriteOffsetY * scale,
+                          ),
+                          child: Transform.scale(
+                            scale: scale,
+                            alignment: Alignment.topLeft,
+                            child: child,
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
           );
         },
       );
     }
 
-    return CachedNetworkImage(
-      imageUrl: thumb.thumbUrl,
+    return Image(
+      image: _imageProvider(thumb.thumbUrl,
+          attempt: _thumbnailAttempts[thumb.thumbUrl] ?? 0),
       fit: BoxFit.cover,
-      cacheManager: EhImageCacheManager.instance,
-      errorWidget: (_, __, ___) => Container(
-        color: Colors.grey[800],
-        child: Center(
-          child: Text(
-            '${index + 1}',
-            style: const TextStyle(color: Colors.white54, fontSize: 10),
-          ),
-        ),
-      ),
+      errorBuilder: (_, __, ___) => _thumbnailError(thumb.thumbUrl),
     );
   }
+
+  Widget _thumbnailError(String url) => IconButton(
+        padding: EdgeInsets.zero,
+        tooltip: S.of(context).retry,
+        icon: const Icon(Icons.refresh, color: Colors.white70, size: 20),
+        onPressed: () => setState(() {
+          _thumbnailAttempts[url] = (_thumbnailAttempts[url] ?? 0) + 1;
+        }),
+      );
 }

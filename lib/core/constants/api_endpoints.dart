@@ -54,5 +54,5 @@ class ApiEndpoints {
       'https://github.com/EhTagTranslation/Database/releases/latest/download/db.text.json';
 
   // My Tags
-  static String get myTags => 'https://e-hentai.org/mytags';
+  static String get myTags => '$_base/mytags';
 }

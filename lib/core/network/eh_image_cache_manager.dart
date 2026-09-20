@@ -25,6 +25,14 @@ class EhImageCacheManager extends CacheManager {
     _instance = EhImageCacheManager._(cookieManager);
   }
 
+  /// Reader images use an explicitly owned client, never the global cache's
+  /// in-flight requests. A new reader can request the same URL immediately.
+  static FileService readerFileService(
+    CookieManager cookies,
+    ReaderRequestController requests,
+  ) =>
+      _CookieHttpFileService(cookies, readerRequest: requests);
+
   EhImageCacheManager._(CookieManager cookieManager)
       : super(Config(
           _key,
@@ -38,17 +46,18 @@ class EhImageCacheManager extends CacheManager {
 class _CookieHttpFileService extends FileService {
   static final _log = Logger();
   final CookieManager _cookieManager;
-  final http.Client _defaultHttpClient;
+  http.Client? _defaultHttpClient;
+  final ReaderRequestController? readerRequest;
 
   _CookieHttpFileService(
     this._cookieManager, {
     http.Client? httpClient,
-  }) : _defaultHttpClient = httpClient ?? createImageHttpClient();
+    this.readerRequest,
+  }) : _defaultHttpClient = httpClient;
 
   @override
   Future<FileServiceResponse> get(String url,
       {Map<String, String>? headers}) async {
-    final readerRequest = ReaderImageRequestRegistry.controllerFor(url);
     _ensureReaderRequestActive(readerRequest);
     final requestUri = Uri.tryParse(url);
     if (requestUri != null &&
@@ -131,6 +140,7 @@ class _CookieHttpFileService extends FileService {
         if (response.statusCode < 500 || attempt >= maxAttempts - 1) {
           return response;
         }
+        await response.content.drain<void>();
       } catch (error) {
         _ensureReaderRequestActive(readerRequest);
         _log.w(
@@ -153,7 +163,8 @@ class _CookieHttpFileService extends FileService {
     _ensureReaderRequestActive(readerRequest);
     final request = http.Request('GET', Uri.parse(url));
     request.headers.addAll(headers);
-    final client = readerRequest?.imageClient ?? _defaultHttpClient;
+    final client = readerRequest?.imageClient ??
+        (_defaultHttpClient ??= createImageHttpClient());
     final response = await client.send(request);
     return HttpGetResponse(response);
   }

@@ -12,6 +12,9 @@ class ReaderState extends Equatable {
   final int totalPages;
   final Map<int, GalleryImage> loadedImages;
   final List<ThumbnailInfo> thumbnails;
+  final Set<int> loadingIndices;
+  final Set<int> failedIndices;
+  final Map<int, int> imageAttempts;
   final bool showUI;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
   final String? errorMessage;
@@ -24,6 +27,9 @@ class ReaderState extends Equatable {
     this.totalPages = 0,
     this.loadedImages = const {},
     this.thumbnails = const [],
+    this.loadingIndices = const {},
+    this.failedIndices = const {},
+    this.imageAttempts = const {},
     this.showUI = false,
     this.readingMode = 0,
     this.errorMessage,
@@ -39,6 +45,9 @@ class ReaderState extends Equatable {
     int? totalPages,
     Map<int, GalleryImage>? loadedImages,
     List<ThumbnailInfo>? thumbnails,
+    Set<int>? loadingIndices,
+    Set<int>? failedIndices,
+    Map<int, int>? imageAttempts,
     bool? showUI,
     int? readingMode,
     String? errorMessage,
@@ -51,6 +60,9 @@ class ReaderState extends Equatable {
       totalPages: totalPages ?? this.totalPages,
       loadedImages: loadedImages ?? this.loadedImages,
       thumbnails: thumbnails ?? this.thumbnails,
+      loadingIndices: loadingIndices ?? this.loadingIndices,
+      failedIndices: failedIndices ?? this.failedIndices,
+      imageAttempts: imageAttempts ?? this.imageAttempts,
       showUI: showUI ?? this.showUI,
       readingMode: readingMode ?? this.readingMode,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -61,9 +73,14 @@ class ReaderState extends Equatable {
   List<Object?> get props => [
         status,
         gid,
+        token,
         currentPage,
         totalPages,
-        loadedImages.length,
+        loadedImages,
+        thumbnails,
+        loadingIndices,
+        failedIndices,
+        imageAttempts,
         showUI,
         readingMode,
         errorMessage,

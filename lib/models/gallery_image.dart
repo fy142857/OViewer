@@ -7,6 +7,7 @@ class GalleryImage extends Equatable {
   final String? thumbUrl;
   final int width;
   final int height;
+
   /// Network location key for server failover (from onerror nl('key')).
   /// Append ?nl=key to the image page URL to get an alternate server.
   final String? nlKey;
@@ -22,5 +23,6 @@ class GalleryImage extends Equatable {
   });
 
   @override
-  List<Object?> get props => [index, pageUrl];
+  List<Object?> get props =>
+      [index, pageUrl, imageUrl, thumbUrl, width, height, nlKey];
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get_it/get_it.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_state.dart';
@@ -11,6 +10,7 @@ import '../../core/constants/api_endpoints.dart';
 import '../../core/l10n/s.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../repositories/download_repository.dart';
+import '../../widgets/site_settings_webview.dart';
 import 'my_tags_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -478,16 +478,7 @@ class _UConfigScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
       ),
-      body: InAppWebView(
-        initialUrlRequest: URLRequest(
-          url: Uri.parse(ApiEndpoints.userConfig),
-        ),
-        initialOptions: InAppWebViewGroupOptions(
-          crossPlatform: InAppWebViewOptions(
-            javaScriptEnabled: true,
-          ),
-        ),
-      ),
+      body: SiteSettingsWebView(url: Uri.parse(ApiEndpoints.userConfig)),
     );
   }
 }

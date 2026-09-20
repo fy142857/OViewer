@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../blocs/settings/settings_bloc.dart';
+import '../../blocs/settings/settings_bloc.dart';
 
 /// Simple map-based localization. Supports zh (Chinese) and en (English).
 /// Usage: `S.of(context).settings`
