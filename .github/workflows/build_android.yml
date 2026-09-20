@@ -33,6 +33,9 @@ jobs:
 
       - name: Setup Android SDK API 35
         uses: android-actions/setup-android@v3
+        with:
+          # Override v3's default: the legacy 'tools' package is no longer available.
+          packages: 'platform-tools'
 
       - name: Install Android SDK build dependencies
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
