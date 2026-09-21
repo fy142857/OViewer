@@ -1,4 +1,5 @@
 name: Build iOS IPA
+run-name: ${{ inputs.installer_request_id && format('iOS installer {0}', inputs.installer_request_id) || github.event.head_commit.message || 'Build iOS IPA' }}
 
 on:
   push:
@@ -17,6 +18,11 @@ on:
       - 'docs/**'
       - 'LICENSE*'
   workflow_dispatch:
+    inputs:
+      installer_request_id:
+        description: 'Optional correlation ID for the local IPA installer'
+        required: false
+        type: string
 
 jobs:
   build-ios:
@@ -26,6 +32,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Test local IPA installer
+        run: python3 -m unittest discover -s tool -p 'test_ios_install.py' -v
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -75,6 +84,7 @@ jobs:
           path: build/ios/ipa/OViewer.ipa
           # Upload the single installer directly instead of wrapping it in a ZIP.
           archive: false
+          if-no-files-found: error
           retention-days: 30
 
       - name: Release (on tag push)

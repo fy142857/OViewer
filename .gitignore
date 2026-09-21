@@ -63,3 +63,9 @@ app.*.map.json
 *.g.dart
 *.freezed.dart
 *.mocks.dart
+
+# Local iOS installers and Python tooling
+/ipa/
+*.ipa
+__pycache__/
+/tool/.venv/
