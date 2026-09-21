@@ -40,7 +40,7 @@ class ReaderScreen extends StatefulWidget {
 
 class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
   final _startup = Stopwatch();
-  late final ReaderRequestController _requests;
+  late ReaderRequestController _requests;
 
   @override
   void initState() {
@@ -48,6 +48,23 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
     _requests = ReaderRequestController();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _startup.start();
+  }
+
+  @override
+  void didUpdateWidget(ReaderScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.gid != widget.gid ||
+        oldWidget.token != widget.token ||
+        oldWidget.initialPage != widget.initialPage) {
+      // A new preview selection is a new reading session even when Flutter
+      // reuses this route's widget. Old work must not restore its position.
+      _requests.cancel();
+      _requests = ReaderRequestController();
+      _startup
+        ..reset()
+        ..start();
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
   }
 
   @override
@@ -81,6 +98,7 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: BlocProvider(
+        key: ObjectKey(_requests),
         create: (_) => ReaderBloc(
           GetIt.I<GalleryRepository>(),
           GetIt.I<HistoryRepository>(),
@@ -91,8 +109,7 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
             token: widget.token,
             initialPage: widget.initialPage,
           )),
-        child:
-            _ReaderView(startup: _startup, requests: _requests),
+        child: _ReaderView(startup: _startup, requests: _requests),
       ),
     );
   }
@@ -124,11 +141,12 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _firstImageLogged = false;
   int? _lastReadingMode;
   int? _sliderPage;
+  PageStorageBucket _scrollStorage = PageStorageBucket();
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _pageController = PageController(keepPage: false);
     _imageFiles = EhImageCacheManager.readerFileService(
       GetIt.I<app.CookieManager>(),
       widget.requests,
@@ -210,11 +228,13 @@ class _ReaderViewState extends State<_ReaderView> {
       listener: (context, state) {
         if (widget.requests.isCancelled) return;
         if (state.status == ReaderStatus.ready &&
-            (!_positionInitialized ||
-                (state.readingMode != 2 &&
-                    _lastReadingMode != state.readingMode))) {
+            (!_positionInitialized || _lastReadingMode != state.readingMode)) {
           _pageController.dispose();
-          _pageController = PageController(initialPage: state.currentPage);
+          _pageController =
+              PageController(initialPage: state.currentPage, keepPage: false);
+          // ScrollablePositionedList restores PageStorage ahead of its
+          // initialScrollIndex. Keep that storage private to this entry/mode.
+          _scrollStorage = PageStorageBucket();
           _positionInitialized = true;
         }
         _lastReadingMode = state.readingMode;
@@ -348,6 +368,7 @@ class _ReaderViewState extends State<_ReaderView> {
 
   Widget _buildHorizontalReader(ReaderState state) {
     return PhotoViewGallery.builder(
+      key: ObjectKey(_pageController),
       pageController: _pageController,
       itemCount: state.totalPages,
       reverse: state.readingMode == 1, // RTL
@@ -397,72 +418,75 @@ class _ReaderViewState extends State<_ReaderView> {
 
   // ---- Vertical Continuous Scroll Reader ----
   Widget _buildVerticalReader(ReaderState state) {
-    return InteractiveViewer(
-      transformationController: _zoomController,
-      minScale: 1.0,
-      maxScale: 3.0,
-      panEnabled: _isZoomed,
-      scaleEnabled: true,
-      child: ScrollablePositionedList.builder(
-        itemCount: state.totalPages,
-        itemScrollController: _verticalScrollController,
-        itemPositionsListener: _verticalPositionsListener,
-        initialScrollIndex: state.currentPage,
-        itemBuilder: (context, index) {
-          final image = state.loadedImages[index];
-          if (image == null ||
-              state.loadingIndices.contains(index) ||
-              state.failedIndices.contains(index)) {
+    return PageStorage(
+      bucket: _scrollStorage,
+      child: InteractiveViewer(
+        transformationController: _zoomController,
+        minScale: 1.0,
+        maxScale: 3.0,
+        panEnabled: _isZoomed,
+        scaleEnabled: true,
+        child: ScrollablePositionedList.builder(
+          itemCount: state.totalPages,
+          itemScrollController: _verticalScrollController,
+          itemPositionsListener: _verticalPositionsListener,
+          initialScrollIndex: state.currentPage,
+          itemBuilder: (context, index) {
+            final image = state.loadedImages[index];
+            if (image == null ||
+                state.loadingIndices.contains(index) ||
+                state.failedIndices.contains(index)) {
+              return SizedBox(
+                height: MediaQuery.of(context).size.height * 0.8,
+                child: _pendingImage(state, index),
+              );
+            }
+
+            // Calculate aspect ratio for proper height
+            double aspectRatio = image.width > 0 && image.height > 0
+                ? image.width / image.height
+                : 0.7; // default portrait ratio
+            final screenWidth = MediaQuery.of(context).size.width;
+            final imageHeight = screenWidth / aspectRatio;
+
             return SizedBox(
-              height: MediaQuery.of(context).size.height * 0.8,
-              child: _pendingImage(state, index),
-            );
-          }
-
-          // Calculate aspect ratio for proper height
-          double aspectRatio = image.width > 0 && image.height > 0
-              ? image.width / image.height
-              : 0.7; // default portrait ratio
-          final screenWidth = MediaQuery.of(context).size.width;
-          final imageHeight = screenWidth / aspectRatio;
-
-          return SizedBox(
-            width: screenWidth,
-            height: imageHeight.clamp(200.0, screenWidth * 3),
-            child: Image(
-              image: _imageProvider(image.imageUrl,
-                  page: index, attempt: state.imageAttempts[index] ?? 0),
-              fit: BoxFit.fitWidth,
-              loadingBuilder: (_, child, progress) => progress == null
-                  ? child
-                  : SizedBox(
-                      height: imageHeight,
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+              width: screenWidth,
+              height: imageHeight.clamp(200.0, screenWidth * 3),
+              child: Image(
+                image: _imageProvider(image.imageUrl,
+                    page: index, attempt: state.imageAttempts[index] ?? 0),
+                fit: BoxFit.fitWidth,
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : SizedBox(
+                        height: imageHeight,
+                        child: const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
                       ),
+                errorBuilder: (_, __, ___) => SizedBox(
+                  height: 300,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.broken_image,
+                            color: Colors.white54, size: 48),
+                        TextButton(
+                          onPressed: () => context
+                              .read<ReaderBloc>()
+                              .add(RetryImageAtIndex(index)),
+                          child: Text(S.of(context).retry,
+                              style: const TextStyle(color: Colors.white)),
+                        ),
+                      ],
                     ),
-              errorBuilder: (_, __, ___) => SizedBox(
-                height: 300,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.broken_image,
-                          color: Colors.white54, size: 48),
-                      TextButton(
-                        onPressed: () => context
-                            .read<ReaderBloc>()
-                            .add(RetryImageAtIndex(index)),
-                        child: Text(S.of(context).retry,
-                            style: const TextStyle(color: Colors.white)),
-                      ),
-                    ],
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
