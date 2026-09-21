@@ -139,22 +139,40 @@ def texts(window):
     return [c.window_text().strip() for c in window.descendants(control_type="Text")]
 
 
+def ipa_dialogs(app, window):
+    # Qt exposes the native owned dialog under its main UIA window on Windows 11.
+    # Application.windows() alone only sees top-level windows and can miss it.
+    candidates = app.windows() + window.descendants(title="Choose IPA File")
+    return list({w.handle: w for w in candidates
+                 if w.window_text() == "Choose IPA File" and w.is_visible()}.values())
+
+
+def matches_ipa_label(label, filename):
+    # Sideloadly inserts zero-width word breaks and Qt elides long run-specific names.
+    label = label.replace("\u200b", "")
+    if label == filename:
+        return True
+    parts = label.split("…")
+    return (len(parts) == 2 and len(parts[0]) >= 16 and
+            filename.startswith(parts[0]) and filename.endswith(parts[1]))
+
+
 def load_ipa(app, window, path):
     # The IPA picker is the large icon button to the left of iDevice. It has no accessible name.
     # Use its relationship to the labeled device combo, never absolute desktop coordinates.
-    device_rect = combo(window, "iDevice:").rectangle()
-    candidates = [c for c in window.descendants(control_type="Button")
-                  if c.is_visible() and c.rectangle().width() >= 55 and c.rectangle().height() >= 60
-                  and c.rectangle().right <= device_rect.left]
-    # Some Qt versions expose the same icon as both a parent and a child button.
-    by_rect = {(c.rectangle().left, c.rectangle().top, c.rectangle().right, c.rectangle().bottom): c for c in candidates}
-    picker = unique(list(by_rect.values()), "IPA 文件选择按钮")
-    picker.invoke()
+    if not ipa_dialogs(app, window):
+        device_rect = combo(window, "iDevice:").rectangle()
+        candidates = [c for c in window.descendants(control_type="Button")
+                      if c.is_visible() and c.rectangle().width() >= 55 and c.rectangle().height() >= 60
+                      and c.rectangle().right <= device_rect.left]
+        # Some Qt versions expose the same icon as both a parent and a child button.
+        by_rect = {(c.rectangle().left, c.rectangle().top, c.rectangle().right, c.rectangle().bottom): c for c in candidates}
+        picker = unique(list(by_rect.values()), "IPA 文件选择按钮")
+        picker.invoke()
     deadline = time.monotonic() + 15
     dialog = None
     while time.monotonic() < deadline:
-        dialogs = [w for w in app.windows() if w.handle != window.handle and
-                   w.element_info.class_name == "#32770" and w.is_visible()]
+        dialogs = ipa_dialogs(app, window)
         if len(dialogs) == 1:
             dialog = dialogs[0]
             break
@@ -163,13 +181,16 @@ def load_ipa(app, window, path):
         raise RuntimeError("未打开 IPA 文件对话框。")
     edits = [c for c in dialog.descendants(control_type="Edit")
              if c.element_info.automation_id in ("1148", "1001")]
-    unique(edits, "文件名输入框").set_edit_text(str(path))
+    filename_edit = unique(edits, "文件名输入框")
+    filename_edit.set_edit_text(str(path))
+    if filename_edit.get_value() != str(path):
+        raise RuntimeError("文件对话框未接受所选 IPA 的完整路径。")
     opens = [c for c in dialog.descendants(control_type="Button")
              if c.element_info.automation_id == "1"]
     unique(opens, "打开文件按钮").invoke()
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
-        if path.name in texts(window):
+        if not ipa_dialogs(app, window) and any(matches_ipa_label(t, path.name) for t in texts(window)):
             return
         time.sleep(0.5)
     raise RuntimeError("Sideloadly 未确认载入所选 IPA。")
@@ -194,7 +215,7 @@ def install_ipa(path, explicit=None, udid=None, timeout=900):
         # Interactive app: keep its window visible for Apple authentication prompts.
         subprocess.Popen([str(executable)], cwd=executable.parent)
         app.connect(path=str(executable), timeout=30)
-    window = app.window(title_re=r"^Sideloadly!.*").wait("exists", timeout=30).wrapper_object()
+    window = app.window(title_re=r"^Sideloadly!.*").wait("exists", timeout=30)
     if window.is_minimized():
         window.restore()
     window.set_focus()

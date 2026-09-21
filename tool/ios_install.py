@@ -29,6 +29,14 @@ class InstallerError(RuntimeError):
     pass
 
 
+def require_successful_run(run):
+    if run["status"] != "completed" or run["conclusion"] != "success":
+        raise InstallerError(
+            f"iOS 构建未成功（{run['conclusion'] or run['status']}），终止进程，不下载或安装 IPA。"
+            f"日志：{run['html_url']}"
+        )
+
+
 def command(args, *, check=True, input=None):
     result = subprocess.run(args, cwd=ROOT, input=input, capture_output=True,
                             text=True, encoding="utf-8", errors="replace",
@@ -173,8 +181,7 @@ def choose(items, label):
 
 
 def download(gh, run, folder):
-    if run["status"] != "completed" or run["conclusion"] != "success":
-        raise InstallerError("此构建尚未成功完成，请选择成功的构建。")
+    require_successful_run(run)
     artifacts = [a for a in gh.artifacts(run["id"]) if not a["expired"] and
                  ("ipa" in a["name"].lower() or "ios" in a["name"].lower() or a["name"] == "artifact")]
     if not artifacts:
@@ -228,9 +235,18 @@ def wait_run(gh, run, timeout):
             print(f"构建 #{run['run_number']}：{status[0]} / {status[1] or '-'}", flush=True)
             last, reported = status, time.monotonic()
         if run["status"] == "completed":
-            if run["conclusion"] != "success":
-                raise InstallerError(f"构建未成功：{run['conclusion']}。日志：{run['html_url']}")
+            require_successful_run(run)
             return run
+        if run["status"] == "in_progress":
+            # A failed compilation may be followed by lengthy cleanup steps.
+            # Stop as soon as the iOS job/step reports failure, without waiting for cleanup.
+            jobs = gh.api(f"/actions/runs/{run['id']}/jobs?filter=latest&per_page=100")["jobs"]
+            for job in jobs:
+                failed = next((s for s in job.get("steps", [])
+                               if s.get("conclusion") in ("failure", "cancelled", "timed_out")), None)
+                if failed or job.get("conclusion") in ("failure", "cancelled", "timed_out", "action_required", "startup_failure"):
+                    stage = failed["name"] if failed else job["name"]
+                    raise InstallerError(f"iOS 构建步骤失败：{stage}，终止进程，不下载或安装 IPA。日志：{run['html_url']}")
         if time.monotonic() >= deadline:
             raise InstallerError(f"等待构建超时；远端构建仍保留。稍后运行 download --run-id {run['id']}")
         time.sleep(15)
@@ -355,7 +371,9 @@ def main():
         recent(gh)
         return 0
     if args.mode == "auto":
-        path = download(gh, build(gh, args), args.output)
+        run = build(gh, args)
+        require_successful_run(run)
+        path = download(gh, run, args.output)
         return install(path, args) if path and not args.no_install else 0
     if args.mode == "manual":
         run = choose(recent(gh), "构建")
@@ -379,15 +397,19 @@ def main():
     return 0
 
 
+def entrypoint():
+    try:
+        return main()
+    except KeyboardInterrupt:
+        print("\n已停止本地等待；已触发的构建或安装不会被取消。", file=sys.stderr)
+        return 130
+    except (RuntimeError, OSError, zipfile.BadZipFile, EOFError) as exc:
+        print(f"错误：{exc}", file=sys.stderr)
+        return 1
+
+
 if __name__ == "__main__":
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")
-    try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        print("\n已停止本地等待；已触发的构建或安装不会被取消。", file=sys.stderr)
-        sys.exit(130)
-    except (RuntimeError, OSError, zipfile.BadZipFile, EOFError) as exc:
-        print(f"错误：{exc}", file=sys.stderr)
-        sys.exit(1)
+    sys.exit(entrypoint())

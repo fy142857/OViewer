@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+from contextlib import ExitStack, redirect_stderr
 from pathlib import Path
 import plistlib
 import tempfile
@@ -123,6 +124,22 @@ class InstallerTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             windows.device_item([f"iPad {udid} @WiFi"], udid)
 
+    def test_ipa_dialog_found_as_owned_child_without_duplicate(self):
+        app, window, dialog = Mock(), Mock(), Mock(handle=123)
+        dialog.window_text.return_value = "Choose IPA File"
+        dialog.is_visible.return_value = True
+        app.windows.return_value = []
+        window.descendants.return_value = [dialog]
+        self.assertEqual(windows.ipa_dialogs(app, window), [dialog])
+        app.windows.return_value = [dialog]
+        self.assertEqual(windows.ipa_dialogs(app, window), [dialog])
+
+    def test_long_ipa_label_with_qt_ellipsis(self):
+        name = "OViewer-run35649462792-attempt1-13a8f890-artifact10661578081.ipa"
+        self.assertTrue(windows.matches_ipa_label("OViewer-run356\u200b49462792-atte…", name))
+        self.assertFalse(windows.matches_ipa_label("OViewer-run35536639587-atte…", name))
+        self.assertFalse(windows.matches_ipa_label("OViewer…", name))
+
     def test_dirty_worktree_never_pushes(self):
         with patch.object(cli, "command", return_value=Mock(stdout=" M file")) as command:
             with self.assertRaises(cli.InstallerError):
@@ -146,6 +163,69 @@ class InstallerTests(unittest.TestCase):
         run = {"id": 1, "run_number": 1, "html_url": "url", "status": "completed", "conclusion": "failure"}
         with self.assertRaises(cli.InstallerError):
             cli.wait_run(Mock(), run, 1)
+
+    def run_auto(self, gh, run):
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(cli.sys, "argv", ["ios_install.py", "auto", "--output", str(self.root)]))
+            stack.enter_context(patch.object(cli, "repository", return_value="test/repo"))
+            stack.enter_context(patch.object(cli, "token", return_value="test-token"))
+            stack.enter_context(patch.object(cli, "GitHub", return_value=gh))
+            stack.enter_context(patch.object(cli, "build", return_value=run))
+            install = stack.enter_context(patch.object(cli, "install", return_value=0))
+            errors = stack.enter_context(redirect_stderr(io.StringIO()))
+            return cli.entrypoint(), install, errors
+
+    def test_auto_unsuccessful_run_exits_without_download_or_install(self):
+        for conclusion in ("failure", "cancelled", "timed_out", "skipped", "neutral", "action_required"):
+            with self.subTest(conclusion=conclusion):
+                gh, run = self.fake_download()
+                run["conclusion"] = conclusion
+                code, install, errors = self.run_auto(gh, run)
+                self.assertEqual(code, 1)
+                self.assertIn("终止进程", errors.getvalue())
+                gh.artifacts.assert_not_called()
+                gh.request.assert_not_called()
+                install.assert_not_called()
+
+    def test_auto_success_downloads_valid_ipa_before_install(self):
+        gh, run = self.fake_download()
+        code, install, _ = self.run_auto(gh, run)
+        self.assertEqual(code, 0)
+        install.assert_called_once()
+        self.assertEqual(cli.ipa_info(install.call_args.args[0])["CFBundleIdentifier"], "org.test.viewer")
+
+    def test_auto_success_without_ipa_exits_without_install(self):
+        gh, run = self.fake_download()
+        gh.artifacts.return_value = []
+        code, install, _ = self.run_auto(gh, run)
+        self.assertEqual(code, 1)
+        gh.request.assert_not_called()
+        install.assert_not_called()
+
+    def test_auto_corrupt_ipa_exits_without_install(self):
+        gh, run = self.fake_download("sha256:incorrect")
+        code, install, _ = self.run_auto(gh, run)
+        self.assertEqual(code, 1)
+        install.assert_not_called()
+        self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_failed_compile_exits_before_runner_cleanup_finishes(self):
+        gh, run = self.fake_download()
+        run.update(status="in_progress", conclusion=None)
+        gh.api.return_value = {"jobs": [{"name": "build-ios", "conclusion": None,
+                                         "steps": [{"name": "Build iOS", "conclusion": "failure"},
+                                                   {"name": "Post Checkout", "conclusion": None}]}]}
+        with patch.object(cli.time, "sleep") as sleep:
+            with self.assertRaisesRegex(cli.InstallerError, "Build iOS"):
+                cli.wait_run(gh, run, 60)
+            sleep.assert_not_called()
+
+    def test_running_build_continues_until_success(self):
+        gh, completed = self.fake_download()
+        running = {**completed, "status": "in_progress", "conclusion": None}
+        gh.api.side_effect = [{"jobs": [{"name": "build-ios", "conclusion": None, "steps": []}]}, completed]
+        with patch.object(cli.time, "sleep"):
+            self.assertEqual(cli.wait_run(gh, running, 60), completed)
 
     def test_unchanged_head_dispatch_uses_unique_request(self):
         args = Mock(remote="origin", timeout=10)

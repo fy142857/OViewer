@@ -34,6 +34,8 @@ git commit -m "your change"
 
 下载后检测 USB iPad，按 UDID 匹配 Sideloadly 中的目标设备，载入 IPA 并触发 Start，等待本次安装的 `Done.` 状态。没有设备时保留下载；多台设备时必须通过 `--udid` 指定。保留现有 Apple ID 与高级签名配置，更新原应用时应继续使用原来的 Apple ID／Bundle ID。
 
+只有本次 iOS 构建状态为 `completed / success` 且产物下载、校验成功，才会继续安装。轮询检测到 iOS job／步骤失败、取消或超时时，立即以退出码 `1` 终止本地脚本，不再下载，不启动 Sideloadly，也不回退安装历史 IPA；无需等待 GitHub runner 清理结束。构建成功但 IPA 缺失、过期或校验失败同样退出。这里终止的是本地自动化进程，GitHub runner 的清理任务仍由 GitHub 完成。
+
 ## 手动版本和本地安装
 
 ```powershell
