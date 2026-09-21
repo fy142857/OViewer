@@ -1,13 +1,13 @@
 # iOS 命令行构建、下载和安装
 
-在项目根目录运行 `ios-install.cmd` 打开中文菜单。Python 3.10+、Git 用于构建和下载；自动安装支持 Windows 10/11，适配 Sideloadly 0.60 的英文界面。
+在项目根目录运行 `tool/ios-install.cmd` 打开中文菜单。Python 3.10+、Git 用于构建和下载；自动安装支持 Windows 10/11，适配 Sideloadly 0.60 的英文界面。
 
 ## 首次准备
 
 ```powershell
 python -m venv tool/.venv
 tool/.venv/Scripts/python.exe -m pip install -r tool/requirements-ios.txt
-.\ios-install.cmd doctor
+.\tool\ios-install.cmd doctor
 ```
 
 安装 [Sideloadly](https://sideloadly.io/) 及其要求的 Apple iTunes/iCloud 桌面组件，在 Sideloadly 中完成一次 Apple ID 登录。iPad 通过 USB 连接、解锁并信任电脑。需要时在 iPad 上开启开发者模式。首次认证、验证码及信任提示需本人处理；脚本不读取或保存 Apple 凭据。
@@ -22,10 +22,10 @@ Sideloadly 路径从注册表、PATH、常用安装目录及 `D:\Sideloadly` 查
 # 先正常提交项目修改（脚本不会擅自提交工作区文件）
 git add <要提交的文件>
 git commit -m "your change"
-.\ios-install.cmd auto
+.\tool\ios-install.cmd auto
 
 # 仅构建和下载（自动模式仍要求先连接 USB iPad）
-.\ios-install.cmd auto --no-install
+.\tool\ios-install.cmd auto --no-install
 ```
 
 `auto` 的第一步是检测 USB iPad，菜单中的自动模式和 `auto --no-install` 也执行此检查。没有设备时立即以退出码 `2` 结束，不读取 GitHub 凭据、不推送、不触发构建、不下载、不启动 Sideloadly。多台设备需通过 `--udid` 指定目标；检测失败或指定设备不存在时同样停止。确认设备后要求干净的工作区，推送当前分支到 `origin`，跟踪同一提交 SHA 的新 iOS push 构建。当前提交已经推送、仅文档变更或其他分支未触发时，使用带唯一请求 ID 的 `workflow_dispatch`。分支必须包含本项目新增的 workflow 输入配置；不会误用其他提交或历史构建。默认等待构建 3600 秒，可用 `--timeout` 修改。
@@ -39,13 +39,13 @@ git commit -m "your change"
 ## 手动版本和本地安装
 
 ```powershell
-.\ios-install.cmd manual                 # 最近 10 次构建 → 选择下载 → 选择本地 IPA 安装
-.\ios-install.cmd list                   # 只列最近 10 次 iOS 构建
-.\ios-install.cmd download               # 下载最近成功的构建，不自动安装
-.\ios-install.cmd download --run-id 123   # 下载指定 iOS 构建
-.\ios-install.cmd install                # 选择本地 IPA 后安装
-.\ios-install.cmd install --ipa "D:\path\OViewer.ipa"
-.\ios-install.cmd install --udid "your-device-udid"
+.\tool\ios-install.cmd manual                 # 最近 10 次构建 → 选择下载 → 选择本地 IPA 安装
+.\tool\ios-install.cmd list                   # 只列最近 10 次 iOS 构建
+.\tool\ios-install.cmd download               # 下载最近成功的构建，不自动安装
+.\tool\ios-install.cmd download --run-id 123   # 下载指定 iOS 构建
+.\tool\ios-install.cmd install                # 选择本地 IPA 后安装
+.\tool\ios-install.cmd install --ipa "D:\path\OViewer.ipa"
+.\tool\ios-install.cmd install --udid "your-device-udid"
 ```
 
 `manual` 和 `download` 下载不要求连接 iPad；选择安装时再检测设备。`manual` 列出最近 10 次构建（包括失败、进行中的记录），显示时间、分支、提交和结果；只有成功且未过期的产物可下载。产物保留 30 天，过期时需重新构建。选择序号 `0` 返回／只保留下载。安装菜单扫描 `ipa/`、项目根目录及 `build/ios/` 中的 IPA；`--output` 可更改下载／扫描目录。

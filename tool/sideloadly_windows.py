@@ -199,7 +199,7 @@ def load_ipa(app, window, path):
 def install_ipa(path, explicit=None, udid=None, timeout=900):
     device = select_device(connected_ipads(), udid)
     if device is None:
-        print(f"未检测到 USB iPad，已保留 IPA：{path}\n连接后运行 ios-install.cmd install。")
+        print(f"未检测到 USB iPad，已保留 IPA：{path}\n连接后在项目根目录运行 tool/ios-install.cmd install。")
         return 2
     executable = find_sideloadly(explicit)
     try:
