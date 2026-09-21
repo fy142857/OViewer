@@ -11,6 +11,7 @@ import '../../core/network/eh_image_cache_manager.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
+import '../../widgets/sprite_thumbnail.dart';
 
 class ThumbnailPreviewScreen extends StatelessWidget {
   final int gid;
@@ -114,8 +115,7 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
             onNotification: _handleScrollNotification,
             child: GridView.builder(
               padding: const EdgeInsets.all(8),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
                 childAspectRatio: 0.7,
                 crossAxisSpacing: 4,
@@ -166,8 +166,8 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .surfaceVariant,
-                                  child: const Icon(
-                                      Icons.broken_image, size: 20),
+                                  child:
+                                      const Icon(Icons.broken_image, size: 20),
                                 ),
                               ),
                       ),
@@ -205,55 +205,16 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
   /// Renders a single thumbnail from a CSS sprite sheet by clipping
   /// the correct region using the offset and size from [ThumbnailInfo].
   Widget _buildSpriteThumbnail(BuildContext context, ThumbnailInfo thumb) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellW = constraints.maxWidth;
-        final cellH = constraints.maxHeight;
-        final scaleX = cellW / thumb.spriteWidth;
-        final scaleY = cellH / thumb.spriteHeight;
-        final scale = scaleX > scaleY ? scaleX : scaleY;
-
-        return ClipRect(
-          child: SizedBox(
-            width: cellW,
-            height: cellH,
-            child: OverflowBox(
-              maxWidth: double.infinity,
-              maxHeight: double.infinity,
-              alignment: Alignment.topLeft,
-              child: Transform.translate(
-                offset: Offset(
-                  -thumb.spriteOffsetX * scale,
-                  -thumb.spriteOffsetY * scale,
-                ),
-                child: Transform.scale(
-                  scale: scale,
-                  alignment: Alignment.topLeft,
-                  child: CachedNetworkImage(
-                    imageUrl: thumb.thumbUrl,
-                    cacheManager: EhImageCacheManager.instance,
-                    placeholder: (_, __) => SizedBox(
-                      width: cellW,
-                      height: cellH,
-                      child: Container(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
-                      ),
-                    ),
-                    errorWidget: (_, __, ___) => SizedBox(
-                      width: cellW,
-                      height: cellH,
-                      child: Container(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
-                        child: const Icon(Icons.broken_image, size: 20),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    return SpriteThumbnail(
+      thumbnail: thumb,
+      image: CachedNetworkImageProvider(thumb.thumbUrl,
+          cacheManager: EhImageCacheManager.instance),
+      placeholder: (_) =>
+          ColoredBox(color: Theme.of(context).colorScheme.surfaceVariant),
+      errorBuilder: (_, __, ___) => ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceVariant,
+        child: const Center(child: Icon(Icons.broken_image, size: 20)),
+      ),
     );
   }
 }

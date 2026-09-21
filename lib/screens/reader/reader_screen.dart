@@ -21,6 +21,7 @@ import '../../repositories/settings_repository.dart';
 import '../../core/l10n/s.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
+import '../../widgets/sprite_thumbnail.dart';
 
 class ReaderScreen extends StatefulWidget {
   final int gid;
@@ -704,47 +705,14 @@ class _ReaderViewState extends State<_ReaderView> {
     }
 
     if (thumb.isSprite) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final cellW = constraints.maxWidth;
-          final cellH = constraints.maxHeight;
-          final scaleX = cellW / thumb.spriteWidth;
-          final scaleY = cellH / thumb.spriteHeight;
-          final scale = scaleX > scaleY ? scaleX : scaleY;
-
-          return Image(
-            image: _imageProvider(thumb.thumbUrl,
-                attempt: _thumbnailAttempts[thumb.thumbUrl] ?? 0),
-            errorBuilder: (_, __, ___) => _thumbnailError(thumb.thumbUrl),
-            frameBuilder: (_, child, frame, __) => frame == null
-                ? Container(color: Colors.grey[800])
-                : ClipRect(
-                    child: SizedBox(
-                      width: cellW,
-                      height: cellH,
-                      child: OverflowBox(
-                        maxWidth: double.infinity,
-                        maxHeight: double.infinity,
-                        alignment: Alignment.topLeft,
-                        child: Transform.translate(
-                          offset: Offset(
-                            -thumb.spriteOffsetX * scale,
-                            -thumb.spriteOffsetY * scale,
-                          ),
-                          child: Transform.scale(
-                            scale: scale,
-                            alignment: Alignment.topLeft,
-                            child: child,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-          );
-        },
+      return SpriteThumbnail(
+        thumbnail: thumb,
+        image: _imageProvider(thumb.thumbUrl,
+            attempt: _thumbnailAttempts[thumb.thumbUrl] ?? 0),
+        placeholder: (_) => ColoredBox(color: Colors.grey[800]!),
+        errorBuilder: (_, __, ___) => _thumbnailError(thumb.thumbUrl),
       );
     }
-
     return Image(
       image: _imageProvider(thumb.thumbUrl,
           attempt: _thumbnailAttempts[thumb.thumbUrl] ?? 0),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../core/parser/gallery_detail_parser.dart';
+import 'sprite_thumbnail.dart';
 
 class ThumbnailGrid extends StatelessWidget {
   final List<ThumbnailInfo> thumbnails;
@@ -52,55 +53,16 @@ class ThumbnailGrid extends StatelessWidget {
   }
 
   Widget _buildSpriteThumbnail(BuildContext context, ThumbnailInfo thumb) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellW = constraints.maxWidth;
-        final cellH = constraints.maxHeight;
-        final scaleX = cellW / thumb.spriteWidth;
-        final scaleY = cellH / thumb.spriteHeight;
-        final scale = scaleX > scaleY ? scaleX : scaleY;
-
-        return ClipRect(
-          child: SizedBox(
-            width: cellW,
-            height: cellH,
-            child: OverflowBox(
-              maxWidth: double.infinity,
-              maxHeight: double.infinity,
-              alignment: Alignment.topLeft,
-              child: Transform.translate(
-                offset: Offset(
-                  -thumb.spriteOffsetX * scale,
-                  -thumb.spriteOffsetY * scale,
-                ),
-                child: Transform.scale(
-                  scale: scale,
-                  alignment: Alignment.topLeft,
-                  child: CachedNetworkImage(
-                    imageUrl: thumb.thumbUrl,
-                    cacheManager: EhImageCacheManager.instance,
-                    placeholder: (_, __) => SizedBox(
-                      width: cellW,
-                      height: cellH,
-                      child: Container(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
-                      ),
-                    ),
-                    errorWidget: (_, __, ___) => SizedBox(
-                      width: cellW,
-                      height: cellH,
-                      child: Container(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
-                        child: const Icon(Icons.broken_image, size: 20),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    return SpriteThumbnail(
+      thumbnail: thumb,
+      image: CachedNetworkImageProvider(thumb.thumbUrl,
+          cacheManager: EhImageCacheManager.instance),
+      placeholder: (_) =>
+          ColoredBox(color: Theme.of(context).colorScheme.surfaceVariant),
+      errorBuilder: (_, __, ___) => ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceVariant,
+        child: const Center(child: Icon(Icons.broken_image, size: 20)),
+      ),
     );
   }
 }
