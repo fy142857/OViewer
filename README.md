@@ -132,18 +132,6 @@ git push origin v1.0.0
 2. **Sideloadly** — GUI 自签工具
 3. **TrollStore** — 如果设备支持（iOS 14.0–16.6.1）
 
-### Windows 一键构建／下载／安装 iOS
-
-项目提供 `tool/ios-install.cmd` 中文命令行菜单，详见 [安装脚本说明](tool/IOS_INSTALL.md)。
-
-```powershell
-.\tool\ios-install.cmd auto     # 检测 USB iPad → 推送当前已提交分支 → 构建、下载、安装
-.\tool\ios-install.cmd manual   # 选择最近 10 次构建 → 下载 → 选择本地 IPA 安装
-.\tool\ios-install.cmd install  # 直接选择项目内的 IPA 安装
-```
-
-IPA 保存到项目 `ipa/`，命名如 `OViewer-Build iOS IPA #14.ipa`。自动模式未连接 USB iPad 时在推送／构建之前退出；手动下载不要求连接设备。首次 Apple ID 登录、验证码与设备信任提示需手动完成。
-
 ## iOS 12 兼容性
 
 - Flutter 3.13.9–3.16.x（项目当前版本线）

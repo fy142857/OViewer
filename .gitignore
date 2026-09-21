@@ -69,3 +69,10 @@ app.*.map.json
 *.ipa
 __pycache__/
 /tool/.venv/
+/ios-install.cmd
+/tool/ios-install.cmd
+/tool/ios_install.py
+/tool/sideloadly_windows.py
+/tool/requirements-ios.txt
+/tool/test_ios_install.py
+/tool/IOS_INSTALL.md

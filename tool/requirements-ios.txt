@@ -1,2 +1,0 @@
-# Only needed for Windows Sideloadly installation, not Actions downloads.
-pywinauto==0.6.9
