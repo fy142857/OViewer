@@ -176,7 +176,7 @@ def download(gh, run, folder):
     if run["status"] != "completed" or run["conclusion"] != "success":
         raise InstallerError("此构建尚未成功完成，请选择成功的构建。")
     artifacts = [a for a in gh.artifacts(run["id"]) if not a["expired"] and
-                 (a["name"].lower().endswith(".ipa") or "ipa" in a["name"].lower() or a["name"] == "artifact")]
+                 ("ipa" in a["name"].lower() or "ios" in a["name"].lower() or a["name"] == "artifact")]
     if not artifacts:
         raise InstallerError("此构建没有可下载的 IPA（可能已过期，保留期为 30 天）。")
     if len(artifacts) == 1:

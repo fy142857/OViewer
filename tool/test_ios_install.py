@@ -83,6 +83,11 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("run10-attempt1-abcdef12", path.name)
         self.assertEqual(json.loads(path.with_suffix(".json").read_text())["run_id"], 10)
 
+    def test_legacy_project_artifact_name(self):
+        gh, run = self.fake_download()
+        gh.artifacts.return_value[0]["name"] = "OViewer-iOS"
+        self.assertIsNotNone(cli.download(gh, run, self.root))
+
     def test_digest_failure_does_not_leave_ipa(self):
         gh, run = self.fake_download("sha256:incorrect")
         with self.assertRaises(cli.InstallerError):
@@ -141,6 +146,29 @@ class InstallerTests(unittest.TestCase):
         run = {"id": 1, "run_number": 1, "html_url": "url", "status": "completed", "conclusion": "failure"}
         with self.assertRaises(cli.InstallerError):
             cli.wait_run(Mock(), run, 1)
+
+    def test_unchanged_head_dispatch_uses_unique_request(self):
+        args = Mock(remote="origin", timeout=10)
+        run = {"id": 2, "head_sha": "abc", "display_title": "iOS installer request123"}
+        gh = Mock()
+        gh.runs.side_effect = [[{"id": 1}], [run]]
+        outputs = ["", "dev", "abc", "abc refs/heads/dev", ""]
+        with patch.object(cli, "command", side_effect=[Mock(stdout=s) for s in outputs]), \
+                patch.object(cli.uuid, "uuid4", return_value=Mock(hex="request123")), \
+                patch.object(cli, "wait_run", return_value=run):
+            self.assertEqual(cli.build(gh, args), run)
+        gh.api.assert_called_once_with("/actions/workflows/build_ios.yml/dispatches",
+                                       {"ref": "dev", "inputs": {"installer_request_id": "request123"}})
+
+    def test_dispatch_branch_race_does_not_download_other_commit(self):
+        args = Mock(remote="origin", timeout=10)
+        gh = Mock()
+        gh.runs.side_effect = [[], [{"id": 2, "head_sha": "other", "display_title": "iOS installer request123"}]]
+        outputs = ["", "dev", "abc", "abc refs/heads/dev", ""]
+        with patch.object(cli, "command", side_effect=[Mock(stdout=s) for s in outputs]), \
+                patch.object(cli.uuid, "uuid4", return_value=Mock(hex="request123")):
+            with self.assertRaisesRegex(cli.InstallerError, "远端分支已变化"):
+                cli.build(gh, args)
 
 
 if __name__ == "__main__":
