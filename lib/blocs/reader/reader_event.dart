@@ -9,11 +9,11 @@ abstract class ReaderEvent extends Equatable {
 class LoadReaderImages extends ReaderEvent {
   final int gid;
   final String token;
-  final int initialPage;
+  final int? initialPage;
   const LoadReaderImages({
     required this.gid,
     required this.token,
-    this.initialPage = 0,
+    this.initialPage,
   });
   @override
   List<Object?> get props => [gid, token, initialPage];
@@ -24,6 +24,14 @@ class LoadImageAtIndex extends ReaderEvent {
   const LoadImageAtIndex(this.index);
   @override
   List<Object?> get props => [index];
+}
+
+class LoadThumbnailAtIndex extends ReaderEvent {
+  final int index;
+  final bool retry;
+  const LoadThumbnailAtIndex(this.index, {this.retry = false});
+  @override
+  List<Object?> get props => [index, retry];
 }
 
 class PageChanged extends ReaderEvent {

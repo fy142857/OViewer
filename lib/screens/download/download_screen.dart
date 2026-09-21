@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:get_it/get_it.dart';
 import '../../blocs/download/download_bloc.dart';
 import '../../blocs/download/download_event.dart';
 import '../../blocs/download/download_state.dart';
 import '../../core/l10n/s.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../models/download_task.dart';
-import '../../repositories/history_repository.dart';
 import '../../widgets/loading_indicator.dart';
 
 class DownloadScreen extends StatefulWidget {
@@ -151,14 +149,10 @@ class _DownloadScreenState extends State<DownloadScreen> {
         ),
         trailing: _buildActionButton(context, task, isActive),
         onTap: task.isComplete
-            ? () async {
-                final progress = await GetIt.I<HistoryRepository>()
-                    .getProgress(task.gid);
-                if (!context.mounted) return;
+            ? () {
                 Navigator.pushNamed(context, '/reader', arguments: {
                       'gid': task.gid,
                       'token': task.token,
-                      'initialPage': progress?.lastReadPage ?? 0,
                     });
               }
             : null,

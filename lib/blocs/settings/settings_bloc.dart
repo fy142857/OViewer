@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/storage/reader_index_cache.dart';
 import '../../core/network/cookie_manager.dart' as app;
 import '../../core/network/dio_client.dart';
 import '../../core/network/eh_image_cache_manager.dart';
@@ -135,6 +136,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     ToggleSiteMode event,
     Emitter<SettingsState> emit,
   ) async {
+    ReaderIndexCache.shared.clear();
     AppConstants.useExHentai = event.useExHentai;
     await _repository.setUseExHentai(event.useExHentai);
     // Site-specific image URLs must not survive a mode switch.

@@ -9,8 +9,10 @@ import 'package:oviewer/blocs/reader/reader_event.dart';
 import 'package:oviewer/blocs/reader/reader_state.dart';
 import 'package:oviewer/core/network/reader_request_controller.dart';
 import 'package:oviewer/core/parser/gallery_detail_parser.dart';
-import 'package:oviewer/models/gallery_detail.dart';
+import 'package:oviewer/models/reader_index_page.dart';
+import 'package:oviewer/core/storage/reader_index_cache.dart';
 import 'package:oviewer/models/gallery_image.dart';
+import 'package:oviewer/models/reading_progress.dart';
 import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
@@ -30,14 +32,16 @@ void main() {
 
   test('closing the reader bloc cancels its active gallery request', () async {
     final galleryRepository = MockGalleryRepository();
+    when(() => galleryRepository.readerIndexCache)
+        .thenReturn(ReaderIndexCache());
     final historyRepository = MockHistoryRepository();
     final settingsRepository = MockSettingsRepository();
     final requestController = ReaderRequestController();
-    final detailCompleter = Completer<GalleryDetail>();
+    final detailCompleter = Completer<ReaderIndexPage>();
     final tokenCompleter = Completer<CancelToken>();
 
     when(() => settingsRepository.getReadingMode()).thenReturn(0);
-    when(() => galleryRepository.fetchGalleryDetail(
+    when(() => galleryRepository.fetchReaderIndexPage(
           42,
           'token',
           cancelToken: any(named: 'cancelToken'),
@@ -102,29 +106,24 @@ void main() {
 
     setUp(() {
       gallery = MockGalleryRepository();
+      when(() => gallery.readerIndexCache).thenReturn(ReaderIndexCache());
       history = MockHistoryRepository();
       settings = MockSettingsRepository();
       when(() => settings.getReadingMode()).thenReturn(0);
       when(() => history.getProgress(any())).thenAnswer((_) async => null);
       when(() => history.updateProgress(any(), any(), any()))
           .thenAnswer((_) async {});
-      when(() => gallery.fetchGalleryDetail(42, 'token',
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
               cancelToken: any(named: 'cancelToken')))
-          .thenAnswer((_) async => GalleryDetail(
-              gid: 42,
-              token: 'token',
-              title: 'Test',
-              thumbUrl: '',
-              category: 'Manga',
-              uploader: '',
-              postedAt: DateTime(2026),
-              fileCount: 1,
-              rating: 0));
-      when(() => gallery.fetchThumbnails(42, 'token',
-              cancelToken: any(named: 'cancelToken')))
-          .thenAnswer((_) async => const ThumbnailResult(thumbnails: [
-                ThumbnailInfo(pageToken: 'page', pageIndex: 0, thumbUrl: '')
-              ], totalPages: 1));
+          .thenAnswer((_) async => ReaderIndexPage(
+                  totalPages: 1,
+                  indexPage: 0,
+                  indexPageCount: 1,
+                  pageSize: 1,
+                  thumbnails: {
+                    0: const ThumbnailInfo(
+                        pageToken: 'page', pageIndex: 0, thumbUrl: '')
+                  }));
       when(() => gallery.fetchImage('page', 42, 0,
               cancelToken: any(named: 'cancelToken')))
           .thenAnswer((_) async => first);
@@ -132,6 +131,137 @@ void main() {
     });
 
     tearDown(() => bloc.close());
+
+    ReaderIndexPage part(int page) => ReaderIndexPage(
+            totalPages: 105,
+            indexPage: page,
+            indexPageCount: 6,
+            pageSize: 20,
+            thumbnails: {
+              for (var i = page * 20; i < ((page + 1) * 20).clamp(0, 105); i++)
+                i: ThumbnailInfo(pageToken: 'page', pageIndex: i, thumbUrl: '')
+            });
+
+    test(
+        'reader is ready with true page count before the target index finishes',
+        () async {
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+              cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => part(0));
+      final target = Completer<ReaderIndexPage>();
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+              page: 5, cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) => target.future);
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+              page: 4, cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => part(4));
+      for (var i = 98; i < 105; i++) {
+        when(() => gallery.fetchImage('page', 42, i,
+                cancelToken: any(named: 'cancelToken')))
+            .thenAnswer((_) async => GalleryImage(
+                index: i,
+                pageUrl: 'page',
+                imageUrl: 'https://example.org/$i.png'));
+      }
+      bloc.add(
+          const LoadReaderImages(gid: 42, token: 'token', initialPage: 101));
+      await waitFor((s) => s.loadingIndices.contains(101));
+      expect(bloc.state.status, ReaderStatus.ready);
+      expect(bloc.state.totalPages, 105);
+      expect(bloc.state.currentPage, 101);
+      expect(bloc.state.thumbnails.length, 20);
+      expect(bloc.state.loadedImages, isEmpty);
+      verifyNever(() => history.getProgress(42));
+      target.complete(part(5));
+      await waitFor((s) => s.loadedImages.containsKey(101));
+    });
+
+    test(
+        'explicit first page does not restore saved progress; null reads it once',
+        () async {
+      when(() => history.getProgress(42)).thenAnswer((_) async =>
+          ReadingProgress(
+              gid: 42,
+              lastReadPage: 2,
+              totalPages: 3,
+              lastReadAt: DateTime(2026)));
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+              cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => ReaderIndexPage(
+                  totalPages: 3,
+                  indexPage: 0,
+                  indexPageCount: 1,
+                  pageSize: 3,
+                  thumbnails: {
+                    for (var i = 0; i < 3; i++)
+                      i: ThumbnailInfo(
+                          pageToken: 'page', pageIndex: i, thumbUrl: '')
+                  }));
+      for (var i = 0; i < 3; i++) {
+        when(() => gallery.fetchImage('page', 42, i,
+                cancelToken: any(named: 'cancelToken')))
+            .thenAnswer((_) async => GalleryImage(
+                index: i,
+                pageUrl: 'page',
+                imageUrl: 'https://example.org/$i.png'));
+      }
+      bloc.add(const LoadReaderImages(gid: 42, token: 'token', initialPage: 0));
+      await waitFor(
+          (s) => s.loadedImages.length == 3 && s.loadingIndices.isEmpty);
+      expect(bloc.state.currentPage, 0);
+      verifyNever(() => history.getProgress(42));
+      await bloc.close();
+      bloc = ReaderBloc(gallery, history, settings);
+      bloc.add(const LoadReaderImages(gid: 42, token: 'token'));
+      await waitFor((s) => s.status == ReaderStatus.ready);
+      expect(bloc.state.currentPage, 2);
+      verify(() => history.getProgress(42)).called(1);
+    });
+
+    test(
+        'a missing index page fails locally and can be retried without leaving reader',
+        () async {
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+              cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => part(0));
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+              page: 1, cancelToken: any(named: 'cancelToken')))
+          .thenThrow(StateError('Offline'));
+      bloc.add(
+          const LoadReaderImages(gid: 42, token: 'token', initialPage: 21));
+      await waitFor((s) => s.failedIndices.contains(21));
+      expect(bloc.state.status, ReaderStatus.ready);
+      expect(bloc.state.totalPages, 105);
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+              page: 1, cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => part(1));
+      for (var i = 18; i < 25; i++) {
+        when(() => gallery.fetchImage('page', 42, i,
+                cancelToken: any(named: 'cancelToken')))
+            .thenAnswer((_) async => GalleryImage(
+                index: i,
+                pageUrl: 'page',
+                imageUrl: 'https://example.org/$i.png'));
+      }
+      bloc.add(const RetryImageAtIndex(21));
+      await waitFor((s) => s.loadedImages.containsKey(21));
+      expect(bloc.state.status, ReaderStatus.ready);
+      expect(bloc.state.failedIndices.contains(21), isFalse);
+    });
+
+    test('stale token refresh is bounded to one new index lookup', () async {
+      var fetches = 0;
+      when(() => gallery.fetchImage('page', 42, 0,
+          cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
+        fetches++;
+        return const GalleryImage(index: 0, pageUrl: 'page', imageUrl: '');
+      });
+      bloc.add(const LoadReaderImages(gid: 42, token: 'token', initialPage: 0));
+      await waitFor((s) => s.failedIndices.contains(0));
+      expect(fetches, 2);
+      verify(() => gallery.invalidateReaderIndex(42, 'token', 0)).called(1);
+      expect(bloc.state.status, ReaderStatus.ready);
+    });
 
     test('retry publishes a replacement URL even when page count is unchanged',
         () async {
@@ -191,14 +321,18 @@ void main() {
     test(
         'preloading stays around the reading position rather than walking the book',
         () async {
-      when(() => gallery.fetchThumbnails(42, 'token',
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
               cancelToken: any(named: 'cancelToken')))
-          .thenAnswer((_) async => ThumbnailResult(
-              thumbnails: List.generate(
-                  20,
-                  (i) => ThumbnailInfo(
-                      pageToken: 'page', pageIndex: i, thumbUrl: '')),
-              totalPages: 1));
+          .thenAnswer((_) async => ReaderIndexPage(
+                  totalPages: 20,
+                  indexPage: 0,
+                  indexPageCount: 1,
+                  pageSize: 20,
+                  thumbnails: {
+                    for (var i = 0; i < 20; i++)
+                      i: ThumbnailInfo(
+                          pageToken: 'page', pageIndex: i, thumbUrl: '')
+                  }));
       for (var index = 0; index < 20; index++) {
         when(() => gallery.fetchImage('page', 42, index,
                 cancelToken: any(named: 'cancelToken')))

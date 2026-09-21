@@ -327,13 +327,9 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
         Expanded(
           child: FilledButton.icon(
             onPressed: () async {
-              final progress = await GetIt.I<HistoryRepository>()
-                  .getProgress(widget.gid);
-              if (!context.mounted) return;
               await Navigator.pushNamed(context, '/reader', arguments: {
                 'gid': widget.gid,
                 'token': widget.token,
-                'initialPage': progress?.lastReadPage ?? 0,
               });
               _loadReadingProgress();
             },
@@ -497,7 +493,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
               await Navigator.pushNamed(context, '/reader', arguments: {
                 'gid': widget.gid,
                 'token': widget.token,
-                'initialPage': index,
+                'initialPage': detail.thumbnails[index].pageIndex,
               });
               _loadReadingProgress();
             },

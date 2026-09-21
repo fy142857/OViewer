@@ -44,7 +44,7 @@ class AppRouter {
           builder: (_) => ReaderScreen(
             gid: args['gid'] as int,
             token: args['token'] as String,
-            initialPage: args['initialPage'] as int? ?? 0,
+            initialPage: args['initialPage'] as int?,
           ),
         );
 

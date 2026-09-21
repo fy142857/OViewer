@@ -37,6 +37,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   final FileService fileService;
   final ReaderImageCache cache;
   final int attempt;
+  final void Function()? onImageReady;
 
   const ReaderImageProvider(
     this.url, {
@@ -44,6 +45,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     required this.fileService,
     required this.cache,
     this.attempt = 0,
+    this.onImageReady,
   });
 
   @override
@@ -79,7 +81,11 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
         try {
           final cached = await cache.read(url);
           _ensureActive();
-          if (cached != null) return await _decode(cached, decode);
+          if (cached != null) {
+            final codec = await _decode(cached, decode);
+            onImageReady?.call();
+            return codec;
+          }
         } catch (_) {
           _ensureActive();
           // A missing or corrupt cache entry must not block a fresh download.
@@ -124,6 +130,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
         codec.dispose();
         _ensureActive();
       }
+      onImageReady?.call();
       return codec;
     } catch (_) {
       scheduleMicrotask(() => PaintingBinding.instance.imageCache.evict(this));

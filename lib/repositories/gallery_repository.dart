@@ -11,13 +11,55 @@ import '../core/constants/app_constants.dart';
 import '../models/gallery_preview.dart';
 import '../models/gallery_detail.dart';
 import '../models/gallery_image.dart';
+import '../models/reader_index_page.dart';
+import '../core/storage/reader_index_cache.dart';
 
 class GalleryRepository {
   static final _log = Logger();
   final DioClient _dio;
+  final ReaderIndexCache readerIndexCache;
   final Map<int, _ApiCredentials> _apiCredentials = {};
 
-  GalleryRepository(this._dio);
+  GalleryRepository(this._dio, {ReaderIndexCache? indexCache})
+      : readerIndexCache = indexCache ?? ReaderIndexCache.shared;
+
+  ReaderIndexPage? cachedReaderIndex(int gid, String token, {int page = 0}) =>
+      readerIndexCache.get(AppConstants.baseUrl, gid, token, page);
+
+  void invalidateReaderIndex(int gid, String token, int page) =>
+      readerIndexCache.remove(AppConstants.baseUrl, gid, token, page);
+
+  Future<ReaderIndexPage> fetchReaderIndexPage(int gid, String token,
+      {int page = 0, CancelToken? cancelToken}) async {
+    final cached = cachedReaderIndex(gid, token, page: page);
+    if (cached != null) return cached;
+    final site = AppConstants.baseUrl;
+    final generation = readerIndexCache.generation;
+    final html = await _dio.get(
+        ApiEndpoints.galleryThumbnails(gid, token, page: page),
+        cancelToken: cancelToken);
+    if (cancelToken?.isCancelled == true ||
+        site != AppConstants.baseUrl ||
+        generation != readerIndexCache.generation) {
+      throw StateError('Reader index session is no longer active.');
+    }
+    final result = GalleryDetailParser.parseReaderIndex(html, page: page);
+    readerIndexCache.put(site, gid, token, result);
+    return result;
+  }
+
+  void _seedReaderIndex(String html, String site, int generation, int gid,
+      String token, int page, CancelToken? cancelToken) {
+    if (cancelToken?.isCancelled == true ||
+        site != AppConstants.baseUrl ||
+        generation != readerIndexCache.generation) return;
+    try {
+      readerIndexCache.put(site, gid, token,
+          GalleryDetailParser.parseReaderIndex(html, page: page));
+    } on FormatException {
+      // Detail/preview parsing remains tolerant; invalid data never seeds cache.
+    }
+  }
 
   /// Resolve a URL that may be relative to absolute.
   /// Handles: full URLs, absolute paths (/...), query-only (?...).
@@ -106,7 +148,10 @@ class GalleryRepository {
     CancelToken? cancelToken,
   }) async {
     final url = ApiEndpoints.galleryDetail(gid, token);
+    final site = AppConstants.baseUrl;
+    final generation = readerIndexCache.generation;
     final html = await _dio.get(url, cancelToken: cancelToken);
+    _seedReaderIndex(html, site, generation, gid, token, 0, cancelToken);
     _cacheApiCredentials(gid, html);
     final detail = GalleryDetailParser.parse(html, gid, token);
 
@@ -182,7 +227,10 @@ class GalleryRepository {
     CancelToken? cancelToken,
   }) async {
     final url = ApiEndpoints.galleryThumbnails(gid, token, page: page);
+    final site = AppConstants.baseUrl;
+    final generation = readerIndexCache.generation;
     final html = await _dio.get(url, cancelToken: cancelToken);
+    _seedReaderIndex(html, site, generation, gid, token, page, cancelToken);
     final thumbnails = GalleryDetailParser.parseThumbnails(html);
     final totalPages = GalleryDetailParser.parseThumbnailPageCount(html);
     return ThumbnailResult(thumbnails: thumbnails, totalPages: totalPages);

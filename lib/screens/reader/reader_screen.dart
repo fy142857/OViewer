@@ -25,13 +25,13 @@ import '../../widgets/error_widget.dart';
 class ReaderScreen extends StatefulWidget {
   final int gid;
   final String token;
-  final int initialPage;
+  final int? initialPage;
 
   const ReaderScreen({
     super.key,
     required this.gid,
     required this.token,
-    this.initialPage = 0,
+    this.initialPage,
   });
 
   @override
@@ -39,7 +39,7 @@ class ReaderScreen extends StatefulWidget {
 }
 
 class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
-  int? _resolvedPage;
+  final _startup = Stopwatch();
   late final ReaderRequestController _requests;
 
   @override
@@ -47,7 +47,7 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
     super.initState();
     _requests = ReaderRequestController();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _resolveStartPage();
+    _startup.start();
   }
 
   @override
@@ -76,29 +76,8 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
     super.dispose();
   }
 
-  Future<void> _resolveStartPage() async {
-    var page = widget.initialPage;
-    if (page == 0) {
-      final progress =
-          await GetIt.I<HistoryRepository>().getProgress(widget.gid);
-      if (progress != null && progress.lastReadPage > 0) {
-        page = progress.lastReadPage;
-      }
-    }
-    if (mounted && !_requests.isCancelled) {
-      setState(() => _resolvedPage = page);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final page = _resolvedPage;
-    if (page == null) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        body: LoadingIndicator(message: S.of(context).loadingReader),
-      );
-    }
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: BlocProvider(
@@ -110,19 +89,20 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
         )..add(LoadReaderImages(
             gid: widget.gid,
             token: widget.token,
-            initialPage: page,
+            initialPage: widget.initialPage,
           )),
-        child: _ReaderView(initialPage: page, requests: _requests),
+        child:
+            _ReaderView(startup: _startup, requests: _requests),
       ),
     );
   }
 }
 
 class _ReaderView extends StatefulWidget {
-  final int initialPage;
+  final Stopwatch startup;
   final ReaderRequestController requests;
   const _ReaderView({
-    required this.initialPage,
+    required this.startup,
     required this.requests,
   });
 
@@ -140,11 +120,15 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _isZoomed = false;
   late final FileService _imageFiles;
   final Map<String, int> _thumbnailAttempts = {};
+  bool _positionInitialized = false;
+  bool _firstImageLogged = false;
+  int? _lastReadingMode;
+  int? _sliderPage;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: widget.initialPage);
+    _pageController = PageController();
     _imageFiles = EhImageCacheManager.readerFileService(
       GetIt.I<app.CookieManager>(),
       widget.requests,
@@ -225,6 +209,15 @@ class _ReaderViewState extends State<_ReaderView> {
           prev.showUI != curr.showUI,
       listener: (context, state) {
         if (widget.requests.isCancelled) return;
+        if (state.status == ReaderStatus.ready &&
+            (!_positionInitialized ||
+                (state.readingMode != 2 &&
+                    _lastReadingMode != state.readingMode))) {
+          _pageController.dispose();
+          _pageController = PageController(initialPage: state.currentPage);
+          _positionInitialized = true;
+        }
+        _lastReadingMode = state.readingMode;
         SystemChrome.setEnabledSystemUIMode(
           state.showUI || state.status == ReaderStatus.error
               ? SystemUiMode.edgeToEdge
@@ -241,7 +234,8 @@ class _ReaderViewState extends State<_ReaderView> {
         }
       },
       builder: (context, state) {
-        if (state.status == ReaderStatus.loading) {
+        if (state.status == ReaderStatus.initial ||
+            state.status == ReaderStatus.loading) {
           return Scaffold(
             backgroundColor: Colors.black,
             body: LoadingIndicator(message: S.of(context).loadingReader),
@@ -306,11 +300,26 @@ class _ReaderViewState extends State<_ReaderView> {
   // ---- Horizontal PageView Reader (LR / RL) ----
   void _toggleUI() => context.read<ReaderBloc>().add(ToggleReaderUI());
 
-  ReaderImageProvider _imageProvider(String url, {int attempt = 0}) =>
+  ReaderImageProvider _imageProvider(String url,
+          {int attempt = 0, int? page}) =>
       ReaderImageProvider(url,
           requests: widget.requests,
           fileService: _imageFiles,
           cache: ReaderImageCache(EhImageCacheManager.instance),
+          onImageReady: page == null
+              ? null
+              : () {
+                  if (!_firstImageLogged &&
+                      mounted &&
+                      page == context.read<ReaderBloc>().state.currentPage) {
+                    _firstImageLogged = true;
+                    assert(() {
+                      debugPrint(
+                          '[reader] first image visible in ${widget.startup.elapsedMilliseconds}ms');
+                      return true;
+                    }());
+                  }
+                },
           attempt: attempt);
 
   Widget _imageError(int index) => Center(
@@ -355,7 +364,7 @@ class _ReaderViewState extends State<_ReaderView> {
         return PhotoViewGalleryPageOptions(
           onTapUp: (_, __, ___) => _toggleUI(),
           imageProvider: _imageProvider(image.imageUrl,
-              attempt: state.imageAttempts[index] ?? 0),
+              page: index, attempt: state.imageAttempts[index] ?? 0),
           filterQuality: FilterQuality.medium,
           initialScale: PhotoViewComputedScale.contained,
           minScale: PhotoViewComputedScale.contained,
@@ -422,7 +431,7 @@ class _ReaderViewState extends State<_ReaderView> {
             height: imageHeight.clamp(200.0, screenWidth * 3),
             child: Image(
               image: _imageProvider(image.imageUrl,
-                  attempt: state.imageAttempts[index] ?? 0),
+                  page: index, attempt: state.imageAttempts[index] ?? 0),
               fit: BoxFit.fitWidth,
               loadingBuilder: (_, child, progress) => progress == null
                   ? child
@@ -554,14 +563,14 @@ class _ReaderViewState extends State<_ReaderView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Thumbnail strip
-            if (state.thumbnails.isNotEmpty)
+            if (state.totalPages > 0)
               SizedBox(
                 height: 56,
                 child: ListView.builder(
                   controller: _thumbnailScrollController,
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  itemCount: state.thumbnails.length,
+                  itemCount: state.totalPages,
                   itemBuilder: (_, index) {
                     final thumb = state.thumbnails[index];
                     final isCurrent = index == state.currentPage;
@@ -585,7 +594,9 @@ class _ReaderViewState extends State<_ReaderView> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(3),
-                          child: _buildStripThumbnail(thumb, index),
+                          child: thumb == null
+                              ? _pendingThumbnail(state, index)
+                              : _buildStripThumbnail(thumb, index),
                         ),
                       ),
                     );
@@ -598,12 +609,12 @@ class _ReaderViewState extends State<_ReaderView> {
               child: Row(
                 children: [
                   Text(
-                    '${state.currentPage + 1}',
+                    '${(_sliderPage ?? state.currentPage) + 1}',
                     style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   Expanded(
                     child: Slider(
-                      value: state.currentPage
+                      value: (_sliderPage ?? state.currentPage)
                           .toDouble()
                           .clamp(0, (state.totalPages - 1).toDouble()),
                       min: 0,
@@ -611,7 +622,11 @@ class _ReaderViewState extends State<_ReaderView> {
                       divisions:
                           state.totalPages > 1 ? state.totalPages - 1 : 1,
                       onChanged: (value) {
+                        setState(() => _sliderPage = value.round());
+                      },
+                      onChangeEnd: (value) {
                         final page = value.round();
+                        setState(() => _sliderPage = null);
                         if (state.readingMode == 2) {
                           _verticalScrollController.jumpTo(index: page);
                         } else {
@@ -712,6 +727,26 @@ class _ReaderViewState extends State<_ReaderView> {
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => _thumbnailError(thumb.thumbUrl),
     );
+  }
+
+  Widget _pendingThumbnail(ReaderState state, int index) {
+    if (state.failedThumbnails.contains(index)) {
+      return IconButton(
+          padding: EdgeInsets.zero,
+          tooltip: S.of(context).retry,
+          icon: const Icon(Icons.refresh, color: Colors.white70, size: 20),
+          onPressed: () => context
+              .read<ReaderBloc>()
+              .add(LoadThumbnailAtIndex(index, retry: true)));
+    }
+    if (!state.loadingThumbnails.contains(index)) {
+      context.read<ReaderBloc>().add(LoadThumbnailAtIndex(index));
+    }
+    return ColoredBox(
+        color: Colors.black26,
+        child: Center(
+            child: Text('${index + 1}',
+                style: const TextStyle(color: Colors.white54, fontSize: 10))));
   }
 
   Widget _thumbnailError(String url) => IconButton(

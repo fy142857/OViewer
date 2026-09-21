@@ -3,8 +3,52 @@ import 'package:html/dom.dart';
 import '../../models/gallery_detail.dart';
 import '../../models/gallery_tag.dart';
 import '../../models/gallery_comment.dart';
+import '../../models/reader_index_page.dart';
 
 class GalleryDetailParser {
+  /// Read only the metadata needed to start reading; never fetch title APIs.
+  static ReaderIndexPage parseReaderIndex(String html, {int page = 0}) {
+    final document = html_parser.parse(html);
+    var count = 0;
+    for (final row in document.querySelectorAll('#gdd tr')) {
+      final cells = row.querySelectorAll('td');
+      if (cells.length > 1 && cells.first.text.trim() == 'Length:') {
+        count = _extractInt(cells[1].text);
+      }
+    }
+    final thumbs = parseThumbnails(html);
+    if (count <= 0 || thumbs.isEmpty) {
+      throw const FormatException('No readable gallery index was returned.');
+    }
+    final indices = thumbs.map((t) => t.pageIndex).toSet().toList()..sort();
+    final start = indices.first;
+    final end = indices.last;
+    if (start < 0 ||
+        end >= count ||
+        end - start + 1 != indices.length ||
+        (page == 0 && start != 0) ||
+        (page > 0 && (start == 0 || start % page != 0))) {
+      throw const FormatException('Gallery index page range is inconsistent.');
+    }
+    final pageSize = page == 0 ? end + 1 : start ~/ page;
+    final pageCount = (count + pageSize - 1) ~/ pageSize;
+    if (document.querySelector('table.ptt') != null &&
+        parseThumbnailPageCount(html) != pageCount) {
+      throw const FormatException(
+          'Gallery pagination does not match its page range.');
+    }
+    final expectedEnd = ((page + 1) * pageSize).clamp(0, count) - 1;
+    if (end != expectedEnd) {
+      throw const FormatException('Gallery index page is incomplete.');
+    }
+    return ReaderIndexPage(
+        totalPages: count,
+        indexPage: page,
+        indexPageCount: pageCount,
+        pageSize: pageSize,
+        thumbnails: {for (final thumb in thumbs) thumb.pageIndex: thumb});
+  }
+
   /// Parse gallery detail page HTML into GalleryDetail
   static GalleryDetail parse(String htmlString, int gid, String token) {
     final document = html_parser.parse(htmlString);

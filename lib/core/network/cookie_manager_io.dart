@@ -5,6 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart' as webview;
 import 'package:path_provider/path_provider.dart';
 import 'package:logger/logger.dart';
 import '../constants/app_constants.dart';
+import '../storage/reader_index_cache.dart';
 
 class CookieManager {
   static final _log = Logger();
@@ -115,6 +116,7 @@ class CookieManager {
     required String passHash,
     String? igneous,
   }) async {
+    ReaderIndexCache.shared.clear();
     final ehUri = Uri.parse(AppConstants.ehBaseUrl);
     final exUri = Uri.parse(AppConstants.exBaseUrl);
 
@@ -199,6 +201,7 @@ class CookieManager {
   }
 
   Future<void> clearCookies() async {
+    ReaderIndexCache.shared.clear();
     await _cookieJar.deleteAll();
     _log.i('All cookies cleared');
   }

@@ -11,7 +11,9 @@ class ReaderState extends Equatable {
   final int currentPage;
   final int totalPages;
   final Map<int, GalleryImage> loadedImages;
-  final List<ThumbnailInfo> thumbnails;
+  final Map<int, ThumbnailInfo> thumbnails;
+  final Set<int> loadingThumbnails;
+  final Set<int> failedThumbnails;
   final Set<int> loadingIndices;
   final Set<int> failedIndices;
   final Map<int, int> imageAttempts;
@@ -26,7 +28,9 @@ class ReaderState extends Equatable {
     this.currentPage = 0,
     this.totalPages = 0,
     this.loadedImages = const {},
-    this.thumbnails = const [],
+    this.thumbnails = const {},
+    this.loadingThumbnails = const {},
+    this.failedThumbnails = const {},
     this.loadingIndices = const {},
     this.failedIndices = const {},
     this.imageAttempts = const {},
@@ -44,7 +48,9 @@ class ReaderState extends Equatable {
     int? currentPage,
     int? totalPages,
     Map<int, GalleryImage>? loadedImages,
-    List<ThumbnailInfo>? thumbnails,
+    Map<int, ThumbnailInfo>? thumbnails,
+    Set<int>? loadingThumbnails,
+    Set<int>? failedThumbnails,
     Set<int>? loadingIndices,
     Set<int>? failedIndices,
     Map<int, int>? imageAttempts,
@@ -60,6 +66,8 @@ class ReaderState extends Equatable {
       totalPages: totalPages ?? this.totalPages,
       loadedImages: loadedImages ?? this.loadedImages,
       thumbnails: thumbnails ?? this.thumbnails,
+      loadingThumbnails: loadingThumbnails ?? this.loadingThumbnails,
+      failedThumbnails: failedThumbnails ?? this.failedThumbnails,
       loadingIndices: loadingIndices ?? this.loadingIndices,
       failedIndices: failedIndices ?? this.failedIndices,
       imageAttempts: imageAttempts ?? this.imageAttempts,
@@ -78,6 +86,8 @@ class ReaderState extends Equatable {
         totalPages,
         loadedImages,
         thumbnails,
+        loadingThumbnails,
+        failedThumbnails,
         loadingIndices,
         failedIndices,
         imageAttempts,
