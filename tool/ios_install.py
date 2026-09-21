@@ -22,6 +22,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = "build_ios.yml"
+WORKFLOW_NAME = "Build iOS IPA"
 MAX_BYTES = 2 * 1024**3
 
 
@@ -180,6 +181,16 @@ def choose(items, label):
         print("请输入有效序号。")
 
 
+def ipa_filename(run, artifact, multiple_artifacts=False):
+    name = f"OViewer-{WORKFLOW_NAME} #{int(run['run_number'])}"
+    attempt = int(run.get("run_attempt", 1))
+    if attempt > 1:
+        name += f" (attempt {attempt})"
+    if multiple_artifacts:
+        name += f" (artifact {int(artifact['id'])})"
+    return name + ".ipa"
+
+
 def download(gh, run, folder):
     require_successful_run(run)
     artifacts = [a for a in gh.artifacts(run["id"]) if not a["expired"] and
@@ -195,7 +206,7 @@ def download(gh, run, folder):
         if artifact is None:
             return None
     folder.mkdir(parents=True, exist_ok=True)
-    name = f"OViewer-run{run['id']}-attempt{run.get('run_attempt', 1)}-{run['head_sha'][:8]}-artifact{artifact['id']}.ipa"
+    name = ipa_filename(run, artifact, multiple_artifacts=len(artifacts) > 1)
     destination = folder / name
     print(f"下载构建 #{run['run_number']} → {destination}", flush=True)
     with tempfile.TemporaryDirectory(prefix=".ipa-", dir=folder) as temp:
@@ -217,7 +228,8 @@ def download(gh, run, folder):
             raise InstallerError("产物 SHA-256 不匹配，未保存 IPA。")
         info = unpack_artifact(raw, staged)
         staged.replace(destination)
-    metadata = {"run_url": run["html_url"], "run_id": run["id"], "sha": run["head_sha"],
+    metadata = {"run_url": run["html_url"], "run_id": run["id"], "run_number": run["run_number"],
+                "run_attempt": run.get("run_attempt", 1), "workflow_name": WORKFLOW_NAME, "sha": run["head_sha"],
                 "artifact_id": artifact["id"], "artifact_digest": wanted,
                 "ipa_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
                 "bundle_id": info["CFBundleIdentifier"], "version": info.get("CFBundleShortVersionString")}
@@ -344,6 +356,18 @@ def parser():
     return p
 
 
+def auto_device_preflight(args):
+    from sideloadly_windows import connected_ipads, select_device
+    device = select_device(connected_ipads(), args.udid)
+    if device is None:
+        print("未检测到 USB iPad，自动流程未启动：不推送、不触发构建、不下载、不启动 Sideloadly。", flush=True)
+        return False
+    # Keep the same device throughout the build; installation rechecks this UDID.
+    args.udid = device["udid"]
+    print("已检测到 USB iPad，开始自动流程。", flush=True)
+    return True
+
+
 def main():
     args = parser().parse_args()
     if args.timeout <= 0 or args.install_timeout <= 0:
@@ -351,10 +375,13 @@ def main():
     args.output = args.output.resolve()
     if args.mode == "menu":
         modes = ["auto", "manual", "install", "doctor"]
-        print("1. 推送当前提交、构建、下载并安装\n2. 选择最近 10 次 iOS 构建、下载并选择安装\n3. 安装本地 IPA\n4. 检查安装环境")
+        print("1. 检测 USB iPad 后推送、构建、下载并安装\n2. 选择最近 10 次 iOS 构建、下载并选择安装\n3. 安装本地 IPA\n4. 检查安装环境")
         args.mode = choose(modes, "操作")
         if args.mode is None:
             return 0
+    # This gate deliberately precedes Git, credentials and GitHub requests, including --no-install.
+    if args.mode == "auto" and not auto_device_preflight(args):
+        return 2
     if args.mode == "doctor":
         from sideloadly_windows import doctor
         doctor(args.sideloadly)

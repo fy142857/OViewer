@@ -137,12 +137,12 @@ git push origin v1.0.0
 项目提供 `ios-install.cmd` 中文命令行菜单，详见 [安装脚本说明](tool/IOS_INSTALL.md)。
 
 ```powershell
-.\ios-install.cmd auto     # 推送当前已提交分支 → 等待 Actions → 下载 IPA → Sideloadly 安装
+.\ios-install.cmd auto     # 检测 USB iPad → 推送当前已提交分支 → 构建、下载、安装
 .\ios-install.cmd manual   # 选择最近 10 次构建 → 下载 → 选择本地 IPA 安装
 .\ios-install.cmd install  # 直接选择项目内的 IPA 安装
 ```
 
-IPA 保存到项目 `ipa/`，未连接 USB iPad 时保留文件；首次 Apple ID 登录、验证码与设备信任提示需手动完成。
+IPA 保存到项目 `ipa/`，命名如 `OViewer-Build iOS IPA #14.ipa`。自动模式未连接 USB iPad 时在推送／构建之前退出；手动下载不要求连接设备。首次 Apple ID 登录、验证码与设备信任提示需手动完成。
 
 ## iOS 12 兼容性
 

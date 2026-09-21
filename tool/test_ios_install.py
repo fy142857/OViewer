@@ -81,8 +81,18 @@ class InstallerTests(unittest.TestCase):
     def test_download_verified_with_provenance(self):
         gh, run = self.fake_download()
         path = cli.download(gh, run, self.root)
-        self.assertIn("run10-attempt1-abcdef12", path.name)
-        self.assertEqual(json.loads(path.with_suffix(".json").read_text())["run_id"], 10)
+        self.assertEqual(path.name, "OViewer-Build iOS IPA #3.ipa")
+        metadata = json.loads(path.with_suffix(".json").read_text())
+        self.assertEqual(metadata["run_id"], 10)
+        self.assertEqual(metadata["run_number"], 3)
+
+    def test_reruns_and_multiple_artifacts_keep_distinct_names(self):
+        first = cli.ipa_filename({"run_number": 3}, {"id": 20})
+        rerun = cli.ipa_filename({"run_number": 3, "run_attempt": 2}, {"id": 21})
+        multiple = cli.ipa_filename({"run_number": 3}, {"id": 22}, multiple_artifacts=True)
+        self.assertEqual(len({first, rerun, multiple}), 3)
+        self.assertIn("#3 (attempt 2)", rerun)
+        self.assertIn("#3 (artifact 22)", multiple)
 
     def test_legacy_project_artifact_name(self):
         gh, run = self.fake_download()
@@ -166,6 +176,7 @@ class InstallerTests(unittest.TestCase):
 
     def run_auto(self, gh, run):
         with ExitStack() as stack:
+            stack.enter_context(patch.object(windows, "connected_ipads", return_value=[{"udid": "1234567890abcdef1234"}]))
             stack.enter_context(patch.object(cli.sys, "argv", ["ios_install.py", "auto", "--output", str(self.root)]))
             stack.enter_context(patch.object(cli, "repository", return_value="test/repo"))
             stack.enter_context(patch.object(cli, "token", return_value="test-token"))
@@ -174,6 +185,42 @@ class InstallerTests(unittest.TestCase):
             install = stack.enter_context(patch.object(cli, "install", return_value=0))
             errors = stack.enter_context(redirect_stderr(io.StringIO()))
             return cli.entrypoint(), install, errors
+
+    def test_auto_no_ipad_stops_before_any_git_or_github_access(self):
+        for argv in (["auto"], ["auto", "--no-install"], []):
+            with self.subTest(argv=argv), ExitStack() as stack:
+                stack.enter_context(patch.object(cli.sys, "argv", ["ios_install.py", *argv]))
+                stack.enter_context(patch.object(cli, "choose", return_value="auto"))
+                stack.enter_context(patch.object(windows, "connected_ipads", return_value=[]))
+                forbidden = [stack.enter_context(patch.object(cli, name)) for name in
+                             ("command", "repository", "token", "GitHub", "build", "download", "install")]
+                self.assertEqual(cli.entrypoint(), 2)
+                for action in forbidden:
+                    action.assert_not_called()
+
+    def test_auto_device_detection_error_stops_before_github(self):
+        with patch.object(cli.sys, "argv", ["ios_install.py", "auto"]), \
+                patch.object(windows, "connected_ipads", side_effect=RuntimeError("PnP error")), \
+                patch.object(cli, "repository") as repo, redirect_stderr(io.StringIO()):
+            self.assertEqual(cli.entrypoint(), 1)
+            repo.assert_not_called()
+
+    def test_manual_download_without_ipad_uses_build_number(self):
+        gh, run = self.fake_download()
+        run.update(created_at="2026-09-22T00:00:00Z", head_branch="dev")
+        gh.runs.return_value = [run]
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(cli.sys, "argv", ["ios_install.py", "manual", "--no-install", "--output", str(self.root)]))
+            stack.enter_context(patch.object(cli, "choose", return_value=run))
+            stack.enter_context(patch.object(cli, "repository", return_value="test/repo"))
+            stack.enter_context(patch.object(cli, "token", return_value="test-token"))
+            stack.enter_context(patch.object(cli, "GitHub", return_value=gh))
+            detect = stack.enter_context(patch.object(windows, "connected_ipads"))
+            install = stack.enter_context(patch.object(cli, "install"))
+            self.assertEqual(cli.entrypoint(), 0)
+            detect.assert_not_called()
+            install.assert_not_called()
+            self.assertTrue((self.root / "OViewer-Build iOS IPA #3.ipa").is_file())
 
     def test_auto_unsuccessful_run_exits_without_download_or_install(self):
         for conclusion in ("failure", "cancelled", "timed_out", "skipped", "neutral", "action_required"):
@@ -192,6 +239,8 @@ class InstallerTests(unittest.TestCase):
         code, install, _ = self.run_auto(gh, run)
         self.assertEqual(code, 0)
         install.assert_called_once()
+        self.assertEqual(install.call_args.args[0].name, "OViewer-Build iOS IPA #3.ipa")
+        self.assertEqual(install.call_args.args[1].udid, "1234567890abcdef1234")
         self.assertEqual(cli.ipa_info(install.call_args.args[0])["CFBundleIdentifier"], "org.test.viewer")
 
     def test_auto_success_without_ipa_exits_without_install(self):

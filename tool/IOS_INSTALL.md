@@ -24,15 +24,15 @@ git add <要提交的文件>
 git commit -m "your change"
 .\ios-install.cmd auto
 
-# 仅构建和下载
+# 仅构建和下载（自动模式仍要求先连接 USB iPad）
 .\ios-install.cmd auto --no-install
 ```
 
-`auto` 要求干净的工作区，推送当前分支到 `origin`，跟踪同一提交 SHA 的新 iOS push 构建。当前提交已经推送、仅文档变更或其他分支未触发时，使用带唯一请求 ID 的 `workflow_dispatch`。分支必须包含本项目新增的 workflow 输入配置；不会误用其他提交或历史构建。默认等待构建 3600 秒，可用 `--timeout` 修改。
+`auto` 的第一步是检测 USB iPad，菜单中的自动模式和 `auto --no-install` 也执行此检查。没有设备时立即以退出码 `2` 结束，不读取 GitHub 凭据、不推送、不触发构建、不下载、不启动 Sideloadly。多台设备需通过 `--udid` 指定目标；检测失败或指定设备不存在时同样停止。确认设备后要求干净的工作区，推送当前分支到 `origin`，跟踪同一提交 SHA 的新 iOS push 构建。当前提交已经推送、仅文档变更或其他分支未触发时，使用带唯一请求 ID 的 `workflow_dispatch`。分支必须包含本项目新增的 workflow 输入配置；不会误用其他提交或历史构建。默认等待构建 3600 秒，可用 `--timeout` 修改。
 
-下载保存至项目 `ipa/`，文件名包含 run ID、重跑次数、提交 SHA、artifact ID，每个 IPA 附带来源和 SHA-256 的 JSON 文件。下载使用临时文件、SHA-256（GitHub 提供时）与 IPA CRC 校验，成功后原子替换。兼容当前 `archive: false` 直接上传 IPA 和历史 ZIP 包装格式。下载目录与 IPA 已加入 Git 忽略规则。
+自动和手动下载均保存至项目 `ipa/`，文件名显示 GitHub Actions 构建序号，例如 `OViewer-Build iOS IPA #14.ipa`。同一构建重跑时加上 ` (attempt 2)`，同一构建有多个可选产物时加上 artifact ID，避免不同版本互相覆盖。每个 IPA 附带 JSON 文件，记录构建序号、run ID、重跑次数、提交 SHA、artifact ID、来源和 SHA-256。下载使用临时文件、SHA-256（GitHub 提供时）与 IPA CRC 校验，成功后原子替换。兼容当前 `archive: false` 直接上传 IPA 和历史 ZIP 包装格式。下载目录与 IPA 已加入 Git 忽略规则。
 
-下载后检测 USB iPad，按 UDID 匹配 Sideloadly 中的目标设备，载入 IPA 并触发 Start，等待本次安装的 `Done.` 状态。没有设备时保留下载；多台设备时必须通过 `--udid` 指定。保留现有 Apple ID 与高级签名配置，更新原应用时应继续使用原来的 Apple ID／Bundle ID。
+下载后再次检测 USB iPad，按启动时确定的 UDID 匹配 Sideloadly 中的目标设备，载入 IPA 并触发 Start，等待本次安装的 `Done.` 状态。若设备在构建期间断开，保留下载并停止安装，不会改选其他设备。保留现有 Apple ID 与高级签名配置，更新原应用时应继续使用原来的 Apple ID／Bundle ID。
 
 只有本次 iOS 构建状态为 `completed / success` 且产物下载、校验成功，才会继续安装。轮询检测到 iOS job／步骤失败、取消或超时时，立即以退出码 `1` 终止本地脚本，不再下载，不启动 Sideloadly，也不回退安装历史 IPA；无需等待 GitHub runner 清理结束。构建成功但 IPA 缺失、过期或校验失败同样退出。这里终止的是本地自动化进程，GitHub runner 的清理任务仍由 GitHub 完成。
 
@@ -48,11 +48,11 @@ git commit -m "your change"
 .\ios-install.cmd install --udid "your-device-udid"
 ```
 
-`manual` 列出最近 10 次构建（包括失败、进行中的记录），显示时间、分支、提交和结果；只有成功且未过期的产物可下载。产物保留 30 天，过期时需重新构建。选择序号 `0` 返回／只保留下载。安装菜单扫描 `ipa/`、项目根目录及 `build/ios/` 中的 IPA；`--output` 可更改下载／扫描目录。
+`manual` 和 `download` 下载不要求连接 iPad；选择安装时再检测设备。`manual` 列出最近 10 次构建（包括失败、进行中的记录），显示时间、分支、提交和结果；只有成功且未过期的产物可下载。产物保留 30 天，过期时需重新构建。选择序号 `0` 返回／只保留下载。安装菜单扫描 `ipa/`、项目根目录及 `build/ios/` 中的 IPA；`--output` 可更改下载／扫描目录。
 
 首次认证或签名错误请查看 Sideloadly 窗口。自动安装依赖其 UI 控件；界面不匹配时会停止并报错，不会使用屏幕固定坐标盲点。默认安装超时 900 秒，可通过 `--install-timeout` 调整。Ctrl+C 只停止脚本等待，不会取消已启动的 Actions 或 Sideloadly 任务。
 
-退出码：`0` 操作完成或用户退出；`1` 失败／未确认成功；`2` IPA 已保留但未连接 USB iPad；`130` 用户中断。
+退出码：`0` 操作完成或用户退出；`1` 失败／未确认成功；`2` 未连接 USB iPad（自动流程未启动，或安装时已保留下载）；`130` 用户中断。
 
 ## 验证
 
