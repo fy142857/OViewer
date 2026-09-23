@@ -70,6 +70,26 @@ class ReleaseGuards(unittest.TestCase):
             with self.assertRaises(VersionError):
                 artifact(None, artifacts, "OViewer.ipa")
 
+    def test_stale_attempt_tampered_download_and_package_version_are_rejected(self):
+        from unittest.mock import Mock
+        candidate = {"schema": 1, "platform": "ios", "candidate_id": "1.0.1+2", "run_id": 42,
+                     "run_attempt": 2, "filename": "OViewer.ipa", "size": 3,
+                     "sha256": hashlib.sha256(b"ipa").hexdigest(), "version": "1.0.1", "build_number": 2}
+        api = Mock(repository="owner/repo")
+        api.request.side_effect = lambda path: {"id": 3} if "/workflows/" in path else {**self.run, "display_title": "ios / 1.0.1+2"}
+        api.pages.return_value = []
+        cases = [("run_attempt", 1, "earlier run attempt"), ("sha256", "wrong", "sha256 mismatch"),
+                 ("version", "1.0.2", "package version")]
+        for key, value, reason in cases:
+            stream = io.BytesIO()
+            with zipfile.ZipFile(stream, "w") as archive:
+                archive.writestr("build-metadata.json", json.dumps({**candidate, key: value}))
+            with tempfile.TemporaryDirectory() as directory, \
+                    patch("scripts.versioning.release.artifact", side_effect=[stream.getvalue(), b"ipa"]), \
+                    patch("scripts.versioning.release.inspect_package", return_value={"version": "1.0.1", "build_number": 2}), \
+                    self.subTest(key=key), self.assertRaisesRegex(VersionError, reason):
+                read_build(api, "ios", 42, Path(directory))
+
 
 class FakeReleaseAPI:
     def __init__(self):

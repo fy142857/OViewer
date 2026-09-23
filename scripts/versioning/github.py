@@ -39,7 +39,10 @@ class GitHub:
         host = urllib.parse.urlsplit(url).netloc
         if host not in {"api.github.com", "uploads.github.com"}:
             raise VersionError("Unexpected GitHub API host")
-        headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/octet-stream" if binary else "application/vnd.github+json",
+        # Artifact downloads use the JSON API media type and redirect to storage.
+        # Only release-asset downloads require the octet-stream negotiation.
+        accept = "application/octet-stream" if binary and "/releases/assets/" in url else "application/vnd.github+json"
+        headers = {"Authorization": f"Bearer {self.token}", "Accept": accept,
                    "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "OViewer-release"}
         if isinstance(data, bytes):
             headers["Content-Type"] = "application/octet-stream"
