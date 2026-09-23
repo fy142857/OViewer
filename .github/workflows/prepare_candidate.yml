@@ -1,0 +1,47 @@
+name: Prepare candidate
+
+on:
+  push:
+    branches: [dev, main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+# A single repository-wide allocator, including manual retries and both branches.
+concurrency:
+  group: oviewer-candidate-allocation
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test version management
+        run: python -m unittest discover -s scripts/tests -v
+      - name: Allocate or recover candidate
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: python -m scripts.versioning.prepare --branch "$SOURCE_BRANCH" --source "$SOURCE_SHA"
+      - name: Dispatch both platforms
+        if: steps.candidate.outputs.candidate_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_ID: ${{ steps.candidate.outputs.candidate_id }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        run: python -m scripts.versioning.dispatch --candidate "$CANDIDATE_ID" --branch "$SOURCE_BRANCH"

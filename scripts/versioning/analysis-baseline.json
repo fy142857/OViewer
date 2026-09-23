@@ -1,0 +1,38 @@
+[
+  {
+    "code": "PREFER_CONST_CONSTRUCTORS_IN_IMMUTABLES",
+    "message": "Constructors in '@immutable' classes should be declared as 'const'.",
+    "path": "lib/blocs/gallery_list/gallery_list_event.dart",
+    "severity": "INFO"
+  },
+  {
+    "code": "UNNECESSARY_GETTERS_SETTERS",
+    "message": "Unnecessary use of getter and setter to wrap a field.",
+    "path": "lib/core/constants/app_constants.dart",
+    "severity": "INFO"
+  },
+  {
+    "code": "PREFER_CONST_DECLARATIONS",
+    "message": "Use 'const' for final variables initialized to a constant value.",
+    "path": "lib/repositories/search_repository.dart",
+    "severity": "INFO"
+  },
+  {
+    "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+    "message": "Don't use 'BuildContext's across async gaps.",
+    "path": "lib/screens/gallery_detail/gallery_detail_screen.dart",
+    "severity": "INFO"
+  },
+  {
+    "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+    "message": "Don't use 'BuildContext's across async gaps.",
+    "path": "lib/screens/gallery_detail/gallery_detail_screen.dart",
+    "severity": "INFO"
+  },
+  {
+    "code": "PREFER_CONST_CONSTRUCTORS",
+    "message": "Use 'const' with the constructor to improve performance.",
+    "path": "lib/widgets/gallery_card.dart",
+    "severity": "INFO"
+  }
+]

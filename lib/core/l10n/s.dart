@@ -60,6 +60,7 @@ class S {
   String daysAgo(int n) => _zh ? '$n天前' : '${n}d ago';
 
   // ---- Settings Screen ----
+  String get versionUnavailable => _zh ? '版本信息不可用' : 'Version information unavailable';
   String get appearance => _zh ? '外观' : 'Appearance';
   String get theme => _zh ? '主题' : 'Theme';
   String get followSystem => _zh ? '跟随系统' : 'Follow system';

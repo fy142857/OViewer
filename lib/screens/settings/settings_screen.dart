@@ -11,6 +11,7 @@ import '../../core/l10n/s.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../repositories/download_repository.dart';
 import '../../widgets/site_settings_webview.dart';
+import '../../widgets/app_version_subtitle.dart';
 import 'my_tags_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -264,7 +265,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: const Text('OViewer'),
-                subtitle: Text('Version 1.0.0\n${s.appDescription}'),
+                subtitle: AppVersionSubtitle(
+                  description: s.appDescription,
+                  unavailableLabel: s.versionUnavailable,
+                ),
               ),
               const SizedBox(height: 32),
             ],
