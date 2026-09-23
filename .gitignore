@@ -76,3 +76,6 @@ __pycache__/
 /tool/requirements-ios.txt
 /tool/test_ios_install.py
 /tool/IOS_INSTALL.md
+
+# Local issue notes
+/issue.txt
