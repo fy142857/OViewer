@@ -6,7 +6,6 @@ import 'core/router/app_router.dart';
 import 'core/router/route_observer.dart';
 import 'core/theme/app_theme.dart';
 import 'blocs/gallery_list/gallery_list_bloc.dart';
-import 'blocs/search/search_bloc.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_event.dart';
 import 'blocs/favorites/favorites_bloc.dart';
@@ -16,7 +15,6 @@ import 'blocs/settings/settings_event.dart';
 import 'blocs/settings/settings_state.dart';
 import 'blocs/download/download_bloc.dart';
 import 'repositories/gallery_repository.dart';
-import 'repositories/search_repository.dart';
 import 'repositories/favorites_repository.dart';
 import 'repositories/history_repository.dart';
 import 'repositories/auth_repository.dart';
@@ -34,9 +32,6 @@ class OViewerApp extends StatelessWidget {
       providers: [
         BlocProvider(
           create: (_) => GalleryListBloc(sl<GalleryRepository>()),
-        ),
-        BlocProvider(
-          create: (_) => SearchBloc(sl<SearchRepository>()),
         ),
         BlocProvider(
           create: (_) => AuthBloc(sl<AuthRepository>())

@@ -8,21 +8,41 @@ import '../../core/constants/app_constants.dart';
 import '../../core/l10n/s.dart';
 import '../../core/utils/eh_url_parser.dart';
 import '../../models/search_filter.dart';
+import '../../repositories/search_repository.dart';
 import '../../repositories/tag_translation_repository.dart';
 import '../../widgets/gallery_card.dart';
 import '../../widgets/shimmer_loading.dart';
 
-class SearchScreen extends StatefulWidget {
+class SearchScreen extends StatelessWidget {
   final String? initialKeyword;
   final bool saveHistory;
 
   const SearchScreen({super.key, this.initialKeyword, this.saveHistory = true});
 
   @override
-  State<SearchScreen> createState() => _SearchScreenState();
+  Widget build(BuildContext context) {
+    // Nested searches keep their own results, filters and pagination until pop.
+    return BlocProvider(
+      create: (_) => SearchBloc(GetIt.I<SearchRepository>()),
+      child: _SearchView(
+        initialKeyword: initialKeyword,
+        saveHistory: saveHistory,
+      ),
+    );
+  }
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchView extends StatefulWidget {
+  final String? initialKeyword;
+  final bool saveHistory;
+
+  const _SearchView({this.initialKeyword, required this.saveHistory});
+
+  @override
+  State<_SearchView> createState() => _SearchViewState();
+}
+
+class _SearchViewState extends State<_SearchView> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
