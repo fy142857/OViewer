@@ -2,159 +2,136 @@
 
 [中文](README.md) / **[English](README.en.md)**
 
-OViewer (Old Viewer) is a Flutter manga reader for E-Hentai and ExHentai on Android and iOS. The configured minimum OS versions are Android 5.0 (API 21) and iOS 12.0.
+OViewer (Old Viewer) is a Flutter manga reader for Android and iOS, with support for E-Hentai and ExHentai. Browse galleries, search by tags, manage favorites, and choose how you read.
 
-## Features
+The project targets **Android 5.0 and iOS 12.0** as its minimum OS versions, keeping older devices in mind.
 
-### Browsing and search
+## Browse and discover
 
-- Four home tabs: Latest, Popular, History, and Favorites, with list / grid layouts and loading placeholders.
-- Keyword search, category and minimum-rating filters, and direct navigation by entering a gallery URL.
-- Autocomplete shows matching local search history first, followed by tag suggestions, with duplicate candidates removed.
-- Chinese tag translations and autocomplete. Multiword tags replace the complete matching phrase, respecting the cursor position and preserving other search conditions.
-- Tag alias support: `artist:"moxueyin | jiuxueran$"` is submitted as `artist:"moxueyin$"`. History retains the original input.
-- Similar-gallery and tag searches. Each search page owns its results and pagination state, preserving the original list and scroll position when navigating back.
-- Gallery details, grouped tags, comments and voting, ratings, and a dedicated thumbnail preview screen. Sprite thumbnails are cropped correctly in portrait and landscape layouts.
+- Explore the latest and popular galleries, your favorites, and your reading history.
+- Switch between list and grid views.
+- Find manga using keywords, categories, and minimum-rating filters.
+- See matching search history first as you type, followed by tag suggestions.
+- Search with Chinese tag translations, multiword tags, and tag aliases.
+- Find similar galleries from a gallery's detail page, or tap a tag to explore further.
+- Paste a gallery URL to open its details directly.
 
-### Reader
+Gallery details include the cover, uploader, language, page count, tags, and thumbnails, along with ratings, comments, and comment voting.
 
-- Left-to-right, right-to-left, and continuous vertical reading, with zoom, a page slider, and a thumbnail strip.
-- Opening a preview starts at the selected page; the regular reading entry restores saved progress.
-- A single tap toggles the reader controls and system status bar together.
-- Page indices and nearby resources load on demand. Recent index data from gallery details and previews is reused, avoiding a full-gallery index scan on entry.
-- Leaving the reader immediately cancels unfinished full-image and thumbnail requests. They are requested again on demand when reopening.
-- Successfully loaded images remain in the disk cache and are reused on valid cache hits. Failed or cancelled loads are not cached as successful results and can be retried on reopening or with the retry button.
+## Read your way
 
-### Accounts and settings
+Choose **left-to-right paging, right-to-left paging, or continuous vertical scrolling**.
 
-- WebView login and manual Cookie login, with E-Hentai / ExHentai switching.
-- Local favorites, cloud favorite synchronization, browsing history, and reading progress.
-- Loading, refreshing, or paginating a list reads cloud favorite markers for the red hearts in list and grid layouts. Favorite changes on other devices appear when the list is fetched again.
-- Chinese / English UI, system / light / dark themes, and a default reading mode.
-- My Tags, Title Language, and Image Size open the current site's settings. Login cookies are synchronized before the embedded page loads.
-- Manual proxy configuration, automatic proxy detection, image cache clearing, and download storage usage.
-- Download task lists, pause / resume controls, and progress tracking; see the limitations below.
+Zoom into images and jump between pages using the progress slider or thumbnail strip. Opening a preview starts at the selected page, while the regular reading entry resumes your saved progress.
+
+Tap the reading area to show or hide the controls and status bar. Images load on demand and are cached after loading successfully for reuse when you return. Leaving the reader stops unfinished image loads, and failed images can be retried with a tap.
+
+## Favorites and history
+
+After signing in, you can manage cloud favorites and recognize favorited galleries by the **red heart** in list and grid views.
+
+If you add or remove a favorite on another device using the same account, pull to refresh the current list to update its marker.
+
+Browsing history and reading progress are stored on the current device, making it easy to pick up where you left off. Reading progress does not yet sync across devices.
+
+## Accounts and personalization
+
+- Sign in through the embedded browser or enter Cookies manually.
+- Switch between E-Hentai and ExHentai, subject to your account's access permissions.
+- Choose a Chinese or English interface.
+- Use a light or dark theme, or follow the system setting.
+- Set your default reading mode, configure a proxy, and clear the image cache.
+- My Tags, Title Language, and Image Size open the corresponding settings for the current site.
+
+## Download and install
+
+Find installation packages on the project's [Releases](https://github.com/fy142857/OViewer/releases) or [Actions](https://github.com/fy142857/OViewer/actions) page:
+
+| Platform | Package | Installation |
+|----------|---------|--------------|
+| Android | APK | Download and install |
+| iOS | Unsigned IPA | Complete the appropriate signing and installation process for your device |
+
+Use Releases for published versions and Actions for development branch builds.
 
 ## Current limitations
 
-- Downloads need further work: image downloads currently pass through a text response before being written to disk, and completed tasks open the online reader. A reliable offline reading flow is not yet implemented, and downloads are not guaranteed to continue when the OS suspends the app.
-- The cache size limit setting is saved but is not yet connected to disk-capacity-based eviction. Manual image cache clearing is available.
-- iOS 12 is the deployment target, not a claim of testing on every device. Older OS support needs to be checked again when upgrading Flutter or plugins.
+- Downloads and offline reading are still being improved. Online reading is recommended for now.
+- Browsing history and reading progress do not yet sync across devices.
+- The cache size limit setting is saved, but automatic cleanup based on that limit is not yet implemented. You can clear the image cache manually.
+- iOS 12 is the deployment target; compatibility still needs to be verified on individual devices.
 
-## Technology
+## Technical architecture
 
-| Area | Implementation |
-|------|----------------|
-| Framework | Flutter `>=3.13.0 <3.17.0`, Dart `>=3.1.0 <4.0.0`; CI uses Flutter 3.16.0 |
-| State / dependency injection | flutter_bloc, equatable, get_it |
-| Networking and parsing | dio, http, cookie_jar, html |
-| Local storage | drift (SQLite), shared_preferences |
-| Images and reading | cached_network_image, flutter_cache_manager, photo_view, scrollable_positioned_list |
-| Embedded browser | flutter_inappwebview 5.8.x (constraint: `^5.8.0`) |
-| Automated builds | GitHub Actions: Android APK and unsigned iOS IPA |
+OViewer uses Flutter for Android and iOS, with separate layers for the interface, state management, and data access. Pages use BLoC to manage interaction state, while repositories access the sites and local storage.
 
-See [pubspec.yaml](pubspec.yaml) for constraints and [pubspec.lock](pubspec.lock) for resolved dependency versions.
+Each search page maintains its own state, so similar-gallery searches do not overwrite the original list. The reader loads resources on demand and distinguishes completed cache entries from unfinished requests to reduce repeated loading.
 
-## Project layout
+### Technology stack
+
+| Area | Technology |
+|------|------------|
+| Framework | Flutter `>=3.13.0 <3.17.0` / Dart `>=3.1.0 <4.0.0` |
+| State management | flutter_bloc 8.x + equatable |
+| Dependency injection | get_it |
+| Networking | dio, http, cookie_jar |
+| Parsing | html, converting site pages into application data models |
+| Local storage | drift (SQLite) + shared_preferences |
+| Images and caching | cached_network_image + flutter_cache_manager |
+| Reader interaction | photo_view + scrollable_positioned_list |
+| Login and site settings | flutter_inappwebview 5.8.x |
+| Automated builds | GitHub Actions, producing Android APKs and unsigned iOS IPAs |
+
+Automated builds currently use Flutter 3.16.0. Chinese tag translations are provided by **EhTagTranslation**.
+
+### Project structure
 
 ```text
 lib/
-├── main.dart              # Initialization and dependency registration
-├── app.dart               # App, themes, and global state
+├── main.dart                    # App initialization and dependency registration
+├── app.dart                     # App configuration, themes, and global state
 ├── core/
-│   ├── constants/         # Site and endpoint constants
-│   ├── l10n/              # Chinese / English strings
-│   ├── network/           # Cookies, proxies, image requests, reader sessions
-│   ├── parser/            # Gallery, search, and tag HTML parsing
-│   ├── router/            # Routes and page lifecycle observation
-│   ├── storage/           # Database, preferences, reader index cache
-│   ├── theme/             # Themes
-│   └── utils/             # URLs, titles, tag queries, and autocomplete
-├── models/                # Data models
-├── repositories/          # Data access
-├── blocs/                 # Page and business state
-├── widgets/               # Reusable components
-└── screens/               # Home, details, reader, search, settings, etc.
+│   ├── constants/               # Site URLs, endpoints, and app constants
+│   ├── l10n/                    # Chinese / English interface strings
+│   ├── network/                 # Requests, Cookies, proxies, and image loading
+│   ├── parser/                  # Gallery, search, tag, and comment parsing
+│   ├── router/                  # Page routes and lifecycle observation
+│   ├── storage/                 # Database, preferences, and reader index cache
+│   ├── theme/                   # Themes and colors
+│   └── utils/                   # Links, titles, tag queries, and autocomplete
+├── models/                      # Data models
+├── repositories/                # Network and local data access
+├── blocs/                       # Browsing, search, reader, and favorites state
+├── widgets/                     # Reusable cards, thumbnails, rating widgets, etc.
+└── screens/                     # Pages
+    ├── home/                    # Home
+    ├── search/                  # Search
+    ├── gallery_detail/          # Gallery details
+    ├── thumbnail_preview/       # Thumbnail preview
+    ├── reader/                  # Reader
+    ├── favorites/               # Favorites
+    ├── history/                 # Browsing history
+    ├── comments/                # Comments
+    ├── download/                # Download management
+    ├── login/                   # Login
+    └── settings/                # App and site settings
 
-test/                      # Parser, repository, BLoC, network, and widget tests
-.github/workflows/         # Android / iOS automated builds
+android/                         # Android platform project
+ios/                             # iOS platform project
+test/                            # Unit and widget regression tests
+.github/workflows/               # Android / iOS automated builds
 ```
 
-## Development setup
+## Feedback and contributions
 
-- Use Flutter / Dart SDKs within the constraints above. CI pins Flutter 3.16.0.
-- Android builds use JDK 17, Android SDK Platform 35, and Build Tools 35.0.0. The project configures AGP 8.6.1 and Gradle 8.7, with a minimum runtime API of 21.
-- Local iOS builds require macOS, Xcode, and CocoaPods. CI uses macOS 14 / Xcode 15.4.
+Found a problem or have a feature suggestion? Please open an [Issue](https://github.com/fy142857/OViewer/issues). Pull requests are also welcome.
 
-```bash
-git clone https://github.com/fy142857/OViewer.git
-cd OViewer
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-flutter run
-```
-
-Generated database files are not committed. Run code generation before the first launch and after changing database models.
-
-```bash
-flutter test
-flutter analyze
-```
-
-Tests cover search history and autocomplete, nested search navigation, reader positioning, request cancellation, image cache reuse, portrait / landscape thumbnails, Cookie synchronization, and HTML parsing. See [test/](test/) for the cases. Automated tests do not replace device testing. The current mobile build workflows do not run these tests or static analysis; run the relevant checks separately before committing.
-
-## Building and installation
-
-### Android APK
-
-```bash
-flutter build apk --release
-```
-
-Output: `build/app/outputs/flutter-apk/app-release.apk`.
-
-The current `release` build uses the debug signing configuration. Configure your own signing credentials before production distribution.
-
-### Unsigned iOS IPA
-
-On macOS, after installing dependencies and generating code, follow the current CI build procedure:
-
-```bash
-flutter build ios --release --no-codesign --config-only
-xcodebuild -workspace ios/Runner.xcworkspace \
-  -scheme Runner \
-  -configuration Release \
-  -sdk iphoneos \
-  -destination generic/platform=iOS \
-  -derivedDataPath build/ios/DerivedData \
-  CODE_SIGNING_ALLOWED=NO \
-  ONLY_ACTIVE_ARCH=NO
-mkdir -p build/ios/ipa/Payload
-cp -R build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app build/ios/ipa/Payload/
-(cd build/ios/ipa && zip -r OViewer.ipa Payload)
-```
-
-Output: `build/ios/ipa/OViewer.ipa`. An unsigned IPA requires an appropriate signing and installation process for the device; it is not a ready-to-install signed package. The deployment target is set to 12.0 in the [Podfile](ios/Podfile) and the iOS project.
-
-### GitHub Actions
-
-| Workflow | Output | Runner / toolchain |
-|----------|--------|--------------------|
-| [Build Android APK](.github/workflows/build_android.yml) | `app-release.apk` | ubuntu-latest / JDK 17 / Flutter 3.16.0 |
-| [Build iOS IPA](.github/workflows/build_ios.yml) | `OViewer.ipa` (unsigned) | macos-14 / Xcode 15.4 / Flutter 3.16.0 |
-
-- Builds run on pushes to `main` or `dev`, `v*` tag pushes, and pull requests targeting `main`.
-- Branch pushes and PRs that only change Markdown, `docs/`, or `LICENSE*` files skip builds. These path filters do not affect tag pushes or manual runs.
-- Manual run: repository Actions → select a workflow → Run workflow.
-- Installers are uploaded as individual artifacts and retained for 30 days. Builds for `v*` tags also upload them to GitHub Releases.
-
-To publish, use a version tag that does not already exist, for example:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+When reporting a problem, include the app version, device and OS version, and steps to reproduce it. Hide sensitive information such as account details and Cookies in screenshots.
 
 ## License
 
-[Apache License 2.0](LICENSE)
+This project is licensed under the **Apache License 2.0**.
+
+## Special thanks
+
+Thank you to [EhTagTranslation/Database](https://github.com/EhTagTranslation/Database) for providing Chinese tag translations.

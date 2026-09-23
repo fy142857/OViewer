@@ -2,159 +2,136 @@
 
 **[中文](README.md)** / [English](README.en.md)
 
-OViewer (Old Viewer) 是使用 Flutter 开发的 Android / iOS E-Hentai、ExHentai 漫画阅读器。项目配置的最低系统版本为 Android 5.0（API 21）和 iOS 12.0。
+OViewer（Old Viewer）是一款使用 Flutter 开发的 Android / iOS 漫画阅读器，支持 E-Hentai 与 ExHentai，提供画廊浏览、标签搜索、收藏管理和多种阅读模式。
 
-## 功能
+项目最低系统目标为 **Android 5.0 和 iOS 12.0**，兼顾较旧设备的使用需求。
 
-### 浏览与搜索
+## 浏览与发现
 
-- 最新、热门、浏览历史、收藏四个首页标签页，支持列表 / 网格切换和加载骨架屏。
-- 关键词搜索、分类筛选、最低评分筛选，以及直接输入画廊链接打开详情。
-- 搜索联想优先显示匹配的本机搜索历史，再显示标签候选，并去除重复项。
-- 标签中文翻译与联想；多词标签按完整匹配短语替换，支持在光标位置插入并保留其他查询条件。
-- 标签别名兼容：`artist:"moxueyin | jiuxueran$"` 提交时转换为 `artist:"moxueyin$"`；历史记录保留原输入。
-- 相似画廊与标签搜索；每个搜索页面独立保存结果和分页状态，逐级返回时保留原列表及滚动位置。
-- 画廊详情、标签分组、评论与投票、评分，以及独立缩略图预览页；支持横竖屏下的拼接缩略图裁剪。
+- 浏览最新、热门画廊，以及自己的收藏和阅读历史。
+- 在列表和网格视图之间切换。
+- 使用关键词、分类和最低评分筛选查找漫画。
+- 输入时优先显示匹配的搜索历史，再提供标签联想。
+- 支持中文标签翻译、多词标签和标签别名搜索。
+- 从详情页查看相似画廊，或点击标签继续探索。
+- 直接粘贴画廊链接，打开对应详情。
 
-### 阅读器
+画廊详情页展示封面、上传者、语言、页数、标签和缩略图，并提供评分、评论及评论投票功能。
 
-- 从左到右、从右到左翻页，以及上下连续滚动；支持缩放、进度滑块和底部缩略图条。
-- 点击预览图从对应页开始；普通阅读入口恢复上次进度。
-- 单击显示 / 隐藏阅读工具栏，并同步显示 / 隐藏系统状态栏。
-- 按需获取页码索引和相邻页资源，复用近期详情页、预览页已获取的索引，避免进入时遍历整本画廊。
-- 退出阅读器立即取消未完成的大图和缩略图请求；再次进入时按需重新请求。
-- 成功加载的图片保留磁盘缓存，有效缓存命中时复用；失败或取消的加载不会作为成功结果缓存，支持再次进入或点击重试。
+## 按习惯阅读
 
-### 账号与设置
+支持**从左到右、从右到左翻页，以及上下连续滚动**。
 
-- WebView 登录和手动 Cookie 登录，支持 E-Hentai / ExHentai 切换。
-- 本地收藏、云端收藏同步、浏览历史和阅读进度记录。
-- 列表加载、刷新及翻页时读取云端收藏标记，列表和网格显示红色爱心；其他设备的收藏变更会在重新获取列表后体现。
-- 中文 / English 界面，跟随系统 / 浅色 / 深色主题，默认阅读模式设置。
-- “我的标签”“标题语言”“图片尺寸”打开当前站点的设置页面；内嵌页面加载前同步登录 Cookie。
-- 手动代理配置、自动代理探测、图片缓存清理和下载存储用量查看。
-- 下载任务列表、暂停 / 恢复入口及进度记录；下载功能的限制见下文。
+你可以缩放图片，通过进度条或缩略图快速跳页。点击预览图会从对应页开始阅读，普通阅读入口则恢复上次进度。
+
+单击阅读画面即可显示或隐藏工具栏与状态栏。图片按需加载，成功加载后保留缓存，方便再次打开；退出阅读器会停止未完成的图片加载，加载失败时可以点击重试。
+
+## 收藏与历史
+
+登录后，可以管理云端收藏，并在列表和网格中通过**红色爱心**识别已收藏的漫画。
+
+同一账号在其他设备收藏或取消收藏后，下拉刷新当前列表即可更新标记。
+
+浏览历史与阅读进度保存在当前设备，方便继续阅读。阅读进度暂不支持跨设备同步。
+
+## 账号与个性化
+
+- 支持网页登录和手动输入 Cookie。
+- 支持切换 E-Hentai / ExHentai，访问范围取决于账号权限。
+- 提供中文和 English 界面。
+- 支持浅色、深色和跟随系统主题。
+- 可以设置默认阅读模式、配置代理和清理图片缓存。
+- “我的标签”“标题语言”和“图片尺寸”会打开当前站点的对应设置页面。
+
+## 下载与安装
+
+在项目的 [Releases](https://github.com/fy142857/OViewer/releases) 或 [Actions](https://github.com/fy142857/OViewer/actions) 页面查找安装包：
+
+| 平台 | 安装包 | 安装说明 |
+|------|--------|----------|
+| Android | APK | 下载后安装 |
+| iOS | 未签名 IPA | 需要自行完成适用于设备的签名与安装流程 |
+
+Releases 用于获取已发布版本；Actions 中可查看开发分支的构建产物。
 
 ## 当前限制
 
-- 下载模块仍需完善：图片下载目前经文本响应写入文件，下载列表的阅读入口仍打开在线阅读器，尚未形成可靠的离线阅读流程，也不保证应用被系统挂起后继续下载。
-- “缓存大小上限”目前保存设置值，尚未接入按磁盘容量淘汰缓存的逻辑；可以手动清理图片缓存。
-- iOS 12 是部署目标，不代表已在所有设备上完成兼容性验证。升级 Flutter 或插件时需重新验证旧系统支持。
+- 下载与离线阅读功能仍在完善中，目前建议以在线阅读为主。
+- 浏览历史和阅读进度尚不支持跨设备同步。
+- “缓存大小上限”目前仅保存设置值，尚未实现按该容量自动清理；可以手动清理图片缓存。
+- iOS 12 是项目部署目标，实际兼容性仍需结合设备验证。
 
-## 技术栈
+## 技术架构
 
-| 类别 | 实现 |
+OViewer 使用 Flutter 构建 Android 和 iOS 应用，将界面展示、状态管理和数据访问分层组织。页面通过 BLoC 管理交互状态，Repository 负责访问站点和本地存储。
+
+搜索页面各自维护独立状态，避免相似画廊搜索覆盖原列表。阅读器按需获取资源，并区分已完成的缓存与尚未完成的请求，以减少重复加载。
+
+### 技术栈
+
+| 类别 | 选型 |
 |------|------|
-| 框架 | Flutter `>=3.13.0 <3.17.0`，Dart `>=3.1.0 <4.0.0`；CI 使用 Flutter 3.16.0 |
-| 状态管理 / 依赖注入 | flutter_bloc、equatable、get_it |
-| 网络与解析 | dio、http、cookie_jar、html |
-| 本地存储 | drift（SQLite）、shared_preferences |
-| 图片与阅读 | cached_network_image、flutter_cache_manager、photo_view、scrollable_positioned_list |
-| 内嵌网页 | flutter_inappwebview 5.8.x（依赖约束 `^5.8.0`） |
-| 自动构建 | GitHub Actions：Android APK、未签名 iOS IPA |
+| 框架 | Flutter `>=3.13.0 <3.17.0` / Dart `>=3.1.0 <4.0.0` |
+| 状态管理 | flutter_bloc 8.x + equatable |
+| 依赖注入 | get_it |
+| 网络请求 | dio、http、cookie_jar |
+| 数据解析 | html，将站点页面解析为应用数据模型 |
+| 本地存储 | drift（SQLite）+ shared_preferences |
+| 图片与缓存 | cached_network_image + flutter_cache_manager |
+| 阅读交互 | photo_view + scrollable_positioned_list |
+| 登录与站点设置 | flutter_inappwebview 5.8.x |
+| 自动构建 | GitHub Actions，生成 Android APK 和未签名 iOS IPA |
 
-版本约束见 [pubspec.yaml](pubspec.yaml)，解析后的依赖版本见 [pubspec.lock](pubspec.lock)。
+当前自动构建使用 Flutter 3.16.0。中文标签翻译来自 **EhTagTranslation**。
 
-## 项目结构
+### 项目结构
 
 ```text
 lib/
-├── main.dart              # 初始化与依赖注册
-├── app.dart               # 应用、主题与全局状态
+├── main.dart                    # 应用初始化与依赖注册
+├── app.dart                     # 应用配置、主题与全局状态
 ├── core/
-│   ├── constants/         # 站点与接口常量
-│   ├── l10n/              # 中文 / English 文案
-│   ├── network/           # Cookie、代理、图片请求与阅读会话
-│   ├── parser/            # 画廊、搜索、标签等 HTML 解析
-│   ├── router/            # 路由与页面生命周期观察
-│   ├── storage/           # 数据库、偏好、阅读索引缓存
-│   ├── theme/             # 主题
-│   └── utils/             # URL、标题、标签查询与联想处理
-├── models/                # 数据模型
-├── repositories/          # 数据访问
-├── blocs/                 # 页面与业务状态
-├── widgets/               # 复用组件
-└── screens/               # 首页、详情、阅读、搜索、设置等页面
+│   ├── constants/               # 站点地址、接口与应用常量
+│   ├── l10n/                    # 中文 / English 界面文案
+│   ├── network/                 # 网络请求、Cookie、代理与图片加载
+│   ├── parser/                  # 画廊、搜索、标签与评论解析
+│   ├── router/                  # 页面路由与生命周期观察
+│   ├── storage/                 # 数据库、偏好设置与阅读索引缓存
+│   ├── theme/                   # 主题与颜色
+│   └── utils/                   # 链接、标题、标签查询与联想处理
+├── models/                      # 数据模型
+├── repositories/                # 网络与本地数据访问
+├── blocs/                       # 浏览、搜索、阅读、收藏等状态管理
+├── widgets/                     # 卡片、缩略图、评分等复用组件
+└── screens/                     # 页面
+    ├── home/                    # 首页
+    ├── search/                  # 搜索
+    ├── gallery_detail/          # 画廊详情
+    ├── thumbnail_preview/       # 缩略图预览
+    ├── reader/                  # 阅读器
+    ├── favorites/               # 收藏
+    ├── history/                 # 浏览历史
+    ├── comments/                # 评论
+    ├── download/                # 下载管理
+    ├── login/                   # 登录
+    └── settings/                # 应用与站点设置
 
-test/                      # 解析器、仓库、BLoC、网络及组件回归测试
-.github/workflows/         # Android / iOS 自动构建
+android/                         # Android 平台工程
+ios/                             # iOS 平台工程
+test/                            # 单元测试与组件回归测试
+.github/workflows/               # Android / iOS 自动构建
 ```
 
-## 开发环境与快速开始
+## 反馈与参与
 
-- 使用符合上述约束的 Flutter / Dart SDK；CI 固定为 Flutter 3.16.0。
-- Android 构建使用 JDK 17、Android SDK Platform 35 和 Build Tools 35.0.0；项目配置 AGP 8.6.1、Gradle 8.7，最低运行 API 为 21。
-- iOS 本地构建需要 macOS、Xcode 和 CocoaPods；CI 使用 macOS 14 / Xcode 15.4。
+遇到问题或有功能建议，欢迎提交 [Issue](https://github.com/fy142857/OViewer/issues)，也欢迎通过 Pull Request 参与改进。
 
-```bash
-git clone https://github.com/fy142857/OViewer.git
-cd OViewer
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-flutter run
-```
+反馈问题时，请尽量提供应用版本、设备与系统版本，以及复现步骤。截图中请遮挡账号、Cookie 等敏感信息。
 
-数据库生成文件未纳入版本控制，首次运行或修改数据库模型后需执行代码生成。
+## 开源许可
 
-```bash
-flutter test
-flutter analyze
-```
+本项目采用 **Apache License 2.0**。
 
-测试包含搜索历史与标签联想、嵌套搜索导航、阅读定位、请求取消、图片缓存复用、横竖屏缩略图、Cookie 同步及 HTML 解析等场景。具体用例见 [test/](test/)，自动化测试不能代替真机验证。当前移动端构建 workflow 未配置执行上述测试和静态分析，提交前需单独运行相关检查。
+## 特别鸣谢
 
-## 构建与安装
-
-### Android APK
-
-```bash
-flutter build apk --release
-```
-
-产物：`build/app/outputs/flutter-apk/app-release.apk`。
-
-当前 `release` 构建使用 debug 签名配置；正式分发前应配置自己的签名。
-
-### iOS 未签名 IPA
-
-在 macOS 上完成依赖安装与代码生成后，按当前 CI 流程构建：
-
-```bash
-flutter build ios --release --no-codesign --config-only
-xcodebuild -workspace ios/Runner.xcworkspace \
-  -scheme Runner \
-  -configuration Release \
-  -sdk iphoneos \
-  -destination generic/platform=iOS \
-  -derivedDataPath build/ios/DerivedData \
-  CODE_SIGNING_ALLOWED=NO \
-  ONLY_ACTIVE_ARCH=NO
-mkdir -p build/ios/ipa/Payload
-cp -R build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app build/ios/ipa/Payload/
-(cd build/ios/ipa && zip -r OViewer.ipa Payload)
-```
-
-产物：`build/ios/ipa/OViewer.ipa`。未签名 IPA 需要经过适用于设备的签名与安装流程，不能直接作为已签名安装包使用。部署目标由 [Podfile](ios/Podfile) 和 iOS 工程配置为 12.0。
-
-### GitHub Actions
-
-| Workflow | 产物 | Runner / 工具链 |
-|----------|------|----------------|
-| [Build Android APK](.github/workflows/build_android.yml) | `app-release.apk` | ubuntu-latest / JDK 17 / Flutter 3.16.0 |
-| [Build iOS IPA](.github/workflows/build_ios.yml) | `OViewer.ipa`（未签名） | macos-14 / Xcode 15.4 / Flutter 3.16.0 |
-
-- 推送到 `main`、`dev`，或创建 `v*` 标签时触发；面向 `main` 的 PR 也会触发。
-- 仅修改 Markdown、`docs/` 或 `LICENSE*` 文件的分支推送和 PR 会跳过构建；标签推送和手动触发不受这些路径过滤影响。
-- 手动触发：仓库 Actions → 选择 workflow → Run workflow。
-- 安装包作为独立 artifact 上传，保留 30 天；`v*` 标签构建还会上传到 GitHub Releases。
-
-发布时使用尚未存在的版本标签，例如：
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-## 许可证
-
-[Apache License 2.0](LICENSE)
+感谢 [EhTagTranslation/Database](https://github.com/EhTagTranslation/Database) 提供标签（Tag）中文翻译数据。
