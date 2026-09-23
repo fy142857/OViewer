@@ -29,6 +29,11 @@ class RulesTests(unittest.TestCase):
     def test_multiple_fixes_do_not_accumulate(self):
         self.assertEqual(self.calculate("fix: one", "fix: two"), "1.2.4")
 
+    def test_source_named_license_is_not_mistaken_for_a_license_document(self):
+        version, summary = next_version("1.0.0", [Commit("new", "feat: license settings", ("lib/license_settings.dart",))], set())
+        self.assertEqual(version, "1.1.0")
+        self.assertEqual(len(summary), 1)
+
     def test_invalid_commit_identified_even_if_documentation_only(self):
         for message in ("Fix bug", "unknown: x", "feat:", "fix: "):
             with self.assertRaisesRegex(VersionError, "bad-sha"):

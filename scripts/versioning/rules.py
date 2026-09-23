@@ -46,7 +46,7 @@ def with_version(text: str, version: str, number: int) -> str:
 def ignored_path(path: str) -> bool:
     path = path.lower()
     return (path.endswith(".md") or path.startswith("docs/")
-            or path.rsplit("/", 1)[-1].startswith("license")
+            or ("/" not in path and path.startswith("license"))
             or path == CANDIDATE_PATH)
 
 
