@@ -7,6 +7,7 @@ import '../../blocs/search/search_state.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/l10n/s.dart';
 import '../../core/utils/eh_url_parser.dart';
+import '../../core/utils/tag_autocomplete.dart';
 import '../../models/search_filter.dart';
 import '../../repositories/search_repository.dart';
 import '../../repositories/tag_translation_repository.dart';
@@ -49,7 +50,7 @@ class _SearchViewState extends State<_SearchView> {
   List<String> _selectedCategories = [];
   int? _minRating;
   bool _showHistory = true;
-  List<TagSearchResult> _suggestions = [];
+  List<TagSuggestion> _suggestions = [];
 
   @override
   void initState() {
@@ -67,6 +68,7 @@ class _SearchViewState extends State<_SearchView> {
     });
     context.read<SearchBloc>().add(LoadSearchHistory());
     _scrollController.addListener(_onScroll);
+    _controller.addListener(_updateSuggestions);
   }
 
   void _onScroll() {
@@ -112,40 +114,21 @@ class _SearchViewState extends State<_SearchView> {
   }
 
   void _updateSuggestions() {
-    final text = _controller.text;
-    // Extract the last token (after last space) for suggestion
-    final lastToken = text.contains(' ')
-        ? text.substring(text.lastIndexOf(' ') + 1)
-        : text;
-    if (lastToken.isEmpty) {
-      setState(() => _suggestions = []);
-      return;
-    }
     try {
       final repo = GetIt.I<TagTranslationRepository>();
-      setState(() => _suggestions = repo.searchByTranslation(lastToken));
+      final suggestions = tagSuggestions(
+          _controller.value, (query) => repo.searchByTranslation(query));
+      setState(() => _suggestions = suggestions);
     } catch (_) {
       setState(() => _suggestions = []);
     }
   }
 
-  void _applySuggestion(TagSearchResult result) {
-    final text = _controller.text;
-    final tag = '${result.namespace}:"${result.key}\$"';
-    // Replace the last token with the selected tag
-    final lastSpaceIndex = text.lastIndexOf(' ');
-    final prefix =
-        lastSpaceIndex >= 0 ? text.substring(0, lastSpaceIndex + 1) : '';
-    _controller.text = '$prefix$tag ';
+  void _applySuggestion(TagSuggestion suggestion) {
+    if (_controller.text != suggestion.source) return;
+    _controller.value = suggestion.apply();
     setState(() => _suggestions = []);
-    // Refocus to scroll TextField to the end
-    _focusNode.unfocus();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-      _controller.selection = TextSelection.collapsed(
-        offset: _controller.text.length,
-      );
-    });
+    _focusNode.requestFocus();
   }
 
   @override
@@ -174,9 +157,6 @@ class _SearchViewState extends State<_SearchView> {
                   )
                 : null,
           ),
-          onChanged: (_) {
-            _updateSuggestions();
-          },
           onSubmitted: (_) => _performSearch(),
         ),
       ),
@@ -450,13 +430,14 @@ class _SearchViewState extends State<_SearchView> {
         itemCount: _suggestions.length,
         itemBuilder: (context, index) {
           final suggestion = _suggestions[index];
+          final tag = suggestion.tag;
           return ListTile(
             dense: true,
             leading: Icon(Icons.label_outline,
                 size: 20, color: Theme.of(context).colorScheme.outline),
-            title: Text('${suggestion.namespace}:${suggestion.key}'),
+            title: Text('${tag.namespace}:${tag.key}'),
             subtitle: Text(
-              suggestion.translation,
+              tag.translation,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
