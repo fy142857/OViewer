@@ -36,8 +36,7 @@ void main() {
           home: Scaffold(
               body: Row(children: [
         SizedBox(width: 300, height: 240, child: GalleryCard(gallery: parsed)),
-        SizedBox(
-            width: 200, height: 300, child: GalleryGridItem(gallery: parsed)),
+        SizedBox(width: 200, child: GalleryGridItem(gallery: parsed)),
       ]))));
       await tester.pumpAndSettle();
       final hearts = tester.widgetList<Icon>(find.byIcon(Icons.favorite));

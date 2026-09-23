@@ -18,10 +18,12 @@ class GalleryGridItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail - flexible height
-            Expanded(
+            // Portrait covers keep the same proportions on phones and tablets.
+            AspectRatio(
+              aspectRatio: 2 / 3,
               child: Stack(
                 fit: StackFit.expand,
                 children: [

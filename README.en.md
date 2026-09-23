@@ -9,7 +9,7 @@ The project targets **Android 5.0 and iOS 12.0** as its minimum OS versions, kee
 ## Browse and discover
 
 - Explore the latest and popular galleries, your favorites, and your reading history.
-- Switch between list and grid views.
+- Switch between list and card views on the home and search screens. Cards adapt to the screen width while keeping portrait cover proportions.
 - Find manga using keywords, categories, and minimum-rating filters.
 - See matching search history first as you type, followed by tag suggestions.
 - Search with Chinese tag translations, multiword tags, and tag aliases.

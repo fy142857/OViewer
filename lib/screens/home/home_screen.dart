@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:logger/logger.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_state.dart';
@@ -19,6 +18,7 @@ import '../../core/l10n/s.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../widgets/gallery_card.dart';
 import '../../widgets/gallery_grid_item.dart';
+import '../../widgets/adaptive_gallery_grid.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/error_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -489,23 +489,16 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildGridView(GalleryListState state) {
-    return MasonryGridView.count(
-      crossAxisCount: 2,
-      mainAxisSpacing: 4,
-      crossAxisSpacing: 4,
-      padding: const EdgeInsets.all(8),
+    return AdaptiveGalleryGrid(
       itemCount: state.galleries.length + (state.hasReachedEnd ? 0 : 1),
       itemBuilder: (context, index) {
         if (index >= state.galleries.length) {
           return _buildLoadMoreIndicator(state);
         }
         final gallery = state.galleries[index];
-        return SizedBox(
-          height: 260,
-          child: GalleryGridItem(
-            gallery: gallery,
-            onTap: () => _navigateToGallery(gallery.gid, gallery.token),
-          ),
+        return GalleryGridItem(
+          gallery: gallery,
+          onTap: () => _navigateToGallery(gallery.gid, gallery.token),
         );
       },
     );
