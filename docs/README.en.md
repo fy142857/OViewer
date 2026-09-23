@@ -1,6 +1,6 @@
 # OViewer
 
-[中文](README.md) / **[English](README.en.md)**
+[中文](../README.md) / **[English](README.en.md)**
 
 OViewer (Old Viewer) is a Flutter manga reader for Android and iOS, with support for E-Hentai and ExHentai. Browse galleries, search by tags, manage favorites, and choose how you read.
 
