@@ -159,7 +159,7 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
         _log.i('[LoadMore] after dedup: ${unique.length} new '
             '(${newGalleries.length - unique.length} duplicates)');
 
-        accumulated.addAll(filtered);
+        accumulated.addAll(await _markFavorites(filtered));
 
         // Determine next URL with fallback
         final nextUrl = result.nextPageUrl ?? _buildFallbackNextUrl(page);
@@ -216,9 +216,7 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
     Emitter<GalleryListState> emit,
   ) async {
     if (state.galleries.isEmpty) return;
-    final marked = await _markFavorites(
-      state.galleries.map((g) => g.copyWith(isFavorited: false)).toList(),
-    );
+    final marked = await _markFavorites(state.galleries, fromNetwork: false);
     emit(state.copyWith(galleries: marked));
   }
 
@@ -232,13 +230,20 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
     add(const FetchGalleries());
   }
 
-  /// Mark galleries that are in local favorites.
-  Future<List<GalleryPreview>> _markFavorites(
-      List<GalleryPreview> galleries) async {
-    final favGids = await GetIt.I<FavoritesRepository>().getLocalFavoriteGids();
-    if (favGids.isEmpty) return galleries;
+  /// Fresh server markers update the cache; returning from details uses the
+  /// cache so an older list response cannot undo a local add/remove action.
+  Future<List<GalleryPreview>> _markFavorites(List<GalleryPreview> galleries,
+      {bool fromNetwork = true}) async {
+    final favorites = GetIt.I<FavoritesRepository>();
+    if (fromNetwork && galleries.any((g) => g.cloudFavorited != null)) {
+      await favorites.cacheFavoriteStates(galleries);
+    }
+    final favGids = await favorites.getLocalFavoriteGids();
     return galleries
-        .map((g) => favGids.contains(g.gid) ? g.copyWith(isFavorited: true) : g)
+        .map((g) => g.copyWith(
+            isFavorited: fromNetwork
+                ? g.cloudFavorited ?? (g.isFavorited || favGids.contains(g.gid))
+                : favGids.contains(g.gid)))
         .toList();
   }
 

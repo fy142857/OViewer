@@ -65,6 +65,20 @@ class GalleryGridItem extends StatelessWidget {
                     ),
                   ),
                   // Page count badge
+                  if (gallery.isFavorited)
+                    const Positioned(
+                      top: 4,
+                      right: 4,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle),
+                        child: Padding(
+                          padding: EdgeInsets.all(3),
+                          child:
+                              Icon(Icons.favorite, size: 16, color: Colors.red),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     bottom: 4,
                     right: 4,
@@ -112,8 +126,7 @@ class GalleryGridItem extends StatelessWidget {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Icon(Icons.star,
-                          size: 12, color: Colors.amber[700]),
+                      Icon(Icons.star, size: 12, color: Colors.amber[700]),
                       const SizedBox(width: 2),
                       Text(
                         gallery.rating.toStringAsFixed(1),

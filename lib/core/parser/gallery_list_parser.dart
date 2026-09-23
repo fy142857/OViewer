@@ -82,6 +82,8 @@ class GalleryListParser {
         uploader: '',
         fileCount: 0,
         postedAt: DateTime.now(),
+        cloudFavorited: parent == null ? null : _cloudFavorited(parent, gid),
+        isFavorited: parent != null && _cloudFavorited(parent, gid) == true,
       ));
     }
 
@@ -305,6 +307,8 @@ class GalleryListParser {
         language: language,
         postedAt: postedAt,
         tags: _extractTags(row),
+        cloudFavorited: _cloudFavorited(row, parsed.$1),
+        isFavorited: _cloudFavorited(row, parsed.$1) == true,
       );
     } catch (_) {
       return null;
@@ -363,6 +367,8 @@ class GalleryListParser {
         language: language,
         postedAt: postedAt,
         tags: _extractTags(row),
+        cloudFavorited: _cloudFavorited(row, parsed.$1),
+        isFavorited: _cloudFavorited(row, parsed.$1) == true,
       );
     } catch (_) {
       return null;
@@ -406,6 +412,8 @@ class GalleryListParser {
         language: language,
         postedAt: postedAt,
         tags: _extractTags(row),
+        cloudFavorited: _cloudFavorited(row, parsed.$1),
+        isFavorited: _cloudFavorited(row, parsed.$1) == true,
       );
     } catch (_) {
       return null;
@@ -444,6 +452,8 @@ class GalleryListParser {
         language: language,
         postedAt: postedAt,
         tags: _extractTags(div),
+        cloudFavorited: _cloudFavorited(div, parsed.$1),
+        isFavorited: _cloudFavorited(div, parsed.$1) == true,
       );
     } catch (_) {
       return null;
@@ -451,6 +461,25 @@ class GalleryListParser {
   }
 
   // ---- Utilities ----
+
+  /// The site's favorite category color is on this gallery's posted timestamp.
+  /// Rating sprites and category badges are unrelated to favorite status.
+  static bool? _cloudFavorited(Element element, int gid) {
+    final posted = element.querySelector('#posted_$gid');
+    if (posted == null) return null;
+    final style = posted.attributes['style'] ?? '';
+    final color = RegExp(
+      r'background-color\s*:\s*rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*([\d.]+))?\s*\)',
+      caseSensitive: false,
+    ).firstMatch(style);
+    if (color != null) {
+      return color.group(1) == null ||
+          (double.tryParse(color.group(1)!) ?? 0) > 0;
+    }
+    return RegExp(r'background-color\s*:\s*#[0-9a-f]{3}(?:[0-9a-f]{3})?\b',
+            caseSensitive: false)
+        .hasMatch(style);
+  }
 
   static (int, String)? _parseGalleryUrl(String href) {
     final match = _galleryUrlRegex.firstMatch(href);

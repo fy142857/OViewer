@@ -45,8 +45,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         totalPages: result.totalPages,
         totalResults: result.totalResults,
         searchHistory: _repository.getSearchHistory(),
-        hasReachedEnd:
-            result.galleries.isEmpty || result.nextPageUrl == null,
+        hasReachedEnd: result.galleries.isEmpty || result.nextPageUrl == null,
         nextPageUrl: result.nextPageUrl,
       ));
     } catch (e) {
@@ -126,20 +125,22 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     Emitter<SearchState> emit,
   ) async {
     if (state.results.isEmpty) return;
-    final marked = await _markFavorites(
-      state.results.map((g) => g.copyWith(isFavorited: false)).toList(),
-    );
+    final marked = await _markFavorites(state.results, fromNetwork: false);
     emit(state.copyWith(results: marked));
   }
 
-  Future<List<GalleryPreview>> _markFavorites(
-      List<GalleryPreview> galleries) async {
-    final favGids =
-        await GetIt.I<FavoritesRepository>().getLocalFavoriteGids();
-    if (favGids.isEmpty) return galleries;
+  Future<List<GalleryPreview>> _markFavorites(List<GalleryPreview> galleries,
+      {bool fromNetwork = true}) async {
+    final favorites = GetIt.I<FavoritesRepository>();
+    if (fromNetwork && galleries.any((g) => g.cloudFavorited != null)) {
+      await favorites.cacheFavoriteStates(galleries);
+    }
+    final favGids = await favorites.getLocalFavoriteGids();
     return galleries
-        .map((g) =>
-            favGids.contains(g.gid) ? g.copyWith(isFavorited: true) : g)
+        .map((g) => g.copyWith(
+            isFavorited: fromNetwork
+                ? g.cloudFavorited ?? (g.isFavorited || favGids.contains(g.gid))
+                : favGids.contains(g.gid)))
         .toList();
   }
 }

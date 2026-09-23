@@ -29,6 +29,7 @@ OViewer (Old Viewer) is a Flutter manga reader for E-Hentai and ExHentai on Andr
 
 - WebView login and manual Cookie login, with E-Hentai / ExHentai switching.
 - Local favorites, cloud favorite synchronization, browsing history, and reading progress.
+- Loading, refreshing, or paginating a list reads cloud favorite markers for the red hearts in list and grid layouts. Favorite changes on other devices appear when the list is fetched again.
 - Chinese / English UI, system / light / dark themes, and a default reading mode.
 - My Tags, Title Language, and Image Size open the current site's settings. Login cookies are synchronized before the embedded page loads.
 - Manual proxy configuration, automatic proxy detection, image cache clearing, and download storage usage.

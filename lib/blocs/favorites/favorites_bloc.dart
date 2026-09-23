@@ -21,7 +21,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     emit(state.copyWith(status: FavoritesStatus.loading));
     try {
       final result = await _repository.fetchCloudFavorites();
-      // Rebuild local cache for _markFavorites
+      // Merge this page; unseen favorites may be on later pages.
       await _repository.rebuildCache(result.galleries);
       emit(state.copyWith(
         status: FavoritesStatus.loaded,
@@ -69,6 +69,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     try {
       final nextPage = state.currentPage + 1;
       final result = await _repository.fetchCloudFavorites(page: nextPage);
+      await _repository.rebuildCache(result.galleries);
       emit(state.copyWith(
         favorites: [...state.favorites, ...result.galleries],
         currentPage: nextPage,

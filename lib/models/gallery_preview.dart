@@ -15,6 +15,9 @@ class GalleryPreview extends Equatable {
   final List<String> tags;
   final bool isFavorited;
 
+  /// Server state from this list response; null when the markup is unknown.
+  final bool? cloudFavorited;
+
   const GalleryPreview({
     required this.gid,
     required this.token,
@@ -29,9 +32,10 @@ class GalleryPreview extends Equatable {
     required this.postedAt,
     this.tags = const [],
     this.isFavorited = false,
+    this.cloudFavorited,
   });
 
-  GalleryPreview copyWith({bool? isFavorited}) =>
+  GalleryPreview copyWith({bool? isFavorited, bool? cloudFavorited}) =>
       GalleryPreview(
         gid: gid,
         token: token,
@@ -46,8 +50,9 @@ class GalleryPreview extends Equatable {
         postedAt: postedAt,
         tags: tags,
         isFavorited: isFavorited ?? this.isFavorited,
+        cloudFavorited: cloudFavorited ?? this.cloudFavorited,
       );
 
   @override
-  List<Object?> get props => [gid, token, isFavorited];
+  List<Object?> get props => [gid, token, isFavorited, cloudFavorited];
 }

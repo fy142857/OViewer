@@ -129,7 +129,9 @@ class GalleryRepository {
         ? _resolve(nextUrl)
         : ApiEndpoints.favorites(page: page);
     final html = await _dio.get(url);
-    final galleries = GalleryListParser.parse(html);
+    final galleries = GalleryListParser.parse(html)
+        .map((g) => g.copyWith(isFavorited: true, cloudFavorited: true))
+        .toList();
     final pageCount = GalleryListParser.parsePageCount(html);
     final nextPageUrl = GalleryListParser.parseNextPageUrl(html);
     return GalleryListResult(

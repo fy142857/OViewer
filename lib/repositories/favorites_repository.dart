@@ -21,13 +21,16 @@ class FavoritesRepository {
   }) async {
     final url = ApiEndpoints.favorites(page: page, cat: cat);
     final html = await _dio.get(url);
-    final galleries = GalleryListParser.parse(html);
+    final galleries = GalleryListParser.parse(html)
+        .map((g) => g.copyWith(isFavorited: true, cloudFavorited: true))
+        .toList();
     final pageCount = GalleryListParser.parsePageCount(html);
     return FavoritesResult(galleries: galleries, totalPages: pageCount);
   }
 
   /// Add to cloud favorites (auto-caches locally)
-  Future<void> addCloudFavorite(int gid, String token, {int slot = 0, GalleryPreview? preview}) async {
+  Future<void> addCloudFavorite(int gid, String token,
+      {int slot = 0, GalleryPreview? preview}) async {
     // Write local cache first so other screens see the update immediately
     if (preview != null) {
       await _db.addLocalFavorite(LocalFavoritesCompanion(
@@ -44,12 +47,13 @@ class FavoritesRepository {
     }
     try {
       final url = ApiEndpoints.addFavorite(gid, token);
-      await _dio.post(url, data: FormData.fromMap({
-        'favcat': slot.toString(),
-        'favnote': '',
-        'apply': 'Add to Favorites',
-        'update': '1',
-      }));
+      await _dio.post(url,
+          data: FormData.fromMap({
+            'favcat': slot.toString(),
+            'favnote': '',
+            'apply': 'Add to Favorites',
+            'update': '1',
+          }));
     } catch (_) {
       // Revert local cache on API failure
       await _db.removeLocalFavorite(gid);
@@ -64,11 +68,12 @@ class FavoritesRepository {
     await _db.removeLocalFavorite(gid);
     try {
       final url = ApiEndpoints.addFavorite(gid, token);
-      await _dio.post(url, data: FormData.fromMap({
-        'favcat': 'favdel',
-        'apply': 'Apply Changes',
-        'update': '1',
-      }));
+      await _dio.post(url,
+          data: FormData.fromMap({
+            'favcat': 'favdel',
+            'apply': 'Apply Changes',
+            'update': '1',
+          }));
     } catch (_) {
       // Revert local cache on API failure
       if (existing != null) {
@@ -90,13 +95,22 @@ class FavoritesRepository {
 
   // --- Local cache (used by _markFavorites) ---
 
-  Future<Set<int>> getLocalFavoriteGids() =>
-      _db.getLocalFavoriteGids();
+  Future<Set<int>> getLocalFavoriteGids() => _db.getLocalFavoriteGids();
 
-  /// Rebuild local cache from cloud results
+  /// Reconcile only galleries present in a fresh response. Other pages are
+  /// not evidence of removal, and unknown markup must not erase local state.
+  Future<void> cacheFavoriteStates(List<GalleryPreview> galleries) async {
+    await rebuildCache(
+        galleries.where((g) => g.cloudFavorited == true).toList());
+    for (final gallery in galleries) {
+      if (gallery.cloudFavorited == false) {
+        await _db.removeLocalFavorite(gallery.gid);
+      }
+    }
+  }
+
+  /// Merge a page of confirmed cloud favorites without erasing other pages.
   Future<void> rebuildCache(List<GalleryPreview> galleries) async {
-    // Clear existing cache then insert fresh data
-    await _db.clearLocalFavorites();
     for (final g in galleries) {
       await _db.addLocalFavorite(LocalFavoritesCompanion(
         gid: Value(g.gid),
