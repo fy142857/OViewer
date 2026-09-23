@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import '../../repositories/tag_translation_repository.dart';
+import 'tag_search_query.dart';
 
 /// A suggestion owns the same text range that was used to find its tag.
 class TagSuggestion {
@@ -10,7 +11,7 @@ class TagSuggestion {
   const TagSuggestion(this.tag, this.range, this.source);
 
   TextEditingValue apply() {
-    final replacement = '${tag.namespace}:"${tag.key}\$"';
+    final replacement = exactTagQuery(tag.namespace, tag.key);
     final suffix = source.substring(range.end);
     final separator = suffix.isEmpty ? ' ' : '';
     final text =
@@ -21,6 +22,20 @@ class TagSuggestion {
           offset: range.start + replacement.length + separator.length),
     );
   }
+}
+
+/// History is already stored newest first. Match and deduplicate without
+/// changing the user's saved text or ordering.
+List<String> matchingSearchHistory(String query, List<String> history) {
+  String comparable(String text) =>
+      text.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  final needle = comparable(query);
+  if (needle.isEmpty) return [];
+  final seen = <String>{};
+  return history.where((entry) {
+    final normalized = comparable(entry);
+    return normalized.contains(needle) && seen.add(normalized);
+  }).toList();
 }
 
 /// Try the longest plain-text phrase ending at the caret first. Quoted tags

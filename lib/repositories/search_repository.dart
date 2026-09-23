@@ -1,6 +1,7 @@
 import '../core/network/dio_client.dart';
 import '../core/parser/search_parser.dart';
 import '../core/storage/local_storage.dart';
+import '../core/utils/tag_search_query.dart';
 import '../models/gallery_preview.dart';
 import '../models/search_filter.dart';
 import '../core/constants/app_constants.dart';
@@ -67,7 +68,8 @@ class SearchRepository {
     final params = <String>[];
 
     if (filter.keyword != null && filter.keyword!.isNotEmpty) {
-      params.add('f_search=${Uri.encodeComponent(filter.keyword!)}');
+      final keyword = normalizeTagSearchQuery(filter.keyword!);
+      params.add('f_search=${Uri.encodeComponent(keyword)}');
     }
 
     // Category filter (bitmask)

@@ -16,6 +16,34 @@ List<TagSearchResult> search(String query) =>
         : [];
 
 void main() {
+  test('history candidates preserve recency and ignore case/extra whitespace',
+      () {
+    expect(
+        matchingSearchHistory('NANAO  YUKI', [
+          'unrelated',
+          'nanao yukiji language:chinese',
+          r'artist:"nanao yukiji$"',
+          'NANAO   YUKIJI language:chinese',
+        ]),
+        ['nanao yukiji language:chinese', r'artist:"nanao yukiji$"']);
+    expect(matchingSearchHistory('', ['nanao']), isEmpty);
+    expect(matchingSearchHistory('missing', ['nanao']), isEmpty);
+  });
+
+  test('alias suggestions insert only the canonical tag', () {
+    const text = 'jiuxueran';
+    final results = tagSuggestions(
+        const TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length)),
+        (_) => [
+              const TagSearchResult(
+                  namespace: 'artist',
+                  key: 'moxueyin | jiuxueran',
+                  translation: '墨雪吟')
+            ]);
+    expect(results.single.apply().text, 'artist:"moxueyin\$" ');
+  });
   for (final phrase in [
     'nanao yukiji',
     'nanao yuki',
@@ -80,7 +108,7 @@ void main() {
     final result = tagSuggestions(
             const TextEditingValue(
                 text: text,
-            selection: TextSelection(baseOffset: 5, extentOffset: 17)),
+                selection: TextSelection(baseOffset: 5, extentOffset: 17)),
             search)
         .single
         .apply();

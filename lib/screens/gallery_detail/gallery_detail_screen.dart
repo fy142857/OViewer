@@ -24,6 +24,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../core/utils/eh_url_parser.dart';
 import '../../core/utils/title_extractor.dart';
+import '../../core/utils/tag_search_query.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/rating_bar.dart';
@@ -430,7 +431,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
                                     context,
                                     '/search',
                                     arguments:
-                                        '${tag.namespace}:"${tag.key}\$"',
+                                        exactTagQuery(tag.namespace, tag.key),
                                   );
                                 },
                               ))

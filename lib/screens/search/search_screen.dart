@@ -8,6 +8,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/l10n/s.dart';
 import '../../core/utils/eh_url_parser.dart';
 import '../../core/utils/tag_autocomplete.dart';
+import '../../core/utils/tag_search_query.dart';
 import '../../models/search_filter.dart';
 import '../../repositories/search_repository.dart';
 import '../../repositories/tag_translation_repository.dart';
@@ -51,6 +52,7 @@ class _SearchViewState extends State<_SearchView> {
   int? _minRating;
   bool _showHistory = true;
   List<TagSuggestion> _suggestions = [];
+  List<String> _historySuggestions = [];
 
   @override
   void initState() {
@@ -96,6 +98,7 @@ class _SearchViewState extends State<_SearchView> {
     setState(() {
       _showHistory = false;
       _suggestions = [];
+      _historySuggestions = [];
     });
     _focusNode.unfocus();
     context.read<SearchBloc>().add(PerformSearch(SearchFilter(
@@ -114,20 +117,47 @@ class _SearchViewState extends State<_SearchView> {
   }
 
   void _updateSuggestions() {
+    final history = _controller.value.composing.isCollapsed
+        ? matchingSearchHistory(_controller.text,
+            GetIt.I<SearchRepository>().getSearchHistory())
+        : <String>[];
+    var suggestions = <TagSuggestion>[];
     try {
       final repo = GetIt.I<TagTranslationRepository>();
-      final suggestions = tagSuggestions(
+      suggestions = tagSuggestions(
           _controller.value, (query) => repo.searchByTranslation(query));
-      setState(() => _suggestions = suggestions);
     } catch (_) {
-      setState(() => _suggestions = []);
+      // History remains available while the tag dictionary is unavailable.
     }
+    String comparable(String text) =>
+        normalizeTagSearchQuery(text).trim().toLowerCase();
+    final historyQueries = history.map(comparable).toSet();
+    setState(() {
+      _historySuggestions = history;
+      _suggestions = suggestions.where((suggestion) =>
+          !historyQueries.contains(comparable(suggestion.apply().text))).toList();
+    });
   }
 
   void _applySuggestion(TagSuggestion suggestion) {
     if (_controller.text != suggestion.source) return;
     _controller.value = suggestion.apply();
-    setState(() => _suggestions = []);
+    setState(() {
+      _suggestions = [];
+      _historySuggestions = [];
+    });
+    _focusNode.requestFocus();
+  }
+
+  void _applyHistorySuggestion(String query) {
+    _controller.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(offset: query.length),
+    );
+    setState(() {
+      _suggestions = [];
+      _historySuggestions = [];
+    });
     _focusNode.requestFocus();
   }
 
@@ -152,6 +182,7 @@ class _SearchViewState extends State<_SearchView> {
                       setState(() {
                         _showHistory = true;
                         _suggestions = [];
+                        _historySuggestions = [];
                       });
                     },
                   )
@@ -182,14 +213,17 @@ class _SearchViewState extends State<_SearchView> {
           if (_selectedCategories.isNotEmpty || _minRating != null)
             _buildActiveFilters(),
           // Tag suggestions or Content
-          if (_suggestions.isNotEmpty)
+          if (_historySuggestions.isNotEmpty || _suggestions.isNotEmpty)
             _buildSuggestions()
           else
             Expanded(
             child: BlocBuilder<SearchBloc, SearchState>(
               builder: (context, state) {
                 if (_showHistory) {
-                  return _buildSearchHistory(state.searchHistory);
+                  return _buildSearchHistory(_controller.text.trim().isEmpty
+                      ? state.searchHistory
+                      : matchingSearchHistory(_controller.text,
+                          GetIt.I<SearchRepository>().getSearchHistory()));
                 }
                 if (state.status == SearchStatus.loading &&
                     state.results.isEmpty) {
@@ -427,9 +461,19 @@ class _SearchViewState extends State<_SearchView> {
   Widget _buildSuggestions() {
     return Expanded(
       child: ListView.builder(
-        itemCount: _suggestions.length,
+        itemCount: _historySuggestions.length + _suggestions.length,
         itemBuilder: (context, index) {
-          final suggestion = _suggestions[index];
+          if (index < _historySuggestions.length) {
+            final query = _historySuggestions[index];
+            return ListTile(
+              dense: true,
+              leading: const Icon(Icons.history, size: 20),
+              title: Text(query),
+              subtitle: Text(S.of(context).recentSearches),
+              onTap: () => _applyHistorySuggestion(query),
+            );
+          }
+          final suggestion = _suggestions[index - _historySuggestions.length];
           final tag = suggestion.tag;
           return ListTile(
             dense: true,
@@ -461,7 +505,8 @@ class _SearchViewState extends State<_SearchView> {
                 size: 64,
                 color: Theme.of(context).colorScheme.outline),
             const SizedBox(height: 16),
-            Text(s.enterKeywordToSearch),
+            Text(_controller.text.trim().isEmpty
+                ? s.enterKeywordToSearch : s.noResultsFound),
           ],
         ),
       );
