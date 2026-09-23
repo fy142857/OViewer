@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.0.0",
   "branch": "dev",
-  "build_number": 2,
-  "candidate_id": "1.0.1+2",
-  "fingerprint": "d90f188469ed7a1d1bc262725cc01e6f25fb31c0da8ab1b4a87d390709cfb33d",
+  "build_number": 3,
+  "candidate_id": "1.0.1+3",
+  "fingerprint": "36a292be82a7b4bbb01a47c9d626731b8ef3738a21b677671c238d07cf5f1a7d",
   "notes": "### 新增\n\n- 自动计算应用版本，Android 与 iOS 共用候选构建号。\n- 设置页显示实际安装包版本及构建号。\n- 发布时校验并使用指定候选的原始安装包。\n\n### 修复\n\n- 避免标签发布再次构建并覆盖已验证的安装包。\n\n### 变更\n\n- Android 后续正式候选使用固定签名密钥。\n\n### 已知限制\n\n- 首次更换 Android 签名时，如果与 v1.0.0 证书不同，需卸载旧版后安装，可能丢失本地历史、进度及设置；安装前请自行记录重要数据。\n- iOS 提供未签名 IPA，需自行签名安装。",
   "schema": 1,
-  "source_sha": "6aef794a541cc1077962c927f8da631df6287918",
+  "source_sha": "50c3e3925f170a77bf372eb6e2568029ad1e6608",
   "summary": [
     {
       "sha": "f32428951cef1db32dfb9b03b45f79377df02eab",
@@ -17,6 +17,11 @@
       "sha": "6aef794a541cc1077962c927f8da631df6287918",
       "subject": "ci: implement unified candidates and verified release publishing",
       "type": "ci"
+    },
+    {
+      "sha": "50c3e3925f170a77bf372eb6e2568029ad1e6608",
+      "subject": "fix(ci): negotiate artifact downloads with the GitHub API media type",
+      "type": "fix"
     }
   ],
   "version": "1.0.1"
