@@ -79,3 +79,6 @@ __pycache__/
 
 # Local issue notes
 /issue.txt
+
+# Private local signing backup (contains keys and passwords)
+/.release/signing_key/
