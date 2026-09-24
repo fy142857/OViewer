@@ -54,6 +54,7 @@ class _SearchViewState extends State<_SearchView> {
   final _scrollController = ScrollController();
   final _gridScrollController = ScrollController();
   final _focusNode = FocusNode();
+  PageStorageBucket _resultScrollStorage = PageStorageBucket();
   List<String> _selectedCategories = [];
   int? _minRating;
   bool _showHistory = true;
@@ -103,6 +104,10 @@ class _SearchViewState extends State<_SearchView> {
     }
 
     setState(() {
+      // A submitted search starts fresh in both layouts, including the layout
+      // currently detached while history/suggestions are visible. Within this
+      // search, layout switches and returning from detail retain their offsets.
+      _resultScrollStorage = PageStorageBucket();
       _showHistory = false;
       _suggestions = [];
       _historySuggestions = [];
@@ -281,35 +286,38 @@ class _SearchViewState extends State<_SearchView> {
                     );
                   }
 
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      context.read<SearchBloc>().add(PerformSearch(state.filter,
-                          saveHistory: widget.saveHistory));
-                      // Wait for the bloc to finish loading
-                      await context
-                          .read<SearchBloc>()
-                          .stream
-                          .firstWhere((s) => s.status != SearchStatus.loading);
-                    },
-                    child: isGrid
-                        ? AdaptiveGalleryGrid(
-                            key: const PageStorageKey('search-grid'),
-                            controller: _gridScrollController,
-                            itemCount: state.results.length +
-                                (state.isLoadingMore ? 1 : 0),
-                            itemBuilder: (context, index) =>
-                                _buildResult(state, index, isGrid: true),
-                          )
-                        : ListView.builder(
-                            key: const PageStorageKey('search-list'),
-                            controller: _scrollController,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(8),
-                            itemCount: state.results.length +
-                                (state.isLoadingMore ? 1 : 0),
-                            itemBuilder: (context, index) =>
-                                _buildResult(state, index, isGrid: false),
-                          ),
+                  return PageStorage(
+                    key: ObjectKey(_resultScrollStorage),
+                    bucket: _resultScrollStorage,
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        context.read<SearchBloc>().add(PerformSearch(
+                            state.filter,
+                            saveHistory: widget.saveHistory));
+                        // Wait for the bloc to finish loading
+                        await context.read<SearchBloc>().stream.firstWhere(
+                            (s) => s.status != SearchStatus.loading);
+                      },
+                      child: isGrid
+                          ? AdaptiveGalleryGrid(
+                              key: const PageStorageKey('search-grid'),
+                              controller: _gridScrollController,
+                              itemCount: state.results.length +
+                                  (state.isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) =>
+                                  _buildResult(state, index, isGrid: true),
+                            )
+                          : ListView.builder(
+                              key: const PageStorageKey('search-list'),
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.all(8),
+                              itemCount: state.results.length +
+                                  (state.isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) =>
+                                  _buildResult(state, index, isGrid: false),
+                            ),
+                    ),
                   );
                 },
               ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +34,139 @@ void main() {
     PaintingBinding.instance.imageCache.clearLiveImages();
     await GetIt.I.reset();
   });
+
+  for (final startInGrid in [false, true]) {
+    testWidgets('new searches reset both saved offsets (grid: $startInGrid)',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final settings = MockSettings();
+      when(() => settings.setDisplayMode(any())).thenAnswer((_) async {});
+      final settingsBloc = SettingsBloc(settings);
+      addTearDown(settingsBloc.close);
+      final repo = MockSearch();
+      final favorites = MockFavorites();
+      when(() => favorites.getLocalFavoriteGids()).thenAnswer((_) async => {});
+      when(() => repo.getSearchHistory()).thenReturn(['first']);
+      when(() => repo.addSearchHistory(any())).thenAnswer((_) async {});
+      const thumb = 'https://example.test/search-reset.png';
+      SearchResult results(String query) => SearchResult(
+            galleries: List.generate(
+                60,
+                (index) => GalleryPreview(
+                    gid: index + 1,
+                    token: 'abc',
+                    title: '$query gallery $index',
+                    thumbUrl: thumb,
+                    category: 'Manga',
+                    rating: 4,
+                    uploader: '',
+                    fileCount: 20,
+                    postedAt: DateTime(2026))),
+            totalPages: 1,
+            totalResults: 60,
+          );
+      final delayed = Completer<SearchResult>();
+      final queries = <SearchFilter>[];
+      when(() => repo.search(any(),
+          page: any(named: 'page'),
+          nextUrl: any(named: 'nextUrl'))).thenAnswer((call) {
+        final filter = call.positionalArguments.single as SearchFilter;
+        queries.add(filter);
+        return queries.length == 2
+            ? delayed.future
+            : Future.value(results(filter.keyword ?? ''));
+      });
+      GetIt.I.registerSingleton<SearchRepository>(repo);
+      GetIt.I.registerSingleton<FavoritesRepository>(favorites);
+      EhImageCacheManager.init(MockCookies());
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawColor(Colors.blue, BlendMode.src);
+      final picture = recorder.endRecording();
+      final pixels = await tester.runAsync(() => picture.toImage(2, 3));
+      picture.dispose();
+      PaintingBinding.instance.imageCache.putIfAbsent(
+        const CachedNetworkImageProvider(thumb),
+        () => OneFrameImageStreamCompleter(
+            Future.value(ImageInfo(image: pixels!))),
+      );
+      await tester.pumpWidget(BlocProvider.value(
+          value: settingsBloc,
+          child:
+              const MaterialApp(home: SearchScreen(initialKeyword: 'first'))));
+      await tester.pumpAndSettle();
+      final toggle = find.byKey(const ValueKey('search-view-toggle'));
+      ScrollController activeController() =>
+          find.byType(MasonryGridView).evaluate().isNotEmpty
+              ? tester
+                  .widget<MasonryGridView>(find.byType(MasonryGridView))
+                  .controller!
+              : tester.widget<ListView>(find.byType(ListView)).controller!;
+      activeController().jumpTo(450);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      activeController().jumpTo(900);
+      await tester.pumpAndSettle();
+      if (!startInGrid) {
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(activeController().offset, 450);
+      }
+      // Focusing/editing hides the results; neither result controller is attached
+      // when the next search starts. Both PageStorage offsets must be discarded.
+      await tester.enterText(find.byType(TextField), 'second');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pump();
+      delayed.complete(results('second'));
+      await tester.pumpAndSettle();
+      expect(queries.last.keyword, 'second');
+      expect(activeController().offset, 0);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(activeController().offset, 0);
+
+      // Repeating the same query through the FAB also starts at the top, even
+      // when the result list is still mounted and the query text has not changed.
+      activeController().jumpTo(550);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byWidgetPredicate(
+          (w) => w is FloatingActionButton && w.heroTag == 'search'));
+      await tester.pumpAndSettle();
+      expect(queries, hasLength(3));
+      expect(activeController().offset, 0);
+
+      // Applying filters is a new search too.
+      activeController().jumpTo(500);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byWidgetPredicate(
+          (w) => w is FloatingActionButton && w.heroTag == 'filter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilterChip, 'Manga'));
+      await tester.scrollUntilVisible(find.byType(FilledButton), 200,
+          scrollable: find
+              .descendant(
+                  of: find.byType(DraggableScrollableSheet),
+                  matching: find.byType(Scrollable))
+              .last);
+      await tester.tap(find.byType(FilledButton).last);
+      await tester.pumpAndSettle();
+      expect(queries.last.categories, contains('Manga'));
+      expect(activeController().offset, 0);
+
+      // Selecting a recent search uses the same reset behavior.
+      activeController().jumpTo(600);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.clear));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('first'));
+      await tester.pumpAndSettle();
+      expect(queries.last.keyword, 'first');
+      expect(queries, hasLength(5));
+      expect(activeController().offset, 0);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets(
       'search switches layouts, adapts portrait covers and keeps navigation/pagination',
