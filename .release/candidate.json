@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.0.0",
   "branch": "dev",
-  "build_number": 4,
-  "candidate_id": "1.0.1+4",
-  "fingerprint": "fab2f6bbf6a54a4d66105fe31801731fa927ca3498492e1a3ce730fd4f211c4c",
+  "build_number": 5,
+  "candidate_id": "1.0.1+5",
+  "fingerprint": "a0bde26effb76ef77cbc27e8c77037c74d2e472548b02ed967d237df7fa1daed",
   "notes": "### 新增\n\n- 自动计算应用版本，Android 与 iOS 共用候选构建号。\n- 设置页显示实际安装包版本及构建号。\n- 发布时校验并使用指定候选的原始安装包。\n\n### 修复\n\n- 避免标签发布再次构建并覆盖已验证的安装包。\n\n### 变更\n\n- Android 后续正式候选使用固定签名密钥。\n\n### 已知限制\n\n- 首次更换 Android 签名时，如果与 v1.0.0 证书不同，需卸载旧版后安装，可能丢失本地历史、进度及设置；安装前请自行记录重要数据。\n- iOS 提供未签名 IPA，需自行签名安装。",
   "schema": 1,
-  "source_sha": "0876164694cc992b94eebe309df0a63453893d62",
+  "source_sha": "881427d931898446aa3c5fae328f7ffeb334f59b",
   "summary": [
     {
       "sha": "f32428951cef1db32dfb9b03b45f79377df02eab",
@@ -27,6 +27,11 @@
       "sha": "0876164694cc992b94eebe309df0a63453893d62",
       "subject": "fix(ci): keep license-related source files in candidate fingerprints",
       "type": "fix"
+    },
+    {
+      "sha": "881427d931898446aa3c5fae328f7ffeb334f59b",
+      "subject": "chore: ignore local signing backup and record device migration check",
+      "type": "chore"
     }
   ],
   "version": "1.0.1"
