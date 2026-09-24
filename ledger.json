@@ -174,8 +174,58 @@
         }
       ],
       "version": "1.0.1"
+    },
+    {
+      "base_tag": "v1.0.0",
+      "branch": "dev",
+      "build_number": 7,
+      "build_sha": "8f3416c426f50a53614e0f962edceb8f9d58609d",
+      "candidate_id": "1.0.1+7",
+      "fingerprint": "0ac38afbfe25e7f0926a8bf3dfbd69e7a782571a766f6816253374092fe6a1c7",
+      "notes": "### 新增\n\n- 自动计算应用版本，Android 与 iOS 共用候选构建号。\n- 设置页显示实际安装包版本及构建号。\n- 发布时校验并使用指定候选的原始安装包。\n\n### 修复\n\n- 修复搜索页新一轮搜索沿用旧滚动位置的问题；列表和卡片均回到顶部，同一轮搜索的视图切换及详情返回继续保留位置。\n- 调整 iOS 登录页以兼容 Cloudflare 安全验证：使用不注入插件脚本的原生 WKWebView，并保留登录页面及 Cookie 会话，补充刷新入口。\n- 修复登录后仍停留在 `act=Login` 地址时未识别 Cookie，以及异步保存登录时重建浏览器的问题。\n- 避免标签发布再次构建并覆盖已验证的安装包。\n\n### 变更\n\n- Android 后续正式候选使用固定签名密钥。\n\n### 已知限制\n\n- 从签名更新前下载的旧签名 v1.0.0 升级，需要卸载旧版后安装，可能丢失本地历史、进度及设置；安装前请自行记录重要数据。更新签名后的 v1.0.0 与后续正式候选使用同一证书。\n- iOS 提供未签名 IPA，需自行签名安装。",
+      "schema": 1,
+      "source_sha": "cc31a451336b77cec94f42529eab8130c6808dec",
+      "stage": "reserved",
+      "summary": [
+        {
+          "sha": "f32428951cef1db32dfb9b03b45f79377df02eab",
+          "subject": "chore: ignore local issue notes",
+          "type": "chore"
+        },
+        {
+          "sha": "6aef794a541cc1077962c927f8da631df6287918",
+          "subject": "ci: implement unified candidates and verified release publishing",
+          "type": "ci"
+        },
+        {
+          "sha": "50c3e3925f170a77bf372eb6e2568029ad1e6608",
+          "subject": "fix(ci): negotiate artifact downloads with the GitHub API media type",
+          "type": "fix"
+        },
+        {
+          "sha": "0876164694cc992b94eebe309df0a63453893d62",
+          "subject": "fix(ci): keep license-related source files in candidate fingerprints",
+          "type": "fix"
+        },
+        {
+          "sha": "881427d931898446aa3c5fae328f7ffeb334f59b",
+          "subject": "chore: ignore local signing backup and record device migration check",
+          "type": "chore"
+        },
+        {
+          "sha": "2bcfe4355a89de1498abeba03b7407da7b42d8a0",
+          "subject": "fix(ios): preserve native web login sessions for challenge verification",
+          "type": "fix"
+        },
+        {
+          "sha": "cc31a451336b77cec94f42529eab8130c6808dec",
+          "subject": "fix(search): reset scroll positions for each submitted query (#33)",
+          "type": "fix"
+        }
+      ],
+      "version": "1.0.1"
     }
   ],
-  "last_build_number": 6,
+  "last_build_number": 7,
   "schema": 1
 }
