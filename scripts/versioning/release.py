@@ -96,8 +96,7 @@ def release_notes(candidate, android, ios):
             f"- iOS run ID: {ios['run_id']}（第 {ios['run_attempt']} 次运行）\n\n"
             f"### 校验\n\n- APK SHA-256: `{android['sha256']}`\n- IPA SHA-256: `{ios['sha256']}`\n"
             f"- Android 证书 SHA-256: `{android['signing_cert_sha256']}`\n\n"
-            "### 安装说明\n\nAndroid 使用固定正式签名。若从 v1.0.0 升级时证书不同，需卸载后重装，"
-            "可能丢失本地历史、进度及设置，请先记录重要数据。后续相同签名版本可覆盖安装。\n\niOS 为未签名 IPA，需自行签名安装。\n")
+            "### 安装说明\n\nAndroid 使用固定正式签名，相同签名版本可覆盖安装。\n\niOS 为未签名 IPA，需自行签名安装。\n")
 
 
 def check_assets(api, release_id, files):
