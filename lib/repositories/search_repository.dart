@@ -72,17 +72,18 @@ class SearchRepository {
       params.add('f_search=${Uri.encodeComponent(keyword)}');
     }
 
-    // Category filter (bitmask)
-    if (filter.categories.isNotEmpty) {
-      var catBits = 0;
-      final allCats = AppConstants.categories;
-      for (var i = 0; i < allCats.length; i++) {
-        if (!filter.categories.contains(allCats[i])) {
-          catBits |= (1 << i);
+    // f_cats excludes categories using fixed site bits, not their UI indices.
+    final selected = filter.categories.toSet();
+    var excludedBits = 0;
+    if (selected.isNotEmpty) {
+      for (final entry in AppConstants.categoryBits.entries) {
+        if (!selected.contains(entry.key)) {
+          excludedBits |= entry.value;
         }
       }
-      if (catBits > 0) params.add('f_cats=$catBits');
     }
+    // Empty/all selections explicitly mean unrestricted categories.
+    params.add('f_cats=$excludedBits');
 
     if (filter.minRating != null) {
       params.add('f_srdd=${filter.minRating}');

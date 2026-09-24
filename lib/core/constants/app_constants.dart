@@ -55,6 +55,20 @@ class AppConstants {
     'Misc',
   ];
 
+  // Site protocol bits for f_cats (1 means excluded), independent of UI order.
+  static const Map<String, int> categoryBits = {
+    'Doujinshi': 2,
+    'Manga': 4,
+    'Artist CG': 8,
+    'Game CG': 16,
+    'Western': 512,
+    'Non-H': 256,
+    'Image Set': 32,
+    'Cosplay': 64,
+    'Asian Porn': 128,
+    'Misc': 1,
+  };
+
   // Category colors (hex)
   static const Map<String, int> categoryColors = {
     'Doujinshi': 0xFFF44336,
