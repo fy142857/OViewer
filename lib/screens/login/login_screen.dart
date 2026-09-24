@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
 import '../../blocs/auth/auth_state.dart';
-import '../../core/constants/app_constants.dart';
+import '../../widgets/login_webview.dart';
 import '../../core/l10n/s.dart';
 import '../../repositories/auth_repository.dart';
 import 'package:get_it/get_it.dart';
@@ -156,43 +155,22 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ---- WebView Login ----
   Widget _buildWebViewLogin(BuildContext context, AuthState state) {
-    if (state.status == AuthStatus.loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     final loginUrl = GetIt.I<AuthRepository>().loginPageUrl;
-
-    return InAppWebView(
-      initialUrlRequest: URLRequest(url: Uri.parse(loginUrl)),
-      initialOptions: InAppWebViewGroupOptions(
-        crossPlatform: InAppWebViewOptions(
-          javaScriptEnabled: true,
-          useShouldOverrideUrlLoading: true,
+    return Stack(
+      children: [
+        LoginWebView(
+          url: Uri.parse(loginUrl),
+          enabled: state.status != AuthStatus.loading,
+          onLogin: (cookies) =>
+              context.read<AuthBloc>().add(LoginFromWebView(cookies)),
         ),
-      ),
-      onLoadStop: (controller, url) async {
-        // Check if we're on the main site after login
-        final currentUrl = url?.toString() ?? '';
-        if (currentUrl.contains('e-hentai.org') &&
-            !currentUrl.contains('act=Login')) {
-          // Try to extract cookies
-          final cookies = await CookieManager.instance()
-              .getCookies(url: Uri.parse(AppConstants.ehBaseUrl));
-
-          final cookieMap = <String, String>{};
-          for (final cookie in cookies) {
-            cookieMap[cookie.name] = cookie.value;
-          }
-
-          // Check for required cookies
-          if (cookieMap.containsKey(AppConstants.cookieIpbMemberId) &&
-              cookieMap.containsKey(AppConstants.cookieIpbPassHash)) {
-            if (mounted) {
-              context.read<AuthBloc>().add(LoginFromWebView(cookieMap));
-            }
-          }
-        }
-      },
+        if (state.status == AuthStatus.loading)
+          const Positioned.fill(
+            child: AbsorbPointer(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+      ],
     );
   }
 

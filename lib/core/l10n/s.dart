@@ -22,6 +22,7 @@ class S {
   String get clear => _zh ? '清除' : 'Clear';
   String get delete => _zh ? '删除' : 'Delete';
   String get retry => _zh ? '重试' : 'Retry';
+  String get reloadLoginPage => _zh ? '刷新登录页' : 'Reload login page';
   String get login => _zh ? '登录' : 'Login';
   String get logout => _zh ? '退出登录' : 'Logout';
   String get reset => _zh ? '重置' : 'Reset';
