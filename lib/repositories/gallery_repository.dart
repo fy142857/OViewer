@@ -16,6 +16,7 @@ import '../models/gallery_detail.dart';
 import '../models/gallery_image.dart';
 import '../models/reader_index_page.dart';
 import '../core/storage/reader_index_cache.dart';
+import '../core/parser/gallery_content_warning.dart';
 
 class GalleryRepository {
   static final _log = Logger();
@@ -25,6 +26,15 @@ class GalleryRepository {
 
   GalleryRepository(this._dio, {ReaderIndexCache? indexCache})
       : readerIndexCache = indexCache ?? ReaderIndexCache.shared;
+
+  void acceptGalleryWarning(int gid, String token) => _dio
+      .allowGalleryWarning(Uri.parse(ApiEndpoints.galleryDetail(gid, token)));
+
+  void _checkWarning(String html, int gid, String token) {
+    final warning = GalleryContentWarning.parse(
+        html, Uri.parse(ApiEndpoints.galleryDetail(gid, token)));
+    if (warning != null) throw warning;
+  }
 
   ReaderIndexPage? cachedReaderIndex(int gid, String token, {int page = 0}) =>
       readerIndexCache.get(AppConstants.baseUrl, gid, token, page);
@@ -46,6 +56,7 @@ class GalleryRepository {
         generation != readerIndexCache.generation) {
       throw StateError('Reader index session is no longer active.');
     }
+    _checkWarning(html, gid, token);
     final result = GalleryDetailParser.parseReaderIndex(html, page: page);
     readerIndexCache.put(site, gid, token, result);
     return result;
@@ -156,6 +167,7 @@ class GalleryRepository {
     final site = AppConstants.baseUrl;
     final generation = readerIndexCache.generation;
     final html = await _dio.get(url, cancelToken: cancelToken);
+    _checkWarning(html, gid, token);
     _seedReaderIndex(html, site, generation, gid, token, 0, cancelToken);
     _cacheApiCredentials(gid, html);
     final detail = GalleryDetailParser.parse(html, gid, token);
@@ -236,6 +248,7 @@ class GalleryRepository {
     final site = AppConstants.baseUrl;
     final generation = readerIndexCache.generation;
     final html = await _dio.get(url, cancelToken: cancelToken);
+    _checkWarning(html, gid, token);
     _seedReaderIndex(html, site, generation, gid, token, page, cancelToken);
     final thumbnails = GalleryDetailParser.parseThumbnails(html);
     final totalPages = GalleryDetailParser.parseThumbnailPageCount(html);
@@ -300,6 +313,7 @@ class GalleryRepository {
   Future<List<GalleryComment>> fetchComments(int gid, String token) async {
     final html =
         await _dio.get('${ApiEndpoints.galleryDetail(gid, token)}?hc=1');
+    _checkWarning(html, gid, token);
     _cacheApiCredentials(gid, html);
     return _readComments(html, requireAll: true);
   }

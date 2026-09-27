@@ -6,6 +6,7 @@ import '../../models/gallery_preview.dart';
 import '../../models/gallery_comment.dart';
 import 'gallery_detail_event.dart';
 import 'gallery_detail_state.dart';
+import '../../core/parser/gallery_content_warning.dart';
 
 class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
   final GalleryRepository _repository;
@@ -28,6 +29,9 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
   ) async {
     emit(state.copyWith(status: GalleryDetailStatus.loading));
     try {
+      if (event.acceptWarning) {
+        _repository.acceptGalleryWarning(event.gid, event.token);
+      }
       final detail =
           await _repository.fetchGalleryDetail(event.gid, event.token);
       _remainingComments = null;
@@ -36,6 +40,10 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
         detail: detail,
         allCommentsLoaded: detail.commentCount <= detail.comments.length,
       ));
+    } on GalleryContentWarning catch (warning) {
+      emit(state.copyWith(
+          status: GalleryDetailStatus.contentWarning,
+          errorMessage: warning.message));
     } catch (e) {
       emit(state.copyWith(
         status: GalleryDetailStatus.error,

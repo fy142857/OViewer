@@ -147,6 +147,9 @@ class S {
   String get memberIdPassHashRequired => _zh ? 'Member ID 和 Pass Hash 为必填' : 'Member ID and Pass Hash are required';
 
   // ---- Gallery Detail Screen ----
+  String get galleryContentWarning => _zh ? '站点内容提示' : 'Site content warning';
+  String get galleryWarningExplanation => _zh ? '站点对该画廊显示了内容提示。继续后，仅在本次应用会话中允许查看该画廊。' : 'The site has flagged this gallery. Continue to view this gallery for the current app session.';
+  String get continueGallery => _zh ? '继续查看' : 'Continue to gallery';
   String get loadingDetails => _zh ? '正在加载详情...' : 'Loading details...';
   String get failedToLoad => _zh ? '加载失败' : 'Failed to load';
   String get uploader => _zh ? '上传者' : 'Uploader';

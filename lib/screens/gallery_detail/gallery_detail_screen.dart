@@ -30,6 +30,7 @@ import '../../widgets/tag_chip.dart';
 import '../../widgets/thumbnail_grid.dart';
 import '../comments/comments_screen.dart';
 import '../../widgets/comment_card.dart';
+import '../../widgets/gallery_warning_view.dart';
 
 class GalleryDetailScreen extends StatelessWidget {
   final int gid;
@@ -125,6 +126,15 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
           return Scaffold(
             body: LoadingIndicator(message: s.loadingDetails),
           );
+        }
+        if (state.status == GalleryDetailStatus.contentWarning) {
+          return GalleryWarningView(
+              message: state.errorMessage ?? '',
+              onContinue: () => context.read<GalleryDetailBloc>().add(
+                  FetchGalleryDetail(
+                      gid: widget.gid,
+                      token: widget.token,
+                      acceptWarning: true)));
         }
         if (state.status == GalleryDetailStatus.error) {
           return Scaffold(

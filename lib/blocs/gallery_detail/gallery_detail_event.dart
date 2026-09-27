@@ -9,9 +9,11 @@ abstract class GalleryDetailEvent extends Equatable {
 class FetchGalleryDetail extends GalleryDetailEvent {
   final int gid;
   final String token;
-  const FetchGalleryDetail({required this.gid, required this.token});
+  final bool acceptWarning;
+  const FetchGalleryDetail(
+      {required this.gid, required this.token, this.acceptWarning = false});
   @override
-  List<Object?> get props => [gid, token];
+  List<Object?> get props => [gid, token, acceptWarning];
 }
 
 class ToggleFavorite extends GalleryDetailEvent {

@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../models/gallery_detail.dart';
 
-enum GalleryDetailStatus { initial, loading, loaded, error }
+enum GalleryDetailStatus { initial, loading, loaded, contentWarning, error }
 
 enum CommentPostStatus { idle, sending, success, failure }
 

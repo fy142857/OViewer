@@ -11,6 +11,7 @@ import '../../core/network/reader_request_controller.dart';
 import '../../models/gallery_image.dart';
 import 'reader_event.dart';
 import 'reader_state.dart';
+import '../../core/parser/gallery_content_warning.dart';
 
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final GalleryRepository _galleryRepo;
@@ -19,6 +20,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final ReaderRequestController _requests;
   ReaderIndexSession? _index;
   bool _starting = false;
+  int _requestedStart = 0;
 
   ReaderBloc(this._galleryRepo, this._historyRepo, this._settingsRepo,
       {ReaderRequestController? requestController})
@@ -29,6 +31,12 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<LoadThumbnailAtIndex>(_onLoadThumbnail);
     on<RetryImageAtIndex>(_onRetryImageAtIndex);
     on<PageChanged>(_onPageChanged);
+    on<AcceptReaderContentWarning>((event, emit) {
+      if (!_active || state.status != ReaderStatus.contentWarning) return;
+      _galleryRepo.acceptGalleryWarning(state.gid, state.token);
+      add(LoadReaderImages(
+          gid: state.gid, token: state.token, initialPage: _requestedStart));
+    });
     on<ReaderImageReady>((event, emit) {
       if (_active &&
           (state.imageAttempts[event.index] ?? 0) == event.attempt &&
@@ -76,6 +84,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           (await _historyRepo.getProgress(event.gid))?.lastReadPage ??
           0;
       if (!_active) return;
+      _requestedStart = start;
       final index =
           ReaderIndexSession(_galleryRepo, _requests, event.gid, event.token);
       _index = index;
@@ -95,6 +104,12 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       _saveProgress(current);
       add(LoadImageAtIndex(current));
       // Neighbours are queued only after the current page URL is available.
+    } on GalleryContentWarning catch (warning) {
+      if (_active) {
+        emit(state.copyWith(
+            status: ReaderStatus.contentWarning,
+            errorMessage: warning.message));
+      }
     } catch (error) {
       if (_active) {
         emit(state.copyWith(

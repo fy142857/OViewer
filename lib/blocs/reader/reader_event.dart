@@ -76,3 +76,5 @@ class ReaderImageFailed extends ReaderEvent {
   @override
   List<Object?> get props => [index, attempt];
 }
+
+class AcceptReaderContentWarning extends ReaderEvent {}

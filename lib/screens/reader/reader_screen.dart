@@ -26,6 +26,7 @@ import '../../widgets/reader_page_image.dart';
 import '../../core/services/page_image_exporter.dart';
 import '../../models/reader_page_resource.dart';
 import '../../widgets/reader_page_menu.dart';
+import '../../widgets/gallery_warning_view.dart';
 
 class ReaderScreen extends StatefulWidget {
   final int gid;
@@ -249,7 +250,9 @@ class _ReaderViewState extends State<_ReaderView> {
         }
         _lastReadingMode = state.readingMode;
         SystemChrome.setEnabledSystemUIMode(
-          state.showUI || state.status == ReaderStatus.error
+          state.showUI ||
+                  state.status == ReaderStatus.error ||
+                  state.status == ReaderStatus.contentWarning
               ? SystemUiMode.edgeToEdge
               : SystemUiMode.immersiveSticky,
         );
@@ -270,6 +273,12 @@ class _ReaderViewState extends State<_ReaderView> {
             backgroundColor: Colors.black,
             body: LoadingIndicator(message: S.of(context).loadingReader),
           );
+        }
+        if (state.status == ReaderStatus.contentWarning) {
+          return GalleryWarningView(
+              message: state.errorMessage ?? '',
+              onContinue: () =>
+                  context.read<ReaderBloc>().add(AcceptReaderContentWarning()));
         }
         if (state.status == ReaderStatus.error) {
           return Scaffold(

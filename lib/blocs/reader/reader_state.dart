@@ -3,7 +3,7 @@ import '../../models/gallery_image.dart';
 import '../../models/reader_page_resource.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 
-enum ReaderStatus { initial, loading, ready, error }
+enum ReaderStatus { initial, loading, ready, contentWarning, error }
 
 class ReaderState extends Equatable {
   final ReaderStatus status;

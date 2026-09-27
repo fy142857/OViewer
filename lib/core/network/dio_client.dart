@@ -4,11 +4,53 @@ import '../constants/app_constants.dart';
 import 'cookie_manager.dart' as app;
 import 'api_exception.dart';
 import 'dio_proxy_io.dart';
+import '../storage/reader_index_cache.dart';
 
 class DioClient {
   static final _log = Logger();
   late final Dio _dio;
   final app.CookieManager _cookieManager;
+  final Set<Uri> _acceptedWarnings = {};
+  int _warningGeneration = ReaderIndexCache.shared.generation;
+
+  void allowGalleryWarning(Uri gallery) {
+    _resetWarningsIfNeeded();
+    if (gallery.origin != AppConstants.baseUrl ||
+        !RegExp(r'^/g/\d+/[a-f0-9]+/$').hasMatch(gallery.path)) {
+      throw ArgumentError('Expected a gallery on the current site.');
+    }
+    _acceptedWarnings
+        .add(gallery.replace(query: '', fragment: '').removeFragment());
+  }
+
+  void _resetWarningsIfNeeded() {
+    if (_warningGeneration != ReaderIndexCache.shared.generation) {
+      _acceptedWarnings.clear();
+      _warningGeneration = ReaderIndexCache.shared.generation;
+    }
+  }
+
+  void _applyGalleryWarningChoice(RequestOptions options) {
+    _resetWarningsIfNeeded();
+    final uri = options.uri;
+    final accepted = _acceptedWarnings.any((gallery) {
+      if (gallery.origin != uri.origin) return false;
+      if (gallery.path == uri.path) return true;
+      final image = RegExp(r'^/s/[^/]+/(\d+)-\d+$').firstMatch(uri.path);
+      return image != null && image[1] == gallery.pathSegments[1];
+    });
+    if (!accepted) return;
+    // Per-request preference only. Do not persist a site-wide "never warn"
+    // cookie or change authentication cookies/account settings.
+    final current =
+        options.headers['cookie'] ?? options.headers.remove('Cookie') ?? '';
+    final cookies = current
+        .toString()
+        .split(';')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty && !s.startsWith('nw='));
+    options.headers['cookie'] = [...cookies, 'nw=1'].join('; ');
+  }
 
   DioClient(this._cookieManager) {
     _dio = Dio(BaseOptions(
@@ -27,6 +69,7 @@ class DioClient {
     // Logging interceptor (debug only)
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
+        _applyGalleryWarningChoice(options);
         _log.d('REQUEST: ${options.method} ${options.uri}');
         handler.next(options);
       },
