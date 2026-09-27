@@ -216,7 +216,7 @@ void main() {
   });
 
   testWidgets(
-      'native visible comments first; bottom loads hidden comments 20 at a time',
+      'native visible comments first; first bottom loads all hidden comments',
       (tester) async {
     final repo = MockRepo();
     final auth = MockAuth();
@@ -258,14 +258,14 @@ void main() {
     response.complete([hidden.first, ...visible, ...hidden, visible.first]);
     await tester.pumpAndSettle();
     expect(bloc.state.detail!.comments.map((c) => c.id),
-        [0, 99, 11, ...hidden.take(20).map((c) => c.id)]);
+        [0, 99, 11, ...hidden.map((c) => c.id)]);
     expect(bloc.state.detail!.commentCount, 48);
-    expect(bloc.state.allCommentsLoaded, false);
+    expect(bloc.state.allCommentsLoaded, true);
     final position =
         tester.state<ScrollableState>(find.byType(Scrollable).first).position;
     position.jumpTo(position.maxScrollExtent);
     await tester.pumpAndSettle();
-    expect(bloc.state.detail!.comments.length, 43);
+    expect(bloc.state.detail!.comments.length, 48);
     position.jumpTo(position.maxScrollExtent);
     await tester.pumpAndSettle();
     expect(bloc.state.detail!.comments.length, 48);
@@ -276,7 +276,7 @@ void main() {
 
   for (final ex in [false, true]) {
     testWidgets(
-        '54 + 148 actual notice structure loads 20 per bottom on ${ex ? "EX" : "EH"}',
+        '54 + 148 actual notice structure expands all after retry on ${ex ? "EX" : "EH"}',
         (tester) async {
       AppConstants.useExHentai = ex;
       final root = AppConstants.baseUrl;
@@ -328,13 +328,11 @@ void main() {
           scrollable: find.byType(Scrollable).first);
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
-      expect(bloc.state.detail!.comments.length, 74);
-      for (final count in [94, 114, 134, 154, 174, 194, 202]) {
-        position.jumpTo(position.maxScrollExtent);
-        await tester.pumpAndSettle();
-        expect(bloc.state.detail!.comments.length, count);
-        expect(bloc.state.detail!.commentCount, 202);
-      }
+      expect(bloc.state.detail!.comments.length, 202);
+      expect(bloc.state.detail!.commentCount, 202);
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(bloc.state.detail!.comments.length, 202);
       expect(bloc.state.allCommentsLoaded, true);
       expect(bloc.state.detail!.comments.map((c) => c.id),
           List.generate(202, (i) => i));

@@ -195,14 +195,12 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
         final seen = state.detail!.comments.map((c) => c.id).toSet();
         _remainingComments = comments.where((c) => seen.add(c.id)).toList();
       }
-      final next = _remainingComments!.take(20).toList();
-      _remainingComments!.removeRange(0, next.length);
-      final comments = [...state.detail!.comments, ...next];
+      final comments = [...state.detail!.comments, ..._remainingComments!];
+      _remainingComments = [];
       emit(state.copyWith(
-          detail: state.detail?.withComments(comments,
-              totalCount: comments.length + _remainingComments!.length),
+          detail: state.detail?.withComments(comments, all: true),
           commentsLoading: false,
-          allCommentsLoaded: _remainingComments!.isEmpty));
+          allCommentsLoaded: true));
     } catch (e) {
       emit(state.copyWith(commentsLoading: false, commentsError: e.toString()));
     }
