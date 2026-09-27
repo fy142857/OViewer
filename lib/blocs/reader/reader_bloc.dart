@@ -29,6 +29,26 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<LoadThumbnailAtIndex>(_onLoadThumbnail);
     on<RetryImageAtIndex>(_onRetryImageAtIndex);
     on<PageChanged>(_onPageChanged);
+    on<ReaderImageReady>((event, emit) {
+      if (_active &&
+          (state.imageAttempts[event.index] ?? 0) == event.attempt &&
+          state.loadedImages.containsKey(event.index) &&
+          !state.loadingIndices.contains(event.index)) {
+        emit(state.copyWith(readyResources: {
+          ...state.readyResources,
+          event.index: event.resource
+        }));
+      } else {
+        event.resource.releaseMemory();
+      }
+    });
+    on<ReaderImageFailed>((event, emit) {
+      if (_active && (state.imageAttempts[event.index] ?? 0) == event.attempt) {
+        state.readyResources[event.index]?.releaseMemory();
+        emit(state.copyWith(
+            readyResources: {...state.readyResources}..remove(event.index)));
+      }
+    });
     on<ToggleReaderUI>((event, emit) {
       if (!_requests.isCancelled) emit(state.copyWith(showUI: !state.showUI));
     });
@@ -112,10 +132,19 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         !index.isActive ||
         page < 0 ||
         page >= state.totalPages ||
-        state.loadingIndices.contains(page)) return;
+        (!retry && state.loadingIndices.contains(page))) return;
     final previous = state.loadedImages[page];
+    final pageRequests =
+        retry ? _requests.restartPage(page) : _requests.forPage(page);
+    bool current() =>
+        _active &&
+        identical(index, _index) &&
+        index.isActive &&
+        !pageRequests.isCancelled;
+    state.readyResources[page]?.releaseMemory();
     emit(state.copyWith(
         loadingIndices: {...state.loadingIndices, page},
+        readyResources: {...state.readyResources}..remove(page),
         failedIndices: {...state.failedIndices}..remove(page),
         imageAttempts: retry
             ? {
@@ -126,17 +155,17 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     try {
       for (var refresh = 0; refresh < 2; refresh++) {
         final thumb = await index.ensureImage(page, refresh: refresh > 0);
-        if (!_active || !index.isActive) return;
+        if (!current()) return;
         _publishIndex(emit);
         try {
           final nl = previous?.nlKey;
           final image = retry && refresh == 0 && nl != null && nl.isNotEmpty
               ? await _galleryRepo.fetchImageWithNl(
                   thumb.pageToken, state.gid, page, nl,
-                  cancelToken: _requests.cancelToken)
+                  cancelToken: pageRequests.cancelToken)
               : await _galleryRepo.fetchImage(thumb.pageToken, state.gid, page,
-                  cancelToken: _requests.cancelToken);
-          if (!_active || !index.isActive) return;
+                  cancelToken: pageRequests.cancelToken);
+          if (!current()) return;
           if (image.imageUrl.isEmpty) {
             throw const FormatException(
                 'Image page no longer contains an image.');
@@ -165,11 +194,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     } on ReaderIndexDiscarded {
       // Obsolete queued work is not a failed page.
     } catch (_) {
-      if (_active && identical(index, _index) && index.isActive) {
+      if (current()) {
         emit(state.copyWith(failedIndices: {...state.failedIndices, page}));
       }
     } finally {
-      if (_active && identical(index, _index) && index.isActive) {
+      if (current()) {
         emit(state.copyWith(
             loadingIndices: {...state.loadingIndices}..remove(page)));
       }

@@ -200,6 +200,15 @@ class S {
   String get failedToLoadThumbnails => _zh ? '加载缩略图失败' : 'Failed to load thumbnails';
 
   // ---- Reader Screen ----
+  String readerPageTitle(int page) => _zh ? '第 $page 页' : 'Page $page';
+  String get reloadPage => _zh ? '重新加载该页面' : 'Reload this page';
+  String get savePage => _zh ? '保存页面资源' : 'Save page image';
+  String get savingPage => _zh ? '正在保存…' : 'Saving…';
+  String get pageSaved => _zh ? '已保存到相册' : 'Saved to Photos';
+  String get pageSavedAsPng => _zh ? '已转换为 PNG 静态图并保存到相册' : 'Converted to a static PNG and saved to Photos';
+  String get photoPermissionDenied => _zh ? '请在系统设置中允许保存照片' : 'Allow saving photos in system settings';
+  String get pageResourceUnavailable => _zh ? '图片资源已不可用，请重新加载该页面' : 'Image resource unavailable. Reload this page.';
+  String get pageSaveFailed => _zh ? '保存失败，请重试' : 'Could not save image. Please try again.';
   String get loadingReader => _zh ? '正在加载阅读器...' : 'Loading reader...';
   String get failedToLoadReader => _zh ? '加载阅读器失败' : 'Failed to load reader';
   String get noPagesAvailable => _zh ? '没有可用页面' : 'No pages available';

@@ -241,6 +241,38 @@ void main() {
   });
 
   for (final mode in [0, 1, 2]) {
+    testWidgets(
+        'mode $mode: long press loading page offers reload and restarts only this attempt',
+        (tester) async {
+      when(() => GetIt.I<SettingsRepository>().getReadingMode())
+          .thenReturn(mode);
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settingsBloc,
+          child:
+              const MaterialApp(home: ReaderScreen(gid: 42, token: 'token'))));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(pending, hasLength(1));
+      await tester.longPressAt(tester.getCenter(find.byType(ReaderScreen)));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Page 1'), findsOneWidget);
+      expect(find.byKey(const ValueKey('reload-page')), findsOneWidget);
+      expect(find.byKey(const ValueKey('save-page')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('reload-page')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(pending, hasLength(2));
+      expect(tokens.first.isCancelled, true);
+      expect(tokens.last.isCancelled, false);
+      await tester.pumpWidget(const SizedBox.shrink());
+      for (final request in pending) {
+        if (!request.isCompleted) request.completeError(StateError('closed'));
+      }
+      await tester.pump();
+    });
+  }
+
+  for (final mode in [0, 1, 2]) {
     for (final selected in [0, 5]) {
       testWidgets(
           'mode $mode: changed explicit preview page $selected overrides previous reading position',

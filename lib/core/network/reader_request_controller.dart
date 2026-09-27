@@ -16,6 +16,18 @@ class ReaderRequestController {
   final http.Client Function() _imageClientFactory;
   http.Client? _imageClient;
   final Set<void Function()> _cancelListeners = {};
+  final Map<int, ReaderRequestController> _pages = {};
+
+  ReaderRequestController forPage(int page) {
+    if (isCancelled) throw StateError('Reader session was closed.');
+    return _pages.putIfAbsent(page,
+        () => ReaderRequestController(imageClientFactory: _imageClientFactory));
+  }
+
+  ReaderRequestController restartPage(int page) {
+    _pages.remove(page)?.cancel();
+    return forPage(page);
+  }
 
   bool get isCancelled => cancelToken.isCancelled;
 
@@ -40,6 +52,10 @@ class ReaderRequestController {
   void cancel() {
     if (isCancelled) return;
     cancelToken.cancel('Reader screen was closed.');
+    for (final page in _pages.values) {
+      page.cancel();
+    }
+    _pages.clear();
     _imageClient?.close();
     for (final listener in _cancelListeners) {
       listener();

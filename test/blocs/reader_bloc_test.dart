@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'package:oviewer/models/reader_page_resource.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,6 +82,32 @@ void main() {
 
     expect(requestController.isCancelled, isTrue);
     verify(() => imageClient.close()).called(1);
+  });
+
+  test('restarting one page leaves siblings and index work active', () {
+    final clients = <MockHttpClient>[];
+    final root = ReaderRequestController(imageClientFactory: () {
+      final client = MockHttpClient();
+      clients.add(client);
+      return client;
+    });
+    final page0 = root.forPage(0);
+    final page1 = root.forPage(1);
+    page0.imageClient;
+    page1.imageClient;
+    root.imageClient;
+    final next = root.restartPage(0);
+    expect(page0.isCancelled, true);
+    expect(next.isCancelled, false);
+    expect(page1.isCancelled, false);
+    expect(root.isCancelled, false);
+    verify(() => clients.first.close()).called(1);
+    verifyNever(() => clients[1].close());
+    root.cancel();
+    expect(next.isCancelled, true);
+    expect(page1.isCancelled, true);
+    verify(() => clients[1].close()).called(1);
+    verify(() => clients[2].close()).called(1);
   });
 
   group('image loading and retry', () {
@@ -261,6 +289,47 @@ void main() {
       expect(fetches, 2);
       verify(() => gallery.invalidateReaderIndex(42, 'token', 0)).called(1);
       expect(bloc.state.status, ReaderStatus.ready);
+    });
+
+    test('reload interrupts loading metadata and ignores late old results',
+        () async {
+      final old = Completer<GalleryImage>();
+      final fresh = Completer<GalleryImage>();
+      final seen = <CancelToken>[];
+      when(() => gallery.fetchImage('page', 42, 0,
+          cancelToken: any(named: 'cancelToken'))).thenAnswer((call) {
+        seen.add(call.namedArguments[#cancelToken] as CancelToken);
+        return seen.length == 1 ? old.future : fresh.future;
+      });
+      bloc.add(const LoadReaderImages(gid: 42, token: 'token'));
+      await waitFor((s) => s.loadingIndices.contains(0));
+      await Future<void>.delayed(Duration.zero);
+      bloc.add(const RetryImageAtIndex(0));
+      await waitFor((s) => s.imageAttempts[0] == 1);
+      await Future<void>.delayed(Duration.zero);
+      expect(seen, hasLength(2));
+      expect(seen.first.isCancelled, true);
+      expect(seen.last.isCancelled, false);
+      old.complete(const GalleryImage(
+          index: 0, pageUrl: '', imageUrl: 'https://old.test/image'));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.loadingIndices, contains(0));
+      expect(bloc.state.loadedImages, isEmpty);
+      fresh.complete(first);
+      await waitFor((s) => s.loadingIndices.isEmpty);
+      expect(bloc.state.loadedImages[0], isNotNull);
+      expect(bloc.state.loadedImages[0]!.imageUrl, first.imageUrl);
+      final resource = ReaderPageResource(() async => Uint8List.fromList([1]));
+      bloc.add(ReaderImageReady(0, 0, resource));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.readyResources, isEmpty);
+      bloc.add(ReaderImageReady(0, 1, resource));
+      await waitFor((s) => s.readyResources.containsKey(0));
+      bloc.add(const ReaderImageFailed(0, 0));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.readyResources, contains(0));
+      bloc.add(const ReaderImageFailed(0, 1));
+      await waitFor((s) => s.readyResources.isEmpty);
     });
 
     test('retry publishes a replacement URL even when page count is unchanged',

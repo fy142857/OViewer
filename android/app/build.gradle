@@ -49,6 +49,7 @@ def releaseSigning = useEnvironmentSigning ? environmentSigning : [
 def hasReleaseSigning = releaseSigning.values().every { it != null && !it.isEmpty() }
 
 android {
+    testOptions { unitTests.includeAndroidResources = true }
     namespace "com.oviewer.oviewer"
     compileSdkVersion 35
     ndkVersion flutter.ndkVersion
@@ -108,4 +109,7 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.12.2'
+}

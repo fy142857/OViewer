@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A90000000000000000000003 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000004 /* InfoPlist.strings */; };
+		A90000000000000000000001 /* PageImageExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* PageImageExporter.swift */; };
 		B483A441327A461E90554981 /* LoginWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B483A441327A461E90554980 /* LoginWebView.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
@@ -30,6 +32,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A90000000000000000000005 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A90000000000000000000006 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A90000000000000000000002 /* PageImageExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageImageExporter.swift; sourceTree = "<group>"; };
 		B483A441327A461E90554980 /* LoginWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginWebView.swift; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
@@ -96,6 +101,8 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				B483A441327A461E90554980 /* LoginWebView.swift */,
+				A90000000000000000000002 /* PageImageExporter.swift */,
+				A90000000000000000000004 /* InfoPlist.strings */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
@@ -146,6 +153,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
@@ -163,6 +171,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A90000000000000000000003 /* InfoPlist.strings in Resources */,
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
@@ -211,6 +220,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A90000000000000000000001 /* PageImageExporter.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				B483A441327A461E90554981 /* LoginWebView.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
@@ -220,6 +230,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
+		A90000000000000000000004 /* InfoPlist.strings */ = {isa = PBXVariantGroup; children = (A90000000000000000000005 /* en */, A90000000000000000000006 /* zh-Hans */,); name = InfoPlist.strings; sourceTree = "<group>"; };
 		97C146FA1CF9000F007C117D /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (

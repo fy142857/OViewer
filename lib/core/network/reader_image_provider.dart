@@ -9,6 +9,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../constants/app_constants.dart';
 import 'reader_request_controller.dart';
 import 'reader_image_cache_key.dart';
+import '../../models/reader_page_resource.dart';
 
 /// The shared disk cache contains completed images, never in-flight requests.
 class ReaderImageCache {
@@ -78,6 +79,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   final int attempt;
   final void Function()? onImageReady;
   final Duration idleTimeout;
+  final ValueChanged<ReaderPageResource>? onResourceReady;
 
   const ReaderImageProvider(
     this.url, {
@@ -87,6 +89,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     this.attempt = 0,
     this.onImageReady,
     this.idleTimeout = const Duration(seconds: 30),
+    this.onResourceReady,
   });
 
   @override
@@ -98,12 +101,18 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       ReaderImageProvider key, ImageDecoderCallback decode) {
     final chunks = StreamController<ImageChunkEvent>();
     requests.onCancel(() => PaintingBinding.instance.imageCache.evict(key));
-    return MultiFrameImageStreamCompleter(
-      codec: _load(decode, chunks),
+    ReaderPageResource? resource;
+    final completer = MultiFrameImageStreamCompleter(
+      codec: _load(decode, chunks, (value) {
+        resource = value;
+        onResourceReady?.call(value);
+      }),
       chunkEvents: chunks.stream,
       scale: 1,
       debugLabel: url,
     );
+    requests.onCancel(() => resource?.releaseMemory());
+    return completer;
   }
 
   void _ensureActive() {
@@ -123,8 +132,10 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     });
   }
 
-  Future<ui.Codec> _load(ImageDecoderCallback decode,
-      StreamController<ImageChunkEvent> chunks) async {
+  Future<ui.Codec> _load(
+      ImageDecoderCallback decode,
+      StreamController<ImageChunkEvent> chunks,
+      ValueChanged<ReaderPageResource> resourceReady) async {
     try {
       _ensureActive();
       // An explicit retry bypasses cached bytes, including a corrupt entry.
@@ -135,6 +146,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
           _ensureActive();
           if (cached != null) {
             final codec = await _decode(cached, decode);
+            resourceReady(ReaderPageResource(() => cache.read(url)));
             onImageReady?.call();
             return codec;
           }
@@ -182,8 +194,10 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       final codec = await _decode(completedBytes, decode);
       // Persist only a complete, decodable image. Cancellation and HTTP/decode
       // failures never write partial or failed responses into the shared cache.
+      var persisted = false;
       try {
         await _waitFor(cache.write(url, completedBytes));
+        persisted = true;
       } catch (_) {
         // A cache write failure should not turn a loaded image into an error.
       }
@@ -191,6 +205,8 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
         codec.dispose();
         _ensureActive();
       }
+      resourceReady(ReaderPageResource(() => cache.read(url),
+          fallback: persisted ? null : completedBytes));
       onImageReady?.call();
       return codec;
     } catch (_) {
