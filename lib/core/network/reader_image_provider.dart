@@ -38,6 +38,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   final ReaderImageCache cache;
   final int attempt;
   final void Function()? onImageReady;
+  final Duration idleTimeout;
 
   const ReaderImageProvider(
     this.url, {
@@ -46,6 +47,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     required this.cache,
     this.attempt = 0,
     this.onImageReady,
+    this.idleTimeout = const Duration(seconds: 30),
   });
 
   @override
@@ -71,6 +73,17 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     }
   }
 
+  Future<T> _waitFor<T>(Future<T> work, {void Function(T)? disposeLate}) {
+    var timedOut = false;
+    return work.then((value) {
+      if (timedOut) disposeLate?.call(value);
+      return value;
+    }).timeout(idleTimeout, onTimeout: () {
+      timedOut = true;
+      throw TimeoutException('Reader image loading stalled', idleTimeout);
+    });
+  }
+
   Future<ui.Codec> _load(ImageDecoderCallback decode,
       StreamController<ImageChunkEvent> chunks) async {
     try {
@@ -79,27 +92,36 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       // Ordinary reentry always tries the shared completed-image cache first.
       if (attempt == 0) {
         try {
-          final cached = await cache.read(url);
+          final cached = await _waitFor(cache.read(url));
           _ensureActive();
           if (cached != null) {
             final codec = await _decode(cached, decode);
             onImageReady?.call();
             return codec;
           }
+        } on TimeoutException {
+          _ensureActive();
+          // Slow cache IO does not invalidate a previously successful image.
         } catch (_) {
           _ensureActive();
           // A missing or corrupt cache entry must not block a fresh download.
           try {
-            await cache.remove(url);
+            await _waitFor(cache.remove(url));
           } catch (_) {}
         }
       } else {
         try {
-          await cache.remove(url);
+          await _waitFor(cache.remove(url));
         } catch (_) {}
       }
       _ensureActive();
-      final response = await fileService.get(url);
+      final response =
+          await _waitFor(fileService.get(url), disposeLate: (response) {
+        // A timed-out request may still return headers. Drop its body instead
+        // of decoding/caching it or letting it replace a later retry.
+        unawaited(
+            response.content.listen(null, onError: (Object _) {}).cancel());
+      });
       _ensureActive();
       if (response.statusCode != 200) {
         await response.content.listen(null).cancel();
@@ -107,7 +129,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
             statusCode: response.statusCode, uri: Uri.parse(url));
       }
       final bytes = BytesBuilder(copy: false);
-      await for (final chunk in response.content) {
+      await for (final chunk in response.content.timeout(idleTimeout)) {
         _ensureActive();
         bytes.add(chunk);
         chunks.add(ImageChunkEvent(
@@ -122,7 +144,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       // Persist only a complete, decodable image. Cancellation and HTTP/decode
       // failures never write partial or failed responses into the shared cache.
       try {
-        await cache.write(url, completedBytes);
+        await _waitFor(cache.write(url, completedBytes));
       } catch (_) {
         // A cache write failure should not turn a loaded image into an error.
       }
@@ -142,13 +164,18 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
 
   Future<ui.Codec> _decode(Uint8List bytes, ImageDecoderCallback decode) async {
     _ensureActive();
-    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-    final codec = await decode(buffer);
+    final buffer = await _waitFor(ui.ImmutableBuffer.fromUint8List(bytes),
+        disposeLate: (buffer) => buffer.dispose());
+    if (requests.isCancelled) buffer.dispose();
+    _ensureActive();
+    final codec =
+        await _waitFor(decode(buffer), disposeLate: (codec) => codec.dispose());
     try {
       _ensureActive();
       // Creating a codec only parses the image header. Validate the first
       // actual frame before considering these bytes successfully loaded.
-      final firstFrame = await codec.getNextFrame();
+      final firstFrame = await _waitFor(codec.getNextFrame(),
+          disposeLate: (frame) => frame.image.dispose());
       if (requests.isCancelled) {
         firstFrame.image.dispose();
         _ensureActive();
@@ -165,10 +192,11 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       other is ReaderImageProvider &&
       other.url == url &&
       identical(other.requests, requests) &&
-      other.attempt == attempt;
+      other.attempt == attempt &&
+      other.idleTimeout == idleTimeout;
 
   @override
-  int get hashCode => Object.hash(url, requests, attempt);
+  int get hashCode => Object.hash(url, requests, attempt, idleTimeout);
 }
 
 /// Hand the validated first frame to Flutter without decoding it twice or

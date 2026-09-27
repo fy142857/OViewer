@@ -22,6 +22,7 @@ import '../../core/l10n/s.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/sprite_thumbnail.dart';
+import '../../widgets/reader_page_image.dart';
 
 class ReaderScreen extends StatefulWidget {
   final int gid;
@@ -453,18 +454,9 @@ class _ReaderViewState extends State<_ReaderView> {
             return SizedBox(
               width: screenWidth,
               height: imageHeight.clamp(200.0, screenWidth * 3),
-              child: Image(
+              child: ReaderPageImage(
                 image: _imageProvider(image.imageUrl,
                     page: index, attempt: state.imageAttempts[index] ?? 0),
-                fit: BoxFit.fitWidth,
-                loadingBuilder: (_, child, progress) => progress == null
-                    ? child
-                    : SizedBox(
-                        height: imageHeight,
-                        child: const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        ),
-                      ),
                 errorBuilder: (_, __, ___) => SizedBox(
                   height: 300,
                   child: Center(

@@ -329,6 +329,107 @@ void main() {
     requests.cancel();
   });
 
+  test(
+      'stalled response headers fail, late body is discarded and retry succeeds',
+      () async {
+    final png = await makePng();
+    final cache = MemoryImageCache();
+    final files = MockFiles();
+    final pending = Completer<FileServiceResponse>();
+    const url = 'https://example.org/header-stall.png';
+    when(() => files.get(url)).thenAnswer((_) => pending.future);
+    final requests = ReaderRequestController();
+    await expectLater(
+        loadImage(ReaderImageProvider(url,
+            requests: requests,
+            fileService: files,
+            cache: cache,
+            idleTimeout: const Duration(milliseconds: 50))),
+        throwsA(isA<TimeoutException>()));
+    expect(cache.writes, 0);
+    var cancelled = false;
+    final lateBody =
+        StreamController<List<int>>(onCancel: () => cancelled = true);
+    pending
+        .complete(HttpGetResponse(http.StreamedResponse(lateBody.stream, 200)));
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(cancelled, true);
+    await lateBody.close();
+    when(() => files.get(url)).thenAnswer((_) async => HttpGetResponse(
+        http.StreamedResponse(Stream.value(png), 200,
+            contentLength: png.length)));
+    (await loadImage(ReaderImageProvider(url,
+            requests: requests, fileService: files, cache: cache, attempt: 1)))
+        .dispose();
+    expect(cache.writes, 1);
+    expect(cache.entries[url], png);
+    requests.cancel();
+  });
+
+  test('stalled partial body is cancelled and never cached', () async {
+    final files = MockFiles();
+    final cache = MemoryImageCache();
+    var cancelled = false;
+    final body = StreamController<List<int>>(onCancel: () => cancelled = true);
+    const url = 'https://example.org/body-stall.png';
+    when(() => files.get(url)).thenAnswer((_) async => HttpGetResponse(
+        http.StreamedResponse(body.stream, 200, contentLength: 100)));
+    final requests = ReaderRequestController();
+    final result = expectLater(
+        loadImage(ReaderImageProvider(url,
+            requests: requests,
+            fileService: files,
+            cache: cache,
+            idleTimeout: const Duration(milliseconds: 50))),
+        throwsA(isA<TimeoutException>()));
+    body.add([137, 80, 78, 71]);
+    await result;
+    expect(cancelled, true);
+    expect(cache.entries, isEmpty);
+    await body.close();
+    requests.cancel();
+  });
+
+  test('stalled first frame reports an error and disposes late frame',
+      () async {
+    final png = await makePng();
+    final files = MockFiles();
+    final cache = MemoryImageCache();
+    const url = 'https://example.org/frame-stall.png';
+    when(() => files.get(url)).thenAnswer((_) async =>
+        HttpGetResponse(http.StreamedResponse(Stream.value(png), 200)));
+    final codec = BrokenFrameCodec();
+    final frame = Completer<ui.FrameInfo>();
+    when(() => codec.getNextFrame()).thenAnswer((_) => frame.future);
+    final requests = ReaderRequestController();
+    final provider = ReaderImageProvider(url,
+        requests: requests,
+        fileService: files,
+        cache: cache,
+        idleTimeout: const Duration(milliseconds: 50));
+    final error = Completer<void>();
+    final listener = ImageStreamListener((_, __) => error.complete(),
+        onError: (Object e, StackTrace? stack) =>
+            error.completeError(e, stack));
+    final completer =
+        provider.loadImage(provider, (buffer, {getTargetSize}) async {
+      buffer.dispose();
+      return codec;
+    });
+    completer.addListener(listener);
+    await expectLater(error.future, throwsA(isA<TimeoutException>()));
+    expect(cache.writes, 0);
+    verify(() => codec.dispose()).called(1);
+    final realCodec = await ui.instantiateImageCodec(png);
+    final late = await realCodec.getNextFrame();
+    frame.complete(late);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(late.image.debugDisposed, true);
+    realCodec.dispose();
+    completer.removeListener(listener);
+    requests.cancel();
+  });
+
   test('a codec whose first frame fails is never written to successful cache',
       () async {
     final png = await makePng();
