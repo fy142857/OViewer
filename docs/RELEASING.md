@@ -63,3 +63,7 @@ flutter test --no-pub
 静态分析基线位于 `scripts/versioning/analysis-baseline.json`，目前保留已有提示；新增错误和警告会使构建失败。更新基线必须人工审阅，不应在 CI 自动接受新诊断。
 
 自动化无法替代真机验收：需要验证两个递增候选的 Android 覆盖升级及数据保留。Release 安装说明使用当前固定签名的覆盖安装说明及 iOS 签名安装说明。
+
+## Release 安装包名称
+
+正式发布附件统一使用 `OViewer.apk` 和 `OViewer.ipa`。Android 构建 artifact 仍为 `app-release.apk`，发布时完成校验后仅重命名，不重新编译或签名。发布清单的 `filename` 记录下载名称，`artifact_filename` 记录原构建名称；校验文件使用实际发布名称。

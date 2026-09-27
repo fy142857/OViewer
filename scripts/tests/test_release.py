@@ -56,6 +56,31 @@ class ReleaseGuards(unittest.TestCase):
             with self.subTest(updates=updates), self.assertRaises(VersionError):
                 validate_run({**self.run, **updates}, {"id": 3}, "owner/repo")
 
+    def test_android_build_keeps_bytes_and_records_release_filename(self):
+        from unittest.mock import Mock
+        payload = b"original signed apk bytes"
+        metadata = {"schema": 1, "platform": "android", "candidate_id": "1.0.1+8",
+                    "run_id": 42, "run_attempt": 2, "filename": "app-release.apk",
+                    "size": len(payload), "sha256": hashlib.sha256(payload).hexdigest(),
+                    "version": "1.0.1", "build_number": 8}
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w") as archive:
+            archive.writestr("build-metadata.json", json.dumps(metadata))
+        api = Mock(repository="owner/repo")
+        api.request.side_effect = lambda path: {"id": 3} if "/workflows/" in path else {**self.run, "display_title": "android / 1.0.1+8"}
+        api.pages.return_value = []
+        with tempfile.TemporaryDirectory() as directory, \
+                patch("scripts.versioning.release.artifact", side_effect=[stream.getvalue(), payload]) as download, \
+                patch("scripts.versioning.release.inspect_package", return_value={"version": "1.0.1", "build_number": 8}):
+            result, apk = read_build(api, "android", 42, Path(directory))
+            self.assertEqual(download.call_args.args[2], "app-release.apk")
+            self.assertEqual(apk.name, "OViewer.apk")
+            self.assertEqual(apk.read_bytes(), payload)
+            self.assertEqual(result["filename"], "OViewer.apk")
+            self.assertEqual(result["artifact_filename"], "app-release.apk")
+            self.assertEqual(result["sha256"], metadata["sha256"])
+            self.assertFalse((Path(directory) / "app-release.apk").exists())
+
     def test_pair_rejects_each_identity_mismatch(self):
         candidate = {"candidate_id": "1.0.1+2", "build_sha": "a" * 40, "source_sha": "b" * 40, "version": "1.0.1", "build_number": 2}
         validate_pair(candidate, candidate, candidate, "v1.0.1")
@@ -139,7 +164,7 @@ class DraftTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.files = [Path(self.temp.name) / name for name in ("app-release.apk", "OViewer.ipa", "release-manifest.json", "SHA256SUMS.txt")]
+        self.files = [Path(self.temp.name) / name for name in ("OViewer.apk", "OViewer.ipa", "release-manifest.json", "SHA256SUMS.txt")]
         for path in self.files:
             path.write_bytes(path.name.encode())
         self.api = FakeReleaseAPI()
@@ -158,11 +183,11 @@ class DraftTests(unittest.TestCase):
             self.publish()
         self.assertTrue(self.api.releases[0]["draft"])
         self.assertIsNone(self.api.tag)
-        self.assertEqual([a["name"] for a in self.api.assets], ["app-release.apk"])
+        self.assertEqual([a["name"] for a in self.api.assets], ["OViewer.apk"])
         self.publish()
         self.assertFalse(self.api.releases[0]["draft"])
         self.assertEqual(len(self.api.assets), 4)
-        apk_uploads = [path for path, _ in self.api.writes if "name=app-release.apk" in path]
+        apk_uploads = [path for path, _ in self.api.writes if "name=OViewer.apk" in path]
         self.assertEqual(len(apk_uploads), 1)
 
     def test_duplicate_published_release_is_never_changed(self):
