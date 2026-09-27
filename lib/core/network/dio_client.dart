@@ -66,6 +66,8 @@ class DioClient {
     dynamic data,
     Map<String, dynamic>? queryParams,
     CancelToken? cancelToken,
+    String? contentType,
+    Map<String, dynamic>? headers,
   }) async {
     try {
       final targetUrl = _appendQueryParameters(url, queryParams);
@@ -73,6 +75,7 @@ class DioClient {
       final response = await _dio.post(
         targetUrl,
         data: data,
+        options: Options(contentType: contentType, headers: headers),
         cancelToken: cancelToken,
       );
       return response.data as String;

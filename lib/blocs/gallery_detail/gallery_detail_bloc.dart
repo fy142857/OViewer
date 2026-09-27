@@ -6,8 +6,7 @@ import '../../models/gallery_preview.dart';
 import 'gallery_detail_event.dart';
 import 'gallery_detail_state.dart';
 
-class GalleryDetailBloc
-    extends Bloc<GalleryDetailEvent, GalleryDetailState> {
+class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
   final GalleryRepository _repository;
   final FavoritesRepository _favoritesRepo;
 
@@ -18,6 +17,7 @@ class GalleryDetailBloc
     on<RateGallery>(_onRate);
     on<PostComment>(_onPostComment);
     on<VoteComment>(_onVoteComment);
+    on<LoadComments>(_onLoadComments);
   }
 
   Future<void> _onFetch(
@@ -69,6 +69,7 @@ class GalleryDetailBloc
       favoritedSlot: wasFavorited ? null : (event.slot ?? 0),
       tags: detail.tags,
       comments: detail.comments,
+      totalCommentCount: detail.totalCommentCount,
       thumbnails: detail.thumbnails,
       archiveUrl: detail.archiveUrl,
     );
@@ -107,8 +108,8 @@ class GalleryDetailBloc
     Emitter<GalleryDetailState> emit,
   ) async {
     try {
-      final result = await _repository.rateGallery(
-          event.gid, event.token, event.rating);
+      final result =
+          await _repository.rateGallery(event.gid, event.token, event.rating);
       // Update the detail with new rating
       if (state.detail != null) {
         final updated = GalleryDetail(
@@ -131,6 +132,7 @@ class GalleryDetailBloc
           favoritedSlot: state.detail!.favoritedSlot,
           tags: state.detail!.tags,
           comments: state.detail!.comments,
+          totalCommentCount: state.detail!.totalCommentCount,
           thumbnails: state.detail!.thumbnails,
           archiveUrl: state.detail!.archiveUrl,
         );
@@ -145,12 +147,41 @@ class GalleryDetailBloc
     PostComment event,
     Emitter<GalleryDetailState> emit,
   ) async {
+    if (state.postStatus == CommentPostStatus.sending ||
+        state.commentsLoading ||
+        state.votingComments.isNotEmpty ||
+        event.comment.trim().isEmpty) return;
+    emit(state.copyWith(
+        postStatus: CommentPostStatus.sending, clearPostError: true));
     try {
-      await _repository.postComment(event.gid, event.token, event.comment);
-      // Refresh detail to show new comment
-      add(FetchGalleryDetail(gid: event.gid, token: event.token));
-    } catch (_) {
-      // Comment post failed
+      final comments =
+          await _repository.postComment(event.gid, event.token, event.comment);
+      emit(state.copyWith(
+        detail: state.detail?.withComments(comments, all: true),
+        allCommentsLoaded: true,
+        clearCommentsError: true,
+        postStatus: CommentPostStatus.success,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+          postStatus: CommentPostStatus.failure, postError: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadComments(
+      LoadComments event, Emitter<GalleryDetailState> emit) async {
+    if (state.commentsLoading ||
+        state.postStatus == CommentPostStatus.sending ||
+        state.votingComments.isNotEmpty) return;
+    emit(state.copyWith(commentsLoading: true, clearCommentsError: true));
+    try {
+      final comments = await _repository.fetchComments(event.gid, event.token);
+      emit(state.copyWith(
+          detail: state.detail?.withComments(comments, all: true),
+          commentsLoading: false,
+          allCommentsLoaded: true));
+    } catch (e) {
+      emit(state.copyWith(commentsLoading: false, commentsError: e.toString()));
     }
   }
 
@@ -158,11 +189,29 @@ class GalleryDetailBloc
     VoteComment event,
     Emitter<GalleryDetailState> emit,
   ) async {
+    if (event.commentId <= 0 ||
+        state.votingComments.contains(event.commentId) ||
+        state.commentsLoading ||
+        state.postStatus == CommentPostStatus.sending) return;
+    emit(state.copyWith(
+        votingComments: {...state.votingComments, event.commentId},
+        clearVoteError: true));
     try {
-      await _repository.voteComment(
+      final result = await _repository.voteComment(
           event.gid, event.token, event.commentId, event.isUpvote);
-    } catch (_) {
-      // Vote failed silently
+      final detail = state.detail;
+      emit(state.copyWith(
+        detail: detail?.withComments(detail.comments
+            .map((c) => c.id == event.commentId
+                ? c.withVote(result.score, result.vote)
+                : c)
+            .toList()),
+        votingComments: {...state.votingComments}..remove(event.commentId),
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+          votingComments: {...state.votingComments}..remove(event.commentId),
+          voteError: e.toString()));
     }
   }
 }

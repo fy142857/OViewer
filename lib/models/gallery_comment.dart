@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 class GalleryComment extends Equatable {
   final int id;
   final String author;
-  final DateTime postedAt;
+  final DateTime? postedAt;
   final String content;
   final int score;
   final bool isUploader;
@@ -22,5 +22,25 @@ class GalleryComment extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id];
+  List<Object?> get props => [
+        id,
+        author,
+        postedAt,
+        content,
+        score,
+        isUploader,
+        isVotedUp,
+        isVotedDown
+      ];
+
+  GalleryComment withVote(int score, int vote) => GalleryComment(
+        id: id,
+        author: author,
+        postedAt: postedAt,
+        content: content,
+        score: score,
+        isUploader: isUploader,
+        isVotedUp: vote > 0,
+        isVotedDown: vote < 0,
+      );
 }

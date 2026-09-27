@@ -43,6 +43,14 @@ class PostComment extends GalleryDetailEvent {
   List<Object?> get props => [gid, token, comment];
 }
 
+class LoadComments extends GalleryDetailEvent {
+  final int gid;
+  final String token;
+  const LoadComments({required this.gid, required this.token});
+  @override
+  List<Object?> get props => [gid, token];
+}
+
 class VoteComment extends GalleryDetailEvent {
   final int gid;
   final String token;

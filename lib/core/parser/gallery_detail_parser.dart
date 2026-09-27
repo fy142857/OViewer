@@ -1,5 +1,6 @@
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart';
+import 'package:intl/intl.dart';
 import '../../models/gallery_detail.dart';
 import '../../models/gallery_tag.dart';
 import '../../models/gallery_comment.dart';
@@ -163,6 +164,7 @@ class GalleryDetailParser {
       favoritedSlot: favoritedSlot,
       tags: tags,
       comments: comments,
+      totalCommentCount: comments.length + _hiddenCommentCount(document),
       thumbnails: thumbnails,
       archiveUrl: archiveUrl,
     );
@@ -296,15 +298,43 @@ class GalleryDetailParser {
   }
 
   // ---- Comment Parsing ----
+  static List<GalleryComment> parseComments(String html) =>
+      _parseComments(html_parser.parse(html));
+
+  static int _hiddenCommentCount(Document document) {
+    for (final link in document.querySelectorAll('a[href*="hc=1"]')) {
+      final match = RegExp(r'([\d,]+) more comments?', caseSensitive: false)
+          .firstMatch(link.text);
+      if (match != null) return int.parse(match[1]!.replaceAll(',', ''));
+    }
+    return 0;
+  }
+
+  static DateTime? parseCommentDate(String value) {
+    final text = value.trim();
+    for (final pattern in ['d MMMM yyyy, HH:mm', 'd MMMM yyyy, HH:mm:ss']) {
+      try {
+        return DateFormat(pattern, 'en_US').parseStrict(text, true);
+      } on FormatException {/* Try the next supported site format. */}
+    }
+    final iso = DateTime.tryParse(text);
+    if (iso == null) return null;
+    return iso.isUtc
+        ? iso
+        : DateTime.utc(
+            iso.year, iso.month, iso.day, iso.hour, iso.minute, iso.second);
+  }
+
   static List<GalleryComment> _parseComments(Document document) {
     final comments = <GalleryComment>[];
     final commentDivs = document.querySelectorAll('div.c1');
 
     for (final div in commentDivs) {
-      // ID from parent: comment_12345
-      final parentId = div.parent?.attributes['id'] ?? '';
-      final idMatch = RegExp(r'comment_(\d+)').firstMatch(parentId);
-      final id = idMatch != null ? int.parse(idMatch.group(1)!) : 0;
+      final contentEl = div.querySelector('.c6');
+      final idMatch =
+          RegExp(r'^comment_(\d+)$').firstMatch(contentEl?.id ?? '');
+      if (idMatch == null) continue;
+      final id = int.parse(idMatch[1]!);
 
       // Author & date from c3 div
       final c3 = div.querySelector('.c3');
@@ -313,10 +343,9 @@ class GalleryDetailParser {
       final author = c3?.querySelector('a')?.text.trim() ?? 'Anonymous';
       final dateMatch =
           RegExp(r'Posted on (.+?) (?:UTC|by)').firstMatch(c3Text);
-      final postedAt = _parseDate(dateMatch?.group(1)?.trim() ?? '');
+      final postedAt = parseCommentDate(dateMatch?.group(1) ?? '');
 
       // Comment body (HTML)
-      final contentEl = div.querySelector('.c6');
       final content = contentEl?.innerHtml ?? '';
 
       // Score
@@ -325,8 +354,16 @@ class GalleryDetailParser {
       final score = int.tryParse(scoreText.replaceAll('+', '')) ?? 0;
 
       // Is uploader comment
-      final isUploader =
+      final isUploader = id == 0 ||
           div.querySelector('.c4')?.text.contains('Uploader') == true;
+
+      bool voted(String direction) => RegExp(
+            r'color\s*:\s*(?:blue|#0000ff|rgb\(\s*0\s*,\s*0\s*,\s*255\s*\))\s*(?:;|$)',
+            caseSensitive: false,
+          ).hasMatch(div
+                  .querySelector('#comment_vote_${direction}_$id')
+                  ?.attributes['style'] ??
+              '');
 
       comments.add(GalleryComment(
         id: id,
@@ -335,6 +372,8 @@ class GalleryDetailParser {
         content: content,
         score: score,
         isUploader: isUploader,
+        isVotedUp: voted('up'),
+        isVotedDown: voted('down'),
       ));
     }
 

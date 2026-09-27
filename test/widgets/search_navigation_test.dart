@@ -16,6 +16,7 @@ import 'package:oviewer/core/network/cookie_manager.dart';
 import 'package:oviewer/core/network/eh_image_cache_manager.dart';
 import 'package:oviewer/core/router/app_router.dart';
 import 'package:oviewer/models/gallery_detail.dart';
+import 'package:oviewer/models/gallery_comment.dart';
 import 'package:oviewer/models/gallery_preview.dart';
 import 'package:oviewer/models/search_filter.dart';
 import 'package:oviewer/repositories/favorites_repository.dart';
@@ -102,6 +103,15 @@ void main() {
           gid: call.positionalArguments.first as int,
           token: 'token',
           title: 'Similar title',
+          comments: completeBeforePop
+              ? [
+                  GalleryComment(
+                      id: 1,
+                      author: 'Test',
+                      postedAt: DateTime.utc(2026),
+                      content: 'Test comment')
+                ]
+              : [],
           thumbUrl: thumbUrl,
           category: 'Manga',
           uploader: 'test',
@@ -166,6 +176,8 @@ void main() {
 
       await tester.tap(find.byType(GalleryCard).hitTestable().first);
       await tester.pumpAndSettle();
+      expect(find.text('View all ${completeBeforePop ? 1 : 0} comments'),
+          findsOneWidget);
       await tester.ensureVisible(find.text('Similar Galleries'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Similar Galleries'));
