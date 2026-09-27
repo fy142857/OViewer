@@ -221,11 +221,7 @@ class _ReaderViewState extends State<_ReaderView> {
         (_thumbItemWidth / 2) +
         8; // +8 for horizontal padding
     final clampedOffset = targetOffset.clamp(0.0, maxScroll);
-    _thumbnailScrollController.animateTo(
-      clampedOffset,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-    );
+    _thumbnailScrollController.jumpTo(clampedOffset);
   }
 
   @override
@@ -681,6 +677,7 @@ class _ReaderViewState extends State<_ReaderView> {
                 child: ListView.builder(
                   controller: _thumbnailScrollController,
                   scrollDirection: Axis.horizontal,
+                  itemExtent: _thumbItemWidth,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemCount: state.totalPages,
                   itemBuilder: (_, index) {
