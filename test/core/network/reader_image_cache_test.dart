@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'dart:async';
+import 'dart:ui' as ui;
+import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -18,17 +21,32 @@ const normal = 'https://first.hath.network:443/h/$descriptor/key=old/03.webp';
 const alternate =
     'https://second.hath.network/om/session/$original/$descriptor/1280/key-new/03.webp';
 
+class ControlledClearCache extends EhImageCacheManager {
+  final gates = <String, Completer<void>>{};
+  final failures = <String>{};
+  ControlledClearCache(super.config) : super.forTesting();
+  @override
+  Future<void> removeFile(String key) async {
+    final gate = gates[key];
+    if (gate != null) await gate.future;
+    if (failures.contains(key)) {
+      throw const FileSystemException('Test deletion failure');
+    }
+    await super.removeFile(key);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory directory;
-  late EhImageCacheManager manager;
+  late ControlledClearCache manager;
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('oviewer-reader-cache-');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
             const MethodChannel('plugins.flutter.io/path_provider'),
             (_) async => directory.path);
-    manager = EhImageCacheManager.forTesting(Config('reader-cache-test',
+    manager = ControlledClearCache(Config('reader-cache-test',
         repo: JsonCacheInfoRepository.withFile(
             File('${directory.path}/cache.json'))));
     await manager.getFileFromCache('initialize-test-cache');
@@ -40,6 +58,84 @@ void main() {
             const MethodChannel('plugins.flutter.io/path_provider'), null);
     expect(directory.parent.absolute.path, Directory.systemTemp.absolute.path);
     await directory.delete(recursive: true);
+  });
+
+  test(
+      'clear awaits every disk deletion, coalesces calls and clears decoded memory',
+      () async {
+    final png = await makePng();
+    final first = await manager.putFile('https://example.test/one', png);
+    final second = await manager.putFile('https://example.test/two', png);
+    final codec = await ui.instantiateImageCodec(png);
+    final frame = await codec.getNextFrame();
+    codec.dispose();
+    final ready = Completer<void>();
+    final memory = PaintingBinding.instance.imageCache;
+    final image = memory.putIfAbsent(
+        'clear-cache-test-image',
+        () => OneFrameImageStreamCompleter(
+            Future.value(ImageInfo(image: frame.image))))!;
+    final listener = ImageStreamListener((info, _) {
+      info.dispose();
+      if (!ready.isCompleted) ready.complete();
+    });
+    image.addListener(listener);
+    await ready.future;
+    expect(memory.liveImageCount, greaterThan(0));
+    final gate = Completer<void>();
+    manager.gates['https://example.test/one'] = gate;
+    var finished = false;
+    final clearing = manager.emptyCache();
+    expect(identical(clearing, manager.emptyCache()), true);
+    clearing.then((_) => finished = true);
+    await Future<void>.delayed(Duration.zero);
+    expect(finished, false);
+    expect(await first.exists(), true);
+    gate.complete();
+    await clearing;
+    expect(await first.exists(), false);
+    expect(await second.exists(), false);
+    expect(memory.currentSize, 0);
+    expect(memory.liveImageCount, 0);
+    expect(memory.pendingImageCount, 0);
+    image.removeListener(listener);
+  });
+
+  test(
+      'failed deletion is reported and remains retryable while other files clear',
+      () async {
+    final png = await makePng();
+    const failedKey = 'https://example.test/blocked';
+    final blocked = await manager.putFile(failedKey, png);
+    final removed =
+        await manager.putFile('https://example.test/removable', png);
+    manager.failures.add(failedKey);
+    await expectLater(
+        manager.emptyCache(), throwsA(isA<FileSystemException>()));
+    expect(await blocked.exists(), true);
+    expect(await removed.exists(), false);
+    expect(await manager.getFileFromCache(failedKey), isNotNull);
+    manager.failures.clear();
+    await manager.emptyCache();
+    expect(await blocked.exists(), false);
+    expect(await manager.getFileFromCache(failedKey), isNull);
+  });
+
+  test(
+      'size counts actual files, expired bytes and files without index entries',
+      () async {
+    final png = await makePng();
+    expect(await manager.getSizeBytes(), 0);
+    await manager.putFile('https://example.test/current', png);
+    await manager.putFile('https://example.test/expired', png,
+        maxAge: const Duration(days: -1));
+    final unindexed =
+        await manager.store.fileSystem.createFile('unindexed-test.file');
+    await unindexed.writeAsBytes([1, 2, 3], flush: true);
+    expect(await manager.getSizeBytes(), png.length * 2 + 3);
+    await unindexed.delete();
+    await manager.emptyCache();
+    expect(await manager.getSizeBytes(), 0);
   });
 
   test('same displayed content survives server, route and access-key changes',

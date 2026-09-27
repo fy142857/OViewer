@@ -104,6 +104,10 @@ class S {
   String get imageCache => _zh ? '图片缓存' : 'Image Cache';
   String get tapToClear => _zh ? '点击清除' : 'Tap to clear';
   String get cacheCleared => _zh ? '缓存已清除' : 'Cache cleared';
+  String get clearingCache => _zh ? '正在清除图片缓存…' : 'Clearing image cache…';
+  String get calculatingCacheSize => _zh ? '正在统计…' : 'Calculating…';
+  String get cacheSizeUnavailable => _zh ? '暂时无法统计缓存大小' : 'Cache size unavailable';
+  String get cacheClearFailed => _zh ? '图片缓存未能全部清除，请重试' : 'Some image cache could not be cleared. Please retry.';
   String get cacheSizeLimit => _zh ? '缓存大小限制' : 'Cache Size Limit';
   String get downloadsStorage => _zh ? '下载' : 'Downloads';
 

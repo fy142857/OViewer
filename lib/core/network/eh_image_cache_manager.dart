@@ -1,7 +1,9 @@
+import 'dart:io' show FileSystemEntityType;
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import '../constants/app_constants.dart';
 import 'cookie_manager.dart';
 import 'image_http_client.dart';
@@ -17,6 +19,7 @@ class EhImageCacheManager extends CacheManager {
   static EhImageCacheManager? _instance;
   final Config _readerConfig;
   Future<Map<String, List<String>>>? _legacyReaderKeys;
+  Future<void>? _clearing;
 
   static EhImageCacheManager get instance {
     assert(_instance != null,
@@ -69,9 +72,58 @@ class EhImageCacheManager extends CacheManager {
   }
 
   @override
-  Future<void> emptyCache() async {
+  Future<void> emptyCache() =>
+      _clearing ??= _clearImages().whenComplete(() => _clearing = null);
+
+  /// Actual bytes in the image-cache directory, including expired files that
+  /// have not been deleted yet. Database metadata and saved photos live elsewhere.
+  Future<int> getSizeBytes() async {
+    final probe = await _readerConfig.fileSystem.createFile('__size_probe__');
+    final directory = probe.parent;
+    if (!await directory.exists()) return 0;
+    var total = 0;
+    await for (final entity
+        in directory.list(recursive: true, followLinks: false)) {
+      try {
+        final stat = await entity.stat();
+        if (stat.type == FileSystemEntityType.file) total += stat.size;
+      } catch (_) {
+        // A concurrent cache eviction may remove a file while counting.
+        if (await entity.exists()) rethrow;
+      }
+    }
+    return total;
+  }
+
+  Future<void> _clearImages() async {
     _legacyReaderKeys = null;
-    await super.emptyCache();
+    final memory = PaintingBinding.instance.imageCache;
+    memory.clear();
+    memory.clearLiveImages();
+    try {
+      // Wait for repository initialization without creating a cache entry.
+      await getFileFromCache('__oviewer_cache_clear__');
+      final entries = await _readerConfig.repo.getAllObjects();
+      Object? failure;
+      StackTrace? failureStack;
+      for (final entry in entries) {
+        try {
+          // flutter_cache_manager 3.x emptyCache starts file deletion without
+          // awaiting it. removeFile awaits deletion before removing metadata,
+          // so a failed file stays discoverable for the user's next retry.
+          await removeFile(entry.key);
+        } catch (error, stack) {
+          failure ??= error;
+          failureStack ??= stack;
+        }
+      }
+      if (failure != null) Error.throwWithStackTrace(failure, failureStack!);
+    } finally {
+      _legacyReaderKeys = null;
+      store.emptyMemoryCache();
+      memory.clear();
+      memory.clearLiveImages();
+    }
   }
 }
 
