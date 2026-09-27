@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.0.1",
   "branch": "dev",
-  "build_number": 13,
-  "candidate_id": "1.1.0+13",
-  "fingerprint": "97c3216d80d906016124bf70a9da4bd8e9db38533546df90004c3fa3ee01e8a3",
-  "notes": "### 新增\n\n- 评论页支持按时间或热度升降序排序、查看全部评论及发送评论。\n\n- 自动计算应用版本，Android 与 iOS 共用候选构建号。\n- 设置页显示实际安装包版本及构建号。\n- 发布时校验并使用指定候选的原始安装包。\n\n### 修复\n\n- 本地 Android Release 构建支持读取被 Git 忽略的签名配置，复用正式密钥；CI 继续使用环境变量并拒绝缺失签名。\n- 修复评论时间显示为当前时间及点赞、点踩无效的问题；同步两处页面的投票状态，失败时显示原因并保留评论草稿，详情页始终显示全部评论入口。\n\n- 修复搜索分类与站点参数映射错位的问题；分类筛选使用固定协议位值，未选或全选时明确不限分类。\n- 修复搜索页新一轮搜索沿用旧滚动位置的问题；列表和卡片均回到顶部，同一轮搜索的视图切换及详情返回继续保留位置。\n- 调整 iOS 登录页以兼容 Cloudflare 安全验证：使用不注入插件脚本的原生 WKWebView，并保留登录页面及 Cookie 会话，补充刷新入口。\n- 修复登录后仍停留在 `act=Login` 地址时未识别 Cookie，以及异步保存登录时重建浏览器的问题。\n- 避免标签发布再次构建并覆盖已验证的安装包。\n\n### 变更\n\n- Android 后续正式候选使用固定签名密钥。\n\n### 已知限制\n\n- iOS 提供未签名 IPA，需自行签名安装。",
+  "build_number": 14,
+  "candidate_id": "1.1.0+14",
+  "fingerprint": "74f1723d9d84e01c00e0dcddb32413f505c3ac736780a9da000618f272ae11ed",
+  "notes": "### 新增\n\n- 评论页支持按站点顺序查看评论、触底每次追加 20 条阈值以下评论及发送评论。\n\n- 自动计算应用版本，Android 与 iOS 共用候选构建号。\n- 设置页显示实际安装包版本及构建号。\n- 发布时校验并使用指定候选的原始安装包。\n\n### 修复\n\n- 恢复上传者评论的主题色标识，将全部评论入口移至详情页评论标题右侧；修复发送评论后的 302 跳转被误报为服务器错误。\n\n- 本地 Android Release 构建支持读取被 Git 忽略的签名配置，复用正式密钥；CI 继续使用环境变量并拒绝缺失签名。\n- 修复评论时间显示为当前时间及点赞、点踩无效的问题；同步两处页面的投票状态，失败时显示原因并保留评论草稿，详情页始终显示全部评论入口。\n\n- 修复搜索分类与站点参数映射错位的问题；分类筛选使用固定协议位值，未选或全选时明确不限分类。\n- 修复搜索页新一轮搜索沿用旧滚动位置的问题；列表和卡片均回到顶部，同一轮搜索的视图切换及详情返回继续保留位置。\n- 调整 iOS 登录页以兼容 Cloudflare 安全验证：使用不注入插件脚本的原生 WKWebView，并保留登录页面及 Cookie 会话，补充刷新入口。\n- 修复登录后仍停留在 `act=Login` 地址时未识别 Cookie，以及异步保存登录时重建浏览器的问题。\n- 避免标签发布再次构建并覆盖已验证的安装包。\n\n### 变更\n\n- Android 后续正式候选使用固定签名密钥。\n\n### 已知限制\n\n- iOS 提供未签名 IPA，需自行签名安装。",
   "schema": 1,
-  "source_sha": "f8aed519de83fca063c6c621cff01fce3a908784",
+  "source_sha": "fc63280f5e378d494f39e83b14f939c94e0e9caf",
   "summary": [
     {
       "sha": "43d79c4d138f7703fb0a0826540dbdb2c7baf0fb",
@@ -26,6 +26,11 @@
     {
       "sha": "f8aed519de83fca063c6c621cff01fce3a908784",
       "subject": "fix(android): support private local release signing configuration",
+      "type": "fix"
+    },
+    {
+      "sha": "fc63280f5e378d494f39e83b14f939c94e0e9caf",
+      "subject": "fix(comments): preserve site order, paginate hidden replies and follow post redirects",
       "type": "fix"
     }
   ],
