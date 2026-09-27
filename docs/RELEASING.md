@@ -48,7 +48,18 @@ python -m scripts.setup_android_signing --directory <仓库外的私密目录> -
 
 命令只在首次创建密钥，后续复用；密钥目录包含密码，务必独立备份整个目录并限制访问。不要加入 Git。CI 只在临时目录还原密钥，结束后删除。
 
-普通 `flutter run` 使用 debug 签名。本地 release 构建还需通过环境变量指定 `ANDROID_KEYSTORE_PATH` 和三项密码/别名配置。不要把密码写进命令历史或提交文件。
+普通 `flutter run` 使用 debug 签名。本地 `flutter run --release` 或 `flutter build apk --release` 可使用 `android/key.properties` 配置已有的正式签名：
+
+```properties
+storeFile=C:/path/to/private/oviewer-release.jks
+storePassword=<已有密钥库密码>
+keyAlias=<已有密钥别名>
+keyPassword=<已有密钥密码>
+```
+
+`storeFile` 建议使用绝对路径（Windows 使用 `/`）；相对路径以 `android/` 为基准。密钥、别名和密码使用首次配置时保存的同一组数据，不要重新生成密钥。此文件包含密码，已加入 Git 忽略，需限制本机访问权限。
+
+也可使用四项环境变量 `ANDROID_KEYSTORE_PATH`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。一旦设置其中任意一项，必须完整提供四项，不会与本地文件混用；CI 始终只读取环境变量。缺失配置继续阻止 Release 构建，绝不回退到 debug 签名。不要把密码写进命令历史或提交文件。
 
 iOS 仍提供未签名 IPA，部署目标为 iOS 12；需自行签名安装。本地忽略的 iOS 工具已适配候选登记与 `workflow_dispatch`，保留原安装包识别及命名方式。标签不再启动构建或自动安装。
 
