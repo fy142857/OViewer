@@ -544,8 +544,63 @@
         }
       ],
       "version": "1.1.0"
+    },
+    {
+      "base_tag": "v1.0.1",
+      "branch": "dev",
+      "build_number": 17,
+      "build_sha": "b910f875d79b70e91fb721078e4f4403314e9fc9",
+      "candidate_id": "1.1.0+17",
+      "fingerprint": "e6f922d3f5c8ebcb937832aab838c0af9b249fbde15683d119de0a65bb2207e9",
+      "notes": "### 新增\n\n- 评论页支持按站点顺序查看评论，首次触底后一次性加载全部可展开评论，并支持发送评论。\n\n- 自动计算应用版本，Android 与 iOS 共用候选构建号。\n- 设置页显示实际安装包版本及构建号。\n- 发布时校验并使用指定候选的原始安装包。\n\n### 修复\n\n- 修复站点隐藏评论提示位于展开链接外时漏算总数并提前停止加载的问题；完整评论请求未展开时保留重试入口。\n\n- 恢复上传者评论的主题色标识及评论正分绿色、负分红色显示，将全部评论入口移至详情页评论标题右侧；修复发送评论后的 302 跳转被误报为服务器错误。\n\n- 本地 Android Release 构建支持读取被 Git 忽略的签名配置，复用正式密钥；CI 继续使用环境变量并拒绝缺失签名。\n- 修复评论时间显示为当前时间及点赞、点踩无效的问题；同步两处页面的投票状态，失败时显示原因并保留评论草稿，详情页始终显示全部评论入口。\n\n- 修复搜索分类与站点参数映射错位的问题；分类筛选使用固定协议位值，未选或全选时明确不限分类。\n- 修复搜索页新一轮搜索沿用旧滚动位置的问题；列表和卡片均回到顶部，同一轮搜索的视图切换及详情返回继续保留位置。\n- 调整 iOS 登录页以兼容 Cloudflare 安全验证：使用不注入插件脚本的原生 WKWebView，并保留登录页面及 Cookie 会话，补充刷新入口。\n- 修复登录后仍停留在 `act=Login` 地址时未识别 Cookie，以及异步保存登录时重建浏览器的问题。\n- 避免标签发布再次构建并覆盖已验证的安装包。\n\n### 变更\n\n- Android 后续正式候选使用固定签名密钥。\n\n### 已知限制\n\n- iOS 提供未签名 IPA，需自行签名安装。",
+      "schema": 1,
+      "source_sha": "386215d71fbfd273207078058c357c297d2f6d28",
+      "stage": "reserved",
+      "summary": [
+        {
+          "sha": "43d79c4d138f7703fb0a0826540dbdb2c7baf0fb",
+          "subject": "chore(release): remove obsolete signing migration notice",
+          "type": "chore"
+        },
+        {
+          "sha": "a53c655a931b99bcef7c519b587249962cda1ab4",
+          "subject": "fix(release): publish Android packages as OViewer.apk",
+          "type": "fix"
+        },
+        {
+          "sha": "c23be65be87e53e5cae317cc0c1c184889ee5815",
+          "subject": "feat(comments): add sorting and posting and repair voting (#35)",
+          "type": "feat"
+        },
+        {
+          "sha": "f8aed519de83fca063c6c621cff01fce3a908784",
+          "subject": "fix(android): support private local release signing configuration",
+          "type": "fix"
+        },
+        {
+          "sha": "fc63280f5e378d494f39e83b14f939c94e0e9caf",
+          "subject": "fix(comments): preserve site order, paginate hidden replies and follow post redirects",
+          "type": "fix"
+        },
+        {
+          "sha": "b5e4fefa53e0dc677061a9c18d1d36615adfaf7d",
+          "subject": "fix(comments): restore positive and negative score colors",
+          "type": "fix"
+        },
+        {
+          "sha": "e292d89cf06d9c416101cf09b57bba30b84e49f6",
+          "subject": "fix(comments): parse hidden counts from site threshold paragraphs",
+          "type": "fix"
+        },
+        {
+          "sha": "386215d71fbfd273207078058c357c297d2f6d28",
+          "subject": "fix(comments): expand all hidden comments on first bottom reach",
+          "type": "fix"
+        }
+      ],
+      "version": "1.1.0"
     }
   ],
-  "last_build_number": 16,
+  "last_build_number": 17,
   "schema": 1
 }
