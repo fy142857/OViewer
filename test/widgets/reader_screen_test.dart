@@ -429,7 +429,7 @@ void main() {
 
   for (final mode in [0, 1, 2]) {
     testWidgets(
-        'mode $mode: single tap shows system bars; pop cancels before animation and reopening reloads',
+        'mode $mode: single tap shows system bars; Android back exits immediately and reopening reloads',
         (tester) async {
       when(() => GetIt.I<SettingsRepository>().getReadingMode())
           .thenReturn(mode);
@@ -439,10 +439,11 @@ void main() {
         child: MaterialApp(
             navigatorKey: navigator,
             navigatorObservers: [appRouteObserver],
+            onGenerateRoute: AppRouter.generateRoute,
             home: const Scaffold(body: Text('Home'))),
       ));
-      void open() => navigator.currentState!.push(MaterialPageRoute<void>(
-          builder: (_) => const ReaderScreen(gid: 42, token: 'token')));
+      void open() => navigator.currentState!.pushNamed(AppRouter.reader,
+          arguments: {'gid': 42, 'token': 'token'});
       open();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
@@ -458,10 +459,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(systemModes.last, 'SystemUiMode.immersiveSticky');
 
-      navigator.currentState!.pop();
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+          SystemChannels.navigation.name,
+          SystemChannels.navigation.codec
+              .encodeMethodCall(const MethodCall('popRoute')),
+          (_) {});
       expect(tokens.first.isCancelled, isTrue);
-      // The route is still present while its reverse transition runs.
-      expect(find.byType(ReaderScreen), findsOneWidget);
+      await tester.pump();
+      expect(find.byType(ReaderScreen), findsNothing);
       pending.first.completeError(StateError('cancelled'));
       open();
       await tester.pump();

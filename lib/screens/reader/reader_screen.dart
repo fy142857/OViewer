@@ -591,6 +591,8 @@ class _ReaderViewState extends State<_ReaderView> {
         ),
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top,
+          left: MediaQuery.of(context).padding.left,
+          right: MediaQuery.of(context).padding.right,
         ),
         child: Row(
           children: [
@@ -666,6 +668,8 @@ class _ReaderViewState extends State<_ReaderView> {
         ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).padding.bottom + 8,
+          left: MediaQuery.of(context).padding.left,
+          right: MediaQuery.of(context).padding.right,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

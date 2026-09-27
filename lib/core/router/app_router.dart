@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'reader_route.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/gallery_detail/gallery_detail_screen.dart';
 import '../../screens/reader/reader_screen.dart';
@@ -40,7 +41,8 @@ class AppRouter {
 
       case reader:
         final args = routeSettings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
+        return ReaderRoute(
+          settings: routeSettings,
           builder: (_) => ReaderScreen(
             gid: args['gid'] as int,
             token: args['token'] as String,
