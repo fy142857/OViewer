@@ -18,6 +18,7 @@ from .prepare import stable_release
 from .rules import CANDIDATE_PATH, Git, VersionError, package_version, version_tuple
 
 FILENAMES = {"android": "app-release.apk", "ios": "OViewer.ipa"}
+RELEASE_FILENAMES = {"android": "OViewer.apk", "ios": "OViewer.ipa"}
 
 
 def require(condition: bool, message: str):
@@ -65,6 +66,11 @@ def read_build(api, platform, run_id, folder):
     package = inspect_package(destination, platform, os.environ.get("ANDROID_SIGNING_CERT_SHA256"))
     for key, value in package.items():
         require(metadata.get(key) == value, f"{platform} installed package {key} disagrees with metadata")
+    # Preserve build provenance while giving release downloads stable names.
+    release_name = RELEASE_FILENAMES[platform]
+    if destination.name != release_name:
+        destination = destination.rename(folder / release_name)
+        metadata = {**metadata, "artifact_filename": filename, "filename": release_name}
     return metadata, destination
 
 
