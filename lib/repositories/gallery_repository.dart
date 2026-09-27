@@ -27,7 +27,7 @@ class GalleryRepository {
   GalleryRepository(this._dio, {ReaderIndexCache? indexCache})
       : readerIndexCache = indexCache ?? ReaderIndexCache.shared;
 
-  void acceptGalleryWarning(int gid, String token) => _dio
+  Future<void> acceptGalleryWarning(int gid, String token) => _dio
       .allowGalleryWarning(Uri.parse(ApiEndpoints.galleryDetail(gid, token)));
 
   void _checkWarning(String html, int gid, String token) {

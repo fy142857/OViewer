@@ -30,7 +30,7 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
     emit(state.copyWith(status: GalleryDetailStatus.loading));
     try {
       if (event.acceptWarning) {
-        _repository.acceptGalleryWarning(event.gid, event.token);
+        await _repository.acceptGalleryWarning(event.gid, event.token);
       }
       final detail =
           await _repository.fetchGalleryDetail(event.gid, event.token);

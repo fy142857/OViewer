@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:oviewer/core/constants/app_constants.dart';
 import 'package:oviewer/core/network/cookie_manager.dart' as app;
 import 'package:oviewer/core/network/dio_client.dart';
+import 'package:oviewer/core/storage/database.dart';
 
 class MockCookies extends Mock implements app.CookieManager {}
 
@@ -30,7 +31,27 @@ class RedirectAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
-DioClient client(RedirectAdapter adapter) {
+class MockDatabase extends Mock implements AppDatabase {}
+
+DioClient client(RedirectAdapter adapter, {AppDatabase? database}) {
+  if (database == null) {
+    final fake = MockDatabase();
+    final accepted = <int, String>{};
+    when(() => fake.acceptGalleryWarning(any(), any()))
+        .thenAnswer((call) async {
+      accepted[call.positionalArguments[0] as int] =
+          call.positionalArguments[1] as String;
+    });
+    when(() =>
+            fake.hasAcceptedGalleryWarning(any(), token: any(named: 'token')))
+        .thenAnswer((call) async {
+      final gid = call.positionalArguments[0] as int;
+      final token = call.namedArguments[#token];
+      return accepted.containsKey(gid) &&
+          (token == null || accepted[gid] == token);
+    });
+    database = fake;
+  }
   final cookies = MockCookies();
   when(() => cookies.configureDio(any())).thenAnswer((call) {
     final dio = call.positionalArguments.single as Dio;
@@ -41,7 +62,7 @@ DioClient client(RedirectAdapter adapter) {
       handler.next(options);
     }));
   });
-  return DioClient(cookies);
+  return DioClient(cookies, database);
 }
 
 void main() {

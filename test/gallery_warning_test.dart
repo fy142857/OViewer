@@ -96,8 +96,7 @@ void main() {
           isNot(contains('nw=1')));
       ReaderIndexCache.shared.clear();
       await dio.get('$root/g/42/abc/');
-      expect('${adapter.requests.last.headers['cookie']}',
-          isNot(contains('nw=1')));
+      expect('${adapter.requests.last.headers['cookie']}', contains('nw=1'));
       await bloc.close();
     });
   }

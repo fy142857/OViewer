@@ -1303,15 +1303,196 @@ class DownloadTasksCompanion extends UpdateCompanion<DownloadTask> {
   }
 }
 
+class $GalleryWarningAcceptancesTable extends GalleryWarningAcceptances
+    with TableInfo<$GalleryWarningAcceptancesTable, GalleryWarningAcceptance> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GalleryWarningAcceptancesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _gidMeta = const VerificationMeta('gid');
+  @override
+  late final GeneratedColumn<int> gid = GeneratedColumn<int>(
+      'gid', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _tokenMeta = const VerificationMeta('token');
+  @override
+  late final GeneratedColumn<String> token = GeneratedColumn<String>(
+      'token', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [gid, token];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gallery_warning_acceptances';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<GalleryWarningAcceptance> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('gid')) {
+      context.handle(
+          _gidMeta, gid.isAcceptableOrUnknown(data['gid']!, _gidMeta));
+    }
+    if (data.containsKey('token')) {
+      context.handle(
+          _tokenMeta, token.isAcceptableOrUnknown(data['token']!, _tokenMeta));
+    } else if (isInserting) {
+      context.missing(_tokenMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {gid};
+  @override
+  GalleryWarningAcceptance map(Map<String, dynamic> data,
+      {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GalleryWarningAcceptance(
+      gid: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}gid'])!,
+      token: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}token'])!,
+    );
+  }
+
+  @override
+  $GalleryWarningAcceptancesTable createAlias(String alias) {
+    return $GalleryWarningAcceptancesTable(attachedDatabase, alias);
+  }
+}
+
+class GalleryWarningAcceptance extends DataClass
+    implements Insertable<GalleryWarningAcceptance> {
+  final int gid;
+  final String token;
+  const GalleryWarningAcceptance({required this.gid, required this.token});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['gid'] = Variable<int>(gid);
+    map['token'] = Variable<String>(token);
+    return map;
+  }
+
+  GalleryWarningAcceptancesCompanion toCompanion(bool nullToAbsent) {
+    return GalleryWarningAcceptancesCompanion(
+      gid: Value(gid),
+      token: Value(token),
+    );
+  }
+
+  factory GalleryWarningAcceptance.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GalleryWarningAcceptance(
+      gid: serializer.fromJson<int>(json['gid']),
+      token: serializer.fromJson<String>(json['token']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'gid': serializer.toJson<int>(gid),
+      'token': serializer.toJson<String>(token),
+    };
+  }
+
+  GalleryWarningAcceptance copyWith({int? gid, String? token}) =>
+      GalleryWarningAcceptance(
+        gid: gid ?? this.gid,
+        token: token ?? this.token,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('GalleryWarningAcceptance(')
+          ..write('gid: $gid, ')
+          ..write('token: $token')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(gid, token);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GalleryWarningAcceptance &&
+          other.gid == this.gid &&
+          other.token == this.token);
+}
+
+class GalleryWarningAcceptancesCompanion
+    extends UpdateCompanion<GalleryWarningAcceptance> {
+  final Value<int> gid;
+  final Value<String> token;
+  const GalleryWarningAcceptancesCompanion({
+    this.gid = const Value.absent(),
+    this.token = const Value.absent(),
+  });
+  GalleryWarningAcceptancesCompanion.insert({
+    this.gid = const Value.absent(),
+    required String token,
+  }) : token = Value(token);
+  static Insertable<GalleryWarningAcceptance> custom({
+    Expression<int>? gid,
+    Expression<String>? token,
+  }) {
+    return RawValuesInsertable({
+      if (gid != null) 'gid': gid,
+      if (token != null) 'token': token,
+    });
+  }
+
+  GalleryWarningAcceptancesCompanion copyWith(
+      {Value<int>? gid, Value<String>? token}) {
+    return GalleryWarningAcceptancesCompanion(
+      gid: gid ?? this.gid,
+      token: token ?? this.token,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (gid.present) {
+      map['gid'] = Variable<int>(gid.value);
+    }
+    if (token.present) {
+      map['token'] = Variable<String>(token.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalleryWarningAcceptancesCompanion(')
+          ..write('gid: $gid, ')
+          ..write('token: $token')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   late final $HistoryEntriesTable historyEntries = $HistoryEntriesTable(this);
   late final $LocalFavoritesTable localFavorites = $LocalFavoritesTable(this);
   late final $DownloadTasksTable downloadTasks = $DownloadTasksTable(this);
+  late final $GalleryWarningAcceptancesTable galleryWarningAcceptances =
+      $GalleryWarningAcceptancesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [historyEntries, localFavorites, downloadTasks];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        historyEntries,
+        localFavorites,
+        downloadTasks,
+        galleryWarningAcceptances
+      ];
 }

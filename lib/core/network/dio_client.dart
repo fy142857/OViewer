@@ -4,41 +4,33 @@ import '../constants/app_constants.dart';
 import 'cookie_manager.dart' as app;
 import 'api_exception.dart';
 import 'dio_proxy_io.dart';
-import '../storage/reader_index_cache.dart';
+import '../storage/database.dart';
 
 class DioClient {
   static final _log = Logger();
   late final Dio _dio;
   final app.CookieManager _cookieManager;
-  final Set<Uri> _acceptedWarnings = {};
-  int _warningGeneration = ReaderIndexCache.shared.generation;
+  final AppDatabase _database;
 
-  void allowGalleryWarning(Uri gallery) {
-    _resetWarningsIfNeeded();
+  Future<void> allowGalleryWarning(Uri gallery) async {
     if (gallery.origin != AppConstants.baseUrl ||
         !RegExp(r'^/g/\d+/[a-f0-9]+/$').hasMatch(gallery.path)) {
       throw ArgumentError('Expected a gallery on the current site.');
     }
-    _acceptedWarnings
-        .add(gallery.replace(query: '', fragment: '').removeFragment());
+    await _database.acceptGalleryWarning(
+        int.parse(gallery.pathSegments[1]), gallery.pathSegments[2]);
   }
 
-  void _resetWarningsIfNeeded() {
-    if (_warningGeneration != ReaderIndexCache.shared.generation) {
-      _acceptedWarnings.clear();
-      _warningGeneration = ReaderIndexCache.shared.generation;
-    }
-  }
-
-  void _applyGalleryWarningChoice(RequestOptions options) {
-    _resetWarningsIfNeeded();
+  Future<void> _applyGalleryWarningChoice(RequestOptions options) async {
     final uri = options.uri;
-    final accepted = _acceptedWarnings.any((gallery) {
-      if (gallery.origin != uri.origin) return false;
-      if (gallery.path == uri.path) return true;
-      final image = RegExp(r'^/s/[^/]+/(\d+)-\d+$').firstMatch(uri.path);
-      return image != null && image[1] == gallery.pathSegments[1];
-    });
+    if (uri.origin != 'https://e-hentai.org' &&
+        uri.origin != 'https://exhentai.org') return;
+    final gallery = RegExp(r'^/g/(\d+)/([a-f0-9]+)/$').firstMatch(uri.path);
+    final image = RegExp(r'^/s/[^/]+/(\d+)-\d+$').firstMatch(uri.path);
+    if (gallery == null && image == null) return;
+    final accepted = await _database.hasAcceptedGalleryWarning(
+        int.parse((gallery ?? image)![1]!),
+        token: gallery?[2]);
     if (!accepted) return;
     // Per-request preference only. Do not persist a site-wide "never warn"
     // cookie or change authentication cookies/account settings.
@@ -52,7 +44,7 @@ class DioClient {
     options.headers['cookie'] = [...cookies, 'nw=1'].join('; ');
   }
 
-  DioClient(this._cookieManager) {
+  DioClient(this._cookieManager, this._database) {
     _dio = Dio(BaseOptions(
       connectTimeout: const Duration(milliseconds: AppConstants.connectTimeout),
       receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
@@ -68,8 +60,13 @@ class DioClient {
 
     // Logging interceptor (debug only)
     _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        _applyGalleryWarningChoice(options);
+      onRequest: (options, handler) async {
+        try {
+          await _applyGalleryWarningChoice(options);
+        } catch (error) {
+          handler.reject(DioException(requestOptions: options, error: error));
+          return;
+        }
         _log.d('REQUEST: ${options.method} ${options.uri}');
         handler.next(options);
       },

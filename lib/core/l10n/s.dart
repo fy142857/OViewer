@@ -152,7 +152,7 @@ class S {
 
   // ---- Gallery Detail Screen ----
   String get galleryContentWarning => _zh ? '站点内容提示' : 'Site content warning';
-  String get galleryWarningExplanation => _zh ? '站点对该画廊显示了内容提示。继续后，仅在本次应用会话中允许查看该画廊。' : 'The site has flagged this gallery. Continue to view this gallery for the current app session.';
+  String get galleryWarningExplanation => _zh ? '站点对该画廊显示了内容提示。继续后将记住该画廊的确认状态，重启应用后无需再次确认；删除该画廊的浏览记录时会同时清除确认状态。' : 'The site has flagged this gallery. Your confirmation will be remembered across app restarts until you delete this gallery from browsing history.';
   String get continueGallery => _zh ? '继续查看' : 'Continue to gallery';
   String get loadingDetails => _zh ? '正在加载详情...' : 'Loading details...';
   String get failedToLoad => _zh ? '加载失败' : 'Failed to load';

@@ -31,9 +31,18 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<LoadThumbnailAtIndex>(_onLoadThumbnail);
     on<RetryImageAtIndex>(_onRetryImageAtIndex);
     on<PageChanged>(_onPageChanged);
-    on<AcceptReaderContentWarning>((event, emit) {
+    on<AcceptReaderContentWarning>((event, emit) async {
       if (!_active || state.status != ReaderStatus.contentWarning) return;
-      _galleryRepo.acceptGalleryWarning(state.gid, state.token);
+      try {
+        await _galleryRepo.acceptGalleryWarning(state.gid, state.token);
+      } catch (error) {
+        if (_active) {
+          emit(state.copyWith(
+              status: ReaderStatus.error, errorMessage: error.toString()));
+        }
+        return;
+      }
+      if (!_active) return;
       add(LoadReaderImages(
           gid: state.gid, token: state.token, initialPage: _requestedStart));
     });

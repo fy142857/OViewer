@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import '../core/storage/database.dart';
+import '../core/storage/reader_index_cache.dart';
 import '../models/gallery_preview.dart';
 import '../models/reading_progress.dart';
 
@@ -48,8 +49,14 @@ class HistoryRepository {
   }
 
   /// Delete a history entry
-  Future<void> deleteHistory(int gid) => _db.deleteHistory(gid);
+  Future<void> deleteHistory(int gid) async {
+    await _db.deleteHistory(gid);
+    ReaderIndexCache.shared.removeGallery(gid);
+  }
 
   /// Clear all history
-  Future<void> clearAllHistory() => _db.clearAllHistory();
+  Future<void> clearAllHistory() async {
+    await _db.clearAllHistory();
+    ReaderIndexCache.shared.clear();
+  }
 }
