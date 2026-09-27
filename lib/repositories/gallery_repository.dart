@@ -301,12 +301,16 @@ class GalleryRepository {
     final html =
         await _dio.get('${ApiEndpoints.galleryDetail(gid, token)}?hc=1');
     _cacheApiCredentials(gid, html);
-    return _readComments(html);
+    return _readComments(html, requireAll: true);
   }
 
-  List<GalleryComment> _readComments(String html) {
+  List<GalleryComment> _readComments(String html, {bool requireAll = false}) {
     if (html_parser.parse(html).querySelector('#cdiv') == null) {
       throw ApiException.parse('Comment section is missing.');
+    }
+    if (requireAll && GalleryDetailParser.hiddenCommentCount(html) > 0) {
+      throw ApiException.parse(
+          'Hidden comments were not expanded. Please retry.');
     }
     return GalleryDetailParser.parseComments(html);
   }

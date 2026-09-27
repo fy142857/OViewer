@@ -103,6 +103,7 @@ void main() {
           gid: call.positionalArguments.first as int,
           token: 'token',
           title: 'Similar title',
+          totalCommentCount: completeBeforePop ? 202 : 0,
           comments: completeBeforePop
               ? [
                   GalleryComment(
@@ -176,10 +177,10 @@ void main() {
 
       await tester.tap(find.byType(GalleryCard).hitTestable().first);
       await tester.pumpAndSettle();
-      expect(find.text('View all ${completeBeforePop ? 1 : 0} comments'),
+      expect(find.text('View all ${completeBeforePop ? 202 : 0} comments'),
           findsOneWidget);
       final commentHeading =
-          find.text('Comments (${completeBeforePop ? 1 : 0})');
+          find.text('Comments (${completeBeforePop ? 202 : 0})');
       final commentLink = find.byKey(const ValueKey('view-all-comments'));
       expect(tester.getCenter(commentLink).dx,
           greaterThan(tester.getCenter(commentHeading).dx));

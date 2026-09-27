@@ -301,11 +301,37 @@ class GalleryDetailParser {
   static List<GalleryComment> parseComments(String html) =>
       _parseComments(html_parser.parse(html));
 
+  static int hiddenCommentCount(String html) =>
+      _hiddenCommentCount(html_parser.parse(html));
+
   static int _hiddenCommentCount(Document document) {
-    for (final link in document.querySelectorAll('a[href*="hc=1"]')) {
-      final match = RegExp(r'([\d,]+) more comments?', caseSensitive: false)
-          .firstMatch(link.text);
-      if (match != null) return int.parse(match[1]!.replaceAll(',', ''));
+    for (final link
+        in document.querySelectorAll('#cdiv a[href], #chd a[href]')) {
+      // Comments may quote the site's notice or link to hc=1 themselves.
+      Element? ancestor = link;
+      Element? paragraph;
+      var insideComment = false;
+      while (ancestor != null) {
+        if (ancestor.classes.contains('c1') ||
+            ancestor.classes.contains('c6')) {
+          insideComment = true;
+          break;
+        }
+        if (ancestor.localName == 'p') paragraph ??= ancestor;
+        ancestor = ancestor.parent;
+      }
+      if (insideComment) continue;
+      final target = Uri.tryParse(link.attributes['href'] ?? '');
+      if (target?.queryParameters['hc'] != '1') continue;
+      // On EH/EX the count is in the enclosing paragraph; the anchor only
+      // says "click to show all". Also support older all-in-anchor markup.
+      final text = (paragraph ?? link).text.replaceAll(RegExp(r'\s+'), ' ');
+      final match = RegExp(
+              r'There (?:are|is) ([\d,]+) more comments? below the viewing threshold',
+              caseSensitive: false)
+          .firstMatch(text);
+      final count = int.tryParse(match?[1]?.replaceAll(',', '') ?? '');
+      if (count != null) return count;
     }
     return 0;
   }

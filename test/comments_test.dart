@@ -74,6 +74,45 @@ void main() {
     expect(detail.comments[2].isVotedUp, true);
     expect(detail.commentCount, 10);
   });
+  test('real threshold paragraph counts 54 visible plus 148 hidden', () {
+    final html = '<div id="cdiv">'
+        '${List.generate(54, (i) => commentHtml(i)).join()}'
+        '<div id="chd"><p>There are 148 more comments below the viewing threshold - '
+        '<a href="https://e-hentai.org/g/3225333/91a17c1dc5/?hc=1#comments" rel="nofollow">click to show all</a>.</p>'
+        '<p id="postnewcomment">Post a comment</p></div></div>';
+    final detail = GalleryDetailParser.parse(html, 3225333, '91a17c1dc5');
+    expect(detail.comments, hasLength(54));
+    expect(detail.commentCount, 202);
+  });
+
+  test(
+      'threshold parsing handles singular, nested markup and ignores quoted notices',
+      () {
+    for (final pair in <String, int>{
+      '<p>There is 1 more comment below the viewing threshold - <a href="?hc=1#comments">click to show all</a>.</p>':
+          1,
+      '<p>There are <strong>1,234</strong> more comments below the viewing threshold - <a href="?p=0&amp;hc=1#comments">click to show all</a>.</p>':
+          1234,
+      '<p>There are 148 more comments below the viewing threshold - <a href="?hc=10">other</a>.</p>':
+          0,
+    }.entries) {
+      expect(
+          GalleryDetailParser.hiddenCommentCount(
+              '<div id="cdiv"><div id="chd">${pair.key}</div></div>'),
+          pair.value);
+    }
+    const quote =
+        '<p>There are 999 more comments below the viewing threshold - <a href="?hc=1">click to show all</a>.</p>';
+    const html =
+        '<div id="cdiv"><div class="c1"><div class="c6" id="comment_7">$quote</div></div>'
+        '<div id="chd"><p>There are 148 more comments below the viewing threshold - <a href="?hc=1">click to show all</a>.</p></div></div>';
+    expect(GalleryDetailParser.hiddenCommentCount(html), 148);
+    expect(
+        GalleryDetailParser.hiddenCommentCount(
+            '<div id="cdiv"><div class="c1"><div class="c6" id="comment_7">$quote</div></div></div>'),
+        0);
+  });
+
   test('invalid timestamps stay unknown; UTC and ISO dates are supported', () {
     expect(
         GalleryDetailParser.parseComments(commentHtml(1, date: 'invalid'))
@@ -234,6 +273,74 @@ void main() {
     verify(() => repo.fetchComments(10, 'abc')).called(1);
     expect(bloc.state.detail!.comments.map((c) => c.id).toSet(), hasLength(48));
   });
+
+  for (final ex in [false, true]) {
+    testWidgets(
+        '54 + 148 actual notice structure loads 20 per bottom on ${ex ? "EX" : "EH"}',
+        (tester) async {
+      AppConstants.useExHentai = ex;
+      final root = AppConstants.baseUrl;
+      final dio = MockDio();
+      final settings = MockSettings();
+      final visible = List.generate(54, (i) => commentHtml(i)).join();
+      final collapsed =
+          '<div id="cdiv">$visible<div id="chd"><p>There are 148 more comments below the viewing threshold - '
+          '<a href="$root/g/3225333/91a17c1dc5/?hc=1#comments" rel="nofollow">click to show all</a>.</p></div></div>';
+      final expanded =
+          '<div id="cdiv">${List.generate(202, (i) => commentHtml(i)).join()}<div id="chd"></div></div>';
+      var requests = 0;
+      when(() => dio.get(any())).thenAnswer((call) async {
+        if ((call.positionalArguments.first as String).contains('hc=1')) {
+          return ++requests == 1 ? collapsed : expanded;
+        }
+        return collapsed;
+      });
+      when(() => dio.post(any(), data: any(named: 'data')))
+          .thenAnswer((_) async => '{"gmetadata":[{"title_jpn":"Test"}]}');
+      when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
+      when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+      final bloc = GalleryDetailBloc(GalleryRepository(dio), MockFavorites());
+      addTearDown(bloc.close);
+      final ready =
+          bloc.stream.firstWhere((s) => s.status == GalleryDetailStatus.loaded);
+      bloc.add(const FetchGalleryDetail(gid: 3225333, token: '91a17c1dc5'));
+      await ready;
+      expect(bloc.state.detail!.comments.length, 54);
+      expect(bloc.state.detail!.commentCount, 202);
+      expect(bloc.state.allCommentsLoaded, false);
+      await tester.pumpWidget(MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: bloc),
+            BlocProvider<SettingsBloc>.value(value: settings),
+          ],
+          child: const MaterialApp(
+              home: CommentsScreen(gid: 3225333, token: '91a17c1dc5'))));
+      await tester.pumpAndSettle();
+      expect(find.text('Comments (202)'), findsOneWidget);
+      final position =
+          tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(bloc.state.commentsError, contains('not expanded'));
+      expect(bloc.state.detail!.commentCount, 202);
+      expect(bloc.state.allCommentsLoaded, false);
+      await tester.scrollUntilVisible(find.text('Retry'), 500,
+          scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(bloc.state.detail!.comments.length, 74);
+      for (final count in [94, 114, 134, 154, 174, 194, 202]) {
+        position.jumpTo(position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        expect(bloc.state.detail!.comments.length, count);
+        expect(bloc.state.detail!.commentCount, 202);
+      }
+      expect(bloc.state.allCommentsLoaded, true);
+      expect(bloc.state.detail!.comments.map((c) => c.id),
+          List.generate(202, (i) => i));
+      verify(() => dio.get('$root/g/3225333/91a17c1dc5/?hc=1')).called(2);
+    });
+  }
 
   testWidgets('full comments failure can retry; guests cannot submit or vote',
       (tester) async {
