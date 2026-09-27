@@ -327,7 +327,8 @@ class _ReaderViewState extends State<_ReaderView> {
       ReaderImageProvider(url,
           requests: widget.requests,
           fileService: _imageFiles,
-          cache: ReaderImageCache(EhImageCacheManager.instance),
+          cache: ReaderImageCache(EhImageCacheManager.instance,
+              legacyKeys: EhImageCacheManager.instance.legacyReaderKeys),
           onImageReady: page == null
               ? null
               : () {

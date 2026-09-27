@@ -6,6 +6,7 @@ import 'cookie_manager.dart';
 import 'image_http_client.dart';
 import 'network_proxy_io.dart';
 import 'reader_request_controller.dart';
+import 'reader_image_cache_key.dart';
 
 /// Custom [CacheManager] that injects cookies from the app [CookieManager]
 /// into every image request. This is required for ExHentai, which returns
@@ -13,6 +14,8 @@ import 'reader_request_controller.dart';
 class EhImageCacheManager extends CacheManager {
   static const _key = 'ehImageCache';
   static EhImageCacheManager? _instance;
+  final Config _readerConfig;
+  Future<Map<String, List<String>>>? _legacyReaderKeys;
 
   static EhImageCacheManager get instance {
     assert(_instance != null,
@@ -34,13 +37,38 @@ class EhImageCacheManager extends CacheManager {
       _CookieHttpFileService(cookies, readerRequest: requests);
 
   EhImageCacheManager._(CookieManager cookieManager)
-      : super(Config(
+      : this._configured(Config(
           _key,
           fileService: _CookieHttpFileService(
             cookieManager,
             httpClient: createImageHttpClient(),
           ),
         ));
+
+  EhImageCacheManager._configured(this._readerConfig) : super(_readerConfig);
+
+  Future<Iterable<String>> legacyReaderKeys(String key) async {
+    // Ensure the shared cache repository has finished opening.
+    await getFileFromCache(key);
+    final index = await (_legacyReaderKeys ??=
+        _readerConfig.repo.getAllObjects().then((entries) {
+      final result = <String, List<String>>{};
+      for (final entry in entries) {
+        final stable = readerImageCacheKey(entry.url);
+        if (stable != entry.url && entry.key == entry.url) {
+          (result[stable] ??= []).add(entry.key);
+        }
+      }
+      return result;
+    }));
+    return index[key] ?? const [];
+  }
+
+  @override
+  Future<void> emptyCache() async {
+    _legacyReaderKeys = null;
+    await super.emptyCache();
+  }
 }
 
 class _CookieHttpFileService extends FileService {

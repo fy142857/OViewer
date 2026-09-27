@@ -8,25 +8,64 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import '../constants/app_constants.dart';
 import 'reader_request_controller.dart';
+import 'reader_image_cache_key.dart';
 
 /// The shared disk cache contains completed images, never in-flight requests.
 class ReaderImageCache {
   final BaseCacheManager _cache;
+  final Future<Iterable<String>> Function(String)? legacyKeys;
 
-  const ReaderImageCache(this._cache);
+  const ReaderImageCache(this._cache, {this.legacyKeys});
 
   Future<Uint8List?> read(String url) async {
-    final entry = await _cache.getFileFromCache(url);
-    if (entry == null || !entry.validTill.isAfter(DateTime.now())) return null;
-    return entry.file.readAsBytes();
+    final key = readerImageCacheKey(url);
+    Future<Uint8List?> readKey(String candidate) async {
+      final entry = await _cache.getFileFromCache(candidate);
+      if (entry == null || !entry.validTill.isAfter(DateTime.now())) {
+        return null;
+      }
+      return entry.file.readAsBytes();
+    }
+
+    final cached = await readKey(key);
+    if (cached != null || key == url) {
+      if (cached != null && kDebugMode) {
+        debugPrint('[reader-cache] hit=content');
+      }
+      return cached;
+    }
+    final original = await readKey(url);
+    if (original != null) {
+      if (kDebugMode) debugPrint('[reader-cache] hit=original-url');
+      return original;
+    }
+    // Old installations stored completed files under the full source URL.
+    // Reuse those files across /h -> /om failover without deleting the cache.
+    for (final candidate in await legacyKeys?.call(key) ?? <String>[]) {
+      if (candidate == url || candidate == key) continue;
+      final bytes = await readKey(candidate);
+      if (bytes != null) {
+        if (kDebugMode) debugPrint('[reader-cache] hit=legacy-alternate');
+        return bytes;
+      }
+    }
+    return null;
   }
 
   Future<void> write(String url, Uint8List bytes) async {
     await _cache.putFile(url, bytes,
+        key: readerImageCacheKey(url),
         maxAge: const Duration(days: AppConstants.maxCacheAgeDays));
   }
 
-  Future<void> remove(String url) => _cache.removeFile(url);
+  Future<void> remove(String url) async {
+    final key = readerImageCacheKey(url);
+    final keys = <String>{key, url};
+    if (key != url) keys.addAll(await legacyKeys?.call(key) ?? <String>[]);
+    for (final candidate in keys) {
+      await _cache.removeFile(candidate);
+    }
+  }
 }
 
 /// Successful bytes are shared across visits. Active image streams stay scoped
