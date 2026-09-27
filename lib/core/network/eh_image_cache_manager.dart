@@ -1,6 +1,7 @@
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
+import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import 'cookie_manager.dart';
 import 'image_http_client.dart';
@@ -46,6 +47,9 @@ class EhImageCacheManager extends CacheManager {
         ));
 
   EhImageCacheManager._configured(this._readerConfig) : super(_readerConfig);
+
+  @visibleForTesting
+  EhImageCacheManager.forTesting(Config config) : this._configured(config);
 
   Future<Iterable<String>> legacyReaderKeys(String key) async {
     // Ensure the shared cache repository has finished opening.

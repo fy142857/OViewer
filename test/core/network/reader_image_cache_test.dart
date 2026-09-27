@@ -8,8 +8,7 @@ import 'package:oviewer/core/network/eh_image_cache_manager.dart';
 import 'package:oviewer/core/network/reader_image_provider.dart';
 import 'package:oviewer/core/network/reader_image_cache_key.dart';
 import 'package:oviewer/core/network/reader_request_controller.dart';
-import 'reader_image_session_test.dart'
-    show MockCookies, MockFiles, makePng, loadImage;
+import 'reader_image_session_test.dart' show MockFiles, makePng, loadImage;
 
 const descriptor =
     '0123456789abcdef0123456789abcdef01234567-316934-1280-1791-wbp';
@@ -29,8 +28,9 @@ void main() {
         .setMockMethodCallHandler(
             const MethodChannel('plugins.flutter.io/path_provider'),
             (_) async => directory.path);
-    EhImageCacheManager.init(MockCookies());
-    manager = EhImageCacheManager.instance;
+    manager = EhImageCacheManager.forTesting(Config('reader-cache-test',
+        repo: JsonCacheInfoRepository.withFile(
+            File('${directory.path}/cache.json'))));
     await manager.getFileFromCache('initialize-test-cache');
   });
   tearDown(() async {
