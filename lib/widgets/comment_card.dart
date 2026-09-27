@@ -99,6 +99,12 @@ class _CommentCardState extends State<CommentCard> {
                     comment.score > 0
                         ? '+${comment.score}'
                         : '${comment.score}',
+                    style: TextStyle(
+                        color: comment.score > 0
+                            ? Colors.green
+                            : comment.score < 0
+                                ? Colors.red
+                                : null),
                     key: ValueKey('comment-score-${comment.id}')),
               ]),
               const SizedBox(height: 6),
