@@ -56,7 +56,7 @@ class GalleryDetail extends Equatable {
   bool get isFavorited => favoritedSlot != null;
 
   GalleryDetail withComments(List<GalleryComment> updated,
-          {bool all = false}) =>
+          {bool all = false, int? totalCount}) =>
       GalleryDetail(
         gid: gid,
         token: token,
@@ -77,7 +77,8 @@ class GalleryDetail extends Equatable {
         favoritedSlot: favoritedSlot,
         tags: tags,
         comments: updated,
-        totalCommentCount: all ? updated.length : totalCommentCount,
+        totalCommentCount:
+            totalCount ?? (all ? updated.length : totalCommentCount),
         thumbnails: thumbnails,
         archiveUrl: archiveUrl,
       );

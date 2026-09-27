@@ -74,8 +74,26 @@ class _CommentCardState extends State<CommentCard> {
               Row(children: [
                 Expanded(
                     child: Text(comment.author,
-                        style: Theme.of(context).textTheme.titleSmall)),
-                if (comment.isUploader) Text(s.uploaderBadge),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: comment.isUploader
+                                ? Theme.of(context).colorScheme.primary
+                                : null))),
+                if (comment.isUploader)
+                  Container(
+                      key: const ValueKey('uploader-badge'),
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(3)),
+                      child: Text(s.uploaderBadge,
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer))),
                 const SizedBox(width: 8),
                 Text(
                     comment.score > 0

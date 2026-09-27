@@ -3,12 +3,14 @@ import '../../repositories/gallery_repository.dart';
 import '../../repositories/favorites_repository.dart';
 import '../../models/gallery_detail.dart';
 import '../../models/gallery_preview.dart';
+import '../../models/gallery_comment.dart';
 import 'gallery_detail_event.dart';
 import 'gallery_detail_state.dart';
 
 class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
   final GalleryRepository _repository;
   final FavoritesRepository _favoritesRepo;
+  List<GalleryComment>? _remainingComments;
 
   GalleryDetailBloc(this._repository, this._favoritesRepo)
       : super(const GalleryDetailState()) {
@@ -28,9 +30,11 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
     try {
       final detail =
           await _repository.fetchGalleryDetail(event.gid, event.token);
+      _remainingComments = null;
       emit(state.copyWith(
         status: GalleryDetailStatus.loaded,
         detail: detail,
+        allCommentsLoaded: detail.commentCount <= detail.comments.length,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -156,9 +160,17 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
     try {
       final comments =
           await _repository.postComment(event.gid, event.token, event.comment);
+      // Refresh in site order, retaining the visible quota instead of expanding
+      // every hidden comment after posting.
+      final visibleCount = state.detail!.comments.length < 20
+          ? 20
+          : state.detail!.comments.length;
+      final visible = comments.take(visibleCount).toList();
+      _remainingComments = comments.skip(visibleCount).toList();
       emit(state.copyWith(
-        detail: state.detail?.withComments(comments, all: true),
-        allCommentsLoaded: true,
+        detail:
+            state.detail?.withComments(visible, totalCount: comments.length),
+        allCommentsLoaded: _remainingComments!.isEmpty,
         clearCommentsError: true,
         postStatus: CommentPostStatus.success,
       ));
@@ -171,15 +183,26 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
   Future<void> _onLoadComments(
       LoadComments event, Emitter<GalleryDetailState> emit) async {
     if (state.commentsLoading ||
+        state.allCommentsLoaded ||
+        state.detail == null ||
         state.postStatus == CommentPostStatus.sending ||
         state.votingComments.isNotEmpty) return;
     emit(state.copyWith(commentsLoading: true, clearCommentsError: true));
     try {
-      final comments = await _repository.fetchComments(event.gid, event.token);
+      if (_remainingComments == null) {
+        final comments =
+            await _repository.fetchComments(event.gid, event.token);
+        final seen = state.detail!.comments.map((c) => c.id).toSet();
+        _remainingComments = comments.where((c) => seen.add(c.id)).toList();
+      }
+      final next = _remainingComments!.take(20).toList();
+      _remainingComments!.removeRange(0, next.length);
+      final comments = [...state.detail!.comments, ...next];
       emit(state.copyWith(
-          detail: state.detail?.withComments(comments, all: true),
+          detail: state.detail?.withComments(comments,
+              totalCount: comments.length + _remainingComments!.length),
           commentsLoading: false,
-          allCommentsLoaded: true));
+          allCommentsLoaded: _remainingComments!.isEmpty));
     } catch (e) {
       emit(state.copyWith(commentsLoading: false, commentsError: e.toString()));
     }

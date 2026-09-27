@@ -318,6 +318,7 @@ class GalleryRepository {
       '${ApiEndpoints.galleryComment(gid, token)}?hc=1',
       data: {'commenttext_new': comment.trim()},
       contentType: Headers.formUrlEncodedContentType,
+      followPostRedirects: true,
       headers: {
         'Origin': AppConstants.baseUrl,
         'Referer': '${ApiEndpoints.galleryDetail(gid, token)}?hc=1'

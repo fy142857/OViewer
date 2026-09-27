@@ -178,6 +178,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('View all ${completeBeforePop ? 1 : 0} comments'),
           findsOneWidget);
+      final commentHeading =
+          find.text('Comments (${completeBeforePop ? 1 : 0})');
+      final commentLink = find.byKey(const ValueKey('view-all-comments'));
+      expect(tester.getCenter(commentLink).dx,
+          greaterThan(tester.getCenter(commentHeading).dx));
+      expect(
+          (tester.getCenter(commentLink).dy -
+                  tester.getCenter(commentHeading).dy)
+              .abs(),
+          lessThan(2));
       await tester.ensureVisible(find.text('Similar Galleries'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Similar Galleries'));

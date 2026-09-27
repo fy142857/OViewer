@@ -91,21 +91,12 @@ void main() {
             .postedAt,
         DateTime.utc(2026, 9, 27, 8, 31));
   });
-  test('time/score sorting in both directions leaves original list unchanged',
-      () {
+  test('parser retains native site order regardless of time or score', () {
     final comments = GalleryDetailParser.parseComments(
-        commentHtml(1, date: '26 September 2026, 08:31', score: 30) +
-            commentHtml(2, date: '27 September 2026, 08:31', score: -5) +
-            commentHtml(3, date: 'invalid', score: 2));
-    expect(sortComments(comments, CommentSort.time, true).map((c) => c.id),
-        [2, 1, 3]);
-    expect(sortComments(comments, CommentSort.time, false).map((c) => c.id),
-        [1, 2, 3]);
-    expect(sortComments(comments, CommentSort.score, true).map((c) => c.id),
-        [1, 3, 2]);
-    expect(sortComments(comments, CommentSort.score, false).map((c) => c.id),
-        [2, 3, 1]);
-    expect(comments.map((c) => c.id), [1, 2, 3]);
+        commentHtml(3, score: -5) +
+            commentHtml(1, date: 'invalid', score: 99) +
+            commentHtml(2));
+    expect(comments.map((c) => c.id), [3, 1, 2]);
     expect(comments.first.withVote(40, 1), isNot(comments.first));
   });
 
@@ -122,6 +113,7 @@ void main() {
       when(() => dio.post(any(),
               data: any(named: 'data'),
               contentType: any(named: 'contentType'),
+              followPostRedirects: true,
               headers: any(named: 'headers')))
           .thenAnswer((_) async => page(commentHtml(78)));
       expect(
@@ -129,6 +121,7 @@ void main() {
       verify(() => dio.post('$root/g/10/abc/?hc=1',
               data: {'commenttext_new': 'hello & world'},
               contentType: Headers.formUrlEncodedContentType,
+              followPostRedirects: true,
               headers: {'Origin': root, 'Referer': '$root/g/10/abc/?hc=1'}))
           .called(1);
       when(() => dio.post(any(), data: any(named: 'data'))).thenAnswer(
@@ -177,9 +170,69 @@ void main() {
       when(() => dio.post(any(),
           data: any(named: 'data'),
           contentType: any(named: 'contentType'),
+          followPostRedirects: true,
           headers: any(named: 'headers'))).thenAnswer((_) async => response);
       await expectLater(repo.postComment(10, 'abc', 'draft'), throwsException);
     }
+  });
+
+  testWidgets(
+      'native visible comments first; bottom loads hidden comments 20 at a time',
+      (tester) async {
+    final repo = MockRepo();
+    final auth = MockAuth();
+    final settings = MockSettings();
+    final visible = GalleryDetailParser.parseComments(
+        commentHtml(0) + commentHtml(99) + commentHtml(11));
+    final hidden = List.generate(45,
+        (i) => GalleryDetailParser.parseComments(commentHtml(1000 + i)).single);
+    final response = Completer<List<GalleryComment>>();
+    when(() => repo.fetchGalleryDetail(10, 'abc')).thenAnswer(
+        (_) async => original.withComments(visible, totalCount: 48));
+    when(() => repo.fetchComments(10, 'abc'))
+        .thenAnswer((_) => response.future);
+    when(() => auth.state)
+        .thenReturn(const AuthState(status: AuthStatus.authenticated));
+    when(() => auth.stream).thenAnswer((_) => const Stream.empty());
+    when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
+    when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+    final bloc = GalleryDetailBloc(repo, MockFavorites());
+    addTearDown(bloc.close);
+    await load(bloc);
+    await tester.pumpWidget(MultiBlocProvider(providers: [
+      BlocProvider.value(value: bloc),
+      BlocProvider<AuthBloc>.value(value: auth),
+      BlocProvider<SettingsBloc>.value(value: settings),
+    ], child: const MaterialApp(home: CommentsScreen(gid: 10, token: 'abc'))));
+    await tester.pumpAndSettle();
+    verifyNever(() => repo.fetchComments(10, 'abc'));
+    expect(bloc.state.detail!.comments.map((c) => c.id), [0, 99, 11]);
+    expect(find.byKey(const ValueKey('uploader-badge')), findsOneWidget);
+    final uploader = tester.widget<Text>(find.text('Tester 0'));
+    expect(uploader.style!.color,
+        Theme.of(tester.element(find.text('Tester 0'))).colorScheme.primary);
+    await tester.drag(find.byType(ListView), const Offset(0, -650));
+    await tester.pump();
+    expect(bloc.state.commentsLoading, true);
+    await tester.drag(find.byType(ListView), const Offset(0, -100));
+    await tester.pump();
+    response.complete([hidden.first, ...visible, ...hidden, visible.first]);
+    await tester.pumpAndSettle();
+    expect(bloc.state.detail!.comments.map((c) => c.id),
+        [0, 99, 11, ...hidden.take(20).map((c) => c.id)]);
+    expect(bloc.state.detail!.commentCount, 48);
+    expect(bloc.state.allCommentsLoaded, false);
+    final position =
+        tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(bloc.state.detail!.comments.length, 43);
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(bloc.state.detail!.comments.length, 48);
+    expect(bloc.state.allCommentsLoaded, true);
+    verify(() => repo.fetchComments(10, 'abc')).called(1);
+    expect(bloc.state.detail!.comments.map((c) => c.id).toSet(), hasLength(48));
   });
 
   testWidgets('full comments failure can retry; guests cannot submit or vote',
@@ -187,8 +240,8 @@ void main() {
     final repo = MockRepo();
     final auth = MockAuth();
     final settings = MockSettings();
-    when(() => repo.fetchGalleryDetail(10, 'abc'))
-        .thenAnswer((_) async => original);
+    when(() => repo.fetchGalleryDetail(10, 'abc')).thenAnswer(
+        (_) async => original.withComments(original.comments, totalCount: 2));
     when(() => repo.fetchComments(10, 'abc'))
         .thenThrow(Exception('Load denied'));
     when(() => auth.state)
@@ -204,6 +257,9 @@ void main() {
       BlocProvider<AuthBloc>.value(value: auth),
       BlocProvider<SettingsBloc>.value(value: settings),
     ], child: const MaterialApp(home: CommentsScreen(gid: 10, token: 'abc'))));
+    await tester.pumpAndSettle();
+    verifyNever(() => repo.fetchComments(10, 'abc'));
+    await tester.tap(find.byKey(const ValueKey('more-comments')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Load denied'), findsOneWidget);
     when(() => repo.fetchComments(10, 'abc'))
@@ -223,7 +279,7 @@ void main() {
   });
 
   testWidgets(
-      'sorting, votes, failure/retry and posting update shared detail state',
+      'native order, votes, failure/retry and posting update shared detail state',
       (tester) async {
     final repo = MockRepo();
     final auth = MockAuth();
@@ -231,7 +287,7 @@ void main() {
     final all = GalleryDetailParser.parseComments(commentHtml(1, score: 30) +
         commentHtml(2, date: '28 September 2026, 08:31', score: 2));
     when(() => repo.fetchGalleryDetail(10, 'abc'))
-        .thenAnswer((_) async => original);
+        .thenAnswer((_) async => original.withComments(all, all: true));
     when(() => repo.fetchComments(10, 'abc')).thenAnswer((_) async => all);
     when(() => auth.state)
         .thenReturn(const AuthState(status: AuthStatus.authenticated));
@@ -252,18 +308,10 @@ void main() {
         .widgetList<CommentCard>(find.byType(CommentCard))
         .map((c) => c.comment.id)
         .toList();
-    expect(order(), [2, 1]);
-    await tester.tap(find.byKey(const ValueKey('comment-order')));
-    await tester.pumpAndSettle();
     expect(order(), [1, 2]);
-    await tester.tap(find.byKey(const ValueKey('comment-sort')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('By score').last);
-    await tester.pumpAndSettle();
-    expect(order(), [2, 1]);
-    await tester.tap(find.byKey(const ValueKey('comment-order')));
-    await tester.pumpAndSettle();
-    expect(order(), [1, 2]);
+    expect(find.byKey(const ValueKey('comment-sort')), findsNothing);
+    expect(find.byKey(const ValueKey('comment-order')), findsNothing);
+    verifyNever(() => repo.fetchComments(10, 'abc'));
 
     final vote = Completer<CommentVoteResult>();
     when(() => repo.voteComment(10, 'abc', 1, true))

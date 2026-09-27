@@ -5,28 +5,7 @@ import '../../blocs/gallery_detail/gallery_detail_bloc.dart';
 import '../../blocs/gallery_detail/gallery_detail_event.dart';
 import '../../blocs/gallery_detail/gallery_detail_state.dart';
 import '../../core/l10n/s.dart';
-import '../../models/gallery_comment.dart';
 import '../../widgets/comment_card.dart';
-
-enum CommentSort { time, score }
-
-List<GalleryComment> sortComments(
-    List<GalleryComment> comments, CommentSort sort, bool descending) {
-  final sorted = List<GalleryComment>.of(comments);
-  sorted.sort((a, b) {
-    if (sort == CommentSort.time) {
-      if (a.postedAt == null && b.postedAt != null) return 1;
-      if (b.postedAt == null && a.postedAt != null) return -1;
-    }
-    var result = sort == CommentSort.score ? a.score.compareTo(b.score) : 0;
-    if (result == 0 && a.postedAt != null && b.postedAt != null) {
-      result = a.postedAt!.compareTo(b.postedAt!);
-    }
-    if (result == 0) result = a.id.compareTo(b.id);
-    return descending ? -result : result;
-  });
-  return sorted;
-}
 
 class CommentsScreen extends StatefulWidget {
   final int gid;
@@ -37,19 +16,33 @@ class CommentsScreen extends StatefulWidget {
 }
 
 class _CommentsScreenState extends State<CommentsScreen> {
-  CommentSort _sort = CommentSort.time;
-  bool _descending = true;
   String _draft = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
+  bool _loadedDuringScroll = false;
 
   void _load() => context
       .read<GalleryDetailBloc>()
       .add(LoadComments(gid: widget.gid, token: widget.token));
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.depth != 0) return false;
+    if (notification is ScrollStartNotification) _loadedDuringScroll = false;
+    final movingDown = notification is ScrollUpdateNotification &&
+            (notification.scrollDelta ?? 0) > 0 ||
+        notification is OverscrollNotification && notification.overscroll > 0;
+    final state = context.read<GalleryDetailBloc>().state;
+    if (movingDown &&
+        notification.metrics.extentAfter <= 64 &&
+        !_loadedDuringScroll &&
+        !state.allCommentsLoaded &&
+        !state.commentsLoading &&
+        state.commentsError == null &&
+        state.postStatus != CommentPostStatus.sending &&
+        state.votingComments.isEmpty) {
+      _loadedDuringScroll = true;
+      _load();
+    }
+    return false;
+  }
 
   Future<void> _compose() async {
     final s = S.of(context);
@@ -86,62 +79,53 @@ class _CommentsScreenState extends State<CommentsScreen> {
         }
       },
       builder: (context, state) {
-        final comments =
-            sortComments(state.detail?.comments ?? [], _sort, _descending);
+        final comments = state.detail?.comments ?? [];
+        final remaining = (state.detail?.commentCount ?? 0) - comments.length;
         final busy = state.commentsLoading ||
             state.votingComments.isNotEmpty ||
             state.postStatus == CommentPostStatus.sending;
         return Scaffold(
-          appBar: AppBar(
-              title: Text(s.comments(state.detail?.commentCount ?? 0)),
-              actions: [
-                DropdownButtonHideUnderline(
-                    child: DropdownButton<CommentSort>(
-                  key: const ValueKey('comment-sort'),
-                  value: _sort,
-                  items: [
-                    DropdownMenuItem(
-                        value: CommentSort.time,
-                        child: Text(s.commentSortTime)),
-                    DropdownMenuItem(
-                        value: CommentSort.score,
-                        child: Text(s.commentSortScore)),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => _sort = value);
-                  },
-                )),
-                IconButton(
-                    key: const ValueKey('comment-order'),
-                    tooltip: _descending ? s.descending : s.ascending,
-                    icon: Icon(_descending
-                        ? Icons.arrow_downward
-                        : Icons.arrow_upward),
-                    onPressed: () =>
-                        setState(() => _descending = !_descending)),
-              ]),
-          body: Column(children: [
-            if (state.commentsLoading) const LinearProgressIndicator(),
-            if (state.commentsError != null)
-              Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(children: [
-                    Text(state.commentsError!),
-                    TextButton(
-                        onPressed: busy ? null : _load, child: Text(s.retry))
-                  ])),
-            Expanded(
-                child: comments.isEmpty
-                    ? Center(child: Text(s.noComments))
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
-                        itemCount: comments.length,
-                        itemBuilder: (context, index) => CommentCard(
-                            key: ValueKey('comment-${comments[index].id}'),
-                            comment: comments[index],
-                            gid: widget.gid,
-                            token: widget.token))),
-          ]),
+          appBar:
+              AppBar(title: Text(s.comments(state.detail?.commentCount ?? 0))),
+          body: NotificationListener<ScrollNotification>(
+              onNotification: _onScroll,
+              child: ListView.builder(
+                key: const PageStorageKey('comments-list'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
+                itemCount: comments.length + 1,
+                itemBuilder: (context, index) {
+                  if (index < comments.length) {
+                    return CommentCard(
+                        key: ValueKey('comment-${comments[index].id}'),
+                        comment: comments[index],
+                        gid: widget.gid,
+                        token: widget.token);
+                  }
+                  if (state.commentsLoading) {
+                    return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()));
+                  }
+                  if (state.commentsError != null) {
+                    return Column(children: [
+                      Text(state.commentsError!),
+                      TextButton(
+                          onPressed: busy ? null : _load, child: Text(s.retry))
+                    ]);
+                  }
+                  if (!state.allCommentsLoaded && remaining > 0) {
+                    return TextButton(
+                        key: const ValueKey('more-comments'),
+                        onPressed: busy ? null : _load,
+                        child: Text(s.moreComments(remaining),
+                            textAlign: TextAlign.center));
+                  }
+                  return comments.isEmpty
+                      ? Center(child: Text(s.noComments))
+                      : const SizedBox.shrink();
+                },
+              )),
           floatingActionButton: FloatingActionButton(
               key: const ValueKey('write-comment'),
               tooltip: s.writeComment,

@@ -162,10 +162,8 @@ class S {
   String get similarGalleries => _zh ? '相似画廊' : 'Similar Galleries';
   String comments(int n) => _zh ? '评论 ($n)' : 'Comments ($n)';
   String viewAllComments(int n) => _zh ? '查看全部 $n 条评论' : 'View all $n comments';
-  String get commentSortTime => _zh ? '按时间' : 'By time';
-  String get commentSortScore => _zh ? '按热度' : 'By score';
-  String get ascending => _zh ? '升序' : 'Ascending';
-  String get descending => _zh ? '降序' : 'Descending';
+  String moreComments(int n) => _zh ? '还有 $n 条评论低于显示阈值，继续加载' :
+      'There are $n more comments below the viewing threshold';
   String get writeComment => _zh ? '发表评论' : 'Write a comment';
   String get sendComment => _zh ? '发送' : 'Send';
   String get commentHint => _zh ? '输入评论内容' : 'Enter your comment';

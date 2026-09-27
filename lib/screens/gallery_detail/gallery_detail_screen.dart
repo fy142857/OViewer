@@ -535,29 +535,35 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
     final busy = state.votingComments.isNotEmpty ||
         state.postStatus == CommentPostStatus.sending;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(s.comments(detail.commentCount),
-          style: Theme.of(context).textTheme.titleMedium),
+      Row(children: [
+        Text(s.comments(detail.commentCount),
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  key: const ValueKey('view-all-comments'),
+                  onPressed: busy
+                      ? null
+                      : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                                value: context.read<GalleryDetailBloc>(),
+                                child: CommentsScreen(
+                                    gid: detail.gid, token: detail.token)),
+                          )),
+                  child: Text(s.viewAllComments(detail.commentCount),
+                      textAlign: TextAlign.end),
+                ))),
+      ]),
       const SizedBox(height: 8),
       ...detail.comments.take(5).map((comment) => CommentCard(
           key: ValueKey('detail-comment-${comment.id}'),
           comment: comment,
           gid: detail.gid,
           token: detail.token)),
-      Center(
-          child: TextButton(
-        key: const ValueKey('view-all-comments'),
-        onPressed: busy
-            ? null
-            : () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider.value(
-                      value: context.read<GalleryDetailBloc>(),
-                      child:
-                          CommentsScreen(gid: detail.gid, token: detail.token)),
-                )),
-        child: Text(s.viewAllComments(detail.commentCount)),
-      )),
     ]);
   }
 

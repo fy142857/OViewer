@@ -68,22 +68,65 @@ class DioClient {
     CancelToken? cancelToken,
     String? contentType,
     Map<String, dynamic>? headers,
+    bool followPostRedirects = false,
   }) async {
     try {
       final targetUrl = _appendQueryParameters(url, queryParams);
       _ensureCurrentSite(targetUrl);
-      final response = await _dio.post(
+      var response = await _dio.post(
         targetUrl,
         data: data,
-        options: Options(contentType: contentType, headers: headers),
+        options: Options(
+            contentType: contentType,
+            headers: headers,
+            followRedirects: followPostRedirects ? false : null,
+            validateStatus: followPostRedirects ? _isFormStatus : null),
         cancelToken: cancelToken,
       );
+      if (followPostRedirects) {
+        final original = Uri.parse(targetUrl);
+        for (var hops = 0; _isFormRedirect(response.statusCode); hops++) {
+          if (hops >= 5) {
+            throw ApiException.parse('Too many comment redirects.');
+          }
+          final location = response.headers.value('location');
+          if (location == null) {
+            throw ApiException.parse('Missing redirect location.');
+          }
+          var target = response.realUri.resolve(location);
+          // Only follow this gallery's post/redirect/get. Never resend the body
+          // or send the session to another host/gallery or a login page.
+          if (target.origin != original.origin ||
+              target.userInfo.isNotEmpty ||
+              target.path.replaceFirst(RegExp(r'/$'), '') !=
+                  original.path.replaceFirst(RegExp(r'/$'), '')) {
+            throw const ApiException(
+                message:
+                    'Comment redirected away from this gallery. Please check your login.');
+          }
+          target = target.replace(queryParameters: {
+            ...target.queryParameters,
+            if (original.queryParameters['hc'] == '1') 'hc': '1',
+          }).removeFragment();
+          _ensureCurrentSite(target.toString());
+          response = await _dio.get(target.toString(),
+              cancelToken: cancelToken,
+              options: Options(
+                  followRedirects: false, validateStatus: _isFormStatus));
+        }
+      }
       return response.data as String;
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) rethrow;
       throw _handleDioError(e);
     }
   }
+
+  static bool _isFormRedirect(int? status) =>
+      status == 301 || status == 302 || status == 303;
+  static bool _isFormStatus(int? status) =>
+      status != null &&
+      ((status >= 200 && status < 300) || _isFormRedirect(status));
 
   String _appendQueryParameters(
     String url,
