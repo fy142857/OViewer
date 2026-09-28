@@ -4,13 +4,47 @@ import '../constants/app_constants.dart';
 import 'cookie_manager.dart' as app;
 import 'api_exception.dart';
 import 'dio_proxy_io.dart';
+import '../storage/database.dart';
 
 class DioClient {
   static final _log = Logger();
   late final Dio _dio;
   final app.CookieManager _cookieManager;
+  final AppDatabase _database;
 
-  DioClient(this._cookieManager) {
+  Future<void> allowGalleryWarning(Uri gallery) async {
+    if (gallery.origin != AppConstants.baseUrl ||
+        !RegExp(r'^/g/\d+/[a-f0-9]+/$').hasMatch(gallery.path)) {
+      throw ArgumentError('Expected a gallery on the current site.');
+    }
+    await _database.acceptGalleryWarning(
+        int.parse(gallery.pathSegments[1]), gallery.pathSegments[2]);
+  }
+
+  Future<void> _applyGalleryWarningChoice(RequestOptions options) async {
+    final uri = options.uri;
+    if (uri.origin != 'https://e-hentai.org' &&
+        uri.origin != 'https://exhentai.org') return;
+    final gallery = RegExp(r'^/g/(\d+)/([a-f0-9]+)/$').firstMatch(uri.path);
+    final image = RegExp(r'^/s/[^/]+/(\d+)-\d+$').firstMatch(uri.path);
+    if (gallery == null && image == null) return;
+    final accepted = await _database.hasAcceptedGalleryWarning(
+        int.parse((gallery ?? image)![1]!),
+        token: gallery?[2]);
+    if (!accepted) return;
+    // Per-request preference only. Do not persist a site-wide "never warn"
+    // cookie or change authentication cookies/account settings.
+    final current =
+        options.headers['cookie'] ?? options.headers.remove('Cookie') ?? '';
+    final cookies = current
+        .toString()
+        .split(';')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty && !s.startsWith('nw='));
+    options.headers['cookie'] = [...cookies, 'nw=1'].join('; ');
+  }
+
+  DioClient(this._cookieManager, this._database) {
     _dio = Dio(BaseOptions(
       connectTimeout: const Duration(milliseconds: AppConstants.connectTimeout),
       receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
@@ -26,7 +60,13 @@ class DioClient {
 
     // Logging interceptor (debug only)
     _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
+      onRequest: (options, handler) async {
+        try {
+          await _applyGalleryWarningChoice(options);
+        } catch (error) {
+          handler.reject(DioException(requestOptions: options, error: error));
+          return;
+        }
         _log.d('REQUEST: ${options.method} ${options.uri}');
         handler.next(options);
       },
@@ -66,21 +106,67 @@ class DioClient {
     dynamic data,
     Map<String, dynamic>? queryParams,
     CancelToken? cancelToken,
+    String? contentType,
+    Map<String, dynamic>? headers,
+    bool followPostRedirects = false,
   }) async {
     try {
       final targetUrl = _appendQueryParameters(url, queryParams);
       _ensureCurrentSite(targetUrl);
-      final response = await _dio.post(
+      var response = await _dio.post(
         targetUrl,
         data: data,
+        options: Options(
+            contentType: contentType,
+            headers: headers,
+            followRedirects: followPostRedirects ? false : null,
+            validateStatus: followPostRedirects ? _isFormStatus : null),
         cancelToken: cancelToken,
       );
+      if (followPostRedirects) {
+        final original = Uri.parse(targetUrl);
+        for (var hops = 0; _isFormRedirect(response.statusCode); hops++) {
+          if (hops >= 5) {
+            throw ApiException.parse('Too many comment redirects.');
+          }
+          final location = response.headers.value('location');
+          if (location == null) {
+            throw ApiException.parse('Missing redirect location.');
+          }
+          var target = response.realUri.resolve(location);
+          // Only follow this gallery's post/redirect/get. Never resend the body
+          // or send the session to another host/gallery or a login page.
+          if (target.origin != original.origin ||
+              target.userInfo.isNotEmpty ||
+              target.path.replaceFirst(RegExp(r'/$'), '') !=
+                  original.path.replaceFirst(RegExp(r'/$'), '')) {
+            throw const ApiException(
+                message:
+                    'Comment redirected away from this gallery. Please check your login.');
+          }
+          target = target.replace(queryParameters: {
+            ...target.queryParameters,
+            if (original.queryParameters['hc'] == '1') 'hc': '1',
+          }).removeFragment();
+          _ensureCurrentSite(target.toString());
+          response = await _dio.get(target.toString(),
+              cancelToken: cancelToken,
+              options: Options(
+                  followRedirects: false, validateStatus: _isFormStatus));
+        }
+      }
       return response.data as String;
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) rethrow;
       throw _handleDioError(e);
     }
   }
+
+  static bool _isFormRedirect(int? status) =>
+      status == 301 || status == 302 || status == 303;
+  static bool _isFormStatus(int? status) =>
+      status != null &&
+      ((status >= 200 && status < 300) || _isFormRedirect(status));
 
   String _appendQueryParameters(
     String url,

@@ -104,6 +104,10 @@ class S {
   String get imageCache => _zh ? '图片缓存' : 'Image Cache';
   String get tapToClear => _zh ? '点击清除' : 'Tap to clear';
   String get cacheCleared => _zh ? '缓存已清除' : 'Cache cleared';
+  String get clearingCache => _zh ? '正在清除图片缓存…' : 'Clearing image cache…';
+  String get calculatingCacheSize => _zh ? '正在统计…' : 'Calculating…';
+  String get cacheSizeUnavailable => _zh ? '暂时无法统计缓存大小' : 'Cache size unavailable';
+  String get cacheClearFailed => _zh ? '图片缓存未能全部清除，请重试' : 'Some image cache could not be cleared. Please retry.';
   String get cacheSizeLimit => _zh ? '缓存大小限制' : 'Cache Size Limit';
   String get downloadsStorage => _zh ? '下载' : 'Downloads';
 
@@ -147,6 +151,9 @@ class S {
   String get memberIdPassHashRequired => _zh ? 'Member ID 和 Pass Hash 为必填' : 'Member ID and Pass Hash are required';
 
   // ---- Gallery Detail Screen ----
+  String get galleryContentWarning => _zh ? '站点内容提示' : 'Site content warning';
+  String get galleryWarningExplanation => _zh ? '站点对该画廊显示了内容提示。继续后将记住该画廊的确认状态，重启应用后无需再次确认；删除该画廊的浏览记录时会同时清除确认状态。' : 'The site has flagged this gallery. Your confirmation will be remembered across app restarts until you delete this gallery from browsing history.';
+  String get continueGallery => _zh ? '继续查看' : 'Continue to gallery';
   String get loadingDetails => _zh ? '正在加载详情...' : 'Loading details...';
   String get failedToLoad => _zh ? '加载失败' : 'Failed to load';
   String get uploader => _zh ? '上传者' : 'Uploader';
@@ -162,6 +169,16 @@ class S {
   String get similarGalleries => _zh ? '相似画廊' : 'Similar Galleries';
   String comments(int n) => _zh ? '评论 ($n)' : 'Comments ($n)';
   String viewAllComments(int n) => _zh ? '查看全部 $n 条评论' : 'View all $n comments';
+  String moreComments(int n) => _zh ? '还有 $n 条评论低于显示阈值，继续加载' :
+      'There are $n more comments below the viewing threshold';
+  String get writeComment => _zh ? '发表评论' : 'Write a comment';
+  String get sendComment => _zh ? '发送' : 'Send';
+  String get commentHint => _zh ? '输入评论内容' : 'Enter your comment';
+  String get loginToComment => _zh ? '请先登录后评论或投票' : 'Log in to comment or vote';
+  String get unknownCommentTime => _zh ? '时间未知' : 'Unknown time';
+  String get upvoteComment => _zh ? '点赞' : 'Upvote';
+  String get downvoteComment => _zh ? '点踩' : 'Downvote';
+  String get noComments => _zh ? '暂无评论' : 'No comments yet';
   String get uploaderBadge => _zh ? '上传者' : 'Uploader';
   String get startDownloadConfirm => _zh ? '开始下载？' : 'Start to Download?';
   String get downloadStarted => _zh ? '下载已开始' : 'Download started';
@@ -190,6 +207,15 @@ class S {
   String get failedToLoadThumbnails => _zh ? '加载缩略图失败' : 'Failed to load thumbnails';
 
   // ---- Reader Screen ----
+  String readerPageTitle(int page) => _zh ? '第 $page 页' : 'Page $page';
+  String get reloadPage => _zh ? '重新加载该页面' : 'Reload this page';
+  String get savePage => _zh ? '保存页面资源' : 'Save page image';
+  String get savingPage => _zh ? '正在保存…' : 'Saving…';
+  String get pageSaved => _zh ? '已保存到相册' : 'Saved to Photos';
+  String get pageSavedAsPng => _zh ? '已转换为 PNG 静态图并保存到相册' : 'Converted to a static PNG and saved to Photos';
+  String get photoPermissionDenied => _zh ? '请在系统设置中允许保存照片' : 'Allow saving photos in system settings';
+  String get pageResourceUnavailable => _zh ? '图片资源已不可用，请重新加载该页面' : 'Image resource unavailable. Reload this page.';
+  String get pageSaveFailed => _zh ? '保存失败，请重试' : 'Could not save image. Please try again.';
   String get loadingReader => _zh ? '正在加载阅读器...' : 'Loading reader...';
   String get failedToLoadReader => _zh ? '加载阅读器失败' : 'Failed to load reader';
   String get noPagesAvailable => _zh ? '没有可用页面' : 'No pages available';

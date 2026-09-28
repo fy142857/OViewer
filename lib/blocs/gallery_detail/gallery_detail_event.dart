@@ -9,9 +9,11 @@ abstract class GalleryDetailEvent extends Equatable {
 class FetchGalleryDetail extends GalleryDetailEvent {
   final int gid;
   final String token;
-  const FetchGalleryDetail({required this.gid, required this.token});
+  final bool acceptWarning;
+  const FetchGalleryDetail(
+      {required this.gid, required this.token, this.acceptWarning = false});
   @override
-  List<Object?> get props => [gid, token];
+  List<Object?> get props => [gid, token, acceptWarning];
 }
 
 class ToggleFavorite extends GalleryDetailEvent {
@@ -41,6 +43,14 @@ class PostComment extends GalleryDetailEvent {
       {required this.gid, required this.token, required this.comment});
   @override
   List<Object?> get props => [gid, token, comment];
+}
+
+class LoadComments extends GalleryDetailEvent {
+  final int gid;
+  final String token;
+  const LoadComments({required this.gid, required this.token});
+  @override
+  List<Object?> get props => [gid, token];
 }
 
 class VoteComment extends GalleryDetailEvent {

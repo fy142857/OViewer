@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
+import 'package:html/parser.dart' as html_parser;
+import '../models/gallery_comment.dart';
+import '../core/network/api_exception.dart';
 import '../core/network/dio_client.dart';
 import '../core/parser/gallery_list_parser.dart';
 import '../core/parser/gallery_detail_parser.dart';
@@ -13,6 +16,7 @@ import '../models/gallery_detail.dart';
 import '../models/gallery_image.dart';
 import '../models/reader_index_page.dart';
 import '../core/storage/reader_index_cache.dart';
+import '../core/parser/gallery_content_warning.dart';
 
 class GalleryRepository {
   static final _log = Logger();
@@ -22,6 +26,15 @@ class GalleryRepository {
 
   GalleryRepository(this._dio, {ReaderIndexCache? indexCache})
       : readerIndexCache = indexCache ?? ReaderIndexCache.shared;
+
+  Future<void> acceptGalleryWarning(int gid, String token) => _dio
+      .allowGalleryWarning(Uri.parse(ApiEndpoints.galleryDetail(gid, token)));
+
+  void _checkWarning(String html, int gid, String token) {
+    final warning = GalleryContentWarning.parse(
+        html, Uri.parse(ApiEndpoints.galleryDetail(gid, token)));
+    if (warning != null) throw warning;
+  }
 
   ReaderIndexPage? cachedReaderIndex(int gid, String token, {int page = 0}) =>
       readerIndexCache.get(AppConstants.baseUrl, gid, token, page);
@@ -43,6 +56,7 @@ class GalleryRepository {
         generation != readerIndexCache.generation) {
       throw StateError('Reader index session is no longer active.');
     }
+    _checkWarning(html, gid, token);
     final result = GalleryDetailParser.parseReaderIndex(html, page: page);
     readerIndexCache.put(site, gid, token, result);
     return result;
@@ -153,6 +167,7 @@ class GalleryRepository {
     final site = AppConstants.baseUrl;
     final generation = readerIndexCache.generation;
     final html = await _dio.get(url, cancelToken: cancelToken);
+    _checkWarning(html, gid, token);
     _seedReaderIndex(html, site, generation, gid, token, 0, cancelToken);
     _cacheApiCredentials(gid, html);
     final detail = GalleryDetailParser.parse(html, gid, token);
@@ -184,6 +199,7 @@ class GalleryRepository {
           favoritedSlot: detail.favoritedSlot,
           tags: detail.tags,
           comments: detail.comments,
+          totalCommentCount: detail.totalCommentCount,
           thumbnails: detail.thumbnails,
           archiveUrl: detail.archiveUrl,
         );
@@ -232,6 +248,7 @@ class GalleryRepository {
     final site = AppConstants.baseUrl;
     final generation = readerIndexCache.generation;
     final html = await _dio.get(url, cancelToken: cancelToken);
+    _checkWarning(html, gid, token);
     _seedReaderIndex(html, site, generation, gid, token, page, cancelToken);
     final thumbnails = GalleryDetailParser.parseThumbnails(html);
     final totalPages = GalleryDetailParser.parseThumbnailPageCount(html);
@@ -292,19 +309,65 @@ class GalleryRepository {
     );
   }
 
-  /// Post a comment on a gallery (requires login)
-  Future<void> postComment(int gid, String token, String comment) async {
-    final url = ApiEndpoints.galleryComment(gid, token);
-    await _dio.post(url, data: {
-      'commenttext_new': comment,
-    });
+  /// Include comments hidden by the site's default viewing threshold.
+  Future<List<GalleryComment>> fetchComments(int gid, String token) async {
+    final html =
+        await _dio.get('${ApiEndpoints.galleryDetail(gid, token)}?hc=1');
+    _checkWarning(html, gid, token);
+    _cacheApiCredentials(gid, html);
+    return _readComments(html, requireAll: true);
+  }
+
+  List<GalleryComment> _readComments(String html, {bool requireAll = false}) {
+    if (html_parser.parse(html).querySelector('#cdiv') == null) {
+      throw ApiException.parse('Comment section is missing.');
+    }
+    if (requireAll && GalleryDetailParser.hiddenCommentCount(html) > 0) {
+      throw ApiException.parse(
+          'Hidden comments were not expanded. Please retry.');
+    }
+    return GalleryDetailParser.parseComments(html);
+  }
+
+  Future<List<GalleryComment>> postComment(
+      int gid, String token, String comment) async {
+    if (comment.trim().isEmpty) throw ArgumentError('Comment cannot be empty.');
+    final html = await _dio.post(
+      '${ApiEndpoints.galleryComment(gid, token)}?hc=1',
+      data: {'commenttext_new': comment.trim()},
+      contentType: Headers.formUrlEncodedContentType,
+      followPostRedirects: true,
+      headers: {
+        'Origin': AppConstants.baseUrl,
+        'Referer': '${ApiEndpoints.galleryDetail(gid, token)}?hc=1'
+      },
+    );
+    final document = html_parser.parse(html);
+    final form = document.querySelector('#chd');
+    final draft = document.querySelector('textarea[name="commenttext_new"]');
+    final error =
+        document.querySelector('#chd + p, #chd .d, #chd .error, #cdiv .error');
+    if (error != null ||
+        (draft != null && draft.text.trim().isNotEmpty) ||
+        form?.text.contains('You have to') == true) {
+      throw ApiException(
+          message: error?.text.trim() ??
+              'Comment was not accepted. Check your login and try again.');
+    }
+    final comments = _readComments(html);
+    if (comments.where((c) => !c.isUploader).isEmpty) {
+      throw ApiException.parse('No posted comment in the response.');
+    }
+    _cacheApiCredentials(gid, html);
+    return comments;
   }
 
   /// Vote on a comment (requires login)
-  Future<void> voteComment(
+  Future<CommentVoteResult> voteComment(
       int gid, String token, int commentId, bool isUpvote) async {
+    if (commentId <= 0) throw ArgumentError('This comment cannot be voted on.');
     final credentials = await _ensureApiCredentials(gid, token);
-    await _dio.post(
+    final response = await _dio.post(
       ApiEndpoints.apiEndpoint,
       data: {
         'method': 'votecomment',
@@ -316,15 +379,24 @@ class GalleryRepository {
         'comment_vote': isUpvote ? 1 : -1,
       },
     );
+    final json = jsonDecode(response);
+    if (json is! Map) throw ApiException.parse('Invalid vote response.');
+    if (json['error'] != null) throw ApiException(message: '${json['error']}');
+    if (json['comment_id'] != commentId ||
+        json['comment_score'] is! num ||
+        json['comment_vote'] is! num) {
+      throw ApiException.parse('Incomplete vote response.');
+    }
+    return CommentVoteResult((json['comment_score'] as num).toInt(),
+        (json['comment_vote'] as num).toInt());
   }
 
   Future<_ApiCredentials> _ensureApiCredentials(
     int gid,
     String token,
   ) async {
-    final cached = _apiCredentials[gid];
-    if (cached != null) return cached;
-
+    // Refresh per action: the active site/account can change on this instance.
+    _apiCredentials.remove(gid);
     final html = await _dio.get(ApiEndpoints.galleryDetail(gid, token));
     _cacheApiCredentials(gid, html);
     final credentials = _apiCredentials[gid];
@@ -392,4 +464,10 @@ class RatingResult {
     required this.averageRating,
     required this.ratingCount,
   });
+}
+
+class CommentVoteResult {
+  final int score;
+  final int vote;
+  const CommentVoteResult(this.score, this.vote);
 }

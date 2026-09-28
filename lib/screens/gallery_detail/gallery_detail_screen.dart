@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -22,7 +21,6 @@ import '../../models/reading_progress.dart';
 import '../../repositories/history_repository.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/network/eh_image_cache_manager.dart';
-import '../../core/utils/eh_url_parser.dart';
 import '../../core/utils/title_extractor.dart';
 import '../../core/utils/tag_search_query.dart';
 import '../../widgets/loading_indicator.dart';
@@ -31,6 +29,8 @@ import '../../widgets/rating_bar.dart';
 import '../../widgets/tag_chip.dart';
 import '../../widgets/thumbnail_grid.dart';
 import '../comments/comments_screen.dart';
+import '../../widgets/comment_card.dart';
+import '../../widgets/gallery_warning_view.dart';
 
 class GalleryDetailScreen extends StatelessWidget {
   final int gid;
@@ -46,9 +46,9 @@ class GalleryDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => GalleryDetailBloc(
-            GetIt.I<GalleryRepository>(),
-            GetIt.I<FavoritesRepository>(),
-          )..add(FetchGalleryDetail(gid: gid, token: token)),
+        GetIt.I<GalleryRepository>(),
+        GetIt.I<FavoritesRepository>(),
+      )..add(FetchGalleryDetail(gid: gid, token: token)),
       child: _GalleryDetailView(gid: gid, token: token),
     );
   }
@@ -66,6 +66,7 @@ class _GalleryDetailView extends StatefulWidget {
 
 class _GalleryDetailViewState extends State<_GalleryDetailView> {
   ReadingProgress? _readingProgress;
+  bool _historyRecorded = false;
 
   @override
   void initState() {
@@ -76,8 +77,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
   }
 
   void _loadReadingProgress() async {
-    final progress =
-        await GetIt.I<HistoryRepository>().getProgress(widget.gid);
+    final progress = await GetIt.I<HistoryRepository>().getProgress(widget.gid);
     if (mounted) {
       setState(() => _readingProgress = progress);
     }
@@ -91,9 +91,18 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     return BlocConsumer<GalleryDetailBloc, GalleryDetailState>(
+      listenWhen: (before, after) =>
+          before.status != after.status || before.voteError != after.voteError,
       listener: (context, state) {
-        if (state.status == GalleryDetailStatus.loaded &&
+        if (state.voteError != null &&
+            ModalRoute.of(context)?.isCurrent == true) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(state.voteError!)));
+        }
+        if (!_historyRecorded &&
+            state.status == GalleryDetailStatus.loaded &&
             state.detail != null) {
+          _historyRecorded = true;
           // Auto-record to history
           final d = state.detail!;
           final preview = GalleryPreview(
@@ -118,14 +127,22 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
             body: LoadingIndicator(message: s.loadingDetails),
           );
         }
+        if (state.status == GalleryDetailStatus.contentWarning) {
+          return GalleryWarningView(
+              message: state.errorMessage ?? '',
+              onContinue: () => context.read<GalleryDetailBloc>().add(
+                  FetchGalleryDetail(
+                      gid: widget.gid,
+                      token: widget.token,
+                      acceptWarning: true)));
+        }
         if (state.status == GalleryDetailStatus.error) {
           return Scaffold(
             appBar: AppBar(),
             body: AppErrorWidget(
               message: state.errorMessage ?? s.failedToLoad,
               onRetry: () => context.read<GalleryDetailBloc>().add(
-                    FetchGalleryDetail(
-                        gid: widget.gid, token: widget.token),
+                    FetchGalleryDetail(gid: widget.gid, token: widget.token),
                   ),
             ),
           );
@@ -284,13 +301,11 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
             // Info rows
             _metaRow(Icons.person, s.uploader, detail.uploader),
             _metaRow(Icons.language, s.languageLabel, detail.language),
-            _metaRow(Icons.photo_library, s.pages,
-                s.pagesCount(detail.fileCount)),
-            _metaRow(Icons.access_time, s.posted,
-                _formatDate(detail.postedAt)),
+            _metaRow(
+                Icons.photo_library, s.pages, s.pagesCount(detail.fileCount)),
+            _metaRow(Icons.access_time, s.posted, _formatDate(detail.postedAt)),
             if (detail.fileSize > 0)
-              _metaRow(Icons.storage, s.size,
-                  _formatFileSize(detail.fileSize)),
+              _metaRow(Icons.storage, s.size, _formatFileSize(detail.fileSize)),
           ],
         ),
       ),
@@ -314,7 +329,8 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
             ),
           ),
           Expanded(
-            child: SelectableText(value, style: Theme.of(context).textTheme.bodyMedium),
+            child: SelectableText(value,
+                style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),
@@ -445,8 +461,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
     );
   }
 
-  Widget _buildThumbnailSection(
-      BuildContext context, GalleryDetail detail) {
+  Widget _buildThumbnailSection(BuildContext context, GalleryDetail detail) {
     final displayThumbs = detail.thumbnails.length > 20
         ? detail.thumbnails.sublist(0, 20)
         : detail.thumbnails;
@@ -467,8 +482,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(s.preview,
-                  style: Theme.of(context).textTheme.titleMedium),
+              Text(s.preview, style: Theme.of(context).textTheme.titleMedium),
               Row(
                 children: [
                   Text(
@@ -525,154 +539,42 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
     );
   }
 
-  Widget _buildCommentSection(
-      BuildContext context, GalleryDetail detail) {
-    if (detail.comments.isEmpty) return const SizedBox.shrink();
-
+  Widget _buildCommentSection(BuildContext context, GalleryDetail detail) {
     final s = S.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(s.comments(detail.comments.length),
+    final state = context.read<GalleryDetailBloc>().state;
+    final busy = state.votingComments.isNotEmpty ||
+        state.postStatus == CommentPostStatus.sending;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Text(s.comments(detail.commentCount),
             style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        ...detail.comments.take(5).map((comment) => Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          comment.author,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: comment.isUploader
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                    : null,
-                              ),
-                        ),
-                        if (comment.isUploader) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Text(
-                              s.uploaderBadge,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        if (comment.score != 0)
-                          Text(
-                            comment.score > 0
-                                ? '+${comment.score}'
-                                : '${comment.score}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: comment.score > 0
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // Render comment with clickable gallery links
-                    _buildCommentContent(context, comment.content),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          _formatDate(comment.postedAt),
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                        ),
-                        const Spacer(),
-                        InkWell(
-                          onTap: () {
-                            context.read<GalleryDetailBloc>().add(VoteComment(
-                                  gid: detail.gid,
-                                  token: detail.token,
-                                  commentId: comment.id,
-                                  isUpvote: true,
-                                ));
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(Icons.thumb_up_outlined,
-                                size: 14,
-                                color: Theme.of(context).colorScheme.outline),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () {
-                            context.read<GalleryDetailBloc>().add(VoteComment(
-                                  gid: detail.gid,
-                                  token: detail.token,
-                                  commentId: comment.id,
-                                  isUpvote: false,
-                                ));
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(Icons.thumb_down_outlined,
-                                size: 14,
-                                color: Theme.of(context).colorScheme.outline),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            )),
-        if (detail.comments.length > 5)
-          Center(
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<GalleryDetailBloc>(),
-                      child: CommentsScreen(
-                        gid: detail.gid,
-                        token: detail.token,
-                        comments: detail.comments,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: Text(
-                  s.viewAllComments(detail.comments.length)),
-            ),
-          ),
-      ],
-    );
+        const SizedBox(width: 8),
+        Expanded(
+            child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  key: const ValueKey('view-all-comments'),
+                  onPressed: busy
+                      ? null
+                      : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                                value: context.read<GalleryDetailBloc>(),
+                                child: CommentsScreen(
+                                    gid: detail.gid, token: detail.token)),
+                          )),
+                  child: Text(s.viewAllComments(detail.commentCount),
+                      textAlign: TextAlign.end),
+                ))),
+      ]),
+      const SizedBox(height: 8),
+      ...detail.comments.take(5).map((comment) => CommentCard(
+          key: ValueKey('detail-comment-${comment.id}'),
+          comment: comment,
+          gid: detail.gid,
+          token: detail.token)),
+    ]);
   }
 
   void _toggleFavorite(BuildContext context, GalleryDetail detail) {
@@ -687,89 +589,6 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
     context.read<GalleryDetailBloc>().add(
           ToggleFavorite(gid: detail.gid, token: detail.token),
         );
-  }
-
-  /// Build comment content with clickable E-Hentai/ExHentai gallery links.
-  Widget _buildCommentContent(BuildContext context, String html) {
-    final plainText = _stripHtml(html);
-    final style = Theme.of(context).textTheme.bodyMedium!;
-    final linkStyle = style.copyWith(
-      color: Theme.of(context).colorScheme.primary,
-      decoration: TextDecoration.underline,
-    );
-
-    // Match gallery URLs in the plain text
-    final urlRegex = RegExp(
-      r'https?://(?:e-hentai|exhentai)\.org/g/\d+/[a-f0-9]+/?',
-    );
-
-    final spans = <InlineSpan>[];
-    int lastEnd = 0;
-
-    for (final match in urlRegex.allMatches(plainText)) {
-      // Text before this link
-      if (match.start > lastEnd) {
-        spans.add(TextSpan(text: plainText.substring(lastEnd, match.start)));
-      }
-      // The link itself
-      final url = match.group(0)!;
-      final parsed = EhUrlParser.parseGalleryUrl(url);
-      spans.add(TextSpan(
-        text: url,
-        style: linkStyle,
-        recognizer: parsed != null
-            ? (TapGestureRecognizer()
-              ..onTap = () {
-                Navigator.pushNamed(context, '/gallery', arguments: {
-                  'gid': parsed.$1,
-                  'token': parsed.$2,
-                });
-              })
-            : null,
-      ));
-      lastEnd = match.end;
-    }
-
-    // Remaining text after last link
-    if (lastEnd < plainText.length) {
-      spans.add(TextSpan(text: plainText.substring(lastEnd)));
-    }
-
-    if (spans.isEmpty) {
-      return Text(plainText, style: style, maxLines: 6, overflow: TextOverflow.ellipsis);
-    }
-
-    return RichText(
-      text: TextSpan(style: style, children: spans),
-      maxLines: 6,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  String _stripHtml(String html) {
-    // Preserve href URLs from <a> tags: replace <a href="URL">text</a> with "text (URL)"
-    // but only for E-Hentai/ExHentai gallery links where text != URL
-    final withLinks = html.replaceAllMapped(
-      RegExp(r'<a\s[^>]*href="(https?://(?:e-hentai|exhentai)\.org/g/[^"]+)"[^>]*>(.*?)</a>', caseSensitive: false),
-      (m) {
-        final href = m.group(1)!;
-        final text = m.group(2)!.replaceAll(RegExp(r'<[^>]+>'), '').trim();
-        // If link text already contains the URL, don't duplicate
-        if (text.contains('e-hentai.org/g/') || text.contains('exhentai.org/g/')) {
-          return text;
-        }
-        return '$text $href';
-      },
-    );
-    return withLinks
-        .replaceAll(RegExp(r'<br\s*/?>'), '\n')
-        .replaceAll(RegExp(r'<[^>]+>'), '')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'")
-        .trim();
   }
 
   String _formatDate(DateTime date) {
@@ -804,8 +623,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
                 children: List.generate(5, (i) {
                   final starVal = (i + 1).toDouble();
                   return GestureDetector(
-                    onTap: () =>
-                        setDialogState(() => selectedRating = starVal),
+                    onTap: () => setDialogState(() => selectedRating = starVal),
                     child: Padding(
                       padding: const EdgeInsets.all(4),
                       child: Icon(
@@ -840,8 +658,8 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                      content: Text(
-                          s.rated(selectedRating.toStringAsFixed(1)))),
+                      content:
+                          Text(s.rated(selectedRating.toStringAsFixed(1)))),
                 );
               },
               child: Text(s.submit),

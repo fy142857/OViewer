@@ -12,6 +12,7 @@ import '../../core/network/eh_image_cache_manager.dart';
 import '../../repositories/download_repository.dart';
 import '../../widgets/site_settings_webview.dart';
 import '../../widgets/app_version_subtitle.dart';
+import '../../widgets/clear_image_cache_tile.dart';
 import 'my_tags_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -231,21 +232,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // ---- Storage ----
               _sectionHeader(s.storage),
-              ListTile(
-                leading: const Icon(Icons.cached),
-                title: Text(s.imageCache),
-                subtitle: Text(s.tapToClear),
-                trailing: TextButton(
-                  onPressed: () async {
-                    await EhImageCacheManager.instance.emptyCache();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(s.cacheCleared)),
-                      );
-                    }
-                  },
-                  child: Text(s.clear),
-                ),
+              ClearImageCacheTile(
+                onClear: () => EhImageCacheManager.instance.emptyCache(),
+                readSize: () => EhImageCacheManager.instance.getSizeBytes(),
               ),
               ListTile(
                 leading: const Icon(Icons.sd_storage),

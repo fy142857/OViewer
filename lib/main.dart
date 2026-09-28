@@ -32,8 +32,12 @@ Future<void> _initDependencies() async {
   // Core - Image cache (must be before any image loading)
   EhImageCacheManager.init(cookieManager);
 
+  // Core - Database
+  final database = AppDatabase();
+  sl.registerSingleton<AppDatabase>(database);
+
   // Core - Network
-  final dioClient = DioClient(cookieManager);
+  final dioClient = DioClient(cookieManager, database);
   sl.registerSingleton<DioClient>(dioClient);
 
   // Apply proxy BEFORE any network requests:
@@ -48,10 +52,6 @@ Future<void> _initDependencies() async {
       dioClient.setProxy(result.proxyUrl);
     }
   }
-
-  // Core - Database
-  final database = AppDatabase();
-  sl.registerSingleton<AppDatabase>(database);
 
   // Repositories
   sl.registerLazySingleton<GalleryRepository>(

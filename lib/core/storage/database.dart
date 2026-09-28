@@ -50,14 +50,50 @@ class DownloadTasks extends Table {
   Set<Column> get primaryKey => {gid};
 }
 
+// A gallery choice survives sessions and is removed with browsing history.
+class GalleryWarningAcceptances extends Table {
+  IntColumn get gid => integer()();
+  TextColumn get token => text()();
+
+  @override
+  Set<Column> get primaryKey => {gid};
+}
+
 // --- Database ---
 
-@DriftDatabase(tables: [HistoryEntries, LocalFavorites, DownloadTasks])
+@DriftDatabase(tables: [
+  HistoryEntries,
+  LocalFavorites,
+  DownloadTasks,
+  GalleryWarningAcceptances
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
 
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.createTable(galleryWarningAcceptances);
+        },
+      );
+
+  Future<void> acceptGalleryWarning(int gid, String token) =>
+      into(galleryWarningAcceptances).insertOnConflictUpdate(
+          GalleryWarningAcceptancesCompanion.insert(
+              gid: Value(gid), token: token));
+
+  Future<bool> hasAcceptedGalleryWarning(int gid, {String? token}) async {
+    final row = await (select(galleryWarningAcceptances)
+          ..where((t) => t.gid.equals(gid)))
+        .getSingleOrNull();
+    return row != null && (token == null || row.token == token);
+  }
 
   // History operations
   Future<List<HistoryEntry>> getAllHistory() => (select(historyEntries)
@@ -75,10 +111,17 @@ class AppDatabase extends _$AppDatabase {
   Future<void> updateHistoryEntry(int gid, HistoryEntriesCompanion entry) =>
       (update(historyEntries)..where((t) => t.gid.equals(gid))).write(entry);
 
-  Future<void> deleteHistory(int gid) =>
-      (delete(historyEntries)..where((t) => t.gid.equals(gid))).go();
+  Future<void> deleteHistory(int gid) => transaction(() async {
+        await (delete(galleryWarningAcceptances)
+              ..where((t) => t.gid.equals(gid)))
+            .go();
+        await (delete(historyEntries)..where((t) => t.gid.equals(gid))).go();
+      });
 
-  Future<void> clearAllHistory() => delete(historyEntries).go();
+  Future<void> clearAllHistory() => transaction(() async {
+        await delete(galleryWarningAcceptances).go();
+        await delete(historyEntries).go();
+      });
 
   // Local favorites operations
   Future<List<LocalFavorite>> getAllLocalFavorites() =>

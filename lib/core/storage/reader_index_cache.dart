@@ -44,6 +44,10 @@ class ReaderIndexCache {
     _entries[(site, gid, token)]?.remove(page);
   }
 
+  void removeGallery(int gid) {
+    _entries.removeWhere((key, _) => key.$2 == gid);
+  }
+
   void clear() {
     generation++;
     _entries.clear();

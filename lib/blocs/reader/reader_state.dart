@@ -1,8 +1,9 @@
 import 'package:equatable/equatable.dart';
 import '../../models/gallery_image.dart';
+import '../../models/reader_page_resource.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 
-enum ReaderStatus { initial, loading, ready, error }
+enum ReaderStatus { initial, loading, ready, contentWarning, error }
 
 class ReaderState extends Equatable {
   final ReaderStatus status;
@@ -17,6 +18,7 @@ class ReaderState extends Equatable {
   final Set<int> loadingIndices;
   final Set<int> failedIndices;
   final Map<int, int> imageAttempts;
+  final Map<int, ReaderPageResource> readyResources;
   final bool showUI;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
   final String? errorMessage;
@@ -34,6 +36,7 @@ class ReaderState extends Equatable {
     this.loadingIndices = const {},
     this.failedIndices = const {},
     this.imageAttempts = const {},
+    this.readyResources = const {},
     this.showUI = false,
     this.readingMode = 0,
     this.errorMessage,
@@ -54,6 +57,7 @@ class ReaderState extends Equatable {
     Set<int>? loadingIndices,
     Set<int>? failedIndices,
     Map<int, int>? imageAttempts,
+    Map<int, ReaderPageResource>? readyResources,
     bool? showUI,
     int? readingMode,
     String? errorMessage,
@@ -71,6 +75,7 @@ class ReaderState extends Equatable {
       loadingIndices: loadingIndices ?? this.loadingIndices,
       failedIndices: failedIndices ?? this.failedIndices,
       imageAttempts: imageAttempts ?? this.imageAttempts,
+      readyResources: readyResources ?? this.readyResources,
       showUI: showUI ?? this.showUI,
       readingMode: readingMode ?? this.readingMode,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -91,6 +96,7 @@ class ReaderState extends Equatable {
         loadingIndices,
         failedIndices,
         imageAttempts,
+        readyResources,
         showUI,
         readingMode,
         errorMessage,

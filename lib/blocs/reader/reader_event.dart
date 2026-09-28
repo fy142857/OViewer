@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../models/reader_page_resource.dart';
 
 abstract class ReaderEvent extends Equatable {
   const ReaderEvent();
@@ -58,3 +59,22 @@ class RetryImageAtIndex extends ReaderEvent {
   @override
   List<Object?> get props => [index];
 }
+
+class ReaderImageReady extends ReaderEvent {
+  final int index;
+  final int attempt;
+  final ReaderPageResource resource;
+  const ReaderImageReady(this.index, this.attempt, this.resource);
+  @override
+  List<Object?> get props => [index, attempt, resource];
+}
+
+class ReaderImageFailed extends ReaderEvent {
+  final int index;
+  final int attempt;
+  const ReaderImageFailed(this.index, this.attempt);
+  @override
+  List<Object?> get props => [index, attempt];
+}
+
+class AcceptReaderContentWarning extends ReaderEvent {}

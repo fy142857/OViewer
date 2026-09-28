@@ -22,6 +22,11 @@ import '../../core/l10n/s.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/sprite_thumbnail.dart';
+import '../../widgets/reader_page_image.dart';
+import '../../core/services/page_image_exporter.dart';
+import '../../models/reader_page_resource.dart';
+import '../../widgets/reader_page_menu.dart';
+import '../../widgets/gallery_warning_view.dart';
 
 class ReaderScreen extends StatefulWidget {
   final int gid;
@@ -138,6 +143,9 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _isZoomed = false;
   late final FileService _imageFiles;
   final Map<String, int> _thumbnailAttempts = {};
+  final Map<int, (ReaderRequestController, FileService)> _pageFiles = {};
+  final _savingPages = ValueNotifier<Set<int>>({});
+  bool _pageMenuOpen = false;
   bool _positionInitialized = false;
   bool _firstImageLogged = false;
   int? _lastReadingMode;
@@ -182,6 +190,7 @@ class _ReaderViewState extends State<_ReaderView> {
         current = pos;
       }
     }
+    _releaseOffscreenResources();
     final bloc = context.read<ReaderBloc>();
     if (current.index != bloc.state.currentPage) {
       bloc.add(PageChanged(current.index));
@@ -195,6 +204,7 @@ class _ReaderViewState extends State<_ReaderView> {
     _zoomController.dispose();
     _pageController.dispose();
     _thumbnailScrollController.dispose();
+    _savingPages.dispose();
     super.dispose();
   }
 
@@ -211,11 +221,7 @@ class _ReaderViewState extends State<_ReaderView> {
         (_thumbItemWidth / 2) +
         8; // +8 for horizontal padding
     final clampedOffset = targetOffset.clamp(0.0, maxScroll);
-    _thumbnailScrollController.animateTo(
-      clampedOffset,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-    );
+    _thumbnailScrollController.jumpTo(clampedOffset);
   }
 
   @override
@@ -240,7 +246,9 @@ class _ReaderViewState extends State<_ReaderView> {
         }
         _lastReadingMode = state.readingMode;
         SystemChrome.setEnabledSystemUIMode(
-          state.showUI || state.status == ReaderStatus.error
+          state.showUI ||
+                  state.status == ReaderStatus.error ||
+                  state.status == ReaderStatus.contentWarning
               ? SystemUiMode.edgeToEdge
               : SystemUiMode.immersiveSticky,
         );
@@ -261,6 +269,12 @@ class _ReaderViewState extends State<_ReaderView> {
             backgroundColor: Colors.black,
             body: LoadingIndicator(message: S.of(context).loadingReader),
           );
+        }
+        if (state.status == ReaderStatus.contentWarning) {
+          return GalleryWarningView(
+              message: state.errorMessage ?? '',
+              onContinue: () =>
+                  context.read<ReaderBloc>().add(AcceptReaderContentWarning()));
         }
         if (state.status == ReaderStatus.error) {
           return Scaffold(
@@ -297,6 +311,9 @@ class _ReaderViewState extends State<_ReaderView> {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: state.readingMode == 2 ? _toggleUI : null,
+                onLongPress: state.readingMode == 2
+                    ? null
+                    : () => _showPageMenu(state.currentPage),
                 onDoubleTap: state.readingMode == 2 && _isZoomed
                     ? () => _zoomController.value = Matrix4.identity()
                     : null,
@@ -321,27 +338,128 @@ class _ReaderViewState extends State<_ReaderView> {
   // ---- Horizontal PageView Reader (LR / RL) ----
   void _toggleUI() => context.read<ReaderBloc>().add(ToggleReaderUI());
 
-  ReaderImageProvider _imageProvider(String url,
-          {int attempt = 0, int? page}) =>
-      ReaderImageProvider(url,
-          requests: widget.requests,
-          fileService: _imageFiles,
-          cache: ReaderImageCache(EhImageCacheManager.instance),
-          onImageReady: page == null
-              ? null
-              : () {
-                  if (!_firstImageLogged &&
-                      mounted &&
-                      page == context.read<ReaderBloc>().state.currentPage) {
-                    _firstImageLogged = true;
-                    assert(() {
-                      debugPrint(
-                          '[reader] first image visible in ${widget.startup.elapsedMilliseconds}ms');
-                      return true;
-                    }());
-                  }
-                },
-          attempt: attempt);
+  ReaderImageProvider _imageProvider(String url, {int attempt = 0, int? page}) {
+    final scope =
+        page == null ? widget.requests : widget.requests.forPage(page);
+    var files = _imageFiles;
+    if (page != null) {
+      if (!identical(_pageFiles[page]?.$1, scope)) {
+        _pageFiles[page] = (
+          scope,
+          EhImageCacheManager.readerFileService(
+              GetIt.I<app.CookieManager>(), scope)
+        );
+      }
+      files = _pageFiles[page]!.$2;
+    }
+    return ReaderImageProvider(url,
+        requests: scope,
+        fileService: files,
+        onResourceReady: page == null
+            ? null
+            : (resource) {
+                if (mounted && !scope.isCancelled) {
+                  if (!_isResourceVisible(page)) resource.releaseMemory();
+                  context
+                      .read<ReaderBloc>()
+                      .add(ReaderImageReady(page, attempt, resource));
+                } else {
+                  resource.releaseMemory();
+                }
+              },
+        cache: ReaderImageCache(EhImageCacheManager.instance,
+            legacyKeys: EhImageCacheManager.instance.legacyReaderKeys),
+        onImageReady: page == null
+            ? null
+            : () {
+                if (!_firstImageLogged &&
+                    mounted &&
+                    page == context.read<ReaderBloc>().state.currentPage) {
+                  _firstImageLogged = true;
+                  assert(() {
+                    debugPrint(
+                        '[reader] first image visible in ${widget.startup.elapsedMilliseconds}ms');
+                    return true;
+                  }());
+                }
+              },
+        attempt: attempt);
+  }
+
+  bool _isResourceVisible(int page, {int? horizontalPage}) {
+    final state = context.read<ReaderBloc>().state;
+    if (state.readingMode != 2) {
+      return (page - (horizontalPage ?? state.currentPage)).abs() <= 1;
+    }
+    final positions = _verticalPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return page == state.currentPage;
+    return positions.any((p) =>
+        p.index == page && p.itemLeadingEdge < 1 && p.itemTrailingEdge > 0);
+  }
+
+  void _releaseOffscreenResources({int? horizontalPage}) {
+    for (final entry
+        in context.read<ReaderBloc>().state.readyResources.entries) {
+      if (!_isResourceVisible(entry.key, horizontalPage: horizontalPage)) {
+        entry.value.releaseMemory();
+      }
+    }
+  }
+
+  Future<void> _showPageMenu(int page) async {
+    if (_pageMenuOpen || widget.requests.isCancelled) return;
+    _pageMenuOpen = true;
+    final bloc = context.read<ReaderBloc>();
+    final s = S.of(context);
+    final result = await showDialog<Object>(
+        context: context,
+        builder: (_) => BlocProvider.value(
+            value: bloc,
+            child: ReaderPageMenu(page: page, savingPages: _savingPages)));
+    _pageMenuOpen = false;
+    if (!mounted || widget.requests.isCancelled) return;
+    if (result == 'reload') {
+      bloc.add(RetryImageAtIndex(page));
+    } else if (result is ReaderPageResource &&
+        !_savingPages.value.contains(page)) {
+      _savingPages.value = {..._savingPages.value, page};
+      try {
+        final converted = await PageImageExporter()
+            .save(result, gid: bloc.state.gid, page: page);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(converted ? s.pageSavedAsPng : s.pageSaved)));
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(error is PlatformException &&
+                      error.code == 'permission_denied'
+                  ? s.photoPermissionDenied
+                  : error is StateError &&
+                          error.message == 'page_resource_unavailable'
+                      ? s.pageResourceUnavailable
+                      : s.pageSaveFailed)));
+        }
+      } finally {
+        if (mounted) _savingPages.value = {..._savingPages.value}..remove(page);
+      }
+    }
+  }
+
+  Widget _pageSurface(int page, Widget child) => GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () => _showPageMenu(page),
+      child: child);
+
+  Widget _decodedImageError(ReaderState state, int page) {
+    if (state.readyResources.containsKey(page)) {
+      context
+          .read<ReaderBloc>()
+          .add(ReaderImageFailed(page, state.imageAttempts[page] ?? 0));
+    }
+    return _imageError(page);
+  }
 
   Widget _imageError(int index) => Center(
         child: Column(
@@ -391,24 +509,11 @@ class _ReaderViewState extends State<_ReaderView> {
           initialScale: PhotoViewComputedScale.contained,
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 3,
-          errorBuilder: (_, __, ___) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.broken_image, color: Colors.white54, size: 48),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () =>
-                      context.read<ReaderBloc>().add(RetryImageAtIndex(index)),
-                  child: Text(S.of(context).retry,
-                      style: const TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
-          ),
+          errorBuilder: (_, __, ___) => _decodedImageError(state, index),
         );
       },
       onPageChanged: (page) {
+        _releaseOffscreenResources(horizontalPage: page);
         context.read<ReaderBloc>().add(PageChanged(page));
       },
       loadingBuilder: (_, __) => const Center(
@@ -437,10 +542,12 @@ class _ReaderViewState extends State<_ReaderView> {
             if (image == null ||
                 state.loadingIndices.contains(index) ||
                 state.failedIndices.contains(index)) {
-              return SizedBox(
-                height: MediaQuery.of(context).size.height * 0.8,
-                child: _pendingImage(state, index),
-              );
+              return _pageSurface(
+                  index,
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.8,
+                    child: _pendingImage(state, index),
+                  ));
             }
 
             // Calculate aspect ratio for proper height
@@ -450,42 +557,18 @@ class _ReaderViewState extends State<_ReaderView> {
             final screenWidth = MediaQuery.of(context).size.width;
             final imageHeight = screenWidth / aspectRatio;
 
-            return SizedBox(
-              width: screenWidth,
-              height: imageHeight.clamp(200.0, screenWidth * 3),
-              child: Image(
-                image: _imageProvider(image.imageUrl,
-                    page: index, attempt: state.imageAttempts[index] ?? 0),
-                fit: BoxFit.fitWidth,
-                loadingBuilder: (_, child, progress) => progress == null
-                    ? child
-                    : SizedBox(
-                        height: imageHeight,
-                        child: const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        ),
-                      ),
-                errorBuilder: (_, __, ___) => SizedBox(
-                  height: 300,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.broken_image,
-                            color: Colors.white54, size: 48),
-                        TextButton(
-                          onPressed: () => context
-                              .read<ReaderBloc>()
-                              .add(RetryImageAtIndex(index)),
-                          child: Text(S.of(context).retry,
-                              style: const TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
+            return _pageSurface(
+                index,
+                SizedBox(
+                  width: screenWidth,
+                  height: imageHeight.clamp(200.0, screenWidth * 3),
+                  child: ReaderPageImage(
+                    image: _imageProvider(image.imageUrl,
+                        page: index, attempt: state.imageAttempts[index] ?? 0),
+                    errorBuilder: (_, __, ___) =>
+                        _decodedImageError(state, index),
                   ),
-                ),
-              ),
-            );
+                ));
           },
         ),
       ),
@@ -508,6 +591,8 @@ class _ReaderViewState extends State<_ReaderView> {
         ),
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top,
+          left: MediaQuery.of(context).padding.left,
+          right: MediaQuery.of(context).padding.right,
         ),
         child: Row(
           children: [
@@ -583,6 +668,8 @@ class _ReaderViewState extends State<_ReaderView> {
         ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).padding.bottom + 8,
+          left: MediaQuery.of(context).padding.left,
+          right: MediaQuery.of(context).padding.right,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -594,6 +681,7 @@ class _ReaderViewState extends State<_ReaderView> {
                 child: ListView.builder(
                   controller: _thumbnailScrollController,
                   scrollDirection: Axis.horizontal,
+                  itemExtent: _thumbItemWidth,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemCount: state.totalPages,
                   itemBuilder: (_, index) {

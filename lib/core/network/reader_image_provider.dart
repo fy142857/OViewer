@@ -8,25 +8,65 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import '../constants/app_constants.dart';
 import 'reader_request_controller.dart';
+import 'reader_image_cache_key.dart';
+import '../../models/reader_page_resource.dart';
 
 /// The shared disk cache contains completed images, never in-flight requests.
 class ReaderImageCache {
   final BaseCacheManager _cache;
+  final Future<Iterable<String>> Function(String)? legacyKeys;
 
-  const ReaderImageCache(this._cache);
+  const ReaderImageCache(this._cache, {this.legacyKeys});
 
   Future<Uint8List?> read(String url) async {
-    final entry = await _cache.getFileFromCache(url);
-    if (entry == null || !entry.validTill.isAfter(DateTime.now())) return null;
-    return entry.file.readAsBytes();
+    final key = readerImageCacheKey(url);
+    Future<Uint8List?> readKey(String candidate) async {
+      final entry = await _cache.getFileFromCache(candidate);
+      if (entry == null || !entry.validTill.isAfter(DateTime.now())) {
+        return null;
+      }
+      return entry.file.readAsBytes();
+    }
+
+    final cached = await readKey(key);
+    if (cached != null || key == url) {
+      if (cached != null && kDebugMode) {
+        debugPrint('[reader-cache] hit=content');
+      }
+      return cached;
+    }
+    final original = await readKey(url);
+    if (original != null) {
+      if (kDebugMode) debugPrint('[reader-cache] hit=original-url');
+      return original;
+    }
+    // Old installations stored completed files under the full source URL.
+    // Reuse those files across /h -> /om failover without deleting the cache.
+    for (final candidate in await legacyKeys?.call(key) ?? <String>[]) {
+      if (candidate == url || candidate == key) continue;
+      final bytes = await readKey(candidate);
+      if (bytes != null) {
+        if (kDebugMode) debugPrint('[reader-cache] hit=legacy-alternate');
+        return bytes;
+      }
+    }
+    return null;
   }
 
   Future<void> write(String url, Uint8List bytes) async {
     await _cache.putFile(url, bytes,
+        key: readerImageCacheKey(url),
         maxAge: const Duration(days: AppConstants.maxCacheAgeDays));
   }
 
-  Future<void> remove(String url) => _cache.removeFile(url);
+  Future<void> remove(String url) async {
+    final key = readerImageCacheKey(url);
+    final keys = <String>{key, url};
+    if (key != url) keys.addAll(await legacyKeys?.call(key) ?? <String>[]);
+    for (final candidate in keys) {
+      await _cache.removeFile(candidate);
+    }
+  }
 }
 
 /// Successful bytes are shared across visits. Active image streams stay scoped
@@ -38,6 +78,8 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   final ReaderImageCache cache;
   final int attempt;
   final void Function()? onImageReady;
+  final Duration idleTimeout;
+  final ValueChanged<ReaderPageResource>? onResourceReady;
 
   const ReaderImageProvider(
     this.url, {
@@ -46,6 +88,8 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     required this.cache,
     this.attempt = 0,
     this.onImageReady,
+    this.idleTimeout = const Duration(seconds: 30),
+    this.onResourceReady,
   });
 
   @override
@@ -57,12 +101,18 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       ReaderImageProvider key, ImageDecoderCallback decode) {
     final chunks = StreamController<ImageChunkEvent>();
     requests.onCancel(() => PaintingBinding.instance.imageCache.evict(key));
-    return MultiFrameImageStreamCompleter(
-      codec: _load(decode, chunks),
+    ReaderPageResource? resource;
+    final completer = MultiFrameImageStreamCompleter(
+      codec: _load(decode, chunks, (value) {
+        resource = value;
+        onResourceReady?.call(value);
+      }),
       chunkEvents: chunks.stream,
       scale: 1,
       debugLabel: url,
     );
+    requests.onCancel(() => resource?.releaseMemory());
+    return completer;
   }
 
   void _ensureActive() {
@@ -71,35 +121,58 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     }
   }
 
-  Future<ui.Codec> _load(ImageDecoderCallback decode,
-      StreamController<ImageChunkEvent> chunks) async {
+  Future<T> _waitFor<T>(Future<T> work, {void Function(T)? disposeLate}) {
+    var timedOut = false;
+    return work.then((value) {
+      if (timedOut) disposeLate?.call(value);
+      return value;
+    }).timeout(idleTimeout, onTimeout: () {
+      timedOut = true;
+      throw TimeoutException('Reader image loading stalled', idleTimeout);
+    });
+  }
+
+  Future<ui.Codec> _load(
+      ImageDecoderCallback decode,
+      StreamController<ImageChunkEvent> chunks,
+      ValueChanged<ReaderPageResource> resourceReady) async {
     try {
       _ensureActive();
       // An explicit retry bypasses cached bytes, including a corrupt entry.
       // Ordinary reentry always tries the shared completed-image cache first.
       if (attempt == 0) {
         try {
-          final cached = await cache.read(url);
+          final cached = await _waitFor(cache.read(url));
           _ensureActive();
           if (cached != null) {
             final codec = await _decode(cached, decode);
+            resourceReady(ReaderPageResource(() => cache.read(url)));
             onImageReady?.call();
             return codec;
           }
+        } on TimeoutException {
+          _ensureActive();
+          // Slow cache IO does not invalidate a previously successful image.
         } catch (_) {
           _ensureActive();
           // A missing or corrupt cache entry must not block a fresh download.
           try {
-            await cache.remove(url);
+            await _waitFor(cache.remove(url));
           } catch (_) {}
         }
       } else {
         try {
-          await cache.remove(url);
+          await _waitFor(cache.remove(url));
         } catch (_) {}
       }
       _ensureActive();
-      final response = await fileService.get(url);
+      final response =
+          await _waitFor(fileService.get(url), disposeLate: (response) {
+        // A timed-out request may still return headers. Drop its body instead
+        // of decoding/caching it or letting it replace a later retry.
+        unawaited(
+            response.content.listen(null, onError: (Object _) {}).cancel());
+      });
       _ensureActive();
       if (response.statusCode != 200) {
         await response.content.listen(null).cancel();
@@ -107,7 +180,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
             statusCode: response.statusCode, uri: Uri.parse(url));
       }
       final bytes = BytesBuilder(copy: false);
-      await for (final chunk in response.content) {
+      await for (final chunk in response.content.timeout(idleTimeout)) {
         _ensureActive();
         bytes.add(chunk);
         chunks.add(ImageChunkEvent(
@@ -121,8 +194,10 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       final codec = await _decode(completedBytes, decode);
       // Persist only a complete, decodable image. Cancellation and HTTP/decode
       // failures never write partial or failed responses into the shared cache.
+      var persisted = false;
       try {
-        await cache.write(url, completedBytes);
+        await _waitFor(cache.write(url, completedBytes));
+        persisted = true;
       } catch (_) {
         // A cache write failure should not turn a loaded image into an error.
       }
@@ -130,6 +205,8 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
         codec.dispose();
         _ensureActive();
       }
+      resourceReady(ReaderPageResource(() => cache.read(url),
+          fallback: persisted ? null : completedBytes));
       onImageReady?.call();
       return codec;
     } catch (_) {
@@ -142,13 +219,18 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
 
   Future<ui.Codec> _decode(Uint8List bytes, ImageDecoderCallback decode) async {
     _ensureActive();
-    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-    final codec = await decode(buffer);
+    final buffer = await _waitFor(ui.ImmutableBuffer.fromUint8List(bytes),
+        disposeLate: (buffer) => buffer.dispose());
+    if (requests.isCancelled) buffer.dispose();
+    _ensureActive();
+    final codec =
+        await _waitFor(decode(buffer), disposeLate: (codec) => codec.dispose());
     try {
       _ensureActive();
       // Creating a codec only parses the image header. Validate the first
       // actual frame before considering these bytes successfully loaded.
-      final firstFrame = await codec.getNextFrame();
+      final firstFrame = await _waitFor(codec.getNextFrame(),
+          disposeLate: (frame) => frame.image.dispose());
       if (requests.isCancelled) {
         firstFrame.image.dispose();
         _ensureActive();
@@ -165,10 +247,11 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       other is ReaderImageProvider &&
       other.url == url &&
       identical(other.requests, requests) &&
-      other.attempt == attempt;
+      other.attempt == attempt &&
+      other.idleTimeout == idleTimeout;
 
   @override
-  int get hashCode => Object.hash(url, requests, attempt);
+  int get hashCode => Object.hash(url, requests, attempt, idleTimeout);
 }
 
 /// Hand the validated first frame to Flutter without decoding it twice or

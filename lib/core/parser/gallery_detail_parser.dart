@@ -1,5 +1,6 @@
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart';
+import 'package:intl/intl.dart';
 import '../../models/gallery_detail.dart';
 import '../../models/gallery_tag.dart';
 import '../../models/gallery_comment.dart';
@@ -163,6 +164,7 @@ class GalleryDetailParser {
       favoritedSlot: favoritedSlot,
       tags: tags,
       comments: comments,
+      totalCommentCount: comments.length + _hiddenCommentCount(document),
       thumbnails: thumbnails,
       archiveUrl: archiveUrl,
     );
@@ -296,15 +298,69 @@ class GalleryDetailParser {
   }
 
   // ---- Comment Parsing ----
+  static List<GalleryComment> parseComments(String html) =>
+      _parseComments(html_parser.parse(html));
+
+  static int hiddenCommentCount(String html) =>
+      _hiddenCommentCount(html_parser.parse(html));
+
+  static int _hiddenCommentCount(Document document) {
+    for (final link
+        in document.querySelectorAll('#cdiv a[href], #chd a[href]')) {
+      // Comments may quote the site's notice or link to hc=1 themselves.
+      Element? ancestor = link;
+      Element? paragraph;
+      var insideComment = false;
+      while (ancestor != null) {
+        if (ancestor.classes.contains('c1') ||
+            ancestor.classes.contains('c6')) {
+          insideComment = true;
+          break;
+        }
+        if (ancestor.localName == 'p') paragraph ??= ancestor;
+        ancestor = ancestor.parent;
+      }
+      if (insideComment) continue;
+      final target = Uri.tryParse(link.attributes['href'] ?? '');
+      if (target?.queryParameters['hc'] != '1') continue;
+      // On EH/EX the count is in the enclosing paragraph; the anchor only
+      // says "click to show all". Also support older all-in-anchor markup.
+      final text = (paragraph ?? link).text.replaceAll(RegExp(r'\s+'), ' ');
+      final match = RegExp(
+              r'There (?:are|is) ([\d,]+) more comments? below the viewing threshold',
+              caseSensitive: false)
+          .firstMatch(text);
+      final count = int.tryParse(match?[1]?.replaceAll(',', '') ?? '');
+      if (count != null) return count;
+    }
+    return 0;
+  }
+
+  static DateTime? parseCommentDate(String value) {
+    final text = value.trim();
+    for (final pattern in ['d MMMM yyyy, HH:mm', 'd MMMM yyyy, HH:mm:ss']) {
+      try {
+        return DateFormat(pattern, 'en_US').parseStrict(text, true);
+      } on FormatException {/* Try the next supported site format. */}
+    }
+    final iso = DateTime.tryParse(text);
+    if (iso == null) return null;
+    return iso.isUtc
+        ? iso
+        : DateTime.utc(
+            iso.year, iso.month, iso.day, iso.hour, iso.minute, iso.second);
+  }
+
   static List<GalleryComment> _parseComments(Document document) {
     final comments = <GalleryComment>[];
     final commentDivs = document.querySelectorAll('div.c1');
 
     for (final div in commentDivs) {
-      // ID from parent: comment_12345
-      final parentId = div.parent?.attributes['id'] ?? '';
-      final idMatch = RegExp(r'comment_(\d+)').firstMatch(parentId);
-      final id = idMatch != null ? int.parse(idMatch.group(1)!) : 0;
+      final contentEl = div.querySelector('.c6');
+      final idMatch =
+          RegExp(r'^comment_(\d+)$').firstMatch(contentEl?.id ?? '');
+      if (idMatch == null) continue;
+      final id = int.parse(idMatch[1]!);
 
       // Author & date from c3 div
       final c3 = div.querySelector('.c3');
@@ -313,10 +369,9 @@ class GalleryDetailParser {
       final author = c3?.querySelector('a')?.text.trim() ?? 'Anonymous';
       final dateMatch =
           RegExp(r'Posted on (.+?) (?:UTC|by)').firstMatch(c3Text);
-      final postedAt = _parseDate(dateMatch?.group(1)?.trim() ?? '');
+      final postedAt = parseCommentDate(dateMatch?.group(1) ?? '');
 
       // Comment body (HTML)
-      final contentEl = div.querySelector('.c6');
       final content = contentEl?.innerHtml ?? '';
 
       // Score
@@ -325,8 +380,16 @@ class GalleryDetailParser {
       final score = int.tryParse(scoreText.replaceAll('+', '')) ?? 0;
 
       // Is uploader comment
-      final isUploader =
+      final isUploader = id == 0 ||
           div.querySelector('.c4')?.text.contains('Uploader') == true;
+
+      bool voted(String direction) => RegExp(
+            r'color\s*:\s*(?:blue|#0000ff|rgb\(\s*0\s*,\s*0\s*,\s*255\s*\))\s*(?:;|$)',
+            caseSensitive: false,
+          ).hasMatch(div
+                  .querySelector('#comment_vote_${direction}_$id')
+                  ?.attributes['style'] ??
+              '');
 
       comments.add(GalleryComment(
         id: id,
@@ -335,6 +398,8 @@ class GalleryDetailParser {
         content: content,
         score: score,
         isUploader: isUploader,
+        isVotedUp: voted('up'),
+        isVotedDown: voted('down'),
       ));
     }
 

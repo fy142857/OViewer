@@ -23,6 +23,8 @@ class GalleryDetail extends Equatable {
   final int? favoritedSlot;
   final List<GalleryTag> tags;
   final List<GalleryComment> comments;
+  final int? totalCommentCount;
+  int get commentCount => totalCommentCount ?? comments.length;
   final List<ThumbnailInfo> thumbnails;
   final String? archiveUrl;
 
@@ -46,11 +48,40 @@ class GalleryDetail extends Equatable {
     this.favoritedSlot,
     this.tags = const [],
     this.comments = const [],
+    this.totalCommentCount,
     this.thumbnails = const [],
     this.archiveUrl,
   });
 
   bool get isFavorited => favoritedSlot != null;
+
+  GalleryDetail withComments(List<GalleryComment> updated,
+          {bool all = false, int? totalCount}) =>
+      GalleryDetail(
+        gid: gid,
+        token: token,
+        title: title,
+        titleJpn: titleJpn,
+        thumbUrl: thumbUrl,
+        category: category,
+        uploader: uploader,
+        postedAt: postedAt,
+        parent: parent,
+        visible: visible,
+        language: language,
+        fileCount: fileCount,
+        fileSize: fileSize,
+        rating: rating,
+        ratingCount: ratingCount,
+        favoriteCount: favoriteCount,
+        favoritedSlot: favoritedSlot,
+        tags: tags,
+        comments: updated,
+        totalCommentCount:
+            totalCount ?? (all ? updated.length : totalCommentCount),
+        thumbnails: thumbnails,
+        archiveUrl: archiveUrl,
+      );
 
   @override
   List<Object?> get props => [
@@ -66,6 +97,7 @@ class GalleryDetail extends Equatable {
         favoritedSlot,
         tags,
         comments,
+        totalCommentCount,
         thumbnails,
       ];
 }
