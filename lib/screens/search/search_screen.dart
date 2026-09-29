@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -58,6 +59,10 @@ class _SearchViewState extends State<_SearchView> {
   List<String> _selectedCategories = [];
   int? _minRating;
   bool _showHistory = true;
+  Timer? _suggestionTimer;
+  final _suggestionRevision = ValueNotifier<int>(0);
+  final _hasText = ValueNotifier<bool>(false);
+  TextEditingValue? _suggestedValue;
   List<TagSuggestion> _suggestions = [];
   List<String> _historySuggestions = [];
 
@@ -69,16 +74,22 @@ class _SearchViewState extends State<_SearchView> {
       _showHistory = false;
       _performSearch();
     }
+    _hasText.value = _controller.text.isNotEmpty;
     _focusNode.addListener(() {
       if (_focusNode.hasFocus && !_showHistory) {
         setState(() => _showHistory = true);
         context.read<SearchBloc>().add(LoadSearchHistory());
       }
+      if (_focusNode.hasFocus) {
+        _scheduleSuggestions();
+      } else {
+        _clearSuggestions();
+      }
     });
     context.read<SearchBloc>().add(LoadSearchHistory());
     _scrollController.addListener(() => _onScroll(_scrollController));
     _gridScrollController.addListener(() => _onScroll(_gridScrollController));
-    _controller.addListener(_updateSuggestions);
+    _controller.addListener(_scheduleSuggestions);
   }
 
   void _onScroll(ScrollController controller) {
@@ -91,6 +102,7 @@ class _SearchViewState extends State<_SearchView> {
   }
 
   void _performSearch() {
+    _clearSuggestions();
     final keyword = _controller.text.trim();
 
     // If the input is a gallery URL, navigate directly to it
@@ -124,6 +136,9 @@ class _SearchViewState extends State<_SearchView> {
 
   @override
   void dispose() {
+    _suggestionTimer?.cancel();
+    _suggestionRevision.dispose();
+    _hasText.dispose();
     _controller.dispose();
     _scrollController.dispose();
     _gridScrollController.dispose();
@@ -131,7 +146,29 @@ class _SearchViewState extends State<_SearchView> {
     super.dispose();
   }
 
-  void _updateSuggestions() {
+  void _clearSuggestions() {
+    _suggestionTimer?.cancel();
+    _suggestedValue = null;
+    if (_suggestions.isEmpty && _historySuggestions.isEmpty) return;
+    _suggestions = [];
+    _historySuggestions = [];
+    _suggestionRevision.value++;
+  }
+
+  void _scheduleSuggestions() {
+    _hasText.value = _controller.text.isNotEmpty;
+    _clearSuggestions();
+    final value = _controller.value;
+    if (!_focusNode.hasFocus || !value.composing.isCollapsed) return;
+    _suggestionTimer = Timer(const Duration(milliseconds: 150), () {
+      if (!mounted || !_focusNode.hasFocus || _controller.value != value) {
+        return;
+      }
+      _updateSuggestions(value);
+    });
+  }
+
+  void _updateSuggestions(TextEditingValue value) {
     final history = _controller.value.composing.isCollapsed
         ? matchingSearchHistory(
             _controller.text, GetIt.I<SearchRepository>().getSearchHistory())
@@ -140,41 +177,41 @@ class _SearchViewState extends State<_SearchView> {
     try {
       final repo = GetIt.I<TagTranslationRepository>();
       suggestions = tagSuggestions(
-          _controller.value, (query) => repo.searchByTranslation(query));
+          value, (query) => repo.searchByTranslation(query),
+          searchPhrases: (queries) => repo.searchPhrases(queries));
     } catch (_) {
       // History remains available while the tag dictionary is unavailable.
     }
     String comparable(String text) =>
         normalizeTagSearchQuery(text).trim().toLowerCase();
     final historyQueries = history.map(comparable).toSet();
-    setState(() {
-      _historySuggestions = history;
-      _suggestions = suggestions
-          .where((suggestion) =>
-              !historyQueries.contains(comparable(suggestion.apply().text)))
-          .toList();
-    });
+    final filtered = historyQueries.isEmpty
+        ? suggestions
+        : suggestions
+            .where((suggestion) =>
+                !historyQueries.contains(comparable(suggestion.apply().text)))
+            .toList();
+    _suggestedValue = value;
+    _historySuggestions = history;
+    _suggestions = filtered;
+    _suggestionRevision.value++;
   }
 
   void _applySuggestion(TagSuggestion suggestion) {
-    if (_controller.text != suggestion.source) return;
+    if (_controller.value != _suggestedValue ||
+        _controller.text != suggestion.source) return;
     _controller.value = suggestion.apply();
-    setState(() {
-      _suggestions = [];
-      _historySuggestions = [];
-    });
+    _clearSuggestions();
     _focusNode.requestFocus();
   }
 
   void _applyHistorySuggestion(String query) {
+    if (_controller.value != _suggestedValue) return;
     _controller.value = TextEditingValue(
       text: query,
       selection: TextSelection.collapsed(offset: query.length),
     );
-    setState(() {
-      _suggestions = [];
-      _historySuggestions = [];
-    });
+    _clearSuggestions();
     _focusNode.requestFocus();
   }
 
@@ -186,30 +223,32 @@ class _SearchViewState extends State<_SearchView> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          autofocus: widget.initialKeyword == null,
-          decoration: InputDecoration(
-            hintText: s.searchGalleries,
-            border: InputBorder.none,
-            suffixIcon: _controller.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 20),
-                    onPressed: () {
-                      _controller.clear();
-                      context.read<SearchBloc>().add(ClearSearch());
-                      setState(() {
-                        _showHistory = true;
-                        _suggestions = [];
-                        _historySuggestions = [];
-                      });
-                    },
-                  )
-                : null,
-          ),
-          onSubmitted: (_) => _performSearch(),
-        ),
+        title: ValueListenableBuilder<bool>(
+            valueListenable: _hasText,
+            builder: (context, hasText, _) => TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  autofocus: widget.initialKeyword == null,
+                  decoration: InputDecoration(
+                    hintText: s.searchGalleries,
+                    border: InputBorder.none,
+                    suffixIcon: hasText
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () {
+                              _controller.clear();
+                              context.read<SearchBloc>().add(ClearSearch());
+                              setState(() {
+                                _showHistory = true;
+                                _suggestions = [];
+                                _historySuggestions = [];
+                              });
+                            },
+                          )
+                        : null,
+                  ),
+                  onSubmitted: (_) => _performSearch(),
+                )),
         actions: [
           IconButton(
             key: const ValueKey('search-view-toggle'),
@@ -238,92 +277,107 @@ class _SearchViewState extends State<_SearchView> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Active filters row
-          if (_selectedCategories.isNotEmpty || _minRating != null)
-            _buildActiveFilters(),
-          // Tag suggestions or Content
-          if (_historySuggestions.isNotEmpty || _suggestions.isNotEmpty)
-            _buildSuggestions()
-          else
-            Expanded(
-              child: BlocBuilder<SearchBloc, SearchState>(
-                builder: (context, state) {
-                  if (_showHistory) {
-                    return _buildSearchHistory(_controller.text.trim().isEmpty
-                        ? state.searchHistory
-                        : matchingSearchHistory(_controller.text,
-                            GetIt.I<SearchRepository>().getSearchHistory()));
-                  }
-                  if (state.status == SearchStatus.loading &&
-                      state.results.isEmpty) {
-                    return isGrid
-                        ? const ShimmerGalleryGrid()
-                        : const ShimmerGalleryList();
-                  }
-                  if (state.results.isEmpty &&
-                      state.status == SearchStatus.loaded) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.search_off,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.outline),
-                          const SizedBox(height: 16),
-                          Text(s.noResultsFound),
-                          if (state.filter.keyword != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                s.tryDifferentKeywords,
-                                style: Theme.of(context).textTheme.bodySmall,
+      body: ValueListenableBuilder<int>(
+          valueListenable: _suggestionRevision,
+          builder: (context, _, __) => Column(
+                children: [
+                  // Active filters row
+                  if (_selectedCategories.isNotEmpty || _minRating != null)
+                    _buildActiveFilters(),
+                  // Tag suggestions or Content
+                  if (_historySuggestions.isNotEmpty || _suggestions.isNotEmpty)
+                    _buildSuggestions()
+                  else
+                    Expanded(
+                      child: BlocBuilder<SearchBloc, SearchState>(
+                        builder: (context, state) {
+                          if (_showHistory) {
+                            return _buildSearchHistory(
+                                _controller.text.trim().isEmpty
+                                    ? state.searchHistory
+                                    : matchingSearchHistory(
+                                        _controller.text,
+                                        GetIt.I<SearchRepository>()
+                                            .getSearchHistory()));
+                          }
+                          if (state.status == SearchStatus.loading &&
+                              state.results.isEmpty) {
+                            return isGrid
+                                ? const ShimmerGalleryGrid()
+                                : const ShimmerGalleryList();
+                          }
+                          if (state.results.isEmpty &&
+                              state.status == SearchStatus.loaded) {
+                            return Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.search_off,
+                                      size: 64,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline),
+                                  const SizedBox(height: 16),
+                                  Text(s.noResultsFound),
+                                  if (state.filter.keyword != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        s.tryDifferentKeywords,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                      ),
+                                    ),
+                                ],
                               ),
-                            ),
-                        ],
-                      ),
-                    );
-                  }
+                            );
+                          }
 
-                  return PageStorage(
-                    key: ObjectKey(_resultScrollStorage),
-                    bucket: _resultScrollStorage,
-                    child: RefreshIndicator(
-                      onRefresh: () async {
-                        context.read<SearchBloc>().add(PerformSearch(
-                            state.filter,
-                            saveHistory: widget.saveHistory));
-                        // Wait for the bloc to finish loading
-                        await context.read<SearchBloc>().stream.firstWhere(
-                            (s) => s.status != SearchStatus.loading);
-                      },
-                      child: isGrid
-                          ? AdaptiveGalleryGrid(
-                              key: const PageStorageKey('search-grid'),
-                              controller: _gridScrollController,
-                              itemCount: state.results.length +
-                                  (state.isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) =>
-                                  _buildResult(state, index, isGrid: true),
-                            )
-                          : ListView.builder(
-                              key: const PageStorageKey('search-list'),
-                              controller: _scrollController,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.all(8),
-                              itemCount: state.results.length +
-                                  (state.isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) =>
-                                  _buildResult(state, index, isGrid: false),
+                          return PageStorage(
+                            key: ObjectKey(_resultScrollStorage),
+                            bucket: _resultScrollStorage,
+                            child: RefreshIndicator(
+                              onRefresh: () async {
+                                context.read<SearchBloc>().add(PerformSearch(
+                                    state.filter,
+                                    saveHistory: widget.saveHistory));
+                                // Wait for the bloc to finish loading
+                                await context
+                                    .read<SearchBloc>()
+                                    .stream
+                                    .firstWhere((s) =>
+                                        s.status != SearchStatus.loading);
+                              },
+                              child: isGrid
+                                  ? AdaptiveGalleryGrid(
+                                      key: const PageStorageKey('search-grid'),
+                                      controller: _gridScrollController,
+                                      itemCount: state.results.length +
+                                          (state.isLoadingMore ? 1 : 0),
+                                      itemBuilder: (context, index) =>
+                                          _buildResult(state, index,
+                                              isGrid: true),
+                                    )
+                                  : ListView.builder(
+                                      key: const PageStorageKey('search-list'),
+                                      controller: _scrollController,
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.all(8),
+                                      itemCount: state.results.length +
+                                          (state.isLoadingMore ? 1 : 0),
+                                      itemBuilder: (context, index) =>
+                                          _buildResult(state, index,
+                                              isGrid: false),
+                                    ),
                             ),
+                          );
+                        },
+                      ),
                     ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
+                ],
+              )),
     );
   }
 

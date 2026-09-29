@@ -12,6 +12,7 @@ class TagTranslationRepository {
   /// namespace -> { tagKey -> translatedName }
   Map<String, Map<String, String>> _translations = {};
   bool _loaded = false;
+  List<_SearchEntry> _searchEntries = [];
 
   TagTranslationRepository(this._dio, this._storage);
 
@@ -77,6 +78,12 @@ class TagTranslationRepository {
     }
 
     _translations = result;
+    _searchEntries = [
+      for (final namespace in result.entries)
+        for (final tag in namespace.value.entries)
+          _SearchEntry(TagSearchResult(
+              namespace: namespace.key, key: tag.key, translation: tag.value)),
+    ];
   }
 
   /// Get translation for a specific tag.
@@ -95,20 +102,44 @@ class TagTranslationRepository {
     final results = <TagSearchResult>[];
     final lowerQuery = query.toLowerCase();
 
-    for (final nsEntry in _translations.entries) {
-      for (final tagEntry in nsEntry.value.entries) {
-        if (tagEntry.value.toLowerCase().contains(lowerQuery) ||
-            tagEntry.key.toLowerCase().contains(lowerQuery)) {
-          results.add(TagSearchResult(
-            namespace: nsEntry.key,
-            key: tagEntry.key,
-            translation: tagEntry.value,
-          ));
-          if (results.length >= limit) return results;
-        }
+    for (final entry in _searchEntries) {
+      if (entry.contains(lowerQuery)) {
+        results.add(entry.tag);
+        if (results.length >= limit) return results;
       }
     }
     return results;
+  }
+
+  /// Queries are nested suffixes, longest first. Scan the dictionary once,
+  /// considering ALL short-phrase matches before applying the result limit.
+  /// Otherwise an earlier group of short matches can hide a longer tag.
+  TagPhraseMatch? searchPhrases(List<String> queries, {int limit = 20}) {
+    if (!_loaded || queries.isEmpty || limit <= 0) return null;
+    final lower = queries.map((q) => q.toLowerCase()).toList();
+    if (lower.last.isEmpty) return null;
+    var best = lower.length;
+    final results = <TagSearchResult>[];
+    for (final entry in _searchEntries) {
+      if (!entry.contains(lower.last)) continue;
+      var low = 0;
+      var high = lower.length - 1;
+      while (low < high) {
+        final mid = (low + high) ~/ 2;
+        if (entry.contains(lower[mid])) {
+          high = mid;
+        } else {
+          low = mid + 1;
+        }
+      }
+      if (low < best) {
+        best = low;
+        results.clear();
+      }
+      if (low == best && results.length < limit) results.add(entry.tag);
+      if (best == 0 && results.length == limit) break;
+    }
+    return results.isEmpty ? null : TagPhraseMatch(best, results);
   }
 
   static const _cacheKey = 'eh_tag_translations_cache';
@@ -126,4 +157,21 @@ class TagSearchResult {
   });
 
   String get fullTag => '$namespace:$key';
+}
+
+class TagPhraseMatch {
+  final int queryIndex;
+  final List<TagSearchResult> tags;
+  const TagPhraseMatch(this.queryIndex, this.tags);
+}
+
+class _SearchEntry {
+  final TagSearchResult tag;
+  final String key;
+  final String translation;
+  _SearchEntry(this.tag)
+      : key = tag.key.toLowerCase(),
+        translation = tag.translation.toLowerCase();
+  bool contains(String query) =>
+      key.contains(query) || translation.contains(query);
 }

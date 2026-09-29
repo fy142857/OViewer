@@ -42,8 +42,9 @@ List<String> matchingSearchHistory(String query, List<String> history) {
 /// and scoped search terms form boundaries, so existing filters stay intact.
 List<TagSuggestion> tagSuggestions(
   TextEditingValue value,
-  List<TagSearchResult> Function(String) search,
-) {
+  List<TagSearchResult> Function(String) search, {
+  TagPhraseMatch? Function(List<String>)? searchPhrases,
+}) {
   final text = value.text;
   final selection = value.selection;
   if (!selection.isValid || selection.end > text.length) return [];
@@ -79,6 +80,21 @@ List<TagSuggestion> tagSuggestions(
   var first = active;
   while (first > 0 && isPlain(tokens[first - 1])) {
     first--;
+  }
+  if (searchPhrases != null) {
+    final queries = [
+      for (var i = first; i <= active; i++)
+        text
+            .substring(tokens[i].start, cursor)
+            .trim()
+            .replaceAll(RegExp(r'\s+'), ' '),
+    ];
+    final result = searchPhrases(queries);
+    if (result == null) return [];
+    final range = TextRange(
+        start: tokens[first + result.queryIndex].start,
+        end: tokens[active].end);
+    return result.tags.map((tag) => TagSuggestion(tag, range, text)).toList();
   }
   for (var i = first; i <= active; i++) {
     final results = match(tokens[i].start, cursor, tokens[active].end);
