@@ -21,6 +21,28 @@ void main() {
       categories: ['Manga'],
       minRating: 3);
   for (final ex in [false, true]) {
+    for (final pipe in [' | ', '｜']) {
+      test(
+          'pasted bilingual quoted title searches both sides: EX=$ex, pipe=$pipe',
+          () async {
+        AppConstants.useExHentai = ex;
+        const original = 'Buzama Joushiki Kaihen ~Okorase Kyousei Hatsujou~';
+        const translated = '丢人常识改变～激怒强○发情～';
+        final dio = MockDio();
+        final queries = <String>[];
+        when(() => dio.get(any())).thenAnswer((call) async {
+          final uri = Uri.parse(call.positionalArguments.single as String);
+          expect(uri.host, ex ? 'exhentai.org' : 'e-hentai.org');
+          final q = uri.queryParameters['f_search']!;
+          queries.add(q);
+          return html(q == 'title:"$original"' ? [1, 2, 3, 4] : [1]);
+        });
+        final result = await SearchRepository(dio, MockStorage())
+            .search(SearchFilter(keyword: 'title:"$original$pipe$translated"'));
+        expect(queries, ['title:"$original"', 'title:"$translated"']);
+        expect(result.galleries.map((g) => g.gid), [4, 3, 2, 1]);
+      });
+    }
     for (final emptyFirst in [false, true]) {
       test('either title alone can match: EX=$ex, first empty=$emptyFirst',
           () async {

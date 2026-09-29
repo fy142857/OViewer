@@ -53,15 +53,19 @@ class SearchRepository {
     );
   }
 
-  // Only an explicit chain of quoted title alternatives is handled locally.
-  // Other manually entered search syntax is sent unchanged to the site.
+  // Accept both generated OR chains and pasted/old bilingual title queries.
+  // A pipe inside title quotes separates alternatives, not a literal phrase.
   List<String> _titleAlternatives(String query) {
-    if (!RegExp(r'^title:"[^"]+"(?: OR title:"[^"]+")+$').hasMatch(query)) {
+    if (!RegExp(r'^title:"[^"]+"(?: OR title:"[^"]+")*$')
+        .hasMatch(query.trim())) {
       return [];
     }
-    return RegExp(r'title:"[^"]+"')
+    return RegExp(r'title:"([^"]+)"')
         .allMatches(query)
-        .map((m) => m[0]!)
+        .expand((m) => m[1]!.split(RegExp(r'[|｜]')))
+        .map((title) => title.trim())
+        .where((title) => title.isNotEmpty)
+        .map((title) => 'title:"$title"')
         .toSet()
         .toList();
   }
