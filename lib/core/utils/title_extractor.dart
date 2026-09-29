@@ -1,4 +1,15 @@
 class TitleExtractor {
+  /// A gallery title is data, not EH search syntax. Qualifying and quoting it
+  /// prevents ~, -, : and short words from being interpreted as tag filters.
+  static String similarSearchQuery(String title) {
+    final core = extractCoreTitle(title);
+    final phrase = (core.isEmpty ? title : core)
+        .replaceAll('"', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return phrase.isEmpty ? '' : 'title:"$phrase"';
+  }
+
   /// Extracts the core title from an E-Hentai gallery title by stripping
   /// leading bracketed groups (circle/author, convention markers) and
   /// trailing bracketed groups (language, format, origin).

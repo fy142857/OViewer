@@ -5,6 +5,7 @@ import 'package:oviewer/core/network/dio_client.dart';
 import 'package:oviewer/core/storage/local_storage.dart';
 import 'package:oviewer/models/search_filter.dart';
 import 'package:oviewer/repositories/search_repository.dart';
+import 'package:oviewer/core/utils/title_extractor.dart';
 
 class MockDio extends Mock implements DioClient {}
 
@@ -15,6 +16,23 @@ void main() {
   tearDown(() => AppConstants.useExHentai = originalSite);
 
   for (final ex in [false, true]) {
+    test(
+        'similar title remains quoted through URL construction on ${ex ? "EX" : "EH"}',
+        () async {
+      AppConstants.useExHentai = ex;
+      final dio = MockDio();
+      when(() => dio.get(any())).thenAnswer((_) async => '<html></html>');
+      final repo = SearchRepository(dio, MockStorage());
+      final query = TitleExtractor.similarSearchQuery(
+          '[Author] Buzama Joushiki Kaihen ~Okorase Kyousei Hatsujou~ [English]');
+      await repo.search(SearchFilter(keyword: query));
+      final url = Uri.parse(
+          verify(() => dio.get(captureAny())).captured.single as String);
+      expect(url.host, ex ? 'exhentai.org' : 'e-hentai.org');
+      expect(url.queryParameters['f_search'],
+          'title:"Buzama Joushiki Kaihen ~Okorase Kyousei Hatsujou~"');
+      expect(url.queryParameters['f_cats'], '0');
+    });
     // Expected masks are the site's protocol values, independent of UI order.
     final categoryCases = <String, int>{
       'Doujinshi': 1021,
@@ -36,7 +54,8 @@ void main() {
       categoryCases.keys.toList(): 0,
     };
     for (final entry in selections.entries) {
-      test('category selection ${entry.key} sends ${entry.value} on '
+      test(
+          'category selection ${entry.key} sends ${entry.value} on '
           '${ex ? "EX" : "EH"}', () async {
         AppConstants.useExHentai = ex;
         final dio = MockDio();

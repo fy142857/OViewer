@@ -87,7 +87,7 @@ void main() {
         final page = call.namedArguments[#page] as int? ?? 0;
         final cursor = call.namedArguments[#nextUrl] as String?;
         requests.add((filter.keyword, page, cursor));
-        if (filter.keyword == 'Similar title') return similar.future;
+        if (filter.keyword == 'title:"Similar title"') return similar.future;
         return SearchResult(
           galleries:
               page == 0 ? original : (page == 1 ? secondPage : [preview(31)]),
@@ -224,7 +224,7 @@ void main() {
       expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
           'original');
       expect(requests.where((r) => r.$1 == 'original' && r.$2 == 0).length, 1);
-      verifyNever(() => search.addSearchHistory('Similar title'));
+      verifyNever(() => search.addSearchHistory('title:"Similar title"'));
 
       list.controller!.jumpTo(list.controller!.position.maxScrollExtent);
       await tester.pumpAndSettle();

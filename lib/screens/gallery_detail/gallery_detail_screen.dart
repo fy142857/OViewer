@@ -521,6 +521,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
   Widget _buildSimilarGalleriesButton(
       BuildContext context, GalleryDetail detail) {
     final s = S.of(context);
+    final query = TitleExtractor.similarSearchQuery(detail.title);
     return ListTile(
       leading: const Icon(Icons.find_in_page),
       title: Text(s.similarGalleries),
@@ -529,13 +530,14 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
-      onTap: () {
-        final coreTitle = TitleExtractor.extractCoreTitle(detail.title);
-        Navigator.pushNamed(context, '/search', arguments: {
-          'keyword': coreTitle,
-          'saveHistory': false,
-        });
-      },
+      onTap: query.isEmpty
+          ? null
+          : () {
+              Navigator.pushNamed(context, '/search', arguments: {
+                'keyword': query,
+                'saveHistory': false,
+              });
+            },
     );
   }
 
