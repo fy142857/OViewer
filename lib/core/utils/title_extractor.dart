@@ -3,7 +3,13 @@ class TitleExtractor {
   /// prevents ~, -, : and short words from being interpreted as tag filters.
   static String similarSearchQuery(String title) {
     final core = extractCoreTitle(title);
-    final phrase = (core.isEmpty ? title : core)
+    // Bilingual gallery titles use a pipe to append a translated title.
+    // Searching the combined string requires both versions to be contiguous.
+    // Keep the primary title, shared by original and translated releases.
+    final parts = (core.isEmpty ? title : core).split(RegExp(r'[|｜]'));
+    final phrase = parts
+        .map((part) => part.trim())
+        .firstWhere((part) => part.isNotEmpty, orElse: () => '')
         .replaceAll('"', ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
