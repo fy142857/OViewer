@@ -3,17 +3,15 @@ class TitleExtractor {
   /// prevents ~, -, : and short words from being interpreted as tag filters.
   static String similarSearchQuery(String title) {
     final core = extractCoreTitle(title);
-    // Bilingual gallery titles use a pipe to append a translated title.
-    // Searching the combined string requires both versions to be contiguous.
-    // Keep the primary title, shared by original and translated releases.
-    final parts = (core.isEmpty ? title : core).split(RegExp(r'[|｜]'));
-    final phrase = parts
-        .map((part) => part.trim())
-        .firstWhere((part) => part.isNotEmpty, orElse: () => '')
-        .replaceAll('"', ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    return phrase.isEmpty ? '' : 'title:"$phrase"';
+    // Each pipe-separated title is an alternative. OR is resolved by the
+    // app because the site does not support OR between title: terms.
+    final seen = <String>{};
+    final phrases = (core.isEmpty ? title : core)
+        .split(RegExp(r'[|｜]'))
+        .map((part) =>
+            part.replaceAll('"', ' ').replaceAll(RegExp(r'\s+'), ' ').trim())
+        .where((part) => part.isNotEmpty && seen.add(part.toLowerCase()));
+    return phrases.map((phrase) => 'title:"$phrase"').join(' OR ');
   }
 
   /// Extracts the core title from an E-Hentai gallery title by stripping

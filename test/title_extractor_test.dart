@@ -3,16 +3,18 @@ import 'package:oviewer/core/utils/title_extractor.dart';
 
 void main() {
   group('TitleExtractor.similarSearchQuery', () {
-    test('bilingual titles search the primary title without translation suffix',
-        () {
+    test('bilingual titles keep both sides as independent alternatives', () {
       const original = 'Buzama Joushiki Kaihen ~Okorase Kyousei Hatsujou~';
       for (final separator in [' | ', '|', ' ｜ ']) {
         expect(
             TitleExtractor.similarSearchQuery(
                 '[Author | Alias] $original$separator丢人常识改变～激怒强○发情～ [Chinese] [Digital]'),
-            'title:"$original"');
+            'title:"$original" OR title:"丢人常识改变～激怒强○发情～"');
       }
-      expect(TitleExtractor.similarSearchQuery('| 中文标题 | 译名'), 'title:"中文标题"');
+      expect(TitleExtractor.similarSearchQuery('| 中文标题 | 译名'),
+          'title:"中文标题" OR title:"译名"');
+      expect(TitleExtractor.similarSearchQuery('Title | title | '),
+          'title:"Title"');
       expect(TitleExtractor.similarSearchQuery(' | ｜ '), isEmpty);
     });
     test('treats title operators and short words as a title phrase', () {

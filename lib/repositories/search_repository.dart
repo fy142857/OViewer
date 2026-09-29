@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../core/network/dio_client.dart';
 import '../core/parser/search_parser.dart';
 import '../core/storage/local_storage.dart';
@@ -24,7 +25,21 @@ class SearchRepository {
     int page = 0,
     String? nextUrl,
   }) async {
-    final url = nextUrl != null ? _resolve(nextUrl) : _buildSearchUrl(filter, page);
+    final alternatives = _titleAlternatives(filter.keyword ?? '');
+    if (alternatives.length > 1) {
+      return _searchTitleAlternatives(filter, alternatives, page, nextUrl);
+    }
+    if (alternatives.length == 1) {
+      return _searchSingle(filter.copyWith(keyword: alternatives.single),
+          page: page, nextUrl: nextUrl);
+    }
+    return _searchSingle(filter, page: page, nextUrl: nextUrl);
+  }
+
+  Future<SearchResult> _searchSingle(SearchFilter filter,
+      {int page = 0, String? nextUrl}) async {
+    final url =
+        nextUrl != null ? _resolve(nextUrl) : _buildSearchUrl(filter, page);
     final html = await _dio.get(url);
     final results = SearchParser.parseResults(html);
     final totalPages = SearchParser.parsePageCount(html);
@@ -36,6 +51,79 @@ class SearchRepository {
       totalResults: resultCount,
       nextPageUrl: nextPageUrl,
     );
+  }
+
+  // Only an explicit chain of quoted title alternatives is handled locally.
+  // Other manually entered search syntax is sent unchanged to the site.
+  List<String> _titleAlternatives(String query) {
+    if (!RegExp(r'^title:"[^"]+"(?: OR title:"[^"]+")+$').hasMatch(query)) {
+      return [];
+    }
+    return RegExp(r'title:"[^"]+"')
+        .allMatches(query)
+        .map((m) => m[0]!)
+        .toSet()
+        .toList();
+  }
+
+  static const _unionCursorPrefix = 'oviewer-title-union:';
+
+  Future<SearchResult> _searchTitleAlternatives(SearchFilter filter,
+      List<String> queries, int page, String? cursor) async {
+    final seen = <int>{};
+    var urls = queries
+        .map((query) => _buildSearchUrl(filter.copyWith(keyword: query), 0))
+        .toList();
+    if (cursor != null) {
+      if (!cursor.startsWith(_unionCursorPrefix)) {
+        throw const FormatException('Invalid title search cursor');
+      }
+      final saved = jsonDecode(utf8.decode(
+              base64Url.decode(cursor.substring(_unionCursorPrefix.length))))
+          as Map<String, dynamic>;
+      if (saved['site'] != AppConstants.baseUrl ||
+          saved['query'] != filter.keyword) {
+        throw const FormatException(
+            'Title search cursor belongs to another search');
+      }
+      urls = List<String>.from(saved['urls'] as List);
+      seen.addAll(List<int>.from(saved['seen'] as List));
+    }
+    final results = <GalleryPreview>[];
+    final visited = <String>{};
+    // A page consisting entirely of duplicates must not end pagination while
+    // either title still has another page. Work locally until a batch succeeds,
+    // so retry after a failure never advances the caller's cursor.
+    while (urls.isNotEmpty && results.isEmpty) {
+      final next = <String>[];
+      for (final url in urls) {
+        if (!visited.add(url)) {
+          throw const FormatException('Repeated title search cursor');
+        }
+        final result = await _searchSingle(filter, nextUrl: url);
+        for (final gallery in result.galleries) {
+          if (seen.add(gallery.gid)) results.add(gallery);
+        }
+        if (result.nextPageUrl != null) next.add(_resolve(result.nextPageUrl!));
+      }
+      urls = next.toSet().toList();
+    }
+    results.sort((a, b) => b.gid.compareTo(a.gid));
+    final nextCursor = urls.isEmpty
+        ? null
+        : _unionCursorPrefix +
+            base64Url.encode(utf8.encode(jsonEncode({
+              'site': AppConstants.baseUrl,
+              'query': filter.keyword,
+              'urls': urls,
+              'seen': seen.toList(),
+            })));
+    // There is no exact combined total until both streams are exhausted.
+    return SearchResult(
+        galleries: results,
+        totalPages: page + 1,
+        totalResults: urls.isEmpty ? seen.length : 0,
+        nextPageUrl: nextCursor);
   }
 
   /// Get search history
