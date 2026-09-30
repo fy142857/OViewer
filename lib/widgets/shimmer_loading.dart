@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'adaptive_gallery_grid.dart';
 
 class ShimmerGalleryList extends StatelessWidget {
   final int itemCount;
@@ -83,9 +84,9 @@ class ShimmerGalleryList extends StatelessWidget {
 }
 
 class ShimmerGalleryGrid extends StatelessWidget {
-  final int itemCount;
+  final int? itemCount;
 
-  const ShimmerGalleryGrid({super.key, this.itemCount = 6});
+  const ShimmerGalleryGrid({super.key, this.itemCount});
 
   @override
   Widget build(BuildContext context) {
@@ -93,18 +94,15 @@ class ShimmerGalleryGrid extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
       highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(8),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.6,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-        ),
-        itemCount: itemCount,
-        itemBuilder: (_, __) => _buildGridItem(),
-      ),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final columns = AdaptiveGalleryGrid.columnCount(
+            constraints.maxWidth, MediaQuery.textScaleFactorOf(context));
+        return AdaptiveGalleryGrid(
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: itemCount ?? columns * 3,
+          itemBuilder: (_, __) => _buildGridItem(),
+        );
+      }),
     );
   }
 
@@ -112,7 +110,8 @@ class ShimmerGalleryGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
+        AspectRatio(
+          aspectRatio: 2 / 3,
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,

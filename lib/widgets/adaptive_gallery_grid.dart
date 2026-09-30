@@ -7,29 +7,35 @@ class AdaptiveGalleryGrid extends StatelessWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final ScrollController? controller;
+  final ScrollPhysics physics;
 
   const AdaptiveGalleryGrid({
     super.key,
     required this.itemCount,
     required this.itemBuilder,
     this.controller,
+    this.physics = const AlwaysScrollableScrollPhysics(),
   });
+
+  static const spacing = 8.0;
+  static const padding = 8.0;
+
+  static int columnCount(double availableWidth, double textScale) {
+    final maxCardWidth = 220 * textScale.clamp(1, 2);
+    return math.max(
+        1,
+        ((availableWidth - padding * 2 + spacing) / (maxCardWidth + spacing))
+            .ceil());
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      const spacing = 8.0;
-      const padding = 8.0;
-      final maxCardWidth =
-          220 * MediaQuery.textScaleFactorOf(context).clamp(1, 2);
-      final columns = math.max(
-          1,
-          ((constraints.maxWidth - padding * 2 + spacing) /
-                  (maxCardWidth + spacing))
-              .ceil());
+      final columns = columnCount(
+          constraints.maxWidth, MediaQuery.textScaleFactorOf(context));
       return MasonryGridView.count(
         controller: controller,
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: physics,
         padding: const EdgeInsets.all(padding),
         crossAxisCount: columns,
         mainAxisSpacing: spacing,
