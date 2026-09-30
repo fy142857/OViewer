@@ -1844,8 +1844,33 @@
         }
       ],
       "version": "1.3.1"
+    },
+    {
+      "base_tag": "v1.3.1",
+      "branch": "dev",
+      "build_number": 42,
+      "build_sha": "5d1931e0fbda2939e7d03d4406a56b45305f91e5",
+      "candidate_id": "1.4.0+42",
+      "fingerprint": "b42aac228e49df00fdfe3a063b50f92f16f542d40e6f1ad80b507fd71f22a5ad",
+      "notes": "### 新增\n\n- 画廊详情在“发布时间”下方展示可选择复制的 GID、Token；纯数字搜索并行执行关键词搜索与 GID 精确查找，精确匹配置顶并跨页去重，支持独立失败重试及中英文提示（#39）。\n\n### 修复\n\n### 变更\n\n### 已知限制\n\n- 仅凭 GID 查找依赖当前 EH／EX 站点搜索列表的可见结果；被隐藏、删除或无访问权限的画廊可能无法解析，不会以相邻画廊替代目标。",
+      "schema": 1,
+      "source_sha": "c7abc26b8cecf25789d3f67d429e1e42c39ca0fe",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "Add the previously unavailable ability to locate a gallery and resolve its token from a bare GID, alongside existing keyword search.",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "c7abc26b8cecf25789d3f67d429e1e42c39ca0fe",
+          "subject": "feat(search): resolve numeric gallery IDs alongside keyword results",
+          "type": "feat",
+          "version_impact": "minor"
+        }
+      ],
+      "version": "1.4.0"
     }
   ],
-  "last_build_number": 41,
+  "last_build_number": 42,
   "schema": 1
 }
