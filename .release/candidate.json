@@ -1,33 +1,23 @@
 {
-  "base_tag": "v1.3.1",
+  "base_tag": "v1.4.0",
   "branch": "dev",
-  "build_number": 43,
-  "candidate_id": "1.4.0+43",
-  "fingerprint": "e4167f3fb5c011249390a36bddbc214986a9cb1398aea725e476ca1e35e8d2f6",
-  "notes": "### 新增\n\n- 画廊详情在“发布时间”下方展示可选择复制的 GID、Token；纯数字搜索并行执行关键词搜索与 GID 精确查找，精确匹配置顶并跨页去重，支持独立失败重试及中英文提示（#39）。\n\n### 修复\n\n- 修复“缓存大小限制”仅保存设置而未实际生效：启动时应用保存值，统一限制封面、预览图和阅读器大图磁盘缓存，超限按最近使用时间清理；调低前确认，自动刷新实际占用并提供清理失败重试，保护正在读取和显示的图片（#46）。\n\n### 变更\n\n### 已知限制\n\n- 仅凭 GID 查找依赖当前 EH／EX 站点搜索列表的可见结果；被隐藏、删除或无访问权限的画廊可能无法解析，不会以相邻画廊替代目标。",
+  "build_number": 44,
+  "candidate_id": "1.4.1+44",
+  "fingerprint": "bf621eef061cdbb06ab00bbbfdec7096a477130fc386863fc01fa38334f87d1e",
+  "notes": "### 新增\n\n### 修复\n\n- 补充搜索框占位文本“输入标题、作者、Tag、画廊gid、上传者...”，同步英文；移除 GID 结果页的关键词搜索中、GID 查找中及忽略筛选说明三条文字提示。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "eed245a826548b38f84582386e2524224f66c888",
+  "source_sha": "b2ccb99e4a7ed8df24af3a6cd9b5c9fddbd028ed",
   "summary": [
     {
-      "change_kind": "feature",
-      "classification_reason": "Add the previously unavailable ability to locate a gallery and resolve its token from a bare GID, alongside existing keyword search.",
-      "classification_source": "commit-trailers",
-      "original_type": "feat",
-      "sha": "c7abc26b8cecf25789d3f67d429e1e42c39ca0fe",
-      "subject": "feat(search): resolve numeric gallery IDs alongside keyword results",
-      "type": "feat",
-      "version_impact": "minor"
-    },
-    {
       "change_kind": "fix",
-      "classification_reason": "Make the existing cache size setting actually constrain disk image storage; preserve existing reading, history, favorites, and saved photos.",
+      "classification_reason": "Correct the existing search placeholder and remove unwanted GID progress and filter notices without adding a new capability.",
       "classification_source": "commit-trailers",
       "original_type": "fix",
-      "sha": "eed245a826548b38f84582386e2524224f66c888",
-      "subject": "fix(cache): enforce the configured disk image cache budget",
+      "sha": "b2ccb99e4a7ed8df24af3a6cd9b5c9fddbd028ed",
+      "subject": "fix(search): update placeholder and remove progress notices",
       "type": "fix",
       "version_impact": "patch"
     }
   ],
-  "version": "1.4.0"
+  "version": "1.4.1"
 }
