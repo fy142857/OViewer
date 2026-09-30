@@ -8,7 +8,9 @@
 
 向 `dev` 提交时使用 Conventional Commits，例如 `fix: 修复图片重试`、`feat: 增加阅读选项`。有效变更会启动 **Prepare candidate**，生成如 `1.0.1+2` 的候选，写回版本并触发 Android/iOS 两次构建。仅文档变更不分配新号。
 
-机器人可能已在远端写入版本提交，开始下一次修改前先执行 `git pull --ff-only origin dev`。不要重写候选提交，也不要手动改构建号。
+**每次推送后必须检查自动版本提交并同步本地，不能等到下一次修改前才拉取。** 对本次推送的源提交检查 **Prepare candidate**：若正在排队或执行，等待其结束；若因仅修改文档等路径规则未触发，明确确认这一情况。随后执行 `git fetch origin dev main`，在所推送分支上执行对应的 `git pull --ff-only origin dev` 或 `git pull --ff-only origin main`，将远程最新提交（包括自动版本号和候选记录）拉回本地，并确认本地分支与对应远程跟踪分支的差异为 `0 0`。不要重写候选提交，也不要手动改构建号。
+
+候选准备失败或取消时，检查是否已经写回自动版本提交，拉取已存在的最新进度并报告实际失败状态；不能把等待超时或暂时未看到新提交当作检查完成。同步遇到未提交改动或分支分叉时，保留现有工作并处理差异，不得通过强推、重置或丢弃改动强行对齐。开始下一次修改前仍应检查并快进拉取远端新进度。
 
 构建结果位于 **Build Android APK** 和 **Build iOS IPA**。运行标题带候选 ID；两个安装包名称仍为 `app-release.apk`、`OViewer.ipa`。`build-metadata` 是校验信息，不是安装包。
 
@@ -36,13 +38,15 @@
 ### 发布步骤
 
 1. 验证 Android/iOS 安装包，记下两次运行的 **run ID**，而非 `#运行序号`。
-2. 将 `dev` 的完整提交历史（包括文档及发布记录）快进合并至 `main` 并推送，确认远端两分支指向同一提交。相同内容且保留候选提交时复用版本和原构建。
+2. 在当前工作区将本地 `dev`、`main` 分别快进同步至各自最新远端，再将 `dev` 的完整提交历史（包括文档及发布记录）快进合并至本地 `main` 并推送。按上述推送后检查规则拉取自动版本提交，确认本地 `dev`、本地 `main`、远端 `dev`、远端 `main` 四者指向同一提交。相同内容且保留候选提交时复用版本和原构建。
 3. 从 `main` 手动运行 **Publish verified candidate**，填写 `version`、`android_run_id`、`ios_run_id`。
 4. 建议先保留默认的 `check_only=true`，确认校验通过。正式发布时取消该选项。
 5. 发布成功后关闭同版本 Milestone。Issue 完成状态不代表已发布。
-6. 将本次更新日志归档为正式版本；如产生文档或其他收尾提交，提交并推送至 `dev` 后，必须再次快进同步到 `main`。等待可能改写分支的候选准备任务结束后，重新核对远端分支；只有 `main` 与 `dev` 的 HEAD SHA 完全相同，才算完成正式发布流程。仅应用代码或版本号相同不满足要求。
+6. 将本次更新日志归档为正式版本；如产生文档或其他收尾提交，提交并推送至 `dev` 后，必须再次快进同步本地及远端 `main`。等待可能改写分支的候选准备任务结束后，拉取自动版本提交；如仅一侧有新提交，继续快进同步并检查，直到本地及远端的 `dev`、`main` 四个分支 HEAD SHA 完全相同，才算完成正式发布流程。仅应用代码或版本号相同不满足要求。
 
-最终检查执行 `git fetch origin main dev`，比较 `git rev-parse origin/main origin/dev` 的两行 SHA，并确认 `git rev-list --left-right --count origin/main...origin/dev` 为 `0 0`。分支发生分叉时先解决差异，不得强推覆盖。此一致性要求适用于发布前与发布收尾，之后正常开发仍可继续推进 `dev`。发布标签始终指向已验证安装包的候选提交，不随收尾文档提交移动。
+最终检查执行 `git fetch origin main dev`，比较 `git rev-parse dev main origin/dev origin/main` 的四行 SHA，必须完全相同；同时确认 `git rev-list --left-right --count dev...main`、`git rev-list --left-right --count dev...origin/dev`、`git rev-list --left-right --count main...origin/main` 均为 `0 0`。不能只更新远程跟踪引用，或只执行 `git push origin HEAD:main` 后就结束：这些操作不会自动推进本地 `main` 分支。
+
+分支发生分叉时先解决差异，不得强推覆盖。此四分支一致性要求适用于正式发布前与发布收尾，之后正常开发仍可继续推进 `dev`；日常推送只要求本地所推送分支跟上其对应远端，不因此自动晋升 `main` 或发布 Release。发布标签始终指向已验证安装包的候选提交，不随收尾文档提交移动。
 
 发布工作流不编译。它检查运行来源、候选登记、`main` 包含关系、源码及安装包版本、构建号递增、SHA-256 和正式签名，再上传原始产物、`release-manifest.json`、`SHA256SUMS.txt`。上传后的附件还会下载验证，之后才固定标签并公开 Release。
 
