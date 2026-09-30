@@ -9,6 +9,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../constants/app_constants.dart';
 import 'reader_request_controller.dart';
 import 'reader_image_cache_key.dart';
+import 'eh_image_cache_manager.dart';
 import '../../models/reader_page_resource.dart';
 
 /// The shared disk cache contains completed images, never in-flight requests.
@@ -21,6 +22,9 @@ class ReaderImageCache {
   Future<Uint8List?> read(String url) async {
     final key = readerImageCacheKey(url);
     Future<Uint8List?> readKey(String candidate) async {
+      if (_cache is EhImageCacheManager) {
+        return (_cache as EhImageCacheManager).readBytes(candidate);
+      }
       final entry = await _cache.getFileFromCache(candidate);
       if (entry == null || !entry.validTill.isAfter(DateTime.now())) {
         return null;
@@ -112,6 +116,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       debugLabel: url,
     );
     requests.onCancel(() => resource?.releaseMemory());
+    completer.addOnLastListenerRemovedCallback(() => resource?.releaseMemory());
     return completer;
   }
 
@@ -146,7 +151,8 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
           _ensureActive();
           if (cached != null) {
             final codec = await _decode(cached, decode);
-            resourceReady(ReaderPageResource(() => cache.read(url)));
+            resourceReady(
+                ReaderPageResource(() => cache.read(url), fallback: cached));
             onImageReady?.call();
             return codec;
           }
@@ -194,10 +200,8 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       final codec = await _decode(completedBytes, decode);
       // Persist only a complete, decodable image. Cancellation and HTTP/decode
       // failures never write partial or failed responses into the shared cache.
-      var persisted = false;
       try {
         await _waitFor(cache.write(url, completedBytes));
-        persisted = true;
       } catch (_) {
         // A cache write failure should not turn a loaded image into an error.
       }
@@ -205,8 +209,8 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
         codec.dispose();
         _ensureActive();
       }
-      resourceReady(ReaderPageResource(() => cache.read(url),
-          fallback: persisted ? null : completedBytes));
+      resourceReady(
+          ReaderPageResource(() => cache.read(url), fallback: completedBytes));
       onImageReady?.call();
       return codec;
     } catch (_) {

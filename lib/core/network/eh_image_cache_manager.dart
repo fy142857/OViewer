@@ -1,5 +1,8 @@
-import 'dart:io' show FileSystemEntityType;
+import 'package:file/file.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+// Needed to await registration through CacheManager.store in 3.3.x.
+// ignore: implementation_imports
+import 'package:flutter_cache_manager/src/storage/cache_object.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +13,7 @@ import 'image_http_client.dart';
 import 'network_proxy_io.dart';
 import 'reader_request_controller.dart';
 import 'reader_image_cache_key.dart';
+import 'image_cache_quota.dart';
 
 /// Custom [CacheManager] that injects cookies from the app [CookieManager]
 /// into every image request. This is required for ExHentai, which returns
@@ -18,8 +22,10 @@ class EhImageCacheManager extends CacheManager {
   static const _key = 'ehImageCache';
   static EhImageCacheManager? _instance;
   final Config _readerConfig;
+  final ImageCacheQuota _quota;
   Future<Map<String, List<String>>>? _legacyReaderKeys;
   Future<void>? _clearing;
+  int _fileSequence = 0;
 
   static EhImageCacheManager get instance {
     assert(_instance != null,
@@ -28,9 +34,15 @@ class EhImageCacheManager extends CacheManager {
   }
 
   /// Call once during app startup, after [CookieManager.init].
-  static void init(CookieManager cookieManager) {
-    _instance = EhImageCacheManager._(cookieManager);
+  static void init(CookieManager cookieManager, {int limitMB = 500}) {
+    _instance = EhImageCacheManager._(cookieManager, limitMB);
   }
+
+  ValueListenable<int> get changes => _quota.changes;
+  bool get cleanupFailed => _quota.cleanupFailed;
+  Future<void> applyLimitMB(int mb) => _quota.setLimit(mb * 1024 * 1024);
+  Future<void> enforceLimit() => _quota.enforce();
+  Future<void> enforceLimitQuietly() => _quota.maintainQuietly();
 
   /// Reader images use an explicitly owned client, never the global cache's
   /// in-flight requests. A new reader can request the same URL immediately.
@@ -40,19 +52,127 @@ class EhImageCacheManager extends CacheManager {
   ) =>
       _CookieHttpFileService(cookies, readerRequest: requests);
 
-  EhImageCacheManager._(CookieManager cookieManager)
-      : this._configured(Config(
-          _key,
-          fileService: _CookieHttpFileService(
-            cookieManager,
-            httpClient: createImageHttpClient(),
-          ),
-        ));
+  EhImageCacheManager._(CookieManager cookieManager, int limitMB)
+      : this._configured(
+            Config(
+              _key,
+              fileService: _CookieHttpFileService(
+                cookieManager,
+                httpClient: createImageHttpClient(),
+              ),
+            ),
+            limitBytes: limitMB * 1024 * 1024);
 
-  EhImageCacheManager._configured(this._readerConfig) : super(_readerConfig);
+  static (Config, ImageCacheQuota) _configure(Config config, int limitBytes) {
+    final quota =
+        ImageCacheQuota(config.repo, config.fileSystem, limitBytes: limitBytes);
+    final managed = Config(config.cacheKey,
+        repo: quota,
+        fileSystem: config.fileSystem,
+        fileService: config.fileService);
+    return (managed, quota);
+  }
+
+  EhImageCacheManager._configured(Config config,
+      {int limitBytes = 500 * 1024 * 1024})
+      : this._withQuota(_configure(config, limitBytes));
+
+  EhImageCacheManager._withQuota((Config, ImageCacheQuota) configured)
+      : _readerConfig = configured.$1,
+        _quota = configured.$2,
+        super(configured.$1);
 
   @visibleForTesting
-  EhImageCacheManager.forTesting(Config config) : this._configured(config);
+  EhImageCacheManager.forTesting(Config config,
+      {int limitBytes = 500 * 1024 * 1024})
+      : this._configured(config, limitBytes: limitBytes);
+
+  @override
+  Future<FileInfo?> getFileFromCache(String key,
+      {bool ignoreMemCache = false}) async {
+    await _quota.drain();
+    final result =
+        await super.getFileFromCache(key, ignoreMemCache: ignoreMemCache);
+    if (result != null) await _quota.touch(key);
+    return result;
+  }
+
+  /// A byte read and automatic eviction must never race on the same disk file.
+  Future<Uint8List?> readBytes(String key) async {
+    _quota.pin(key);
+    try {
+      final entry = await getFileFromCache(key);
+      if (entry == null || !entry.validTill.isAfter(DateTime.now())) {
+        return null;
+      }
+      return await entry.file.readAsBytes();
+    } finally {
+      await _quota.unpin(key);
+    }
+  }
+
+  @override
+  Stream<FileResponse> getFileStream(String url,
+      {String? key,
+      Map<String, String>? headers,
+      bool withProgress = false}) async* {
+    final cacheKey = key ?? url;
+    _quota.pin(cacheKey);
+    try {
+      await _quota.drain();
+      // async* backpressure keeps the pin through the consumer's byte read/decode.
+      yield* super.getFileStream(url,
+          key: key, headers: headers, withProgress: withProgress);
+    } finally {
+      await _quota.unpin(cacheKey, check: true);
+    }
+  }
+
+  @override
+  Future<File> putFile(String url, Uint8List fileBytes,
+          {String? key,
+          String? eTag,
+          Duration maxAge = const Duration(days: 30),
+          String fileExtension = 'file'}) =>
+      _putCompleted(url, key ?? url, eTag, maxAge, fileExtension, (file) async {
+        await file.writeAsBytes(fileBytes);
+      });
+
+  @override
+  Future<File> putFileStream(String url, Stream<List<int>> source,
+          {String? key,
+          String? eTag,
+          Duration maxAge = const Duration(days: 30),
+          String fileExtension = 'file'}) =>
+      _putCompleted(url, key ?? url, eTag, maxAge, fileExtension,
+          (file) => source.pipe(file.openWrite()));
+
+  Future<File> _putCompleted(
+      String url,
+      String cacheKey,
+      String? eTag,
+      Duration maxAge,
+      String extension,
+      Future<void> Function(File) write) async {
+    _quota.pin(cacheKey);
+    try {
+      await _quota.drain();
+      // Await registration: the library returns before the new file is indexed.
+      final path =
+          'oviewer-${DateTime.now().microsecondsSinceEpoch}-${_fileSequence++}.$extension';
+      final file = await _readerConfig.fileSystem.createFile(path);
+      await write(file);
+      await store.putFile(CacheObject(url,
+          key: cacheKey,
+          relativePath: path,
+          validTill: DateTime.now().add(maxAge),
+          eTag: eTag,
+          length: await file.length()));
+      return file;
+    } finally {
+      await _quota.unpin(cacheKey, check: true);
+    }
+  }
 
   Future<Iterable<String>> legacyReaderKeys(String key) async {
     // Ensure the shared cache repository has finished opening.
@@ -96,6 +216,7 @@ class EhImageCacheManager extends CacheManager {
   }
 
   Future<void> _clearImages() async {
+    _quota.pause();
     _legacyReaderKeys = null;
     final memory = PaintingBinding.instance.imageCache;
     memory.clear();
@@ -123,6 +244,7 @@ class EhImageCacheManager extends CacheManager {
       store.emptyMemoryCache();
       memory.clear();
       memory.clearLiveImages();
+      await _quota.resume();
     }
   }
 }

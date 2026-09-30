@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 
 /// Local-only export handle. Completed cache files are preferred; bytes are
-/// retained only when persistence failed, and released with the image stream.
+/// retained while displayed so quota eviction cannot break Save, and released
+/// with the image stream.
 class ReaderPageResource {
   final Future<Uint8List?> Function() readCache;
   Uint8List? _fallback;

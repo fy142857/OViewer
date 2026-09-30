@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -13,6 +14,7 @@ import '../../repositories/download_repository.dart';
 import '../../widgets/site_settings_webview.dart';
 import '../../widgets/app_version_subtitle.dart';
 import '../../widgets/clear_image_cache_tile.dart';
+import '../../widgets/cache_limit_tile.dart';
 import '../../widgets/check_update_tile.dart';
 import '../../repositories/update_repository.dart';
 import '../../core/services/release_link_opener.dart';
@@ -238,13 +240,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ClearImageCacheTile(
                 onClear: () => EhImageCacheManager.instance.emptyCache(),
                 readSize: () => EhImageCacheManager.instance.getSizeBytes(),
+                changes: EhImageCacheManager.instance.changes,
+                cleanupFailed: () => EhImageCacheManager.instance.cleanupFailed,
+                retryCleanup: () => EhImageCacheManager.instance.enforceLimit(),
               ),
-              ListTile(
-                leading: const Icon(Icons.sd_storage),
-                title: Text(s.cacheSizeLimit),
-                subtitle: Text('${state.cacheLimitMB} MB'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showCacheLimitDialog(context, state.cacheLimitMB),
+              CacheLimitTile(
+                limitMB: state.cacheLimitMB,
+                onApply: (mb) {
+                  final completer = Completer<void>();
+                  context
+                      .read<SettingsBloc>()
+                      .add(UpdateCacheLimit(mb, completer: completer));
+                  return completer.future;
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.download),
@@ -429,28 +437,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: Text(s.save),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showCacheLimitDialog(BuildContext context, int current) {
-    final s = S.of(context);
-    showDialog(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text(s.cacheSizeLimit),
-        children: [
-          for (final mb in [100, 200, 500, 1000, 2000])
-            RadioListTile<int>(
-              value: mb,
-              groupValue: current,
-              title: Text('$mb MB'),
-              onChanged: (val) {
-                context.read<SettingsBloc>().add(UpdateCacheLimit(val!));
-                Navigator.pop(ctx);
-              },
-            ),
         ],
       ),
     );

@@ -4,8 +4,16 @@ import '../core/l10n/s.dart';
 class ClearImageCacheTile extends StatefulWidget {
   final Future<void> Function() onClear;
   final Future<int> Function() readSize;
+  final Listenable? changes;
+  final bool Function()? cleanupFailed;
+  final Future<void> Function()? retryCleanup;
   const ClearImageCacheTile(
-      {super.key, required this.onClear, required this.readSize});
+      {super.key,
+      required this.onClear,
+      required this.readSize,
+      this.changes,
+      this.cleanupFailed,
+      this.retryCleanup});
 
   @override
   State<ClearImageCacheTile> createState() => _ClearImageCacheTileState();
@@ -16,11 +24,47 @@ class _ClearImageCacheTileState extends State<ClearImageCacheTile> {
   int? _bytes;
   bool _sizeFailed = false;
   int _sizeRequest = 0;
+  bool _retrying = false;
 
   @override
   void initState() {
     super.initState();
     _refreshSize();
+    widget.changes?.addListener(_refreshSize);
+  }
+
+  @override
+  void didUpdateWidget(covariant ClearImageCacheTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.changes != widget.changes) {
+      oldWidget.changes?.removeListener(_refreshSize);
+      widget.changes?.addListener(_refreshSize);
+      _refreshSize();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.changes?.removeListener(_refreshSize);
+    super.dispose();
+  }
+
+  Future<void> _retryCleanup() async {
+    if (_retrying || _clearing) return;
+    setState(() => _retrying = true);
+    try {
+      await widget.retryCleanup?.call();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(S.of(context).cacheClearFailed)));
+      }
+    } finally {
+      if (mounted) {
+        await _refreshSize();
+        if (mounted) setState(() => _retrying = false);
+      }
+    }
   }
 
   Future<void> _refreshSize() async {
@@ -82,13 +126,20 @@ class _ClearImageCacheTileState extends State<ClearImageCacheTile> {
       key: const ValueKey('clear-image-cache'),
       leading: const Icon(Icons.cached),
       title: Text(s.imageCache),
-      subtitle: Text(_clearing
-          ? s.clearingCache
-          : _sizeFailed
-              ? s.cacheSizeUnavailable
-              : _bytes == null
-                  ? s.calculatingCacheSize
-                  : _formatBytes(_bytes!)),
+      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(_clearing
+            ? s.clearingCache
+            : _sizeFailed
+                ? s.cacheSizeUnavailable
+                : _bytes == null
+                    ? s.calculatingCacheSize
+                    : _formatBytes(_bytes!)),
+        if (widget.cleanupFailed?.call() == true)
+          TextButton(
+              key: const ValueKey('retry-cache-quota'),
+              onPressed: _retrying || _clearing ? null : _retryCleanup,
+              child: Text(s.cacheQuotaFailed)),
+      ]),
       trailing: _clearing
           ? SizedBox(
               width: 24,

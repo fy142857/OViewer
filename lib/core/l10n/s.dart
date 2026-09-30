@@ -15,6 +15,10 @@ class S {
 
   bool get _zh => _l == 'zh';
 
+  String get lowerCacheLimitWarning => _zh ? '调低限制后，自动清理超出部分！' : 'Lowering the limit will automatically remove excess cached images!';
+  String get cacheLimitApplyFailed => _zh ? '缓存限制设置或清理失败，请重试' : 'Could not apply the cache limit or finish cleanup. Please retry.';
+  String get cacheQuotaFailed => _zh ? '自动清理失败，点击重试' : 'Automatic cleanup failed. Tap to retry';
+
   String get gidMatch => _zh ? 'GID 匹配' : 'GID match';
   String get gidIgnoresFilters => _zh
       ? 'GID 精确查找不受搜索页筛选影响'

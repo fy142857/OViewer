@@ -46,7 +46,11 @@ class LocalStorage {
   // Cache size limit (MB)
   static const _keyCacheLimit = 'cache_limit_mb';
   int getCacheLimit() => _prefs.getInt(_keyCacheLimit) ?? 500;
-  Future<void> setCacheLimit(int mb) => _prefs.setInt(_keyCacheLimit, mb);
+  Future<void> setCacheLimit(int mb) async {
+    if (!await _prefs.setInt(_keyCacheLimit, mb)) {
+      throw StateError('Could not save image cache limit');
+    }
+  }
 
   // Proxy
   static const _keyProxy = 'proxy_url';

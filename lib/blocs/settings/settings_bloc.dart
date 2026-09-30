@@ -13,8 +13,13 @@ import 'settings_state.dart';
 
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final SettingsRepository _repository;
+  final Future<void> Function(int) _applyCacheLimit;
+  bool _changingCacheLimit = false;
 
-  SettingsBloc(this._repository) : super(const SettingsState()) {
+  SettingsBloc(this._repository, {Future<void> Function(int)? applyCacheLimit})
+      : _applyCacheLimit = applyCacheLimit ??
+            ((mb) => EhImageCacheManager.instance.applyLimitMB(mb)),
+        super(const SettingsState()) {
     on<LoadSettings>(_onLoad);
     on<UpdateThemeMode>(_onTheme);
     on<UpdateReadingMode>(_onReading);
@@ -128,8 +133,25 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     UpdateCacheLimit event,
     Emitter<SettingsState> emit,
   ) async {
-    await _repository.setCacheLimit(event.mb);
-    emit(state.copyWith(cacheLimitMB: event.mb));
+    if (_changingCacheLimit) {
+      event.completer
+          ?.completeError(StateError('Cache limit change in progress'));
+      return;
+    }
+    _changingCacheLimit = true;
+    try {
+      if (![100, 200, 500, 1000, 2000].contains(event.mb)) {
+        throw ArgumentError.value(event.mb, 'mb');
+      }
+      await _repository.setCacheLimit(event.mb);
+      emit(state.copyWith(cacheLimitMB: event.mb));
+      await _applyCacheLimit(event.mb);
+      event.completer?.complete();
+    } catch (error, stack) {
+      event.completer?.completeError(error, stack);
+    } finally {
+      _changingCacheLimit = false;
+    }
   }
 
   Future<void> _onToggleSite(

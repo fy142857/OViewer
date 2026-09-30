@@ -32,7 +32,8 @@ Future<void> _initDependencies() async {
   sl.registerSingleton<CookieManager>(cookieManager);
 
   // Core - Image cache (must be before any image loading)
-  EhImageCacheManager.init(cookieManager);
+  EhImageCacheManager.init(cookieManager, limitMB: localStorage.getCacheLimit());
+  await EhImageCacheManager.instance.enforceLimitQuietly();
 
   // Core - Database
   final database = AppDatabase();

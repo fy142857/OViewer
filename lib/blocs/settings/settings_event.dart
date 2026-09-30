@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 
 abstract class SettingsEvent extends Equatable {
@@ -45,7 +46,8 @@ class ToggleAutoProxy extends SettingsEvent {
 
 class UpdateCacheLimit extends SettingsEvent {
   final int mb;
-  const UpdateCacheLimit(this.mb);
+  final Completer<void>? completer;
+  const UpdateCacheLimit(this.mb, {this.completer});
   @override
   List<Object?> get props => [mb];
 }
