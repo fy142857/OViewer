@@ -77,7 +77,10 @@ class _HomeScreenState extends State<HomeScreen>
   void _activateCurrentTab() {
     final tab = _tabs[_currentIndex];
     if (tab == GalleryTab.watched) {
-      context.read<HistoryBloc>().add(LoadHistory());
+      final history = context.read<HistoryBloc>();
+      if (history.state.status == HistoryStatus.initial) {
+        history.add(LoadHistory());
+      }
       return;
     }
     if (tab == GalleryTab.favorites &&
@@ -390,108 +393,125 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildHistoryContent(BuildContext context) {
+    return BlocBuilder<HistoryBloc, HistoryState>(
+      builder: (context, state) => RefreshIndicator(
+        key: const ValueKey('home-history-refresh'),
+        onRefresh: () {
+          final completer = Completer<void>();
+          context.read<HistoryBloc>().add(LoadHistory(completer: completer));
+          return completer.future;
+        },
+        child: _buildHistoryList(context, state),
+      ),
+    );
+  }
+
+  Widget _buildHistoryList(BuildContext context, HistoryState state) {
     final theme = Theme.of(context);
     final s = S.of(context);
-    return BlocBuilder<HistoryBloc, HistoryState>(
-      builder: (context, state) {
-        if (state.status == HistoryStatus.initial ||
-            state.status == HistoryStatus.loading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (state.entries.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.history, size: 64, color: theme.colorScheme.outline),
-                const SizedBox(height: 16),
-                Text(s.noHistoryRecords, style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text(
-                  s.historyHint,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          key: const PageStorageKey('home-history-list'),
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          itemCount: state.entries.length,
-          itemBuilder: (context, index) {
-            final entry = state.entries[index];
-            final hasProgress = entry.totalPages > 0;
-            final progressPercent =
-                hasProgress ? (entry.lastReadPage + 1) / entry.totalPages : 0.0;
-            final progressText = hasProgress
-                ? '${entry.lastReadPage + 1} / ${entry.totalPages}'
-                : '';
-
-            return ListTile(
-              key: ValueKey(entry.gid),
-              onLongPress: () => _showHistoryEntryMenu(entry.gid),
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: SizedBox(
-                  width: 50,
-                  height: 68,
-                  child: CachedNetworkImage(
-                    imageUrl: entry.thumbUrl,
-                    fit: BoxFit.cover,
-                    cacheManager: EhImageCacheManager.instance,
-                    errorWidget: (_, __, ___) => Container(
-                      color: theme.colorScheme.surfaceVariant,
-                      child: const Icon(Icons.broken_image, size: 20),
-                    ),
-                  ),
-                ),
-              ),
-              title: Text(
-                entry.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall,
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (progressText.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: LinearProgressIndicator(
-                              value: progressPercent,
-                              minHeight: 3,
-                              backgroundColor: theme.colorScheme.surfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          progressText,
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ],
+    if (state.entries.isEmpty) {
+      return CustomScrollView(
+        key: const PageStorageKey('home-history-list'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.history,
+                        size: 64, color: theme.colorScheme.outline),
+                    const SizedBox(height: 16),
+                    Text(s.noHistoryRecords,
+                        style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(
+                      s.historyHint,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
-                  const SizedBox(height: 2),
-                  Text(
-                    _timeAgo(entry.lastReadAt),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ],
+                ),
+              ))
+        ],
+      );
+    }
+    return ListView.builder(
+      key: const PageStorageKey('home-history-list'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      itemCount: state.entries.length,
+      itemBuilder: (context, index) {
+        final entry = state.entries[index];
+        final hasProgress = entry.totalPages > 0;
+        final progressPercent =
+            hasProgress ? (entry.lastReadPage + 1) / entry.totalPages : 0.0;
+        final progressText = hasProgress
+            ? '${entry.lastReadPage + 1} / ${entry.totalPages}'
+            : '';
+
+        return ListTile(
+          key: ValueKey(entry.gid),
+          onLongPress: () => _showHistoryEntryMenu(entry.gid),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              width: 50,
+              height: 68,
+              child: CachedNetworkImage(
+                imageUrl: entry.thumbUrl,
+                fit: BoxFit.cover,
+                cacheManager: EhImageCacheManager.instance,
+                errorWidget: (_, __, ___) => Container(
+                  color: theme.colorScheme.surfaceVariant,
+                  child: const Icon(Icons.broken_image, size: 20),
+                ),
               ),
-              onTap: () => _navigateToGallery(entry.gid, entry.token),
-            );
-          },
+            ),
+          ),
+          title: Text(
+            entry.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleSmall,
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (progressText.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progressPercent,
+                          minHeight: 3,
+                          backgroundColor: theme.colorScheme.surfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      progressText,
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 2),
+              Text(
+                _timeAgo(entry.lastReadAt),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ],
+          ),
+          onTap: () => _navigateToGallery(entry.gid, entry.token),
         );
       },
     );

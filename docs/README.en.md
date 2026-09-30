@@ -35,6 +35,8 @@ If you add or remove a favorite on another device using the same account, pull t
 
 Browsing history and reading progress are stored on the current device, making it easy to pick up where you left off. Reading progress does not yet sync across devices.
 
+Pull down to refresh history, even when the list is empty or shorter than the screen. Returning to History keeps the existing content without reloading it automatically.
+
 ## Accounts and personalization
 
 - Sign in through the embedded browser or enter Cookies manually.

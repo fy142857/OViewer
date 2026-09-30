@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:oviewer/blocs/auth/auth_bloc.dart';
 import 'package:oviewer/blocs/auth/auth_state.dart';
 import 'package:oviewer/blocs/history/history_bloc.dart';
+import 'package:oviewer/blocs/history/history_state.dart';
 import 'package:oviewer/blocs/settings/settings_bloc.dart';
 import 'package:oviewer/blocs/settings/settings_state.dart';
 import 'package:oviewer/core/network/cookie_manager.dart';
@@ -21,6 +22,7 @@ import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/screens/home/home_screen.dart';
+import 'package:oviewer/screens/history/history_screen.dart';
 
 class MockGallery extends Mock implements GalleryRepository {}
 
@@ -123,7 +125,8 @@ void main() {
     await GetIt.I.reset();
   });
 
-  Future<void> boot(WidgetTester tester, {int displayMode = 0}) async {
+  Future<void> boot(WidgetTester tester,
+      {int displayMode = 0, Widget screen = const HomeScreen()}) async {
     history = HistoryBloc(historyRepo);
     EhImageCacheManager.init(MockCookies());
     await tester.binding.setSurfaceSize(const Size(360, 800));
@@ -143,7 +146,7 @@ void main() {
       BlocProvider<SettingsBloc>.value(value: settings),
       BlocProvider<AuthBloc>.value(value: auth),
       BlocProvider<HistoryBloc>.value(value: history),
-    ], child: const MaterialApp(home: HomeScreen())));
+    ], child: MaterialApp(home: screen)));
     await frames(tester);
   }
 
@@ -378,12 +381,13 @@ void main() {
     expect(selected(tester), 2);
   });
 
-  for (final empty in [false, true]) {
+  for (final count in [0, 1, 40]) {
     testWidgets(
-        'returning to history keeps its current view during refresh (empty: $empty)',
+        'history returns without reloading and refreshes only on pull ($count records)',
         (tester) async {
+      final empty = count == 0;
       final entries = List.generate(
-          empty ? 0 : 40,
+          count,
           (i) => HistoryEntry(
               gid: 4700 + i,
               token: 'abc',
@@ -404,7 +408,7 @@ void main() {
       final scrollable =
           find.descendant(of: list, matching: find.byType(Scrollable));
       double offset = 0;
-      if (!empty) {
+      if (count > 1) {
         await tester.drag(list, const Offset(0, -500));
         await frames(tester);
         offset = tester.state<ScrollableState>(scrollable).position.pixels;
@@ -418,6 +422,7 @@ void main() {
       when(() => historyRepo.getAllHistory()).thenAnswer((_) => refresh.future);
       await swipe(tester, right: true);
       expect(selected(tester), 2);
+      verify(() => historyRepo.getAllHistory()).called(1);
       expect(
           find.descendant(
               of: page, matching: find.byType(CircularProgressIndicator)),
@@ -429,6 +434,15 @@ void main() {
         expect(tester.state<ScrollableState>(scrollable).position.pixels,
             closeTo(offset, 1));
       }
+      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+      await tester.pump();
+      await tester.drag(list, const Offset(0, 400));
+      await frames(tester);
+      expect(selected(tester), 2);
+      verify(() => historyRepo.getAllHistory()).called(1);
+      expect(find.byType(RefreshProgressIndicator), findsOneWidget);
+      expect(list, findsOneWidget);
+      if (empty) expect(find.text('No reading history'), findsOneWidget);
       final updated = HistoryEntry(
           gid: 9999,
           token: 'abc',
@@ -442,6 +456,7 @@ void main() {
           lastReadAt: DateTime(2026));
       refresh.complete([updated, ...entries]);
       await frames(tester);
+      expect(find.byType(RefreshProgressIndicator), findsNothing);
       expect(history.state.entries.first.title, 'New history record');
       expect(
           find.descendant(
@@ -449,10 +464,52 @@ void main() {
           findsNothing);
       if (!empty) {
         expect(tester.state<ScrollableState>(scrollable).position.pixels,
-            closeTo(offset, 1));
+            closeTo(0, 1));
       } else {
         expect(find.text('New history record'), findsOneWidget);
       }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final standalone in [false, true]) {
+    testWidgets(
+        'history has no full-page loader and refresh recovers from failure (standalone: $standalone)',
+        (tester) async {
+      final first = Completer<List<HistoryEntry>>();
+      addTearDown(() {
+        if (!first.isCompleted) first.complete([]);
+      });
+      when(() => historyRepo.getAllHistory()).thenAnswer((_) => first.future);
+      await boot(tester,
+          screen: standalone ? const HistoryScreen() : const HomeScreen());
+      if (!standalone) {
+        await tester.tap(find.widgetWithText(Tab, 'History'));
+        await frames(tester);
+      }
+      expect(history.state.status, HistoryStatus.loading);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+      first.complete([]);
+      await frames(tester);
+      final failure = Completer<List<HistoryEntry>>();
+      addTearDown(() {
+        if (!failure.isCompleted) failure.complete([]);
+      });
+      when(() => historyRepo.getAllHistory()).thenAnswer((_) => failure.future);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 400));
+      await frames(tester);
+      expect(find.byType(RefreshProgressIndicator), findsOneWidget);
+      failure.completeError(StateError('database unavailable'));
+      await frames(tester);
+      expect(history.state.status, HistoryStatus.error);
+      expect(find.byType(RefreshProgressIndicator), findsNothing);
+      when(() => historyRepo.getAllHistory()).thenAnswer((_) async => []);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 400));
+      await frames(tester);
+      expect(history.state.status, HistoryStatus.loaded);
+      expect(history.state.errorMessage, isNull);
+      expect(find.byType(RefreshProgressIndicator), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
