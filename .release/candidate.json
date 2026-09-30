@@ -1,33 +1,23 @@
 {
-  "base_tag": "v1.3.0",
+  "base_tag": "v1.3.1",
   "branch": "dev",
-  "build_number": 41,
-  "candidate_id": "1.3.1+41",
-  "fingerprint": "fb57b4ba65bdf0b2810c19eb540ce2c6303addd9d5279257de4fba8960122af7",
-  "notes": "### 新增\n\n### 修复\n\n- 修正已有检查更新流程：新版先弹窗确认再打开浏览器；右侧紫色提示持久保存，安装版本达到或超过已检测版本时清除。此项按 `fix` 分类。\n- 版本管理按明确的改动类别与理由计算 X.Y.Z，校验分类矛盾并支持指定提交的可追溯纠正；将本次误标的 `1.4.0` 候选纠正为 `1.3.1`，构建号继续递增。\n\n### 变更\n\n### 已知限制",
+  "build_number": 42,
+  "candidate_id": "1.4.0+42",
+  "fingerprint": "b42aac228e49df00fdfe3a063b50f92f16f542d40e6f1ad80b507fd71f22a5ad",
+  "notes": "### 新增\n\n- 画廊详情在“发布时间”下方展示可选择复制的 GID、Token；纯数字搜索并行执行关键词搜索与 GID 精确查找，精确匹配置顶并跨页去重，支持独立失败重试及中英文提示（#39）。\n\n### 修复\n\n### 变更\n\n### 已知限制\n\n- 仅凭 GID 查找依赖当前 EH／EX 站点搜索列表的可见结果；被隐藏、删除或无访问权限的画廊可能无法解析，不会以相邻画廊替代目标。",
   "schema": 1,
-  "source_sha": "383114397b19a66d07ec619ced10c088444a4fc0",
+  "source_sha": "c7abc26b8cecf25789d3f67d429e1e42c39ca0fe",
   "summary": [
     {
-      "change_kind": "fix",
-      "classification_reason": "维护者确认此次属于 fix：修正既有检查更新流程的确认交互和更新状态提示，不是新增独立业务能力；原 feat 前缀误标。",
-      "classification_source": "correction",
-      "original_type": "feat",
-      "sha": "41b454435857d33bd3008440c846f4aa2557da92",
-      "subject": "feat(settings): confirm updates and persist reminders",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "修正既有版本分配流程过度依赖提交前缀的问题，并纠正更新确认与提示调整的误标；不新增应用独立业务能力或破坏兼容性。",
+      "change_kind": "feature",
+      "classification_reason": "Add the previously unavailable ability to locate a gallery and resolve its token from a bare GID, alongside existing keyword search.",
       "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "383114397b19a66d07ec619ced10c088444a4fc0",
-      "subject": "fix(versioning): classify release impact and correct update candidate",
-      "type": "fix",
-      "version_impact": "patch"
+      "original_type": "feat",
+      "sha": "c7abc26b8cecf25789d3f67d429e1e42c39ca0fe",
+      "subject": "feat(search): resolve numeric gallery IDs alongside keyword results",
+      "type": "feat",
+      "version_impact": "minor"
     }
   ],
-  "version": "1.3.1"
+  "version": "1.4.0"
 }
