@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.4.0",
   "branch": "dev",
-  "build_number": 45,
-  "candidate_id": "1.4.1+45",
-  "fingerprint": "6c0ce6dbb77476d8535dd693e7143f096627eb9fe6b46a8d10d0d39b65973b7f",
-  "notes": "### 新增\n\n### 修复\n\n- 搜索输入页隐藏右上角模式切换按钮，缩小返回键占位并扩展搜索框；占位文字按可用宽度自动缩小以完整显示，输入文字保持正常字号，结果页保留模式切换按钮。\n\n- 补充搜索框占位文本“输入标题、作者、Tag、画廊gid、上传者...”，同步英文；移除 GID 结果页的关键词搜索中、GID 查找中及忽略筛选说明三条文字提示。\n\n### 变更\n\n### 已知限制",
+  "build_number": 46,
+  "candidate_id": "1.4.1+46",
+  "fingerprint": "d2ae393370ab10717ae867910c5cab3dd51879c257c3130a78a764bfd8d29420",
+  "notes": "### 新增\n\n### 修复\n\n- 卡片骨架屏复用实际结果的自适应网格，列数随可用宽度及文字缩放变化，修复加载期间固定两列的问题；首页与搜索页同步生效（#31）。\n\n- 搜索输入页隐藏右上角模式切换按钮，缩小返回键占位并扩展搜索框；占位文字按可用宽度自动缩小以完整显示，输入文字保持正常字号，结果页保留模式切换按钮。\n\n- 补充搜索框占位文本“输入标题、作者、Tag、画廊gid、上传者...”，同步英文；移除 GID 结果页的关键词搜索中、GID 查找中及忽略筛选说明三条文字提示。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "fb0d71ddbbca3ba457c1b37ee2a1b9613e1b1e94",
+  "source_sha": "20c72a0d03b2ecb78d2e3754d8b7b0e4fd6454dc",
   "summary": [
     {
       "change_kind": "fix",
@@ -25,6 +25,16 @@
       "original_type": "fix",
       "sha": "fb0d71ddbbca3ba457c1b37ee2a1b9613e1b1e94",
       "subject": "fix(search): expand input toolbar and fit placeholder text",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Make loading card placeholders use the same width and text-scale layout as loaded galleries, correcting fixed two-column skeletons.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "20c72a0d03b2ecb78d2e3754d8b7b0e4fd6454dc",
+      "subject": "fix(layout): align loading skeletons with adaptive gallery grids",
       "type": "fix",
       "version_impact": "patch"
     }
