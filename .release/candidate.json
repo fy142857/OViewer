@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.2.0",
   "branch": "dev",
-  "build_number": 37,
-  "candidate_id": "1.3.0+37",
-  "fingerprint": "6f53a0d3074632c9071eb8c118097e4f718a96a8bd81190fdbe557834c81fbba",
-  "notes": "### 新增\n\n- 首页支持左右滑动切换首页、热门、历史和收藏，与标签点击同步；各页独立保留列表与滚动位置。首页历史记录改为长按弹出删除菜单，避免与切页手势冲突（#47）。\n\n### 修复\n\n- 修复每次滑入历史页时列表闪烁的问题：首次加载后在后台刷新本地记录，保留当前列表、空状态与滚动位置。\n\n- Release 说明自动省略空章节标题；正式发布前及收尾后要求 `main` 与 `dev` 的远端提交完全一致，包括更新日志归档。\n\n### 变更\n\n- 首页标签点击切换动画由 300 毫秒缩短至 150 毫秒，横向滑动松手后的吸附动画同步加快，拖动跟手行为保持不变。\n\n- 阅读器长按菜单简化为“重新加载”“保存”，英文同步为“Reload”“Save”（#42）。\n\n### 已知限制",
+  "build_number": 38,
+  "candidate_id": "1.3.0+38",
+  "fingerprint": "aec95e6deac6fb5c6a8d50ef716222ef82edd3182cff0cca44e718c4ee0d89ef",
+  "notes": "### 新增\n\n- 首页支持左右滑动切换首页、热门、历史和收藏，与标签点击同步；各页独立保留列表与滚动位置。首页历史记录改为长按弹出删除菜单，避免与切页手势冲突（#47）。\n\n### 修复\n\n- 历史页取消整页加载指示器和切入时自动重载，改为下拉刷新；空列表和不足一屏时也能下拉，刷新期间保留当前内容。\n\n- Release 说明自动省略空章节标题；正式发布前及收尾后要求 `main` 与 `dev` 的远端提交完全一致，包括更新日志归档。\n\n### 变更\n\n- 首页标签点击切换动画由 300 毫秒缩短至 150 毫秒，横向滑动松手后的吸附动画同步加快，拖动跟手行为保持不变。\n\n- 阅读器长按菜单简化为“重新加载”“保存”，英文同步为“Reload”“Save”（#42）。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "e002de7fdf3a75f887a6ca1cea49bac7c42ae732",
+  "source_sha": "1b4976cf42a8ac1c37cc59cb021a2c17f676d0b0",
   "summary": [
     {
       "sha": "b4bd110890f8ed645c6f5611c539c9f7821d17d7",
@@ -32,6 +32,11 @@
       "sha": "e002de7fdf3a75f887a6ca1cea49bac7c42ae732",
       "subject": "perf(home): double tab transition speed (#47)",
       "type": "perf"
+    },
+    {
+      "sha": "1b4976cf42a8ac1c37cc59cb021a2c17f676d0b0",
+      "subject": "fix(history): replace page loaders with pull-to-refresh (#47)",
+      "type": "fix"
     }
   ],
   "version": "1.3.0"
