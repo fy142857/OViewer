@@ -1855,7 +1855,7 @@
       "notes": "### 新增\n\n- 画廊详情在“发布时间”下方展示可选择复制的 GID、Token；纯数字搜索并行执行关键词搜索与 GID 精确查找，精确匹配置顶并跨页去重，支持独立失败重试及中英文提示（#39）。\n\n### 修复\n\n### 变更\n\n### 已知限制\n\n- 仅凭 GID 查找依赖当前 EH／EX 站点搜索列表的可见结果；被隐藏、删除或无访问权限的画廊可能无法解析，不会以相邻画廊替代目标。",
       "schema": 1,
       "source_sha": "c7abc26b8cecf25789d3f67d429e1e42c39ca0fe",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "feature",
