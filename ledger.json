@@ -1904,8 +1904,33 @@
         }
       ],
       "version": "1.4.0"
+    },
+    {
+      "base_tag": "v1.4.0",
+      "branch": "dev",
+      "build_number": 44,
+      "build_sha": "03ae82fd7661c3f743dc3462a82cc9e4e8cc9f58",
+      "candidate_id": "1.4.1+44",
+      "fingerprint": "bf621eef061cdbb06ab00bbbfdec7096a477130fc386863fc01fa38334f87d1e",
+      "notes": "### 新增\n\n### 修复\n\n- 补充搜索框占位文本“输入标题、作者、Tag、画廊gid、上传者...”，同步英文；移除 GID 结果页的关键词搜索中、GID 查找中及忽略筛选说明三条文字提示。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "b2ccb99e4a7ed8df24af3a6cd9b5c9fddbd028ed",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Correct the existing search placeholder and remove unwanted GID progress and filter notices without adding a new capability.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "b2ccb99e4a7ed8df24af3a6cd9b5c9fddbd028ed",
+          "subject": "fix(search): update placeholder and remove progress notices",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.4.1"
     }
   ],
-  "last_build_number": 43,
+  "last_build_number": 44,
   "schema": 1
 }
