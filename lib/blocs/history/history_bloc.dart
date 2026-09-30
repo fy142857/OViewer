@@ -16,7 +16,11 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     LoadHistory event,
     Emitter<HistoryState> emit,
   ) async {
-    emit(state.copyWith(status: HistoryStatus.loading));
+    // Returning to History refreshes local data without replacing the current
+    // list (or a previously loaded empty view) with a full-page spinner.
+    if (state.status == HistoryStatus.initial) {
+      emit(state.copyWith(status: HistoryStatus.loading));
+    }
     try {
       final entries = await _repository.getAllHistory();
       emit(state.copyWith(

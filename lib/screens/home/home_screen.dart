@@ -390,7 +390,8 @@ class _HomeScreenState extends State<HomeScreen>
     final s = S.of(context);
     return BlocBuilder<HistoryBloc, HistoryState>(
       builder: (context, state) {
-        if (state.status == HistoryStatus.loading) {
+        if (state.status == HistoryStatus.initial ||
+            state.status == HistoryStatus.loading) {
           return const Center(child: CircularProgressIndicator());
         }
         if (state.entries.isEmpty) {

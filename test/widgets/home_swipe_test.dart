@@ -326,4 +326,83 @@ void main() {
     verify(() => historyRepo.deleteHistory(47)).called(1);
     expect(selected(tester), 2);
   });
+
+  for (final empty in [false, true]) {
+    testWidgets(
+        'returning to history keeps its current view during refresh (empty: $empty)',
+        (tester) async {
+      final entries = List.generate(
+          empty ? 0 : 40,
+          (i) => HistoryEntry(
+              gid: 4700 + i,
+              token: 'abc',
+              title: 'History record $i',
+              thumbUrl: thumb,
+              category: 'Manga',
+              rating: 4,
+              fileCount: 12,
+              lastReadPage: 0,
+              totalPages: 12,
+              lastReadAt: DateTime(2026)));
+      when(() => historyRepo.getAllHistory()).thenAnswer((_) async => entries);
+      await boot(tester);
+      await tester.tap(find.widgetWithText(Tab, 'History'));
+      await frames(tester);
+      final page = find.byKey(const ValueKey('home-history-tab'));
+      final list = find.byKey(const PageStorageKey('home-history-list'));
+      final scrollable =
+          find.descendant(of: list, matching: find.byType(Scrollable));
+      double offset = 0;
+      if (!empty) {
+        await tester.drag(list, const Offset(0, -500));
+        await frames(tester);
+        offset = tester.state<ScrollableState>(scrollable).position.pixels;
+        expect(offset, greaterThan(0));
+      }
+      await swipe(tester);
+      final refresh = Completer<List<HistoryEntry>>();
+      addTearDown(() {
+        if (!refresh.isCompleted) refresh.complete(entries);
+      });
+      when(() => historyRepo.getAllHistory()).thenAnswer((_) => refresh.future);
+      await swipe(tester, right: true);
+      expect(selected(tester), 2);
+      expect(
+          find.descendant(
+              of: page, matching: find.byType(CircularProgressIndicator)),
+          findsNothing);
+      if (empty) {
+        expect(find.text('No reading history'), findsOneWidget);
+      } else {
+        expect(list, findsOneWidget);
+        expect(tester.state<ScrollableState>(scrollable).position.pixels,
+            closeTo(offset, 1));
+      }
+      final updated = HistoryEntry(
+          gid: 9999,
+          token: 'abc',
+          title: 'New history record',
+          thumbUrl: thumb,
+          category: 'Manga',
+          rating: 4,
+          fileCount: 12,
+          lastReadPage: 3,
+          totalPages: 12,
+          lastReadAt: DateTime(2026));
+      refresh.complete([updated, ...entries]);
+      await frames(tester);
+      expect(history.state.entries.first.title, 'New history record');
+      expect(
+          find.descendant(
+              of: page, matching: find.byType(CircularProgressIndicator)),
+          findsNothing);
+      if (!empty) {
+        expect(tester.state<ScrollableState>(scrollable).position.pixels,
+            closeTo(offset, 1));
+      } else {
+        expect(find.text('New history record'), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
