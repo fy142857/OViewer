@@ -1544,8 +1544,28 @@
         }
       ],
       "version": "1.2.0"
+    },
+    {
+      "base_tag": "v1.2.0",
+      "branch": "dev",
+      "build_number": 33,
+      "build_sha": "5e91cfb47f261244aee170f1459457f64e67a1fd",
+      "candidate_id": "1.2.1+33",
+      "fingerprint": "a5d78a7ffa0738172513efda2b39f66e39d245428c661de58b9f2a6531252fe2",
+      "notes": "### 新增\n\n### 修复\n\n- Release 说明自动省略空章节标题；正式发布前及收尾后要求 `main` 与 `dev` 的远端提交完全一致，包括更新日志归档。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "b4bd110890f8ed645c6f5611c539c9f7821d17d7",
+      "stage": "reserved",
+      "summary": [
+        {
+          "sha": "b4bd110890f8ed645c6f5611c539c9f7821d17d7",
+          "subject": "fix(release): omit empty sections and require branch parity",
+          "type": "fix"
+        }
+      ],
+      "version": "1.2.1"
     }
   ],
-  "last_build_number": 32,
+  "last_build_number": 33,
   "schema": 1
 }
