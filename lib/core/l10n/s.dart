@@ -220,8 +220,8 @@ class S {
 
   // ---- Reader Screen ----
   String readerPageTitle(int page) => _zh ? '第 $page 页' : 'Page $page';
-  String get reloadPage => _zh ? '重新加载该页面' : 'Reload this page';
-  String get savePage => _zh ? '保存页面资源' : 'Save page image';
+  String get reloadPage => _zh ? '重新加载' : 'Reload';
+  String get savePage => _zh ? '保存' : 'Save';
   String get savingPage => _zh ? '正在保存…' : 'Saving…';
   String get pageSaved => _zh ? '已保存到相册' : 'Saved to Photos';
   String get pageSavedAsPng => _zh ? '已转换为 PNG 静态图并保存到相册' : 'Converted to a static PNG and saved to Photos';
