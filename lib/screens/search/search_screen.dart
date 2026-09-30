@@ -217,6 +217,49 @@ class _SearchViewState extends State<_SearchView> {
     _focusNode.requestFocus();
   }
 
+  TextStyle _fittedHintStyle(BuildContext context, double availableWidth) {
+    final theme = Theme.of(context);
+    final style = (theme.useMaterial3
+            ? theme.textTheme.bodyLarge!
+            : theme.textTheme.titleMedium!)
+        .merge(theme.inputDecorationTheme.hintStyle);
+    final hintStyle = theme.inputDecorationTheme.hintStyle ?? const TextStyle();
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaleFactor: MediaQuery.textScaleFactorOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+      maxLines: 1,
+    );
+    double widthAt(double fontSize) {
+      painter.text = TextSpan(
+          text: S.of(context).searchGalleries,
+          style: style.copyWith(fontSize: fontSize));
+      painter.layout();
+      return painter.width;
+    }
+
+    try {
+      var high = style.fontSize ?? 16;
+      if (widthAt(high) <= availableWidth) {
+        return hintStyle.copyWith(fontSize: high);
+      }
+      var low = 0.1;
+      // Measure the actual font, spacing, locale and accessibility scale.
+      // Only the placeholder shrinks; typed text keeps its normal size.
+      for (var i = 0; i < 14; i++) {
+        final middle = (low + high) / 2;
+        if (widthAt(middle) <= availableWidth - 0.5) {
+          low = middle;
+        } else {
+          high = middle;
+        }
+      }
+      return hintStyle.copyWith(fontSize: low);
+    } finally {
+      painter.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
@@ -225,42 +268,51 @@ class _SearchViewState extends State<_SearchView> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
+        leadingWidth: 48,
+        titleSpacing: 8,
         title: ValueListenableBuilder<bool>(
             valueListenable: _hasText,
-            builder: (context, hasText, _) => TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  autofocus: widget.initialKeyword == null,
-                  decoration: InputDecoration(
-                    hintText: s.searchGalleries,
-                    border: InputBorder.none,
-                    suffixIcon: hasText
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              _controller.clear();
-                              context.read<SearchBloc>().add(ClearSearch());
-                              setState(() {
-                                _showHistory = true;
-                                _suggestions = [];
-                                _historySuggestions = [];
-                              });
-                            },
-                          )
-                        : null,
-                  ),
-                  onSubmitted: (_) => _performSearch(),
-                )),
+            builder: (context, hasText, _) => LayoutBuilder(
+                builder: (context, constraints) => TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      autofocus: widget.initialKeyword == null,
+                      decoration: InputDecoration(
+                        hintText: s.searchGalleries,
+                        hintStyle: _fittedHintStyle(context,
+                            constraints.maxWidth - 16 - (hasText ? 48 : 0)),
+                        hintMaxLines: 1,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 12),
+                        border: InputBorder.none,
+                        suffixIcon: hasText
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 20),
+                                onPressed: () {
+                                  _controller.clear();
+                                  context.read<SearchBloc>().add(ClearSearch());
+                                  setState(() {
+                                    _showHistory = true;
+                                    _suggestions = [];
+                                    _historySuggestions = [];
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                      onSubmitted: (_) => _performSearch(),
+                    ))),
         actions: [
-          IconButton(
-            key: const ValueKey('search-view-toggle'),
-            tooltip: isGrid ? s.listView : s.gridView,
-            icon: Icon(
-                isGrid ? Icons.view_list_rounded : Icons.grid_view_rounded),
-            onPressed: () => context
-                .read<SettingsBloc>()
-                .add(UpdateDisplayMode(isGrid ? 0 : 1)),
-          ),
+          if (!_showHistory)
+            IconButton(
+              key: const ValueKey('search-view-toggle'),
+              tooltip: isGrid ? s.listView : s.gridView,
+              icon: Icon(
+                  isGrid ? Icons.view_list_rounded : Icons.grid_view_rounded),
+              onPressed: () => context
+                  .read<SettingsBloc>()
+                  .add(UpdateDisplayMode(isGrid ? 0 : 1)),
+            ),
         ],
       ),
       floatingActionButton: Column(
