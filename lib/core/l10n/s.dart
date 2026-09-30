@@ -20,11 +20,6 @@ class S {
   String get cacheQuotaFailed => _zh ? '自动清理失败，点击重试' : 'Automatic cleanup failed. Tap to retry';
 
   String get gidMatch => _zh ? 'GID 匹配' : 'GID match';
-  String get gidIgnoresFilters => _zh
-      ? 'GID 精确查找不受搜索页筛选影响'
-      : 'Exact GID lookup ignores search filters';
-  String get searchingOrdinary => _zh ? '正在搜索关键词…' : 'Searching keywords…';
-  String get searchingGid => _zh ? '正在查找 GID…' : 'Looking up GID…';
   String get gidNotFound =>
       _zh ? '未找到可访问的 GID 匹配' : 'No accessible GID match found';
   String get ordinarySearchFailed => _zh ? '关键词搜索失败' : 'Keyword search failed';
@@ -152,7 +147,9 @@ class S {
   String get exhentaiRequiresIgneous => _zh ? 'exhentai.org (需要igneous cookie)' : 'exhentai.org (requires igneous cookie)';
 
   // ---- Search Screen ----
-  String get searchGalleries => _zh ? '搜索画廊...' : 'Search galleries...';
+  String get searchGalleries => _zh
+      ? '输入标题、作者、Tag、画廊gid、上传者...'
+      : 'Enter title, author, Tag, gallery GID, uploader...';
   String get noResultsFound => _zh ? '没有搜索结果' : 'No results found';
   String get tryDifferentKeywords => _zh ? '试试不同的关键词或过滤器' : 'Try different keywords or filters';
   String get enterKeywordToSearch => _zh ? '输入关键词搜索' : 'Enter a keyword to search';

@@ -435,11 +435,6 @@ class _SearchViewState extends State<_SearchView> {
           ]),
         );
     return [
-      if (state.gidStatus != SearchStatus.initial) notice(s.gidIgnoresFilters),
-      if (state.ordinaryStatus == SearchStatus.loading &&
-          state.gidStatus != SearchStatus.initial)
-        notice(s.searchingOrdinary),
-      if (state.gidStatus == SearchStatus.loading) notice(s.searchingGid),
       if (state.gidStatus == SearchStatus.loaded && state.matchedGid == null)
         notice(s.gidNotFound),
       if (state.ordinaryStatus == SearchStatus.error)

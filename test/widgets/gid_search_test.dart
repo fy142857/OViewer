@@ -151,8 +151,23 @@ void main() {
         await boot(tester, repo, locale: locale, grid: grid);
         await tester.pumpAndSettle();
         expect(find.text('Gallery 50'), findsOneWidget);
+        expect(
+            tester
+                .widget<TextField>(find.byType(TextField))
+                .decoration!
+                .hintText,
+            locale == 'zh'
+                ? '输入标题、作者、Tag、画廊gid、上传者...'
+                : 'Enter title, author, Tag, gallery GID, uploader...');
         expect(find.text(locale == 'zh' ? '正在查找 GID…' : 'Looking up GID…'),
-            findsOneWidget);
+            findsNothing);
+        expect(find.text(locale == 'zh' ? '正在搜索关键词…' : 'Searching keywords…'),
+            findsNothing);
+        expect(
+            find.text(locale == 'zh'
+                ? 'GID 精确查找不受搜索页筛选影响'
+                : 'Exact GID lookup ignores search filters'),
+            findsNothing);
         expect(find.text(locale == 'zh' ? '没有找到结果' : 'No results found'),
             findsNothing);
         exact.complete(gallery(42));
