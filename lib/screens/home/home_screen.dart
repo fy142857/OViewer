@@ -51,7 +51,10 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(
+        length: _tabs.length,
+        vsync: this,
+        animationDuration: const Duration(milliseconds: 150));
     _tabController.addListener(_onTabChanged);
     _galleryBlocs = _createGalleryBlocs();
     _activateCurrentTab();
@@ -253,6 +256,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: TabBarView(
             key: const ValueKey('home-tab-pages'),
             controller: _tabController,
+            physics: const _FastTabScrollPhysics(),
             children: [for (final tab in _tabs) _buildTabPage(tab)],
           ),
         ),
@@ -710,5 +714,24 @@ class _HomeScreenState extends State<HomeScreen>
         ],
       ),
     );
+  }
+}
+
+/// Twice the page-snap response frequency, with the same damping ratio.
+/// Drag tracking and the standard page selection thresholds stay unchanged.
+class _FastTabScrollPhysics extends ClampingScrollPhysics {
+  const _FastTabScrollPhysics({super.parent});
+
+  @override
+  _FastTabScrollPhysics applyTo(ScrollPhysics? ancestor) =>
+      _FastTabScrollPhysics(parent: buildParent(ancestor));
+
+  @override
+  SpringDescription get spring {
+    final base = super.spring;
+    return SpringDescription(
+        mass: base.mass,
+        stiffness: base.stiffness * 4,
+        damping: base.damping * 2);
   }
 }

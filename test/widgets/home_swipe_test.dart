@@ -147,6 +147,57 @@ void main() {
     await frames(tester);
   }
 
+  testWidgets(
+      'tab taps finish after 150ms and page snapping runs twice as fast',
+      (tester) async {
+    await boot(tester);
+    for (final destination in [
+      ('Popular', 1),
+      ('Favorites', 3),
+      ('Latest', 0)
+    ]) {
+      await tester.tap(find.widgetWithText(Tab, destination.$1));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 75));
+      expect(
+          tester
+              .widget<TabBar>(find.byType(TabBar))
+              .controller!
+              .indexIsChanging,
+          isTrue);
+      await tester.pump(const Duration(milliseconds: 75));
+      // Allow the next display frame to report animation completion.
+      await tester.pump(const Duration(milliseconds: 16));
+      final controller = tester.widget<TabBar>(find.byType(TabBar)).controller!;
+      expect(controller.indexIsChanging, isFalse);
+      expect(controller.index, destination.$2);
+      expect(tester.widget<PageView>(find.byType(PageView)).controller.page,
+          closeTo(destination.$2.toDouble(), 0.001));
+    }
+    final physics = tester.widget<PageView>(find.byType(PageView)).physics!;
+    final baseline =
+        const PageScrollPhysics().applyTo(const ClampingScrollPhysics());
+    final metrics = PageMetrics(
+        minScrollExtent: 0,
+        maxScrollExtent: 1080,
+        pixels: 216,
+        viewportDimension: 360,
+        axisDirection: AxisDirection.right,
+        viewportFraction: 1,
+        devicePixelRatio: 3);
+    final fast = physics.createBallisticSimulation(metrics, 0)!;
+    final normal = baseline.createBallisticSimulation(metrics, 0)!;
+    for (final time in [0.03, 0.06, 0.1]) {
+      expect(fast.x(time), closeTo(normal.x(time * 2), 0.001));
+    }
+    for (final velocity in [-800.0, 800.0]) {
+      expect(
+          physics.createBallisticSimulation(metrics, velocity)!.x(2),
+          closeTo(baseline.createBallisticSimulation(metrics, velocity)!.x(2),
+              0.001));
+    }
+  });
+
   for (final mode in [0, 1]) {
     testWidgets(
         'swipes across all tabs and back, taps stay synchronized (mode $mode)',
