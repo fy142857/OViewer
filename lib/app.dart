@@ -5,7 +5,6 @@ import 'package:get_it/get_it.dart';
 import 'core/router/app_router.dart';
 import 'core/router/route_observer.dart';
 import 'core/theme/app_theme.dart';
-import 'blocs/gallery_list/gallery_list_bloc.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_event.dart';
 import 'blocs/favorites/favorites_bloc.dart';
@@ -30,9 +29,6 @@ class OViewerApp extends StatelessWidget {
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => GalleryListBloc(sl<GalleryRepository>()),
-        ),
         BlocProvider(
           create: (_) => AuthBloc(sl<AuthRepository>())
             ..add(CheckLoginStatus()),

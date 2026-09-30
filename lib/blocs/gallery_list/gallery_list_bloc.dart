@@ -16,7 +16,8 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
   /// Max consecutive duplicate-only pages before giving up.
   static const _maxDuplicateRetries = 5;
 
-  GalleryListBloc(this._repository) : super(const GalleryListState()) {
+  GalleryListBloc(this._repository, {GalleryTab initialTab = GalleryTab.latest})
+      : super(GalleryListState(currentTab: initialTab)) {
     on<FetchGalleries>(_onFetchGalleries);
     on<RefreshGalleries>(_onRefreshGalleries);
     on<LoadMoreGalleries>(_onLoadMoreGalleries);
