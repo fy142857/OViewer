@@ -41,6 +41,7 @@ Browsing history and reading progress are stored on the current device, making i
 - Choose a Chinese or English interface.
 - Use a light or dark theme, or follow the system setting.
 - Set your default reading mode, configure a proxy, and clear the image cache.
+- Tap Check for updates under Settings → About to compare your installed version with the latest GitHub release. A newer release opens in your browser. Checks use your proxy settings and do not download or install updates automatically.
 - My Tags, Title Language, and Image Size open the corresponding settings for the current site.
 
 ## Download and install

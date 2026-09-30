@@ -13,6 +13,9 @@ import '../../repositories/download_repository.dart';
 import '../../widgets/site_settings_webview.dart';
 import '../../widgets/app_version_subtitle.dart';
 import '../../widgets/clear_image_cache_tile.dart';
+import '../../widgets/check_update_tile.dart';
+import '../../repositories/update_repository.dart';
+import '../../core/services/release_link_opener.dart';
 import 'my_tags_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -258,6 +261,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   description: s.appDescription,
                   unavailableLabel: s.versionUnavailable,
                 ),
+              ),
+              CheckUpdateTile(
+                repository: GetIt.I<UpdateRepository>(),
+                openRelease: GetIt.I<ReleaseLinkOpener>().open,
               ),
               const SizedBox(height: 32),
             ],

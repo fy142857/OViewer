@@ -120,9 +120,9 @@ jobs:
         if: github.event_name == 'pull_request'
         run: flutter build apk --debug --no-pub
 
-      - name: Native photo export tests
+      - name: Native platform tests
         working-directory: android
-        run: ./gradlew :app:testDebugUnitTest --tests com.oviewer.oviewer.PageImageExporterTest
+        run: ./gradlew :app:testDebugUnitTest
 
       - name: Inspect package and write build metadata
         if: github.event_name == 'workflow_dispatch'

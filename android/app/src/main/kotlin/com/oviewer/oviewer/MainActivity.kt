@@ -24,6 +24,8 @@ class MainActivity: FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/release_link")
+            .setMethodCallHandler(ReleaseLinkOpener(this))
         exporter = PageImageExporter(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/page_image_export")
             .setMethodCallHandler(exporter)

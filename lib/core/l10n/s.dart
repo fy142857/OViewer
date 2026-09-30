@@ -61,6 +61,18 @@ class S {
   String daysAgo(int n) => _zh ? '$n天前' : '${n}d ago';
 
   // ---- Settings Screen ----
+  String get checkUpdate => _zh ? '检查更新' : 'Check for updates';
+  String get checkingUpdate => _zh ? '正在检查更新…' : 'Checking for updates…';
+  String get checkUpdateHint => _zh ? '有新版本时在浏览器中打开发布页' : 'Open the release in your browser when an update is available';
+  String get versionCurrent => _zh ? '当前已是最新版本' : 'You are on the latest version';
+  String get versionAhead => _zh ? '当前版本高于最新正式版' : 'Your version is newer than the latest release';
+  String get noReleaseAvailable => _zh ? '暂无可用正式版本' : 'No release is available yet';
+  String get updateNetworkFailed => _zh ? '检查更新失败，请检查网络后重试' : 'Could not check for updates. Check your connection and retry';
+  String get updateTimedOut => _zh ? '检查更新超时，请重试' : 'Update check timed out. Please retry';
+  String get updateRateLimited => _zh ? '检查更新请求受限，请稍后重试' : 'Update checks are rate limited. Please try again later';
+  String get updateInvalidResponse => _zh ? '无法读取发布版本信息，请稍后重试' : 'Could not read release information. Please try again later';
+  String get releaseOpenFailed => _zh ? '无法打开浏览器，请重试' : 'Could not open the browser. Please retry';
+  String get reopenRelease => _zh ? '重新打开' : 'Open again';
   String get versionUnavailable => _zh ? '版本信息不可用' : 'Version information unavailable';
   String get appearance => _zh ? '外观' : 'Appearance';
   String get theme => _zh ? '主题' : 'Theme';

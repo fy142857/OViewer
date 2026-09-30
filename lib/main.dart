@@ -15,6 +15,8 @@ import 'repositories/auth_repository.dart';
 import 'repositories/download_repository.dart';
 import 'repositories/settings_repository.dart';
 import 'repositories/tag_translation_repository.dart';
+import 'repositories/update_repository.dart';
+import 'core/services/release_link_opener.dart';
 
 final sl = GetIt.instance;
 
@@ -54,6 +56,8 @@ Future<void> _initDependencies() async {
   }
 
   // Repositories
+  sl.registerLazySingleton<UpdateRepository>(() => UpdateRepository());
+  sl.registerLazySingleton<ReleaseLinkOpener>(() => ReleaseLinkOpener());
   sl.registerLazySingleton<GalleryRepository>(
     () => GalleryRepository(sl<DioClient>()),
   );
