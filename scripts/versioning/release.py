@@ -93,16 +93,54 @@ def validate_tag(api, version, build_sha):
     return ref
 
 
+def without_empty_sections(markdown: str) -> str:
+    """Omit empty ATX sections, retaining parents with content and fenced code."""
+    lines = markdown.splitlines(keepends=True)
+    sections = []
+    stack = []
+    fence = None
+    for index, line in enumerate(lines):
+        if fence:
+            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) +
+                            "{" + str(len(fence)) + r",}\s*", line):
+                fence = None
+        else:
+            opening = re.match(r" {0,3}(`{3,}|~{3,})", line)
+            heading = re.match(r" {0,3}(#{1,6})(?:\s+|$)", line)
+            if opening:
+                fence = opening[1]
+            elif heading:
+                level = len(heading[1])
+                while stack and stack[-1]["level"] >= level:
+                    stack.pop()["end"] = index
+                section = {"start": index, "end": len(lines),
+                           "level": level, "content": False}
+                sections.append(section)
+                stack.append(section)
+                continue
+        if line.strip():
+            for section in stack:
+                section["content"] = True
+    removed = set()
+    for section in sections:
+        if not section["content"]:
+            removed.update(range(section["start"], section["end"]))
+    return "".join(line for index, line in enumerate(lines) if index not in removed).strip()
+
+
 def release_notes(candidate, android, ios):
     summary = "\n".join(f"- {item['subject']} ({item['sha'][:8]})" for item in candidate["summary"])
-    notes = candidate["notes"] or "请参阅以下提交摘要。"
-    return (f"{notes}\n\n### 候选变更摘要\n\n{summary or '- 无新增普通提交；请检查合并变更。'}\n\n"
-            f"### 构建来源\n\n候选：`{candidate['candidate_id']}`\n\n提交：`{candidate['build_sha']}`\n\n"
+    notes = without_empty_sections(candidate["notes"])
+    sections = [notes] if notes else []
+    if summary:
+        sections.append(f"### 候选变更摘要\n\n{summary}")
+    sections.append(f"### 构建来源\n\n候选：`{candidate['candidate_id']}`\n\n提交：`{candidate['build_sha']}`\n\n"
             f"- Android run ID: {android['run_id']}（第 {android['run_attempt']} 次运行）\n"
             f"- iOS run ID: {ios['run_id']}（第 {ios['run_attempt']} 次运行）\n\n"
             f"### 校验\n\n- APK SHA-256: `{android['sha256']}`\n- IPA SHA-256: `{ios['sha256']}`\n"
             f"- Android 证书 SHA-256: `{android['signing_cert_sha256']}`\n\n"
-            "### 安装说明\n\nAndroid 使用固定正式签名，相同签名版本可覆盖安装。\n\niOS 为未签名 IPA，需自行签名安装。\n")
+            "### 安装说明\n\nAndroid 使用固定正式签名，相同签名版本可覆盖安装。\n\niOS 为未签名 IPA，需自行签名安装。")
+    return "\n\n".join(sections) + "\n"
 
 
 def check_assets(api, release_id, files):

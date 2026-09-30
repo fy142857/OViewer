@@ -11,8 +11,44 @@ from unittest.mock import patch
 
 from scripts.versioning.analyze import diagnostics, new_diagnostics
 from scripts.versioning.build import inspect_package, metadata
-from scripts.versioning.release import artifact, check_assets, publish, read_build, validate_pair, validate_run, validate_tag
+from scripts.versioning.release import artifact, check_assets, publish, read_build, release_notes, validate_pair, validate_run, validate_tag, without_empty_sections
 from scripts.versioning.rules import VersionError
+
+
+class ReleaseNotesTests(unittest.TestCase):
+    def test_empty_sections_between_and_after_content_are_omitted(self):
+        text = "### 新增\n\n- 检查更新\n\n### 变更\n \t\n### 修复\n\n- 修复搜索\n\n### 已知限制\n"
+        self.assertEqual(without_empty_sections(text),
+                         "### 新增\n\n- 检查更新\n\n### 修复\n\n- 修复搜索")
+
+    def test_nested_sections_keep_parents_only_when_they_have_content(self):
+        text = "Introduction\n\n## Empty\n### Empty child\n\n## Kept\n### Empty child\n### Detail\nContent\n"
+        self.assertEqual(without_empty_sections(text),
+                         "Introduction\n\n## Kept\n### Detail\nContent")
+
+    def test_fenced_headings_and_content_are_preserved(self):
+        for fence in ("```", "~~~~"):
+            text = f"### Example\n\n{fence}text\n### Not a heading\n\nbody\n{fence}\n\n### Empty\n"
+            self.assertEqual(without_empty_sections(text), text.split("\n\n### Empty")[0])
+
+    def test_plain_text_and_nonempty_markdown_are_unchanged(self):
+        for text in ("A paragraph", "### 已知限制\n\n- iOS 需自行签名", "### Fix\n\n> A quote\n\nParagraph"):
+            self.assertEqual(without_empty_sections(text), text)
+
+    def test_generated_notes_omit_empty_categories_and_summary(self):
+        candidate = {"notes": "### 变更\n\n### 已知限制\n", "summary": [],
+                     "candidate_id": "1.2.0+32", "build_sha": "a" * 40}
+        android = {"run_id": 1, "run_attempt": 1, "sha256": "apk", "signing_cert_sha256": "cert"}
+        ios = {"run_id": 2, "run_attempt": 1, "sha256": "ipa"}
+        for notes in ("", "   ", candidate["notes"]):
+            result = release_notes({**candidate, "notes": notes}, android, ios)
+            self.assertTrue(result.startswith("### 构建来源\n"))
+            for heading in ("### 变更", "### 已知限制", "### 候选变更摘要"):
+                self.assertNotIn(heading, result)
+            self.assertIn("### 校验", result)
+            self.assertIn("### 安装说明", result)
+        candidate["summary"] = [{"subject": "fix: release notes", "sha": "b" * 40}]
+        self.assertIn("### 候选变更摘要\n\n- fix: release notes (bbbbbbbb)", release_notes(candidate, android, ios))
 
 
 class PackageTests(unittest.TestCase):
