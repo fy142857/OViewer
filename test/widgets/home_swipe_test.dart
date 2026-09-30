@@ -488,6 +488,8 @@ void main() {
         await frames(tester);
       }
       expect(history.state.status, HistoryStatus.loading);
+      expect(find.text('Loading history…'), findsOneWidget);
+      expect(find.text('No reading history'), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.byType(RefreshIndicator), findsOneWidget);
       first.complete([]);

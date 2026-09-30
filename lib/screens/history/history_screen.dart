@@ -75,12 +75,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Icon(Icons.history,
                         size: 64, color: theme.colorScheme.outline),
                     const SizedBox(height: 16),
-                    Text(s.noReadingHistory, style: theme.textTheme.bodyLarge),
-                    const SizedBox(height: 4),
                     Text(
-                      s.galleriesWillAppear,
-                      style: theme.textTheme.bodySmall,
+                      state.status == HistoryStatus.loaded
+                          ? s.noReadingHistory
+                          : state.status == HistoryStatus.error
+                              ? s.failedToLoad
+                              : s.loadingHistory,
+                      style: theme.textTheme.bodyLarge,
                     ),
+                    if (state.status == HistoryStatus.loaded) ...[
+                      const SizedBox(height: 4),
+                      Text(s.galleriesWillAppear,
+                          style: theme.textTheme.bodySmall),
+                    ],
                   ],
                 ),
               ))

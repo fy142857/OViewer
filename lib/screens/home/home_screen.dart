@@ -423,15 +423,21 @@ class _HomeScreenState extends State<HomeScreen>
                     Icon(Icons.history,
                         size: 64, color: theme.colorScheme.outline),
                     const SizedBox(height: 16),
-                    Text(s.noHistoryRecords,
-                        style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
                     Text(
-                      s.historyHint,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                      state.status == HistoryStatus.loaded
+                          ? s.noHistoryRecords
+                          : state.status == HistoryStatus.error
+                              ? s.failedToLoad
+                              : s.loadingHistory,
+                      style: theme.textTheme.titleMedium,
                     ),
+                    if (state.status == HistoryStatus.loaded) ...[
+                      const SizedBox(height: 8),
+                      Text(s.historyHint,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          )),
+                    ],
                   ],
                 ),
               ))

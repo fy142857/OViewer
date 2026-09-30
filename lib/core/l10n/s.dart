@@ -50,6 +50,7 @@ class S {
   String get settings => _zh ? '设置' : 'Settings';
 
   // ---- Home History Tab ----
+  String get loadingHistory => _zh ? '正在读取历史记录…' : 'Loading history…';
   String get noHistoryRecords => _zh ? '暂无浏览记录' : 'No reading history';
   String get historyHint => _zh ? '浏览过的画廊将出现在此处' : 'Galleries you visit will appear here';
   String get clearHistory => _zh ? '清空浏览记录' : 'Clear History';

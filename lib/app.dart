@@ -9,6 +9,7 @@ import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_event.dart';
 import 'blocs/favorites/favorites_bloc.dart';
 import 'blocs/history/history_bloc.dart';
+import 'blocs/history/history_event.dart';
 import 'blocs/settings/settings_bloc.dart';
 import 'blocs/settings/settings_event.dart';
 import 'blocs/settings/settings_state.dart';
@@ -37,7 +38,8 @@ class OViewerApp extends StatelessWidget {
           create: (_) => FavoritesBloc(sl<FavoritesRepository>()),
         ),
         BlocProvider(
-          create: (_) => HistoryBloc(sl<HistoryRepository>()),
+          lazy: false,
+          create: (_) => HistoryBloc(sl<HistoryRepository>())..add(LoadHistory()),
         ),
         BlocProvider(
           create: (_) => SettingsBloc(sl<SettingsRepository>())
