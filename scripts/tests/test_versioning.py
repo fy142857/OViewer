@@ -7,7 +7,11 @@ from pathlib import Path
 
 from scripts.versioning.github import GitHub
 from scripts.versioning.prepare import Ledger, prepare
-from scripts.versioning.rules import Commit, Git, VersionError, next_version, package_version, reusable_candidate, with_version
+from scripts.versioning.rules import CORRECTIONS_PATH, Commit, Git, VersionError, load_corrections, next_version, package_version, reusable_candidate, with_version
+
+
+def classified(message, kind):
+    return message + f"\n\nChange-Kind: {kind}\nChange-Reason: reviewed behavior and compatibility\n"
 
 
 class RulesTests(unittest.TestCase):
@@ -15,29 +19,94 @@ class RulesTests(unittest.TestCase):
         return next_version("1.2.3", [Commit(str(i), m, ("lib/a.dart",)) for i, m in enumerate(messages)], set())[0]
 
     def test_highest_level_wins(self):
-        self.assertEqual(self.calculate("fix: a", "feat(reader): b", "perf: c"), "1.3.0")
+        self.assertEqual(self.calculate(classified("fix: a", "fix"), classified("feat(reader): b", "feature"), classified("perf: c", "performance")), "1.3.0")
 
     def test_breaking_forms(self):
         for message in ("fix!: a", "feat(reader)!: b", "chore: c\n\nBREAKING CHANGE: data migration", "fix: d\n\nBREAKING-CHANGE: remove format"):
             with self.subTest(message=message):
-                self.assertEqual(self.calculate(message), "2.0.0")
+                self.assertEqual(self.calculate(classified(message, "breaking")), "2.0.0")
 
     def test_patch_types(self):
         for kind in ("fix", "perf", "build", "ci", "test", "chore", "refactor", "revert", "style", "docs"):
-            self.assertEqual(self.calculate(f"{kind}: effective change"), "1.2.4")
+            self.assertEqual(self.calculate(classified(f"{kind}: effective change", "maintenance")), "1.2.4")
 
     def test_multiple_fixes_do_not_accumulate(self):
-        self.assertEqual(self.calculate("fix: one", "fix: two"), "1.2.4")
+        self.assertEqual(self.calculate(classified("fix: one", "fix"), classified("fix: two", "fix")), "1.2.4")
 
     def test_source_named_license_is_not_mistaken_for_a_license_document(self):
-        version, summary = next_version("1.0.0", [Commit("new", "feat: license settings", ("lib/license_settings.dart",))], set())
+        version, summary = next_version("1.0.0", [Commit("new", classified("feat: license settings", "feature"), ("lib/license_settings.dart",))], set())
         self.assertEqual(version, "1.1.0")
         self.assertEqual(len(summary), 1)
 
     def test_invalid_commit_identified_even_if_documentation_only(self):
-        for message in ("Fix bug", "unknown: x", "feat:", "fix: "):
+        for message in ("", "Fix bug", "unknown: x", "feat:", "fix: "):
             with self.assertRaisesRegex(VersionError, "bad-sha"):
                 next_version("1.0.0", [Commit("bad-sha", message, ("README.md",))], set())
+
+    def test_prefix_alone_cannot_silently_select_a_version(self):
+        for message in ("feat: tweak update dialog", "fix: new module", "perf: speed up", "fix!: remove format"):
+            with self.subTest(message=message), self.assertRaisesRegex(VersionError, "Change-Kind"):
+                self.calculate(message)
+
+    def test_actual_reviewed_scope_controls_version_even_when_prefix_is_wrong(self):
+        self.assertEqual(self.calculate(classified("feat: change existing update confirmation", "fix")), "1.2.4")
+        self.assertEqual(self.calculate(classified("feat: polish an existing flow", "enhancement")), "1.2.4")
+        self.assertEqual(self.calculate(classified("fix: introduce a standalone reader", "feature")), "1.3.0")
+        self.assertEqual(self.calculate(classified("refactor: organize code", "maintenance")), "1.2.4")
+
+    def test_invalid_missing_duplicate_or_incompatible_classifications_stop(self):
+        for message in (
+            "feat: a\n\nChange-Kind: feature", "feat: a\n\nChange-Kind: unknown\nChange-Reason: why",
+            classified("feat: a", "feature") + "Change-Kind: fix\n",
+            classified("feat: a", "feature") + "Change-Reason: another\n",
+            classified("fix!: removes stored data", "fix"),
+            classified("fix: no compatibility declaration", "breaking"),
+            "fix: a\n\nChange-Kind: fix\nChange-Reason:   "):
+            with self.subTest(message=message), self.assertRaises(VersionError):
+                self.calculate(message)
+
+    def test_tooling_only_is_not_an_application_feature(self):
+        commit = Commit("tools", classified("feat: new build helper", "feature"), ("scripts/versioning/build.py", "test/a.dart"))
+        with self.assertRaisesRegex(VersionError, "tooling/test-only"):
+            next_version("1.3.0", [commit], set())
+        self.assertEqual(next_version("1.3.0", [Commit("tools", classified("fix: build helper", "maintenance"), commit.paths)], set())[0], "1.3.1")
+
+    def test_classification_handles_crlf_and_records_audit_fields(self):
+        message = classified("feat: existing-flow adjustment", "enhancement").replace("\n", "\r\n")
+        version, summary = next_version("1.3.0", [Commit("change", message, ("lib/app.dart",))], set())
+        self.assertEqual(version, "1.3.1")
+        self.assertEqual(summary[0]["original_type"], "feat")
+        self.assertEqual(summary[0]["type"], "fix")
+        self.assertEqual(summary[0]["version_impact"], "patch")
+        self.assertEqual(summary[0]["classification_source"], "commit-trailers")
+
+    def test_exact_commit_correction_does_not_suppress_other_features(self):
+        sha = "a" * 40
+        correction = {"base_tag": "v1.3.0", "commit": sha, "kind": "fix", "reason": "Existing update-flow correction"}
+        old = Commit(sha, "feat(settings): confirm updates", ("lib/app.dart",))
+        version, summary = next_version("1.3.0", [old], set(), [correction])
+        self.assertEqual(version, "1.3.1")
+        self.assertEqual(summary[0]["classification_source"], "correction")
+        feature = Commit("b" * 40, classified("feat: new reader mode", "feature"), ("lib/reader.dart",))
+        self.assertEqual(next_version("1.3.0", [old, feature], set(), [correction])[0], "1.4.0")
+        with self.assertRaisesRegex(VersionError, "Corrections must target"):
+            next_version("1.3.0", [feature], set(), [correction])
+        breaking = Commit(sha, "feat!: remove format", ("lib/app.dart",))
+        with self.assertRaisesRegex(VersionError, "cannot be downgraded"):
+            next_version("1.3.0", [breaking], set(), [correction])
+        self.assertEqual(next_version("1.4.0", [], set(), [correction])[1], [])
+
+    def test_correction_schema_rejects_ambiguous_records(self):
+        item = {"base_tag": "v1.3.0", "commit": "a" * 40, "kind": "fix", "reason": "Reviewed"}
+        self.assertEqual(load_corrections(None), [])
+        self.assertEqual(load_corrections(json.dumps({"schema": 1, "corrections": [item]})), [item])
+        invalid = ["not json", {}, {"schema": 2, "corrections": []},
+                   {"schema": 1, "corrections": [item, item]}]
+        for updates in ({"commit": "short"}, {"reason": " "}, {"kind": "patch"}, {"base_tag": "main"}, {"extra": True}):
+            invalid.append({"schema": 1, "corrections": [{**item, **updates}]})
+        for value in invalid:
+            with self.subTest(value=value), self.assertRaises(VersionError):
+                load_corrections(json.dumps(value))
 
     def test_registered_automation_and_merges_are_ignored(self):
         commits = [Commit("auto", "unusual registered version commit", ("pubspec.yaml",)), Commit("merge", "Merge branch dev", (), True), Commit("docs", "feat!: documentation", ("docs/README.md", "LICENSE"))]
@@ -115,6 +184,12 @@ class GitIdentityTests(unittest.TestCase):
         source = self.commit("fix: squash")
         self.assertIsNone(reusable_candidate([record], fingerprint, source, "v1.0.0", self.git))
 
+    def test_candidate_reuse_requires_the_newly_classified_version(self):
+        record = {"build_number": 40, "build_sha": self.base, "base_tag": "v1.0.0",
+                  "version": "1.1.0", "fingerprint": self.git.fingerprint(self.base), "stage": "ready"}
+        self.assertEqual(reusable_candidate([record], record["fingerprint"], self.base, "v1.0.0", self.git, "1.1.0"), record)
+        self.assertIsNone(reusable_candidate([record], record["fingerprint"], self.base, "v1.0.0", self.git, "1.0.1"))
+
     def test_branch_missing_stable_is_rejected(self):
         self.write("lib/app.dart", "new stable")
         stable = self.commit("fix: stable")
@@ -127,7 +202,10 @@ class FakeGit:
         return b""
 
     def commits(self, base, source):
-        return [Commit(source, "fix: something", ("lib/app.dart",))]
+        return [Commit(source, classified("fix: something", "fix"), ("lib/app.dart",))]
+
+    def optional_file(self, ref, path):
+        return None
 
     def fingerprint(self, ref):
         return "base" if ref.startswith("v") else "changed"
@@ -183,6 +261,34 @@ class FakeAPI:
 
 
 class TransactionTests(unittest.TestCase):
+    def test_check_only_reviews_local_changes_without_writing_refs_or_ledger(self):
+        api = FakeAPI()
+        before = copy.deepcopy(api.refs)
+        review = prepare(api, FakeGit(), "dev", "b" * 40, check_only=True)
+        self.assertEqual(review["version"], "1.0.1")
+        self.assertTrue(review["will_allocate"])
+        self.assertEqual(api.refs, before)
+        self.assertEqual(api.objects, {})
+
+    def test_correction_creates_a_new_increasing_candidate_not_a_rewritten_old_one(self):
+        api, git = FakeAPI(), FakeGit()
+        source = api.source
+        correction = {"base_tag": "v1.0.0", "commit": source, "kind": "fix", "reason": "Existing feature adjustment"}
+        ledger = Ledger(api)
+        old = {"candidate_id": "1.1.0+40", "version": "1.1.0", "build_number": 40,
+               "source_sha": "b" * 40, "build_sha": "c" * 40, "branch": "dev", "base_tag": "v1.0.0",
+               "fingerprint": "changed", "stage": "ready"}
+        ledger.data.update(last_build_number=40, candidates=[old])
+        ledger.save()
+        git.commits = lambda base, ref: [Commit(source, "feat: existing flow", ("lib/app.dart",))]
+        git.optional_file = lambda ref, path: json.dumps({"schema": 1, "corrections": [correction]})
+        candidate = prepare(api, git, "dev", source)
+        self.assertEqual(candidate["candidate_id"], "1.0.1+41")
+        records = Ledger(api).data["candidates"]
+        self.assertEqual(records[0], old)
+        self.assertEqual(len(records), 2)
+        self.assertEqual(candidate["summary"][0]["change_kind"], "fix")
+
     def test_new_candidate_records_source_notes_and_common_version(self):
         api = FakeAPI()
         candidate = prepare(api, FakeGit(), "dev", api.source)

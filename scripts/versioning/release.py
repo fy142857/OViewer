@@ -15,7 +15,7 @@ import zipfile
 from .build import candidate_by_id, certificate, file_digest, inspect_package
 from .github import GitHub, json_text
 from .prepare import stable_release
-from .rules import CANDIDATE_PATH, Git, VersionError, package_version, version_tuple
+from .rules import CANDIDATE_PATH, CORRECTIONS_PATH, CHANGE_LEVELS, IMPACTS, Git, VersionError, load_corrections, package_version, version_tuple
 
 FILENAMES = {"android": "app-release.apk", "ios": "OViewer.ipa"}
 RELEASE_FILENAMES = {"android": "OViewer.apk", "ios": "OViewer.ipa"}
@@ -81,6 +81,17 @@ def validate_pair(android, ios, candidate, version):
     require(version == "v" + candidate["version"], "Release version does not match the candidate")
 
 
+def validate_classification_corrections(candidate, corrections):
+    summary = {item["sha"]: item for item in candidate["summary"]}
+    for correction in corrections:
+        if correction["base_tag"] != candidate["base_tag"] or correction["commit"] not in summary:
+            continue
+        change = summary[correction["commit"]]
+        require(change.get("change_kind") == correction["kind"] and
+                change.get("version_impact") == IMPACTS[CHANGE_LEVELS[correction["kind"]]],
+                "Candidate classification was corrected; use the newly prepared candidate, not the obsolete installer")
+
+
 def validate_tag(api, version, build_sha):
     ref = api.optional("/git/ref/tags/" + urllib.parse.quote(version, safe=""))
     if ref:
@@ -129,7 +140,11 @@ def without_empty_sections(markdown: str) -> str:
 
 
 def release_notes(candidate, android, ios):
-    summary = "\n".join(f"- {item['subject']} ({item['sha'][:8]})" for item in candidate["summary"])
+    summary = "\n".join(
+        f"- {item['subject']} ({item['sha'][:8]})" +
+        (f" [版本分类已纠正为 {item['change_kind']} / {item['version_impact']}]"
+         if item.get("classification_source") == "correction" else "")
+        for item in candidate["summary"])
     notes = without_empty_sections(candidate["notes"])
     sections = [notes] if notes else []
     if summary:
@@ -205,6 +220,8 @@ def release(api, git, version, android_run_id, ios_run_id, check_only=True):
         ios, ipa = read_build(api, "ios", ios_run_id, folder)
         candidate = candidate_by_id(api, android["candidate_id"])
         validate_pair(android, ios, candidate, version)
+        validate_classification_corrections(candidate,
+            load_corrections(git.optional_file("origin/main", CORRECTIONS_PATH)))
         git.run("fetch", "origin", candidate["build_sha"])
         require(git.ancestor(candidate["build_sha"], "origin/main"), "Candidate commit is not contained in main")
         require(git.ancestor(latest["tag_name"], candidate["build_sha"]), "Candidate does not include latest stable release")

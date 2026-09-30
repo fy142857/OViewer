@@ -7,7 +7,7 @@ import os
 import re
 
 from .github import GitHub, json_text
-from .rules import CANDIDATE_PATH, Git, VersionError, next_version, package_version, reusable_candidate, version_tuple, with_version
+from .rules import CANDIDATE_PATH, CORRECTIONS_PATH, Git, VersionError, load_corrections, next_version, package_version, reusable_candidate, version_tuple, with_version
 
 LEDGER_BRANCH = "version-state"
 LEDGER_PATH = "ledger.json"
@@ -38,26 +38,33 @@ def stable_release(api: GitHub) -> dict:
     return max(releases, key=lambda r: version_tuple(r["tag_name"][1:]))
 
 
-def prepare(api: GitHub, git: Git, branch: str, source: str) -> dict | None:
+def prepare(api: GitHub, git: Git, branch: str, source: str, check_only: bool = False) -> dict | None:
     if branch not in {"dev", "main"} or not re.fullmatch(r"[0-9a-f]{40}", source):
         raise VersionError("Only exact commits on dev/main can prepare candidates")
     ledger = Ledger(api)
     base = stable_release(api)["tag_name"]
     git.run("fetch", "origin", f"refs/tags/{base}:refs/tags/{base}", f"refs/heads/{branch}:refs/remotes/origin/{branch}")
     # A retried run may point at the source immediately before our version commit.
-    for candidate in ledger.data["candidates"]:
+    for candidate in (() if check_only else ledger.data["candidates"]):
         if candidate["source_sha"] == source and candidate["branch"] == branch and candidate["base_tag"] == base:
             return finish(api, ledger, candidate)
-    if api.ref(branch) != source:
+    if not check_only and api.ref(branch) != source:
         raise VersionError("Source branch advanced; stop this stale preparation")
     commits = git.commits(base, source)
     fingerprint = git.fingerprint(source)
     registered = {c["build_sha"] for c in ledger.data["candidates"]}
-    version, summary = next_version(base[1:], commits, registered)
-    candidate = reusable_candidate(ledger.data["candidates"], fingerprint, source, base, git)
+    corrections = load_corrections(git.optional_file(source, CORRECTIONS_PATH))
+    version, summary = next_version(base[1:], commits, registered, corrections)
+    candidate = reusable_candidate(ledger.data["candidates"], fingerprint, source, base, git, version)
+    unchanged = fingerprint == git.fingerprint(base)
+    if check_only:
+        return {"base_tag": base, "source_sha": source,
+                "version": base[1:] if unchanged else version, "summary": summary,
+                "will_allocate": not unchanged and candidate is None,
+                "reused_candidate": candidate["candidate_id"] if candidate else None}
     if candidate:
         return candidate
-    if fingerprint == git.fingerprint(base):
+    if unchanged:
         return None
     # A docs-only change after an existing candidate uses the ancestor above;
     # an unchanged release tree does not allocate even on manual dispatch.
@@ -108,8 +115,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--branch", required=True)
     parser.add_argument("--source", required=True)
+    parser.add_argument("--check-only", action="store_true", help="Review classifications without allocating or dispatching a candidate")
     args = parser.parse_args()
-    candidate = prepare(GitHub(), Git(), args.branch, args.source)
+    candidate = prepare(GitHub(), Git(), args.branch, args.source, args.check_only)
+    if args.check_only:
+        print(json_text(candidate))
+        return
     output = {"candidate_id": candidate["candidate_id"] if candidate else "", "build_sha": candidate["build_sha"] if candidate else ""}
     print(json_text(output))
     if os.environ.get("GITHUB_OUTPUT"):

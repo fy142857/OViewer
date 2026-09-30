@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from scripts.versioning.analyze import diagnostics, new_diagnostics
 from scripts.versioning.build import inspect_package, metadata
-from scripts.versioning.release import artifact, check_assets, publish, read_build, release_notes, validate_pair, validate_run, validate_tag, without_empty_sections
+from scripts.versioning.release import artifact, check_assets, publish, read_build, release_notes, validate_classification_corrections, validate_pair, validate_run, validate_tag, without_empty_sections
 from scripts.versioning.rules import VersionError
 
 
@@ -49,6 +49,8 @@ class ReleaseNotesTests(unittest.TestCase):
             self.assertIn("### 安装说明", result)
         candidate["summary"] = [{"subject": "fix: release notes", "sha": "b" * 40}]
         self.assertIn("### 候选变更摘要\n\n- fix: release notes (bbbbbbbb)", release_notes(candidate, android, ios))
+        candidate["summary"][0].update(classification_source="correction", change_kind="fix", version_impact="patch")
+        self.assertIn("[版本分类已纠正为 fix / patch]", release_notes(candidate, android, ios))
 
 
 class PackageTests(unittest.TestCase):
@@ -83,6 +85,16 @@ class PackageTests(unittest.TestCase):
 
 
 class ReleaseGuards(unittest.TestCase):
+    def test_superseded_classification_cannot_publish_an_old_installer(self):
+        sha = "a" * 40
+        correction = {"base_tag": "v1.3.0", "commit": sha, "kind": "fix", "reason": "User correction"}
+        candidate = {"base_tag": "v1.3.0", "summary": [{"sha": sha, "type": "feat"}]}
+        with self.assertRaisesRegex(VersionError, "classification was corrected"):
+            validate_classification_corrections(candidate, [correction])
+        candidate["summary"][0].update(change_kind="fix", version_impact="patch")
+        validate_classification_corrections(candidate, [correction])
+        validate_classification_corrections({"base_tag": "v1.4.0", "summary": []}, [correction])
+
     def setUp(self):
         self.run = {"id": 42, "run_attempt": 2, "workflow_id": 3, "repository": {"full_name": "owner/repo"}, "head_repository": {"full_name": "owner/repo"}, "status": "completed", "conclusion": "success", "event": "workflow_dispatch", "pull_requests": []}
 

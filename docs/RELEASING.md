@@ -6,7 +6,9 @@
 
 按维护者约定，后续由自动化助手完成的改动，在完成必要检查后自动提交并推送至 `dev`，无需逐次确认。仅提交本次任务的改动；用户另有明确指示时以该指示为准。此约定不包含正式发布授权。
 
-向 `dev` 提交时使用 Conventional Commits，例如 `fix: 修复图片重试`、`feat: 增加阅读选项`。有效变更会启动 **Prepare candidate**，生成如 `1.0.1+2` 的候选，写回版本并触发 Android/iOS 两次构建。仅文档变更不分配新号。
+向 `dev` 提交时使用 Conventional Commits。涉及有效文件的提交必须附带 `Change-Kind` 和 `Change-Reason` 正文项，先按[实际改动分类规则](VERSION_MANAGEMENT.md#应用版本号)区分不兼容变更、新独立能力、修复及原有功能调整；仅有 `feat` 前缀不再直接升级次版本。已有检查更新流程的确认弹窗、提示与持久化调整按 `fix` 处理。有效变更会启动 **Prepare candidate**，生成如 `1.0.1+2` 的候选，写回版本并触发 Android/iOS 两次构建。仅文档变更不分配新号，也无需分类正文项。
+
+正式推送前可用 `python -m scripts.versioning.prepare --branch dev --source <完整提交SHA> --check-only` 核对计划版本及分类；它不分配候选。发现已推送提交误标时，使用 `.release/change-classifications.json` 为精确 SHA 记录正确类别和理由，通过新的候选纠正，不重写原提交或手改版本号。旧候选如不符合当前纠正记录，将被正式发布校验拒绝。
 
 **每次推送后必须检查自动版本提交并同步本地，不能等到下一次修改前才拉取。** 对本次推送的源提交检查 **Prepare candidate**：若正在排队或执行，等待其结束；若因仅修改文档等路径规则未触发，明确确认这一情况。随后执行 `git fetch origin dev main`，在所推送分支上执行对应的 `git pull --ff-only origin dev` 或 `git pull --ff-only origin main`，将远程最新提交（包括自动版本号和候选记录）拉回本地，并确认本地分支与对应远程跟踪分支的差异为 `0 0`。不要重写候选提交，也不要手动改构建号。
 
