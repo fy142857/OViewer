@@ -64,7 +64,10 @@ class S {
   // ---- Settings Screen ----
   String get checkUpdate => _zh ? '检查更新' : 'Check for updates';
   String get checkingUpdate => _zh ? '正在检查更新…' : 'Checking for updates…';
-  String get checkUpdateHint => _zh ? '有新版本时在浏览器中打开发布页' : 'Open the release in your browser when an update is available';
+  String get checkUpdateHint => _zh ? '检查最新正式版本' : 'Check for the latest release';
+  String get updateAvailable => _zh ? '已有新版本' : 'Update available';
+  String updateInstallPrompt(String version) => _zh ? '最新版本为 $version，点击安装' : 'The latest version is $version. Click to install.';
+  String get updateStorageFailed => _zh ? '无法保存更新提示，请重试' : 'Could not save the update reminder. Please retry';
   String get versionCurrent => _zh ? '当前已是最新版本' : 'You are on the latest version';
   String get versionAhead => _zh ? '当前版本高于最新正式版' : 'Your version is newer than the latest release';
   String get noReleaseAvailable => _zh ? '暂无可用正式版本' : 'No release is available yet';

@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:oviewer/repositories/update_repository.dart';
+import 'package:oviewer/core/storage/local_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Map<String, dynamic> release({String tag = 'v1.2.0'}) => {
       'tag_name': tag,
@@ -23,7 +25,141 @@ class TrackingClient extends MockClient {
   }
 }
 
+class UnwritableStorage extends LocalStorage {
+  @override
+  String? getLatestReleaseVersion() => null;
+  @override
+  Future<void> setLatestReleaseVersion(String? version) async {
+    throw StateError('Preferences unavailable');
+  }
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('detection is persisted and restored without a network request',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = LocalStorage();
+    await storage.init();
+    final repo = UpdateRepository(
+        storage: storage,
+        readVersion: () async => '1.0.0',
+        clientFactory: () =>
+            MockClient((_) async => http.Response(jsonEncode(release()), 200)));
+    expect((await repo.check().result).status, UpdateStatus.available);
+    expect(storage.getLatestReleaseVersion(), '1.2.0');
+    final restoredStorage = LocalStorage();
+    await restoredStorage.init();
+    final restored = UpdateRepository(
+        storage: restoredStorage,
+        readVersion: () async => '1.0.0',
+        clientFactory: () => throw StateError('Must not request network'));
+    await restored.restoreUpdateStatus();
+    expect(restored.updateAvailable, isTrue);
+  });
+
+  for (final sample in [
+    ('1.1.9', true),
+    ('1.2.0', false),
+    ('1.2.0+99', false),
+    ('1.2.1', false),
+    ('2.0.0', false)
+  ]) {
+    test('saved reminder reconciles offline with installed ${sample.$1}',
+        () async {
+      SharedPreferences.setMockInitialValues(
+          {'latest_release_version': '1.2.0'});
+      final storage = LocalStorage();
+      await storage.init();
+      final repo = UpdateRepository(
+          storage: storage,
+          readVersion: () async => sample.$1,
+          clientFactory: () => throw StateError('Must not request network'));
+      await repo.restoreUpdateStatus();
+      expect(repo.updateAvailable, sample.$2);
+      expect(storage.getLatestReleaseVersion(), sample.$2 ? '1.2.0' : null);
+    });
+  }
+
+  for (final code in [200, 404, 403, 429, 500]) {
+    test('HTTP $code preserves a previously detected update', () async {
+      SharedPreferences.setMockInitialValues(
+          {'latest_release_version': '1.2.0'});
+      final storage = LocalStorage();
+      await storage.init();
+      final repo = UpdateRepository(
+          storage: storage,
+          readVersion: () async => '1.0.0',
+          clientFactory: () =>
+              MockClient((_) async => http.Response('', code)));
+      if (code == 404) {
+        expect((await repo.check().result).status, UpdateStatus.noRelease);
+      } else {
+        await expectLater(
+            repo.check().result, throwsA(isA<UpdateCheckException>()));
+      }
+      expect(repo.updateAvailable, isTrue);
+      expect(storage.getLatestReleaseVersion(), '1.2.0');
+    });
+  }
+
+  test('package lookup failure preserves the badge and can recover on retry',
+      () async {
+    SharedPreferences.setMockInitialValues({'latest_release_version': '1.2.0'});
+    final storage = LocalStorage();
+    await storage.init();
+    var fail = true;
+    final repo = UpdateRepository(
+        storage: storage,
+        readVersion: () async {
+          if (fail) throw StateError('temporarily unavailable');
+          return '1.2.0';
+        },
+        clientFactory: () =>
+            MockClient((_) async => http.Response(jsonEncode(release()), 200)));
+    await repo.restoreUpdateStatus();
+    expect(repo.updateAvailable, isTrue);
+    fail = false;
+    expect((await repo.check().result).status, UpdateStatus.current);
+    expect(repo.updateAvailable, isFalse);
+    expect(storage.getLatestReleaseVersion(), isNull);
+  });
+
+  test(
+      'a newer detection replaces the stored threshold instead of clearing it on any upgrade',
+      () async {
+    SharedPreferences.setMockInitialValues({'latest_release_version': '1.2.0'});
+    final storage = LocalStorage();
+    await storage.init();
+    final repo = UpdateRepository(
+        storage: storage,
+        readVersion: () async => '1.0.0',
+        clientFactory: () => MockClient((_) async =>
+            http.Response(jsonEncode(release(tag: 'v1.3.0')), 200)));
+    await repo.check().result;
+    expect(storage.getLatestReleaseVersion(), '1.3.0');
+    final partialUpgrade =
+        UpdateRepository(storage: storage, readVersion: () async => '1.2.0');
+    await partialUpgrade.restoreUpdateStatus();
+    expect(partialUpgrade.updateAvailable, isTrue);
+    expect(storage.getLatestReleaseVersion(), '1.3.0');
+  });
+
+  test('storage failures are distinguished from network and response errors',
+      () async {
+    final repo = UpdateRepository(
+        storage: UnwritableStorage(),
+        readVersion: () async => '1.0.0',
+        clientFactory: () =>
+            MockClient((_) async => http.Response(jsonEncode(release()), 200)));
+    await expectLater(
+        repo.check().result,
+        throwsA(isA<UpdateCheckException>()
+            .having((e) => e.failure, 'failure', UpdateFailure.storage)));
+    expect(repo.updateAvailable, isTrue);
+  });
+
   for (final sample in [
     ('1.2.0', 'v1.2.0', UpdateStatus.current),
     ('1.2.0+31', '1.2.0+32', UpdateStatus.current),

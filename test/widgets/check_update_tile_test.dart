@@ -10,6 +10,8 @@ import 'package:oviewer/blocs/settings/settings_bloc.dart';
 import 'package:oviewer/blocs/settings/settings_state.dart';
 import 'package:oviewer/repositories/update_repository.dart';
 import 'package:oviewer/widgets/check_update_tile.dart';
+import 'package:oviewer/core/storage/local_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../repositories/update_repository_test.dart'
     show TrackingClient, release;
@@ -31,7 +33,7 @@ Widget app(UpdateRepository repo, Future<bool> Function(Uri) open,
 
 void main() {
   testWidgets(
-      'only checks on tap, prevents duplicates, opens exact release once',
+      'only checks on tap, prevents duplicates, opens exact release only after confirmation',
       (tester) async {
     final pending = Completer<http.Response>();
     var requests = 0;
@@ -54,7 +56,15 @@ void main() {
     expect(requests, 1);
     pending.complete(http.Response(jsonEncode(release()), 200));
     await tester.pumpAndSettle();
+    expect(opened, isEmpty);
+    expect(find.text('最新版本为 1.2.0，点击安装'), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('update-available-badge')), findsOneWidget);
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
     expect(opened.single.toString(), release()['html_url']);
+    expect(
+        find.byKey(const ValueKey('update-available-badge')), findsOneWidget);
     expect(client.closes, 1);
   });
 
@@ -111,11 +121,95 @@ void main() {
     await tester.pumpWidget(app(repo, (_) async => ++opens > 1));
     await tester.tap(find.text('检查更新'));
     await tester.pumpAndSettle();
+    expect(opens, 0);
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
     expect(find.text('无法打开浏览器，请重试'), findsOneWidget);
     await tester.tap(find.text('重新打开'));
     await tester.pumpAndSettle();
     expect(opens, 2);
     expect(requests, 1);
+  });
+
+  for (final locale in ['zh', 'en']) {
+    testWidgets(
+        'cancel keeps a purple reminder across recreation and an upgrade clears it ($locale)',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      SharedPreferences.setMockInitialValues({});
+      final storage = LocalStorage();
+      await storage.init();
+      var requests = 0;
+      var opens = 0;
+      UpdateRepository repository(String installed) => UpdateRepository(
+            storage: storage,
+            readVersion: () async => installed,
+            clientFactory: () => TrackingClient((_) async {
+              requests++;
+              return http.Response(jsonEncode(release()), 200);
+            }),
+          );
+      Future<bool> open(Uri _) async {
+        opens++;
+        return true;
+      }
+
+      await tester.pumpWidget(app(repository('1.0.0'), open, locale: locale));
+      await tester.pumpAndSettle();
+      expect(requests, 0);
+      await tester.tap(find.byKey(const ValueKey('check-update')));
+      await tester.pumpAndSettle();
+      expect(
+          find.text(locale == 'zh'
+              ? '最新版本为 1.2.0，点击安装'
+              : 'The latest version is 1.2.0. Click to install.'),
+          findsOneWidget);
+      expect(opens, 0);
+      await tester.tap(find.text(locale == 'zh' ? '取消' : 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(opens, 0);
+      expect(storage.getLatestReleaseVersion(), '1.2.0');
+      final badge = find.byKey(const ValueKey('update-available-badge'));
+      expect(tester.widget<Text>(badge).style!.color, Colors.purple);
+      expect(tester.widget<Text>(badge).data,
+          locale == 'zh' ? '已有新版本' : 'Update available');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(app(repository('1.0.0'), open, locale: locale));
+      await tester.pumpAndSettle();
+      expect(badge, findsOneWidget);
+      expect(requests, 1);
+      expect(opens, 0);
+      expect(find.byType(AlertDialog), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(app(repository('1.2.0'), open, locale: locale));
+      await tester.pumpAndSettle();
+      expect(badge, findsNothing);
+      expect(storage.getLatestReleaseVersion(), isNull);
+      expect(requests, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('failed check does not dismiss a saved update reminder',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({'latest_release_version': '1.2.0'});
+    final storage = LocalStorage();
+    await storage.init();
+    final repo = UpdateRepository(
+        storage: storage,
+        readVersion: () async => '1.0.0',
+        clientFactory: () =>
+            TrackingClient((_) async => http.Response('', 500)));
+    await tester.pumpWidget(app(repo, (_) async => true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('check-update')));
+    await tester.pumpAndSettle();
+    expect(
+        find.byKey(const ValueKey('update-available-badge')), findsOneWidget);
+    expect(storage.getLatestReleaseVersion(), '1.2.0');
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('检查更新失败，请检查网络后重试'), findsOneWidget);
   });
 
   for (final dispose in [true, false]) {

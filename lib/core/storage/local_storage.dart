@@ -16,6 +16,16 @@ class LocalStorage {
     return _prefs;
   }
 
+  // Keep a detected update across settings visits and application restarts.
+  static const _keyLatestReleaseVersion = 'latest_release_version';
+  String? getLatestReleaseVersion() => _prefs.getString(_keyLatestReleaseVersion);
+  Future<void> setLatestReleaseVersion(String? version) async {
+    final saved = version == null
+        ? await _prefs.remove(_keyLatestReleaseVersion)
+        : await _prefs.setString(_keyLatestReleaseVersion, version);
+    if (!saved) throw StateError('Could not persist the latest release version.');
+  }
+
   // Theme
   static const _keyThemeMode = 'theme_mode';
   int getThemeMode() => _prefs.getInt(_keyThemeMode) ?? 0; // 0=system

@@ -7,10 +7,18 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../core/network/network_proxy_io.dart';
 import '../core/services/release_link_opener.dart';
+import '../core/storage/local_storage.dart';
 
 enum UpdateStatus { available, current, ahead, noRelease }
 
-enum UpdateFailure { network, timeout, rateLimited, invalidResponse, version }
+enum UpdateFailure {
+  network,
+  timeout,
+  rateLimited,
+  invalidResponse,
+  version,
+  storage
+}
 
 class UpdateCheckException implements Exception {
   const UpdateCheckException(this.failure);
@@ -33,10 +41,13 @@ class UpdateCheckOperation {
 
 class UpdateRepository {
   UpdateRepository({
+    LocalStorage? storage,
     http.Client Function()? clientFactory,
     Future<String> Function()? readVersion,
     this.timeout = const Duration(seconds: 15),
-  })  : _clientFactory =
+  })  : _storage = storage,
+        _knownLatest = storage?.getLatestReleaseVersion(),
+        _clientFactory =
             clientFactory ?? (() => IOClient(NetworkProxy.createHttpClient())),
         _readVersion = readVersion ?? _installedVersion;
 
@@ -45,6 +56,41 @@ class UpdateRepository {
   final http.Client Function() _clientFactory;
   final Future<String> Function() _readVersion;
   final Duration timeout;
+  final LocalStorage? _storage;
+  String? _knownLatest;
+
+  bool get updateAvailable => _knownLatest != null;
+
+  /// Reconcile saved detection with the installed package, without networking.
+  Future<void> restoreUpdateStatus() async {
+    try {
+      final installed = _version(await _readVersion());
+      final known = _knownLatest;
+      if (known != null && _compare(installed, _version(known)) >= 0) {
+        await _saveKnownVersion(null);
+      }
+    } catch (_) {
+      // Failure to identify the package is not evidence that it was upgraded.
+      // Keep a saved update indication until a version comparison succeeds.
+    }
+  }
+
+  Future<void> _saveKnownVersion(String? version) async {
+    _knownLatest = version;
+    try {
+      await _storage?.setLatestReleaseVersion(version);
+    } catch (_) {
+      throw const UpdateCheckException(UpdateFailure.storage);
+    }
+  }
+
+  static int _compare(List<int> a, List<int> b) {
+    for (var i = 0; i < 3; i++) {
+      final comparison = a[i].compareTo(b[i]);
+      if (comparison != 0) return comparison;
+    }
+    return 0;
+  }
 
   static Future<String> _installedVersion() async =>
       (await PackageInfo.fromPlatform()).version;
@@ -110,10 +156,8 @@ class UpdateRepository {
       if (!ReleaseLinkOpener.isReleaseUrl(url)) {
         throw const FormatException('Invalid release URL');
       }
-      var comparison = 0;
-      for (var i = 0; i < 3 && comparison == 0; i++) {
-        comparison = latest[i].compareTo(installed[i]);
-      }
+      final comparison = _compare(latest, installed);
+      await _saveKnownVersion(comparison > 0 ? latest.join('.') : null);
       return UpdateCheckResult(
         comparison > 0
             ? UpdateStatus.available
@@ -123,6 +167,8 @@ class UpdateRepository {
         version: tag,
         releaseUrl: url,
       );
+    } on UpdateCheckException {
+      rethrow;
     } catch (_) {
       throw const UpdateCheckException(UpdateFailure.invalidResponse);
     }

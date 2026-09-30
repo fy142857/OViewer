@@ -20,6 +20,18 @@ class CheckUpdateTile extends StatefulWidget {
 class _CheckUpdateTileState extends State<CheckUpdateTile> {
   UpdateCheckOperation? _operation;
   bool _busy = false;
+  bool _checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreUpdateStatus();
+  }
+
+  Future<void> _restoreUpdateStatus() async {
+    await widget.repository.restoreUpdateStatus();
+    if (mounted) setState(() {});
+  }
 
   bool get _visible => mounted && (ModalRoute.of(context)?.isCurrent ?? true);
 
@@ -56,16 +68,37 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
 
   Future<void> _check() async {
     if (_busy) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _checking = true;
+    });
     try {
       _operation = widget.repository.check();
       final result = await _operation!.result;
       if (!mounted) return;
       if (!_visible) return;
+      setState(() => _checking = false);
       final s = S.of(context);
       switch (result.status) {
         case UpdateStatus.available:
-          await _open(result.releaseUrl!);
+          final version =
+              result.version!.replaceFirst(RegExp(r'^v'), '').split('+').first;
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(s.updateAvailable),
+              content: Text(s.updateInstallPrompt(version)),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(s.cancel)),
+                TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(s.confirm)),
+              ],
+            ),
+          );
+          if (confirmed == true && _visible) await _open(result.releaseUrl!);
           break;
         case UpdateStatus.current:
           _message(s.versionCurrent);
@@ -89,6 +122,7 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
         UpdateFailure.rateLimited => s.updateRateLimited,
         UpdateFailure.invalidResponse => s.updateInvalidResponse,
         UpdateFailure.version => s.versionUnavailable,
+        UpdateFailure.storage => s.updateStorageFailed,
       };
       _message(message,
           action: SnackBarAction(
@@ -98,7 +132,12 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
               }));
     } finally {
       _operation = null;
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _checking = false;
+        });
+      }
     }
   }
 
@@ -115,13 +154,24 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
       key: const ValueKey('check-update'),
       leading: const Icon(Icons.system_update),
       title: Text(s.checkUpdate),
-      subtitle: Text(_busy ? s.checkingUpdate : s.checkUpdateHint),
-      trailing: _busy
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2))
-          : const Icon(Icons.chevron_right),
+      subtitle: Text(_checking ? s.checkingUpdate : s.checkUpdateHint),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.repository.updateAvailable) ...[
+            Text(s.updateAvailable,
+                key: const ValueKey('update-available-badge'),
+                style: const TextStyle(color: Colors.purple)),
+            const SizedBox(width: 8),
+          ],
+          _checking
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.chevron_right),
+        ],
+      ),
       onTap: _busy ? null : _check,
     );
   }

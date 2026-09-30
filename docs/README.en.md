@@ -44,7 +44,8 @@ Pull down to refresh history, even when the list is empty or shorter than the sc
 - Choose a Chinese or English interface.
 - Use a light or dark theme, or follow the system setting.
 - Set your default reading mode, configure a proxy, and clear the image cache.
-- Tap Check for updates under Settings → About to compare your installed version with the latest GitHub release. A newer release opens in your browser. Checks use your proxy settings and do not download or install updates automatically.
+- Tap Check for updates under Settings → About to compare your installed version with the latest GitHub release. A newer release shows a confirmation dialog; only Confirm opens its page in your browser. Checks use your proxy settings and do not download or install updates automatically.
+- A purple “Update available” reminder persists beside Check for updates after detection, including after cancellation or an app restart. It clears when the installed version reaches or exceeds the latest detected release.
 - My Tags, Title Language, and Image Size open the corresponding settings for the current site.
 
 ## Download and install

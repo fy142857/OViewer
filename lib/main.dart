@@ -56,7 +56,8 @@ Future<void> _initDependencies() async {
   }
 
   // Repositories
-  sl.registerLazySingleton<UpdateRepository>(() => UpdateRepository());
+  sl.registerLazySingleton<UpdateRepository>(
+      () => UpdateRepository(storage: sl<LocalStorage>()));
   sl.registerLazySingleton<ReleaseLinkOpener>(() => ReleaseLinkOpener());
   sl.registerLazySingleton<GalleryRepository>(
     () => GalleryRepository(sl<DioClient>()),
