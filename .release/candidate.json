@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.2.0",
   "branch": "dev",
-  "build_number": 35,
-  "candidate_id": "1.3.0+35",
-  "fingerprint": "ad2584e4f73862bf6a9f1c0b501de04f7725dc63e53f400cc5767035910ff4e9",
-  "notes": "### 新增\n\n- 首页支持左右滑动切换首页、热门、历史和收藏，与标签点击同步；各页独立保留列表与滚动位置。首页历史记录改为长按弹出删除菜单，避免与切页手势冲突（#47）。\n\n### 修复\n\n- Release 说明自动省略空章节标题；正式发布前及收尾后要求 `main` 与 `dev` 的远端提交完全一致，包括更新日志归档。\n\n### 变更\n\n- 阅读器长按菜单简化为“重新加载”“保存”，英文同步为“Reload”“Save”（#42）。\n\n### 已知限制",
+  "build_number": 36,
+  "candidate_id": "1.3.0+36",
+  "fingerprint": "aa40e26eb4bfc21e37072dd2b09e9010c794f1490de1afe08844b5e2ee03fde8",
+  "notes": "### 新增\n\n- 首页支持左右滑动切换首页、热门、历史和收藏，与标签点击同步；各页独立保留列表与滚动位置。首页历史记录改为长按弹出删除菜单，避免与切页手势冲突（#47）。\n\n### 修复\n\n- 修复每次滑入历史页时列表闪烁的问题：首次加载后在后台刷新本地记录，保留当前列表、空状态与滚动位置。\n\n- Release 说明自动省略空章节标题；正式发布前及收尾后要求 `main` 与 `dev` 的远端提交完全一致，包括更新日志归档。\n\n### 变更\n\n- 阅读器长按菜单简化为“重新加载”“保存”，英文同步为“Reload”“Save”（#42）。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "2c305bd7cc68d8c49476834919bc6f6cd747d869",
+  "source_sha": "31af1b7a3bd74ecb125a806ec695614c437b291e",
   "summary": [
     {
       "sha": "b4bd110890f8ed645c6f5611c539c9f7821d17d7",
@@ -22,6 +22,11 @@
       "sha": "2c305bd7cc68d8c49476834919bc6f6cd747d869",
       "subject": "feat(home): swipe between gallery tabs (#47)",
       "type": "feat"
+    },
+    {
+      "sha": "31af1b7a3bd74ecb125a806ec695614c437b291e",
+      "subject": "fix(home): keep history visible while refreshing (#47)",
+      "type": "fix"
     }
   ],
   "version": "1.3.0"
