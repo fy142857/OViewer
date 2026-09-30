@@ -15,6 +15,21 @@ class S {
 
   bool get _zh => _l == 'zh';
 
+  String get gidMatch => _zh ? 'GID 匹配' : 'GID match';
+  String get gidIgnoresFilters => _zh
+      ? 'GID 精确查找不受搜索页筛选影响'
+      : 'Exact GID lookup ignores search filters';
+  String get searchingOrdinary => _zh ? '正在搜索关键词…' : 'Searching keywords…';
+  String get searchingGid => _zh ? '正在查找 GID…' : 'Looking up GID…';
+  String get gidNotFound =>
+      _zh ? '未找到可访问的 GID 匹配' : 'No accessible GID match found';
+  String get ordinarySearchFailed => _zh ? '关键词搜索失败' : 'Keyword search failed';
+  String get gidSearchFailed => _zh ? 'GID 查找失败' : 'GID lookup failed';
+  String get searchPageFailed =>
+      _zh ? '加载更多结果失败' : 'Failed to load more results';
+  String get searchIncomplete =>
+      _zh ? '搜索未完成，请重试失败的查询' : 'Search incomplete. Retry the failed query.';
+
   // ---- Common ----
   String get cancel => _zh ? '取消' : 'Cancel';
   String get confirm => _zh ? '确认' : 'Confirm';

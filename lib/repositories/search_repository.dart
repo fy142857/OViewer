@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:html/parser.dart' as html_parser;
 import '../core/network/dio_client.dart';
 import '../core/parser/search_parser.dart';
 import '../core/storage/local_storage.dart';
@@ -12,6 +13,45 @@ class SearchRepository {
   final LocalStorage _storage;
 
   SearchRepository(this._dio, this._storage);
+
+  /// Only positive ASCII integers with room for the exclusive list cursor.
+  static int? parseGid(String keyword) {
+    final text = keyword.trim();
+    if (!RegExp(r'^[0-9]+$').hasMatch(text)) return null;
+    final gid = int.tryParse(text);
+    return gid != null && gid > 0 && gid < 0x7fffffffffffffff ? gid : null;
+  }
+
+  /// Locate a visible gallery on the current site without search-page filters.
+  /// `next` is exclusive; never substitute an adjacent gallery for the target.
+  Future<GalleryPreview?> searchByGid(int gid) async {
+    if (parseGid('$gid') == null) throw ArgumentError.value(gid, 'gid');
+    final site = AppConstants.baseUrl;
+    final html = await _dio.get('$site/?f_cats=0&next=${gid + 1}');
+    final document = html_parser.parse(html);
+    final noHits = document.body?.text.contains('No hits found') == true;
+    if (document.querySelector('.itg') == null && !noHits) {
+      throw const FormatException('Expected a gallery search results page');
+    }
+    final galleries = SearchParser.parseResults(html);
+    if (galleries.isEmpty && !noHits) {
+      throw const FormatException('Could not parse gallery search results');
+    }
+    for (final gallery in galleries) {
+      if (gallery.gid != gid || !RegExp(r'^[a-f0-9]+$').hasMatch(gallery.token))
+        continue;
+      final validLink = document.querySelectorAll('a[href*="/g/"]').any((link) {
+        final uri = Uri.parse(site).resolve(link.attributes['href']!);
+        return uri.scheme == 'https' &&
+            uri.origin == site &&
+            uri.userInfo.isEmpty &&
+            uri.path == '/g/$gid/${gallery.token}/';
+      });
+      if (validLink) return gallery;
+      throw const FormatException('Invalid gallery link in GID results');
+    }
+    return null;
+  }
 
   String _resolve(String url) {
     if (url.startsWith('http')) return url;

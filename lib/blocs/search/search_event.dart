@@ -17,6 +17,15 @@ class PerformSearch extends SearchEvent {
 
 class LoadMoreSearchResults extends SearchEvent {}
 
+enum SearchSource { ordinary, gid }
+
+class RetrySearchSource extends SearchEvent {
+  final SearchSource source;
+  const RetrySearchSource(this.source);
+  @override
+  List<Object?> get props => [source];
+}
+
 class ClearSearch extends SearchEvent {}
 
 class LoadSearchHistory extends SearchEvent {}

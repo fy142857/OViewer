@@ -2,10 +2,17 @@ import 'package:equatable/equatable.dart';
 import '../../models/gallery_preview.dart';
 import '../../models/search_filter.dart';
 
+const _sentinel = Object();
+
 enum SearchStatus { initial, loading, loaded, error }
 
 class SearchState extends Equatable {
   final SearchStatus status;
+  final SearchStatus ordinaryStatus;
+  final SearchStatus gidStatus;
+  final int? matchedGid;
+  final String? gidError;
+  final bool loadMoreFailed;
   final SearchFilter filter;
   final List<GalleryPreview> results;
   final List<String> searchHistory;
@@ -19,6 +26,11 @@ class SearchState extends Equatable {
 
   const SearchState({
     this.status = SearchStatus.initial,
+    this.ordinaryStatus = SearchStatus.initial,
+    this.gidStatus = SearchStatus.initial,
+    this.matchedGid,
+    this.gidError,
+    this.loadMoreFailed = false,
     this.filter = const SearchFilter(),
     this.results = const [],
     this.searchHistory = const [],
@@ -33,6 +45,11 @@ class SearchState extends Equatable {
 
   SearchState copyWith({
     SearchStatus? status,
+    SearchStatus? ordinaryStatus,
+    SearchStatus? gidStatus,
+    Object? matchedGid = _sentinel,
+    Object? gidError = _sentinel,
+    bool? loadMoreFailed,
     SearchFilter? filter,
     List<GalleryPreview>? results,
     List<String>? searchHistory,
@@ -41,11 +58,17 @@ class SearchState extends Equatable {
     int? totalResults,
     bool? isLoadingMore,
     bool? hasReachedEnd,
-    String? errorMessage,
-    String? nextPageUrl,
+    Object? errorMessage = _sentinel,
+    Object? nextPageUrl = _sentinel,
   }) {
     return SearchState(
       status: status ?? this.status,
+      ordinaryStatus: ordinaryStatus ?? this.ordinaryStatus,
+      gidStatus: gidStatus ?? this.gidStatus,
+      matchedGid:
+          matchedGid == _sentinel ? this.matchedGid : matchedGid as int?,
+      gidError: gidError == _sentinel ? this.gidError : gidError as String?,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
       filter: filter ?? this.filter,
       results: results ?? this.results,
       searchHistory: searchHistory ?? this.searchHistory,
@@ -54,14 +77,25 @@ class SearchState extends Equatable {
       totalResults: totalResults ?? this.totalResults,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasReachedEnd: hasReachedEnd ?? this.hasReachedEnd,
-      errorMessage: errorMessage ?? this.errorMessage,
-      nextPageUrl: nextPageUrl ?? this.nextPageUrl,
+      errorMessage: errorMessage == _sentinel
+          ? this.errorMessage
+          : errorMessage as String?,
+      nextPageUrl:
+          nextPageUrl == _sentinel ? this.nextPageUrl : nextPageUrl as String?,
     );
   }
 
   @override
   List<Object?> get props => [
         status,
+        ordinaryStatus,
+        gidStatus,
+        matchedGid,
+        gidError,
+        loadMoreFailed,
+        errorMessage,
+        totalPages,
+        totalResults,
         filter,
         results,
         searchHistory,

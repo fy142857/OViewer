@@ -96,7 +96,9 @@ class _SearchViewState extends State<_SearchView> {
     if (controller.position.pixels >=
         controller.position.maxScrollExtent - 300) {
       final bloc = context.read<SearchBloc>();
-      if (bloc.state.isLoadingMore || bloc.state.hasReachedEnd) return;
+      if (bloc.state.isLoadingMore ||
+          bloc.state.hasReachedEnd ||
+          bloc.state.loadMoreFailed) return;
       bloc.add(LoadMoreSearchResults());
     }
   }
@@ -300,79 +302,92 @@ class _SearchViewState extends State<_SearchView> {
                                         GetIt.I<SearchRepository>()
                                             .getSearchHistory()));
                           }
-                          if (state.status == SearchStatus.loading &&
-                              state.results.isEmpty) {
-                            return isGrid
-                                ? const ShimmerGalleryGrid()
-                                : const ShimmerGalleryList();
-                          }
-                          if (state.results.isEmpty &&
-                              state.status == SearchStatus.loaded) {
-                            return Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.search_off,
-                                      size: 64,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline),
-                                  const SizedBox(height: 16),
-                                  Text(s.noResultsFound),
-                                  if (state.filter.keyword != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: Text(
-                                        s.tryDifferentKeywords,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall,
+                          Widget resultsView() {
+                            if (state.status == SearchStatus.loading &&
+                                state.results.isEmpty) {
+                              return isGrid
+                                  ? const ShimmerGalleryGrid()
+                                  : const ShimmerGalleryList();
+                            }
+                            if (state.results.isEmpty &&
+                                state.status == SearchStatus.loaded) {
+                              return Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.search_off,
+                                        size: 64,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline),
+                                    const SizedBox(height: 16),
+                                    Text(s.noResultsFound),
+                                    if (state.filter.keyword != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Text(
+                                          s.tryDifferentKeywords,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
+                              );
+                            }
+
+                            if (state.results.isEmpty &&
+                                state.status == SearchStatus.error) {
+                              return Center(child: Text(s.searchIncomplete));
+                            }
+                            return PageStorage(
+                              key: ObjectKey(_resultScrollStorage),
+                              bucket: _resultScrollStorage,
+                              child: RefreshIndicator(
+                                onRefresh: () async {
+                                  context.read<SearchBloc>().add(PerformSearch(
+                                      state.filter,
+                                      saveHistory: widget.saveHistory));
+                                  // Wait for the bloc to finish loading
+                                  await context
+                                      .read<SearchBloc>()
+                                      .stream
+                                      .firstWhere((s) =>
+                                          s.status != SearchStatus.loading);
+                                },
+                                child: isGrid
+                                    ? AdaptiveGalleryGrid(
+                                        key:
+                                            const PageStorageKey('search-grid'),
+                                        controller: _gridScrollController,
+                                        itemCount: state.results.length +
+                                            (state.isLoadingMore ? 1 : 0),
+                                        itemBuilder: (context, index) =>
+                                            _buildResult(state, index,
+                                                isGrid: true),
+                                      )
+                                    : ListView.builder(
+                                        key:
+                                            const PageStorageKey('search-list'),
+                                        controller: _scrollController,
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                        padding: const EdgeInsets.all(8),
+                                        itemCount: state.results.length +
+                                            (state.isLoadingMore ? 1 : 0),
+                                        itemBuilder: (context, index) =>
+                                            _buildResult(state, index,
+                                                isGrid: false),
+                                      ),
                               ),
                             );
                           }
 
-                          return PageStorage(
-                            key: ObjectKey(_resultScrollStorage),
-                            bucket: _resultScrollStorage,
-                            child: RefreshIndicator(
-                              onRefresh: () async {
-                                context.read<SearchBloc>().add(PerformSearch(
-                                    state.filter,
-                                    saveHistory: widget.saveHistory));
-                                // Wait for the bloc to finish loading
-                                await context
-                                    .read<SearchBloc>()
-                                    .stream
-                                    .firstWhere((s) =>
-                                        s.status != SearchStatus.loading);
-                              },
-                              child: isGrid
-                                  ? AdaptiveGalleryGrid(
-                                      key: const PageStorageKey('search-grid'),
-                                      controller: _gridScrollController,
-                                      itemCount: state.results.length +
-                                          (state.isLoadingMore ? 1 : 0),
-                                      itemBuilder: (context, index) =>
-                                          _buildResult(state, index,
-                                              isGrid: true),
-                                    )
-                                  : ListView.builder(
-                                      key: const PageStorageKey('search-list'),
-                                      controller: _scrollController,
-                                      physics:
-                                          const AlwaysScrollableScrollPhysics(),
-                                      padding: const EdgeInsets.all(8),
-                                      itemCount: state.results.length +
-                                          (state.isLoadingMore ? 1 : 0),
-                                      itemBuilder: (context, index) =>
-                                          _buildResult(state, index,
-                                              isGrid: false),
-                                    ),
-                            ),
-                          );
+                          return Column(children: [
+                            ..._searchNotices(state),
+                            Expanded(child: resultsView()),
+                          ]);
                         },
                       ),
                     ),
@@ -389,9 +404,62 @@ class _SearchViewState extends State<_SearchView> {
       );
     }
     final gallery = state.results[index];
-    return isGrid
+    final card = isGrid
         ? GalleryGridItem(gallery: gallery, onTap: () => _openGallery(gallery))
         : GalleryCard(gallery: gallery, onTap: () => _openGallery(gallery));
+    if (gallery.gid != state.matchedGid) return card;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(S.of(context).gidMatch,
+            key: const ValueKey('gid-match-label'),
+            style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+      ),
+      card,
+    ]);
+  }
+
+  List<Widget> _searchNotices(SearchState state) {
+    final s = S.of(context);
+    Widget notice(String text, {VoidCallback? retry, String? key}) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          child: Row(children: [
+            Expanded(
+                child:
+                    Text(text, style: Theme.of(context).textTheme.bodySmall)),
+            if (retry != null)
+              TextButton(
+                  key: key == null ? null : ValueKey<String>(key),
+                  onPressed: retry,
+                  child: Text(s.retry)),
+          ]),
+        );
+    return [
+      if (state.gidStatus != SearchStatus.initial) notice(s.gidIgnoresFilters),
+      if (state.ordinaryStatus == SearchStatus.loading &&
+          state.gidStatus != SearchStatus.initial)
+        notice(s.searchingOrdinary),
+      if (state.gidStatus == SearchStatus.loading) notice(s.searchingGid),
+      if (state.gidStatus == SearchStatus.loaded && state.matchedGid == null)
+        notice(s.gidNotFound),
+      if (state.ordinaryStatus == SearchStatus.error)
+        notice(s.ordinarySearchFailed,
+            key: 'retry-ordinary-search',
+            retry: () => context
+                .read<SearchBloc>()
+                .add(const RetrySearchSource(SearchSource.ordinary))),
+      if (state.gidStatus == SearchStatus.error)
+        notice(s.gidSearchFailed,
+            key: 'retry-gid-search',
+            retry: () => context
+                .read<SearchBloc>()
+                .add(const RetrySearchSource(SearchSource.gid))),
+      if (state.loadMoreFailed)
+        notice(s.searchPageFailed,
+            key: 'retry-search-page',
+            retry: () =>
+                context.read<SearchBloc>().add(LoadMoreSearchResults())),
+    ];
   }
 
   Future<void> _openGallery(GalleryPreview gallery) async {

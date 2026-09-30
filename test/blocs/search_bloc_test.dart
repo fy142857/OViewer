@@ -64,6 +64,9 @@ void main() {
         isA<SearchState>()
             .having((s) => s.status, 'status', SearchStatus.loading),
         isA<SearchState>()
+            .having((s) => s.status, 'status', SearchStatus.loading)
+            .having((s) => s.searchHistory, 'history', ['test']),
+        isA<SearchState>()
             .having((s) => s.status, 'status', SearchStatus.loaded)
             .having((s) => s.results.length, 'results', 1)
             .having((s) => s.totalResults, 'totalResults', 50),

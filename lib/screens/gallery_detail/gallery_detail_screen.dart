@@ -304,6 +304,8 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
             _metaRow(
                 Icons.photo_library, s.pages, s.pagesCount(detail.fileCount)),
             _metaRow(Icons.access_time, s.posted, _formatDate(detail.postedAt)),
+            _metaRow(Icons.tag, 'GID', '${detail.gid}'),
+            _metaRow(Icons.key, 'Token', detail.token),
             if (detail.fileSize > 0)
               _metaRow(Icons.storage, s.size, _formatFileSize(detail.fileSize)),
           ],
