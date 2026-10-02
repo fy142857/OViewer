@@ -1,43 +1,23 @@
 {
-  "base_tag": "v1.4.0",
+  "base_tag": "v1.4.1",
   "branch": "dev",
-  "build_number": 46,
-  "candidate_id": "1.4.1+46",
-  "fingerprint": "d2ae393370ab10717ae867910c5cab3dd51879c257c3130a78a764bfd8d29420",
-  "notes": "### 新增\n\n### 修复\n\n- 卡片骨架屏复用实际结果的自适应网格，列数随可用宽度及文字缩放变化，修复加载期间固定两列的问题；首页与搜索页同步生效（#31）。\n\n- 搜索输入页隐藏右上角模式切换按钮，缩小返回键占位并扩展搜索框；占位文字按可用宽度自动缩小以完整显示，输入文字保持正常字号，结果页保留模式切换按钮。\n\n- 补充搜索框占位文本“输入标题、作者、Tag、画廊gid、上传者...”，同步英文；移除 GID 结果页的关键词搜索中、GID 查找中及忽略筛选说明三条文字提示。\n\n### 变更\n\n### 已知限制",
+  "build_number": 47,
+  "candidate_id": "1.4.2+47",
+  "fingerprint": "718e2a919f2ac7f699c70587542653c31c58838e1051d76cbbee19dad16a8ca1",
+  "notes": "### 新增\n\n### 修复\n\n- 优化启动空白屏：首帧前仅保留必要本地初始化，首页按保存的主题、语言和布局显示；代理探测、缓存维护和词库处理移到首帧后，网络请求等待统一代理准备结果。词库迁入独立缓存文件并在后台 isolate 解析，加载后自动刷新翻译和联想。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "20c72a0d03b2ecb78d2e3754d8b7b0e4fd6454dc",
+  "source_sha": "991cd00deb0a90400a0634e30edb26e58214af75",
   "summary": [
     {
-      "change_kind": "fix",
-      "classification_reason": "Correct the existing search placeholder and remove unwanted GID progress and filter notices without adding a new capability.",
+      "change_kind": "performance",
+      "classification_reason": "Reduce startup blank-screen time without adding a business capability or changing stored user data compatibility.",
       "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "b2ccb99e4a7ed8df24af3a6cd9b5c9fddbd028ed",
-      "subject": "fix(search): update placeholder and remove progress notices",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Fix clipped search placeholders on narrow screens, reduce toolbar spacing and show the layout toggle only with search results.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "fb0d71ddbbca3ba457c1b37ee2a1b9613e1b1e94",
-      "subject": "fix(search): expand input toolbar and fit placeholder text",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Make loading card placeholders use the same width and text-scale layout as loaded galleries, correcting fixed two-column skeletons.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "20c72a0d03b2ecb78d2e3754d8b7b0e4fd6454dc",
-      "subject": "fix(layout): align loading skeletons with adaptive gallery grids",
-      "type": "fix",
+      "original_type": "perf",
+      "sha": "991cd00deb0a90400a0634e30edb26e58214af75",
+      "subject": "perf(startup): show the home shell before background preparation",
+      "type": "perf",
       "version_impact": "patch"
     }
   ],
-  "version": "1.4.1"
+  "version": "1.4.2"
 }
