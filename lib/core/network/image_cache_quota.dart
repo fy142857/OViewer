@@ -107,7 +107,9 @@ class ImageCacheQuota extends CacheInfoRepository {
     final root = (await files.createFile('__quota_probe__')).parent;
     final entries = await delegate.getAllObjects();
     final byPath = <String, CacheObject>{};
+    var processed = 0;
     for (final entry in entries) {
+      if (++processed % 64 == 0) await Future<void>.delayed(Duration.zero);
       final path = p.normalize(
           p.absolute((await files.createFile(entry.relativePath)).path));
       if (!p.isWithin(p.absolute(root.path), path)) {
@@ -120,6 +122,7 @@ class ImageCacheQuota extends CacheInfoRepository {
     var total = 0;
     if (await root.exists()) {
       await for (final file in root.list(recursive: true, followLinks: false)) {
+        if (++processed % 64 == 0) await Future<void>.delayed(Duration.zero);
         final stat = await file.stat();
         if (stat.type != FileSystemEntityType.file) continue;
         final path = p.normalize(p.absolute(file.path));
@@ -137,6 +140,7 @@ class ImageCacheQuota extends CacheInfoRepository {
     Object? failure;
     StackTrace? failureStack;
     for (final candidate in candidates) {
+      if (++processed % 64 == 0) await Future<void>.delayed(Duration.zero);
       if (total <= limitBytes) break;
       final entry = candidate.entry;
       // Unregistered files may still be downloading. Revisit on last unpin.

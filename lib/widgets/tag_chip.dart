@@ -18,6 +18,15 @@ class TagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (showTranslation && GetIt.I.isRegistered<TagTranslationRepository>()) {
+      return AnimatedBuilder(
+          animation: GetIt.I<TagTranslationRepository>(),
+          builder: (context, _) => _buildChip(context));
+    }
+    return _buildChip(context);
+  }
+
+  Widget _buildChip(BuildContext context) {
     String displayText = tag.key;
 
     // Try to get translation
@@ -27,8 +36,7 @@ class TagChip extends StatelessWidget {
       } else {
         try {
           final tagRepo = GetIt.I<TagTranslationRepository>();
-          final translated =
-              tagRepo.getTranslation(tag.namespace, tag.key);
+          final translated = tagRepo.getTranslation(tag.namespace, tag.key);
           if (translated != null) displayText = translated;
         } catch (_) {
           // TagTranslationRepository not registered yet

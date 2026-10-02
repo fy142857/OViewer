@@ -9,6 +9,8 @@ class NetworkProxy {
   NetworkProxy._();
 
   static String? _proxyUrl;
+  static Future<void> Function()? beforeRequest;
+  static Future<void> waitUntilReady() async => await beforeRequest?.call();
 
   static bool get isEnabled => _proxyUrl != null && _proxyUrl!.isNotEmpty;
 

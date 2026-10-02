@@ -6,6 +6,7 @@ import '../../core/network/cookie_manager.dart' as app;
 import '../../core/network/dio_client.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../core/network/system_proxy_detector.dart';
+import '../../core/network/network_preparation.dart';
 import '../../repositories/gallery_repository.dart';
 import '../../repositories/settings_repository.dart';
 import 'settings_event.dart';
@@ -15,11 +16,27 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final SettingsRepository _repository;
   final Future<void> Function(int) _applyCacheLimit;
   bool _changingCacheLimit = false;
+  final NetworkPreparation? _network;
+  final bool _hasInitialSettings;
+  int _proxyRevision = 0;
 
-  SettingsBloc(this._repository, {Future<void> Function(int)? applyCacheLimit})
-      : _applyCacheLimit = applyCacheLimit ??
+  SettingsBloc(this._repository,
+      {Future<void> Function(int)? applyCacheLimit,
+      SettingsState? initialState,
+      NetworkPreparation? network})
+      : _network = network,
+        _hasInitialSettings = initialState != null,
+        _applyCacheLimit = applyCacheLimit ??
             ((mb) => EhImageCacheManager.instance.applyLimitMB(mb)),
-        super(const SettingsState()) {
+        super(initialState ?? const SettingsState()) {
+    _network?.addListener(_networkChanged);
+    on<NetworkPreparationChanged>((event, emit) {
+      final network = _network;
+      if (network != null)
+        emit(state.copyWith(
+            detectedProxy: network.result.proxyUrl,
+            vpnActive: network.result.vpnActive));
+    });
     on<LoadSettings>(_onLoad);
     on<UpdateThemeMode>(_onTheme);
     on<UpdateReadingMode>(_onReading);
@@ -32,40 +49,44 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<UpdateLocale>(_onUpdateLocale);
   }
 
+  static SettingsState readSaved(SettingsRepository repository) =>
+      SettingsState(
+        themeMode: repository.getThemeMode(),
+        readingMode: repository.getReadingMode(),
+        displayMode: repository.getDisplayMode(),
+        cacheLimitMB: repository.getCacheLimit(),
+        proxyUrl: repository.getProxy(),
+        autoProxy: repository.getAutoProxy(),
+        useExHentai: repository.getUseExHentai(),
+        hiddenTags: repository.getHiddenTags(),
+        locale: repository.getLocale(),
+      );
+
+  void _networkChanged() {
+    if (!isClosed) add(NetworkPreparationChanged());
+  }
+
+  @override
+  Future<void> close() {
+    _network?.removeListener(_networkChanged);
+    return super.close();
+  }
+
   Future<void> _onLoad(LoadSettings event, Emitter<SettingsState> emit) async {
-    final useEx = _repository.getUseExHentai();
-    AppConstants.useExHentai = useEx;
-
-    final proxy = _repository.getProxy();
-    final autoProxy = _repository.getAutoProxy();
-
-    // Auto-detect proxy and VPN status
-    String? detectedProxy;
-    bool vpnActive = false;
-    if (autoProxy && (proxy == null || proxy.isEmpty)) {
-      final result = await SystemProxyDetector.detect();
-      detectedProxy = result.proxyUrl;
-      vpnActive = result.vpnActive;
-    }
-
-    // Apply: manual proxy > auto-detected > direct
-    final effectiveProxy =
-        (proxy != null && proxy.isNotEmpty) ? proxy : detectedProxy;
-    GetIt.I<DioClient>().setProxy(effectiveProxy);
-
-    emit(SettingsState(
-      themeMode: _repository.getThemeMode(),
-      readingMode: _repository.getReadingMode(),
-      displayMode: _repository.getDisplayMode(),
-      cacheLimitMB: _repository.getCacheLimit(),
-      proxyUrl: proxy,
-      autoProxy: autoProxy,
-      detectedProxy: detectedProxy,
-      vpnActive: vpnActive,
-      useExHentai: useEx,
-      hiddenTags: _repository.getHiddenTags(),
-      locale: _repository.getLocale(),
-    ));
+    if (!_hasInitialSettings) emit(readSaved(_repository));
+    AppConstants.useExHentai = state.useExHentai;
+    // Production shares the already scheduled startup probe. It never launches
+    // a second probe or replaces theme/language after an asynchronous wait.
+    if (_network != null) return;
+    final revision = _proxyRevision;
+    final result =
+        state.autoProxy && (state.proxyUrl == null || state.proxyUrl!.isEmpty)
+            ? await SystemProxyDetector.detect()
+            : const AutoProxyResult(proxyUrl: null, vpnActive: false);
+    if (revision != _proxyRevision || emit.isDone) return;
+    GetIt.I<DioClient>().setProxy(state.proxyUrl ?? result.proxyUrl);
+    emit(state.copyWith(
+        detectedProxy: result.proxyUrl, vpnActive: result.vpnActive));
   }
 
   Future<void> _onTheme(
@@ -92,41 +113,38 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     emit(state.copyWith(displayMode: event.mode));
   }
 
-  Future<void> _onProxy(
-    UpdateProxy event,
-    Emitter<SettingsState> emit,
-  ) async {
-    await _repository.setProxy(event.proxyUrl);
-    final effective =
-        event.proxyUrl ?? (state.autoProxy ? state.detectedProxy : null);
-    GetIt.I<DioClient>().setProxy(effective);
+  Future<void> _onProxy(UpdateProxy event, Emitter<SettingsState> emit) async {
+    final revision = ++_proxyRevision;
     emit(state.copyWith(proxyUrl: event.proxyUrl));
+    final preparing = _network?.configure(
+        manualProxy: state.proxyUrl, autoProxy: state.autoProxy);
+    await Future.wait([
+      _repository.setProxy(event.proxyUrl),
+      if (preparing != null) preparing,
+    ]);
+    if (revision != _proxyRevision || emit.isDone) return;
+    if (_network == null) GetIt.I<DioClient>().setProxy(state.effectiveProxy);
   }
 
   Future<void> _onToggleAutoProxy(
-    ToggleAutoProxy event,
-    Emitter<SettingsState> emit,
-  ) async {
-    await _repository.setAutoProxy(event.enabled);
-
-    String? detectedProxy;
-    bool vpnActive = false;
-    if (event.enabled && (state.proxyUrl == null || state.proxyUrl!.isEmpty)) {
-      final result = await SystemProxyDetector.detect();
-      detectedProxy = result.proxyUrl;
-      vpnActive = result.vpnActive;
-    }
-
-    final effective = (state.proxyUrl != null && state.proxyUrl!.isNotEmpty)
-        ? state.proxyUrl
-        : detectedProxy;
-    GetIt.I<DioClient>().setProxy(effective);
-
+      ToggleAutoProxy event, Emitter<SettingsState> emit) async {
+    final revision = ++_proxyRevision;
+    emit(state.copyWith(autoProxy: event.enabled));
+    final preparing = _network?.configure(
+        manualProxy: state.proxyUrl, autoProxy: state.autoProxy);
+    await Future.wait([
+      _repository.setAutoProxy(event.enabled),
+      if (preparing != null) preparing,
+    ]);
+    if (revision != _proxyRevision || emit.isDone || _network != null) return;
+    final result =
+        state.autoProxy && (state.proxyUrl == null || state.proxyUrl!.isEmpty)
+            ? await SystemProxyDetector.detect()
+            : const AutoProxyResult(proxyUrl: null, vpnActive: false);
+    if (revision != _proxyRevision || emit.isDone) return;
+    GetIt.I<DioClient>().setProxy(state.proxyUrl ?? result.proxyUrl);
     emit(state.copyWith(
-      autoProxy: event.enabled,
-      detectedProxy: detectedProxy,
-      vpnActive: vpnActive,
-    ));
+        detectedProxy: result.proxyUrl, vpnActive: result.vpnActive));
   }
 
   Future<void> _onCacheLimit(

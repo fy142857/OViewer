@@ -9,6 +9,8 @@ abstract class SettingsEvent extends Equatable {
 
 class LoadSettings extends SettingsEvent {}
 
+class NetworkPreparationChanged extends SettingsEvent {}
+
 class UpdateThemeMode extends SettingsEvent {
   final int mode;
   const UpdateThemeMode(this.mode);

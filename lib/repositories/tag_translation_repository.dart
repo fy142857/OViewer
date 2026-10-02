@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import '../core/storage/tag_translation_cache.dart';
 import 'package:logger/logger.dart';
 import '../core/network/dio_client.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/storage/local_storage.dart';
 
-class TagTranslationRepository {
+class TagTranslationRepository extends ChangeNotifier {
   static final _log = Logger();
   final DioClient _dio;
   final LocalStorage _storage;
@@ -14,76 +17,89 @@ class TagTranslationRepository {
   bool _loaded = false;
   List<_SearchEntry> _searchEntries = [];
 
-  TagTranslationRepository(this._dio, this._storage);
+  final TagTranslationCache _cache;
+  Future<void>? _loading;
+  Future<void>? _refreshing;
+  bool _disposed = false;
+  TagTranslationRepository(this._dio, this._storage,
+      {TagTranslationCache? cache})
+      : _cache = cache ?? TagTranslationCache();
 
   bool get isLoaded => _loaded;
 
-  /// Load translations: try local cache first, then fetch remote.
-  Future<void> loadTranslations() async {
-    // Try loading from local cache
-    final cached = _storage.prefs.getString(_cacheKey);
-    if (cached != null) {
-      try {
-        _parseJsonData(cached);
-        _loaded = true;
-        _log.i('Tag translations loaded from cache '
-            '(${_translations.length} namespaces)');
-        // Refresh in background
-        _fetchAndCache();
-        return;
-      } catch (_) {
-        // Cache corrupted, fetch fresh
-      }
-    }
+  Future<void> loadTranslations() => _loading ??= _load();
 
-    await _fetchAndCache();
+  Future<void> _load() async {
+    String? stored;
+    try {
+      stored = await _cache.read();
+    } catch (_) {}
+    if (stored != null) {
+      try {
+        _install(await compute(_parseTranslations, stored,
+            debugLabel: 'tag-index-cache'));
+        await _removeLegacy();
+        unawaited(refresh());
+        return;
+      } catch (_) {/* Try the upgrade-era preferences cache next. */}
+    }
+    final legacy = _storage.prefs.getString(_cacheKey);
+    if (legacy != null) {
+      try {
+        final parsed = await compute(_parseTranslations, legacy,
+            debugLabel: 'tag-index-legacy');
+        _install(parsed);
+        try {
+          await _cache.write(legacy);
+          await _removeLegacy();
+        } catch (_) {
+          // Do not discard the only offline copy if migration could not finish.
+        }
+        unawaited(refresh());
+        return;
+      } catch (_) {/* Download a fresh dictionary; preserve existing state. */}
+    }
+    await refresh();
   }
 
+  Future<void> _removeLegacy() async {
+    if (_storage.prefs.containsKey(_cacheKey)) {
+      await _storage.prefs.remove(_cacheKey);
+    }
+  }
+
+  Future<void> refresh() =>
+      _refreshing ??= _fetchAndCache().whenComplete(() => _refreshing = null);
   Future<void> _fetchAndCache() async {
     try {
-      final jsonStr = await _dio.get(ApiEndpoints.ehTagTranslationUrl);
-      _parseJsonData(jsonStr);
-      _loaded = true;
-      // Cache locally
-      await _storage.prefs.setString(_cacheKey, jsonStr);
-      _log.i('Tag translations fetched and cached '
-          '(${_translations.length} namespaces)');
-    } catch (e) {
-      _log.w('Failed to fetch tag translations: $e');
+      final json = await _dio.get(ApiEndpoints.ehTagTranslationUrl);
+      final parsed = await compute(_parseTranslations, json,
+          debugLabel: 'tag-index-refresh');
+      try {
+        await _cache.write(json);
+        await _removeLegacy();
+      } catch (_) {
+        // A valid downloaded dictionary is useful even when storage is full.
+      }
+      _install(parsed);
+    } catch (_) {
+      _log.w(
+          'Tag translation refresh failed; keeping the available dictionary');
     }
   }
 
-  void _parseJsonData(String jsonStr) {
-    final data = json.decode(jsonStr);
-    final result = <String, Map<String, String>>{};
+  void _install(_TranslationIndex index) {
+    if (_disposed) return;
+    _translations = index.translations;
+    _searchEntries = index.searchEntries;
+    _loaded = true;
+    notifyListeners();
+  }
 
-    // EhTagTranslation db.text.json format:
-    // { "data": [ { "namespace": "...", "data": { "tagKey": { "name": "..." } } } ] }
-    if (data is Map && data.containsKey('data')) {
-      final dataList = data['data'] as List;
-      for (final nsEntry in dataList) {
-        final namespace = nsEntry['namespace'] as String? ?? '';
-        final tags = nsEntry['data'] as Map<String, dynamic>? ?? {};
-        final nsMap = <String, String>{};
-        for (final entry in tags.entries) {
-          final tagData = entry.value;
-          if (tagData is Map && tagData.containsKey('name')) {
-            nsMap[entry.key] = tagData['name'] as String;
-          }
-        }
-        if (nsMap.isNotEmpty) {
-          result[namespace] = nsMap;
-        }
-      }
-    }
-
-    _translations = result;
-    _searchEntries = [
-      for (final namespace in result.entries)
-        for (final tag in namespace.value.entries)
-          _SearchEntry(TagSearchResult(
-              namespace: namespace.key, key: tag.key, translation: tag.value)),
-    ];
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   /// Get translation for a specific tag.
@@ -174,4 +190,38 @@ class _SearchEntry {
         translation = tag.translation.toLowerCase();
   bool contains(String query) =>
       key.contains(query) || translation.contains(query);
+}
+
+class _TranslationIndex {
+  final Map<String, Map<String, String>> translations;
+  final List<_SearchEntry> searchEntries;
+  _TranslationIndex(this.translations, this.searchEntries);
+}
+
+_TranslationIndex _parseTranslations(String jsonStr) {
+  final data = json.decode(jsonStr);
+  if (data is! Map || data['data'] is! List) {
+    throw const FormatException('Invalid translation dictionary');
+  }
+  final result = <String, Map<String, String>>{};
+  for (final entry in data['data'] as List) {
+    final namespace = entry['namespace'] as String;
+    final tags = entry['data'] as Map<String, dynamic>;
+    final translated = <String, String>{};
+    for (final tag in tags.entries) {
+      if (tag.value is Map && tag.value['name'] is String) {
+        translated[tag.key] = tag.value['name'] as String;
+      }
+    }
+    if (translated.isNotEmpty) result[namespace] = translated;
+  }
+  if (result.isEmpty) {
+    throw const FormatException('Empty translation dictionary');
+  }
+  return _TranslationIndex(result, [
+    for (final namespace in result.entries)
+      for (final tag in namespace.value.entries)
+        _SearchEntry(TagSearchResult(
+            namespace: namespace.key, key: tag.key, translation: tag.value)),
+  ]);
 }

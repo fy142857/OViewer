@@ -3,6 +3,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get_it/get_it.dart';
 
 import '../core/l10n/s.dart';
+import '../core/network/network_proxy_io.dart';
 import '../core/storage/reader_index_cache.dart';
 import '../core/router/route_observer.dart';
 import '../core/network/cookie_manager.dart' as app;
@@ -37,7 +38,8 @@ class _SiteSettingsWebViewState extends State<SiteSettingsWebView>
   }
 
   void _prepareSession() {
-    _sessionReady = GetIt.I<app.CookieManager>().syncToWebView(widget.url);
+    _sessionReady = NetworkProxy.waitUntilReady()
+        .then((_) => GetIt.I<app.CookieManager>().syncToWebView(widget.url));
   }
 
   @override

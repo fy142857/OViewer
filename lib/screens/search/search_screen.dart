@@ -60,6 +60,7 @@ class _SearchViewState extends State<_SearchView> {
   int? _minRating;
   bool _showHistory = true;
   Timer? _suggestionTimer;
+  TagTranslationRepository? _tagRepository;
   final _suggestionRevision = ValueNotifier<int>(0);
   final _hasText = ValueNotifier<bool>(false);
   TextEditingValue? _suggestedValue;
@@ -69,6 +70,10 @@ class _SearchViewState extends State<_SearchView> {
   @override
   void initState() {
     super.initState();
+    if (GetIt.I.isRegistered<TagTranslationRepository>()) {
+      _tagRepository = GetIt.I<TagTranslationRepository>()
+        ..addListener(_translationChanged);
+    }
     if (widget.initialKeyword != null) {
       _controller.text = widget.initialKeyword!;
       _showHistory = false;
@@ -138,6 +143,7 @@ class _SearchViewState extends State<_SearchView> {
 
   @override
   void dispose() {
+    _tagRepository?.removeListener(_translationChanged);
     _suggestionTimer?.cancel();
     _suggestionRevision.dispose();
     _hasText.dispose();
@@ -146,6 +152,14 @@ class _SearchViewState extends State<_SearchView> {
     _gridScrollController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _translationChanged() {
+    if (mounted &&
+        _focusNode.hasFocus &&
+        _controller.value.composing.isCollapsed) {
+      _scheduleSuggestions();
+    }
   }
 
   void _clearSuggestions() {

@@ -5,6 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/l10n/s.dart';
+import '../core/network/network_proxy_io.dart';
 
 /// Owns one browser session, including while switching tabs or saving a login.
 class LoginWebView extends StatefulWidget {
@@ -31,6 +32,7 @@ class _LoginWebViewState extends State<LoginWebView>
   bool _submitted = false;
   bool _loadFailed = false;
   Uri? _pendingUrl;
+  late Future<void> _networkReady = NetworkProxy.waitUntilReady();
 
   @override
   bool get wantKeepAlive => true;
@@ -136,6 +138,25 @@ class _LoginWebViewState extends State<LoginWebView>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    if (NetworkProxy.beforeRequest == null) return _buildReady(context);
+    return FutureBuilder<void>(
+        future: _networkReady,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+                child: TextButton(
+                    onPressed: () => setState(
+                        () => _networkReady = NetworkProxy.waitUntilReady()),
+                    child: Text(S.of(context).retry)));
+          }
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _buildReady(context);
+        });
+  }
+
+  Widget _buildReady(BuildContext context) {
     final s = S.of(context);
     return Column(children: [
       Align(

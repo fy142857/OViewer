@@ -4,6 +4,7 @@ import '../constants/app_constants.dart';
 import 'cookie_manager.dart' as app;
 import 'api_exception.dart';
 import 'dio_proxy_io.dart';
+import 'network_proxy_io.dart';
 import '../storage/database.dart';
 
 class DioClient {
@@ -88,6 +89,13 @@ class DioClient {
     CancelToken? cancelToken,
   }) async {
     try {
+      if (cancelToken == null) {
+        await NetworkProxy.waitUntilReady();
+      } else {
+        await Future.any(
+            [NetworkProxy.waitUntilReady(), cancelToken.whenCancel]);
+        if (cancelToken.isCancelled) throw cancelToken.cancelError!;
+      }
       final targetUrl = _appendQueryParameters(url, queryParams);
       _ensureCurrentSite(targetUrl);
       final response = await _dio.get(
@@ -111,6 +119,13 @@ class DioClient {
     bool followPostRedirects = false,
   }) async {
     try {
+      if (cancelToken == null) {
+        await NetworkProxy.waitUntilReady();
+      } else {
+        await Future.any(
+            [NetworkProxy.waitUntilReady(), cancelToken.whenCancel]);
+        if (cancelToken.isCancelled) throw cancelToken.cancelError!;
+      }
       final targetUrl = _appendQueryParameters(url, queryParams);
       _ensureCurrentSite(targetUrl);
       var response = await _dio.post(
@@ -198,7 +213,7 @@ class DioClient {
     configureProxy(_dio, proxyUrl);
     _log.i(proxyUrl == null || proxyUrl.isEmpty
         ? 'Proxy cleared'
-        : 'Proxy set to: $proxyUrl');
+        : 'Proxy configured');
   }
 
   ApiException _handleDioError(DioException error) {

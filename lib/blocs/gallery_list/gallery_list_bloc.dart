@@ -1,3 +1,4 @@
+import '../../core/services/startup_timings.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
@@ -50,6 +51,8 @@ class GalleryListBloc extends Bloc<GalleryListEvent, GalleryListState> {
 
       final filtered = _filterHiddenTags(result.galleries);
       final marked = await _markFavorites(filtered);
+      if (state.currentTab == GalleryTab.latest)
+        StartupTimings.mark('home_content');
 
       // If parser found galleries but no nextPageUrl, construct fallback
       final nextUrl = result.nextPageUrl ?? _buildFallbackNextUrl(0);

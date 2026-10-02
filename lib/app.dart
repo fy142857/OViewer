@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'core/router/app_router.dart';
+import 'core/network/network_preparation.dart';
 import 'core/router/route_observer.dart';
 import 'core/theme/app_theme.dart';
 import 'blocs/auth/auth_bloc.dart';
@@ -22,7 +23,9 @@ import 'repositories/settings_repository.dart';
 import 'repositories/download_repository.dart';
 
 class OViewerApp extends StatelessWidget {
-  const OViewerApp({super.key});
+  final SettingsState? initialSettings;
+  final NetworkPreparation? network;
+  const OViewerApp({super.key, this.initialSettings, this.network});
 
   @override
   Widget build(BuildContext context) {
@@ -31,29 +34,30 @@ class OViewerApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => AuthBloc(sl<AuthRepository>())
-            ..add(CheckLoginStatus()),
+          create: (_) =>
+              AuthBloc(sl<AuthRepository>())..add(CheckLoginStatus()),
         ),
         BlocProvider(
           create: (_) => FavoritesBloc(sl<FavoritesRepository>()),
         ),
         BlocProvider(
           lazy: false,
-          create: (_) => HistoryBloc(sl<HistoryRepository>())..add(LoadHistory()),
+          create: (_) =>
+              HistoryBloc(sl<HistoryRepository>())..add(LoadHistory()),
         ),
         BlocProvider(
-          create: (_) => SettingsBloc(sl<SettingsRepository>())
+          create: (_) => SettingsBloc(sl<SettingsRepository>(),
+              initialState: initialSettings, network: network)
             ..add(LoadSettings()),
         ),
         BlocProvider(
-          create: (_) => DownloadBloc(
-              sl<DownloadRepository>(), sl<GalleryRepository>()),
+          create: (_) =>
+              DownloadBloc(sl<DownloadRepository>(), sl<GalleryRepository>()),
         ),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
         buildWhen: (prev, curr) =>
-            prev.themeMode != curr.themeMode ||
-            prev.locale != curr.locale,
+            prev.themeMode != curr.themeMode || prev.locale != curr.locale,
         builder: (context, settingsState) {
           return MaterialApp(
             title: 'OViewer',
@@ -79,9 +83,12 @@ class OViewerApp extends StatelessWidget {
 
   ThemeMode _mapThemeMode(int mode) {
     switch (mode) {
-      case 1: return ThemeMode.light;
-      case 2: return ThemeMode.dark;
-      default: return ThemeMode.system;
+      case 1:
+        return ThemeMode.light;
+      case 2:
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
     }
   }
 }

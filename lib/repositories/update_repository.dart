@@ -96,17 +96,24 @@ class UpdateRepository {
       (await PackageInfo.fromPlatform()).version;
 
   UpdateCheckOperation check() {
-    final client = _clientFactory();
+    http.Client? client;
     var closed = false;
     void close() {
       if (closed) return;
       closed = true;
-      client.close();
+      client?.close();
+    }
+
+    Future<UpdateCheckResult> whenReady() async {
+      await NetworkProxy.waitUntilReady();
+      if (closed) throw const UpdateCheckException(UpdateFailure.network);
+      client = _clientFactory();
+      return _check(client!, () => closed);
     }
 
     Future<UpdateCheckResult> run() async {
       try {
-        return await _check(client, () => closed).timeout(timeout);
+        return await whenReady().timeout(timeout);
       } on UpdateCheckException {
         rethrow;
       } on TimeoutException {

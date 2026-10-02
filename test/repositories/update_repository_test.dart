@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:oviewer/repositories/update_repository.dart';
 import 'package:oviewer/core/storage/local_storage.dart';
+import 'package:oviewer/core/network/network_proxy_io.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Map<String, dynamic> release({String tag = 'v1.2.0'}) => {
@@ -36,6 +37,31 @@ class UnwritableStorage extends LocalStorage {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets(
+      'network preparation and release request share one timeout budget',
+      (tester) async {
+    final network = Completer<void>();
+    final reply = Completer<http.Response>();
+    NetworkProxy.beforeRequest = () => network.future;
+    addTearDown(() => NetworkProxy.beforeRequest = null);
+    final client = TrackingClient((_) => reply.future);
+    final operation = UpdateRepository(
+        timeout: const Duration(seconds: 1),
+        clientFactory: () => client,
+        readVersion: () async => '1.0.0').check();
+    final error = expectLater(
+        operation.result,
+        throwsA(isA<UpdateCheckException>()
+            .having((e) => e.failure, 'failure', UpdateFailure.timeout)));
+    await tester.pump(const Duration(milliseconds: 800));
+    network.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await error;
+    expect(client.closes, 1);
+    reply.complete(http.Response(jsonEncode(release()), 200));
+    await tester.pump();
+  });
 
   test('detection is persisted and restored without a network request',
       () async {
@@ -287,6 +313,6 @@ void main() {
     version.complete('1.0.0');
     await expectLater(operation.result, throwsA(isA<UpdateCheckException>()));
     expect(requests, 0);
-    expect(client.closes, 1);
+    expect(client.closes, 0, reason: 'Cancelled before the client was created');
   });
 }

@@ -58,7 +58,6 @@ class EhImageCacheManager extends CacheManager {
               _key,
               fileService: _CookieHttpFileService(
                 cookieManager,
-                httpClient: createImageHttpClient(),
               ),
             ),
             limitBytes: limitMB * 1024 * 1024);
@@ -264,6 +263,7 @@ class _CookieHttpFileService extends FileService {
   @override
   Future<FileServiceResponse> get(String url,
       {Map<String, String>? headers}) async {
+    await NetworkProxy.waitUntilReady();
     _ensureReaderRequestActive(readerRequest);
     final requestUri = Uri.tryParse(url);
     if (requestUri != null &&

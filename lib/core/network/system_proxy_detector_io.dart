@@ -22,7 +22,7 @@ class SystemProxyDetector {
         Platform.environment['https_proxy'] ??
         Platform.environment['HTTPS_PROXY'];
     if (envProxy != null && envProxy.isNotEmpty) {
-      _log.i('System proxy from env: $envProxy');
+      _log.i('Environment proxy detected');
       return _normalize(envProxy);
     }
 
@@ -42,7 +42,8 @@ class SystemProxyDetector {
 
   static Future<bool> isVpnActive() async {
     try {
-      final interfaces = await NetworkInterface.list();
+      final interfaces = await NetworkInterface.list()
+          .timeout(const Duration(milliseconds: 500));
       for (final iface in interfaces) {
         final name = iface.name.toLowerCase();
         if (name.startsWith('tun') ||
@@ -58,45 +59,52 @@ class SystemProxyDetector {
     return false;
   }
 
-  static Future<String?> probeLocalProxy() async {
-    final hosts = <String>['127.0.0.1'];
-    // Android Emulator maps 10.0.2.2 to the host computer. A Flutter process
-    // inside the emulator cannot reach the desktop proxy via 127.0.0.1.
-    if (Platform.isAndroid) hosts.add('10.0.2.2');
+  static Future<bool> _connect(String host, int port) async {
+    final socket = await Socket.connect(host, port,
+        timeout: const Duration(milliseconds: 500));
+    socket.destroy();
+    return true;
+  }
 
-    for (final host in hosts) {
-      for (final port in _commonPorts) {
+  static Future<String?> probeLocalProxy(
+      {List<String>? hosts,
+      List<int>? ports,
+      Future<bool> Function(String, int)? probe}) async {
+    final targets = hosts ?? ['127.0.0.1', if (Platform.isAndroid) '10.0.2.2'];
+    final candidates = ports ?? _commonPorts;
+    for (final host in targets) {
+      final open = await Future.wait(candidates.map((port) async {
         try {
-          final socket = await Socket.connect(
-            host,
-            port,
-            timeout: const Duration(milliseconds: 500),
-          );
-          socket.destroy();
-          final url = 'http://$host:$port';
-          _log.i('Local proxy port open: $url');
-          return url;
-        } catch (e) {
-          _log.d('Proxy $host:$port not open: $e');
+          return await (probe ?? _connect)(host, port)
+              .timeout(const Duration(milliseconds: 500));
+        } catch (_) {
+          return false;
         }
+      }));
+      for (var i = 0; i < open.length; i++) {
+        if (open[i]) return 'http://$host:${candidates[i]}';
       }
     }
     return null;
   }
 
-  static Future<AutoProxyResult> detect() async {
-    final envProxy = detectEnvProxy();
+  static Future<AutoProxyResult> detect(
+      {String? Function()? environmentProxy,
+      Future<bool> Function()? vpnCheck,
+      Future<String?> Function()? localProbe}) async {
+    final envProxy = (environmentProxy ?? detectEnvProxy)();
     if (envProxy != null) {
       return AutoProxyResult(proxyUrl: envProxy, vpnActive: false);
     }
-    final vpn = await isVpnActive();
-    if (vpn) {
-      return AutoProxyResult(
-        proxyUrl: await probeLocalProxy(),
-        vpnActive: true,
-      );
-    }
-    return const AutoProxyResult(proxyUrl: null, vpnActive: false);
+    var vpn = false;
+    try {
+      vpn = await (vpnCheck ?? isVpnActive)()
+          .timeout(const Duration(milliseconds: 500));
+    } catch (_) {/* Interface failures keep the existing direct fallback. */}
+    return AutoProxyResult(
+      proxyUrl: vpn ? await (localProbe ?? probeLocalProxy)() : null,
+      vpnActive: vpn,
+    );
   }
 
   static String _normalize(String proxy) {
