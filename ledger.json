@@ -2020,7 +2020,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 优化启动空白屏：首帧前仅保留必要本地初始化，首页按保存的主题、语言和布局显示；代理探测、缓存维护和词库处理移到首帧后，网络请求等待统一代理准备结果。词库迁入独立缓存文件并在后台 isolate 解析，加载后自动刷新翻译和联想。\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "991cd00deb0a90400a0634e30edb26e58214af75",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "performance",
