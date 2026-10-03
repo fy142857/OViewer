@@ -51,6 +51,7 @@ class _DailyCheckInTileState extends State<DailyCheckInTile> {
                         }),
               ListTile(
                   enabled: state.memberId != null,
+                  leading: const SizedBox(width: 24, height: 24),
                   title: Text(s.dailyCheckIn),
                   subtitle: Text(state.storageFailed
                       ? s.checkInStorageError
