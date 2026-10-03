@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.4.2",
   "branch": "dev",
-  "build_number": 51,
-  "candidate_id": "1.5.0+51",
-  "fingerprint": "f0737664731bf7bc8b4fa5041193665c65817c65baf9fb0fdbde63625d9004ef",
+  "build_number": 52,
+  "candidate_id": "1.5.0+52",
+  "fingerprint": "9ff617f4dd64e0dd6f5d7950cac9b6ba9336529aa94a9407892a222d7f730482",
   "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "5f45cd6eae345f080e9240411a5f3e269794bea1",
+  "source_sha": "c24c174a1d449ba811a98f4ccfac9d77f58bb721",
   "summary": [
     {
       "change_kind": "feature",
@@ -45,6 +45,16 @@
       "original_type": "fix",
       "sha": "5f45cd6eae345f080e9240411a5f3e269794bea1",
       "subject": "fix(settings): align daily check-in text with automatic check-in",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "修复退出后浏览器残留登录 Cookie 和旧异步响应恢复账号的问题，保留站点偏好并支持中断清理恢复，属于现有登录功能修复。",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "c24c174a1d449ba811a98f4ccfac9d77f58bb721",
+      "subject": "fix(auth): clear browser sessions and reject stale login callbacks",
       "type": "fix",
       "version_impact": "patch"
     }
