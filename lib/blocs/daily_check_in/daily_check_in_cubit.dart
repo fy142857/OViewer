@@ -239,7 +239,6 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
   void observeResponse(Uri uri, String source, Object? scope) {
     if (scope is! _RequestScope ||
         !_valid(scope.generation, scope.day) ||
-        !state.enabled ||
         state.status == CheckInStatus.confirmed ||
         uri.scheme != 'https' ||
         !{'e-hentai.org', 'exhentai.org'}.contains(uri.host) ||

@@ -42,7 +42,7 @@ class _DailyCheckInTileState extends State<DailyCheckInTile> {
                   title: Text(s.autoCheckIn),
                   subtitle: Text(s.checkInSchedule),
                   value: state.enabled,
-                  onChanged: _saving
+                  onChanged: _saving || state.memberId == null
                       ? null
                       : (value) async {
                           setState(() => _saving = true);
@@ -50,6 +50,7 @@ class _DailyCheckInTileState extends State<DailyCheckInTile> {
                           if (mounted) setState(() => _saving = false);
                         }),
               ListTile(
+                  enabled: state.memberId != null,
                   title: Text(s.dailyCheckIn),
                   subtitle: Text(state.storageFailed
                       ? s.checkInStorageError

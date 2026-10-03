@@ -101,7 +101,7 @@ class _DailyCheckInHostState extends State<DailyCheckInHost>
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text(s.confirm))
+                    child: Text(s.checkInDismiss))
               ],
             ));
     unawaited(cubit.markNotified(state.memberId!, state.record.day));

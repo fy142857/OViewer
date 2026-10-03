@@ -394,7 +394,58 @@ void main() {
     expect(repository.replies, hasLength(1));
   });
 
+  checkWidgets(
+      'disabled automatic requests still observe explicit gallery rewards',
+      (tester) async {
+    await cubit.setEnabled(false);
+    ready();
+    expect(repository.replies, isEmpty);
+    cubit.observeResponse(Uri.parse('https://exhentai.org/g/123/abcdef/'), dawn,
+        cubit.captureResponseScope());
+    await tester.pump();
+    expect(cubit.state.status, CheckInStatus.confirmed);
+    expect(cubit.state.needsDialog, isTrue);
+    expect(repository.read('1', '2026-10-03').status, CheckInStatus.confirmed);
+    expect(repository.replies, isEmpty);
+  });
+
   for (final locale in ['zh', 'en']) {
+    checkWidgets(
+        '$locale signed-out settings are disabled and react to login/logout',
+        (tester) async {
+      final settings = MockSettingsBloc();
+      when(() => settings.stream)
+          .thenAnswer((_) => const Stream<SettingsState>.empty());
+      when(() => settings.state).thenReturn(SettingsState(locale: locale));
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settings,
+          child: MaterialApp(
+              home: Scaffold(body: DailyCheckInTile(cubit: cubit)))));
+      final daily = find.widgetWithText(
+          ListTile, locale == 'zh' ? '今日签到' : 'Daily check-in');
+      expect(
+          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).onChanged,
+          isNull);
+      expect(tester.widget<ListTile>(daily).enabled, isFalse);
+      expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed, isNull);
+      await tester
+          .tap(find.text(locale == 'zh' ? '自动签到' : 'Automatic check-in'));
+      expect(cubit.state.enabled, isTrue);
+      expect(repository.replies, isEmpty);
+      cubit.setAccount('1');
+      await tester.pump();
+      expect(
+          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).onChanged,
+          isNotNull);
+      expect(tester.widget<ListTile>(daily).enabled, isTrue);
+      cubit.setAccount(null);
+      await tester.pump();
+      expect(
+          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).onChanged,
+          isNull);
+      expect(tester.widget<ListTile>(daily).enabled, isFalse);
+    });
     checkWidgets(
         '$locale settings preserve manual check-in when automatic is off',
         (tester) async {
@@ -473,7 +524,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Check-in successful'), findsOneWidget);
       expect(find.text('500 Credits'), findsOneWidget);
-      await tester.tap(find.text('Confirm'));
+      await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
       cubit.setForeground(true);
       await tester.pumpAndSettle();

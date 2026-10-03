@@ -20,6 +20,7 @@ class S {
   String get dailyCheckIn => _zh ? '今日签到' : 'Daily check-in';
   String get checkInNow => _zh ? '手动签到' : 'Check in';
   String get checkInSuccess => _zh ? '签到成功' : 'Check-in successful';
+  String get checkInDismiss => _zh ? '确定' : 'OK';
   String get checkInConfirmed => _zh ? '已收到站点的每日奖励确认。' : 'The site confirmed your daily reward.';
   String get checkInSchedule => _zh ? '使用应用时自动签到，每日北京时间 08:00 重置' : 'Checks in while using the app. Resets daily at 00:00 UTC.';
   String get checkInStorageError => _zh ? '签到设置或记录保存失败，请重试' : 'Could not save check-in settings or status. Please retry.';
