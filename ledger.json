@@ -2194,8 +2194,73 @@
         }
       ],
       "version": "1.5.0"
+    },
+    {
+      "base_tag": "v1.4.2",
+      "branch": "dev",
+      "build_number": 52,
+      "build_sha": "6b28b5a26f676e8358d909498adfc87584c78e90",
+      "candidate_id": "1.5.0+52",
+      "fingerprint": "9ff617f4dd64e0dd6f5d7950cac9b6ba9336529aa94a9407892a222d7f730482",
+      "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "c24c174a1d449ba811a98f4ccfac9d77f58bb721",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "新增账号每日自动签到、手动重试、成功奖励弹窗及持久化状态，属于新的独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "cb968d532f0ff771c790775da6da610d55d299f8",
+          "subject": "feat(check-in): collect daily Dawn rewards while using the app",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修正现有签到功能的未登录禁用状态、关闭自动请求后的明确奖励记录和弹窗按钮文案，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "7b8ed27425802794737588c33760607b93fcea26",
+          "subject": "fix(check-in): align signed-out controls and observed rewards",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "按维护者要求调整现有签到判定，无奖励提示或请求失败后静默持久化今日已签到并取消当天重试，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "8ebc0732609862f33e49bee46f90fd85f373b207",
+          "subject": "fix(check-in): complete the day silently after unsuccessful attempts",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修正设置页今日签到文字缩进，使其与自动签到标题及说明对齐，仅调整既有界面布局。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "5f45cd6eae345f080e9240411a5f3e269794bea1",
+          "subject": "fix(settings): align daily check-in text with automatic check-in",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复退出后浏览器残留登录 Cookie 和旧异步响应恢复账号的问题，保留站点偏好并支持中断清理恢复，属于现有登录功能修复。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "c24c174a1d449ba811a98f4ccfac9d77f58bb721",
+          "subject": "fix(auth): clear browser sessions and reject stale login callbacks",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.5.0"
     }
   ],
-  "last_build_number": 51,
+  "last_build_number": 52,
   "schema": 1
 }
