@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,7 @@ class _LoginWebViewState extends State<LoginWebView>
     with AutomaticKeepAliveClientMixin {
   MethodChannel? _channel;
   InAppWebViewController? _androidController;
+  int _readGeneration = 0;
   bool _checking = false;
   bool _submitted = false;
   bool _loadFailed = false;
@@ -40,7 +42,11 @@ class _LoginWebViewState extends State<LoginWebView>
   @override
   void didUpdateWidget(LoginWebView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!oldWidget.enabled && widget.enabled) _submitted = false;
+    if (oldWidget.enabled != widget.enabled) {
+      _readGeneration++;
+      _pendingUrl = null;
+      if (widget.enabled) _submitted = false;
+    }
   }
 
   bool _trusted(Uri? url) =>
@@ -53,6 +59,7 @@ class _LoginWebViewState extends State<LoginWebView>
     _pendingUrl = url;
     if (_checking) return;
     _checking = true;
+    final generation = _readGeneration;
     try {
       // Cookie-store notifications may arrive during a read; coalesce them
       // rather than losing the notification that supplies the second cookie.
@@ -61,7 +68,9 @@ class _LoginWebViewState extends State<LoginWebView>
         _pendingUrl = null;
         for (final scope in {current, Uri.parse(AppConstants.ehBaseUrl)}) {
           final cookies = await CookieManager.instance().getCookies(url: scope);
-          if (!mounted || !widget.enabled) return;
+          if (!mounted || !widget.enabled || generation != _readGeneration) {
+            return;
+          }
           final values = {for (final c in cookies) c.name: c.value};
           final member = values[AppConstants.cookieIpbMemberId];
           final pass = values[AppConstants.cookieIpbPassHash];
@@ -88,6 +97,9 @@ class _LoginWebViewState extends State<LoginWebView>
       // notification or an explicit retry will read it again.
     } finally {
       _checking = false;
+      if (mounted && widget.enabled && !_submitted && _pendingUrl != null) {
+        unawaited(_checkLogin(_pendingUrl));
+      }
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:oviewer/core/network/network_proxy_io.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -63,6 +64,42 @@ void main() {
           home: Scaffold(body: SiteSettingsWebView(url: url)),
         ),
       );
+
+  for (final target in [TargetPlatform.iOS, TargetPlatform.android]) {
+    for (final waitingForProxy in [false, true]) {
+      testWidgets(
+          '$target logout invalidates pending settings preparation (proxy=$waitingForProxy)',
+          (tester) async {
+        debugDefaultTargetPlatformOverride = target;
+        final pending = Completer<void>();
+        var revision = 0;
+        when(() => cookies.sessionRevision).thenAnswer((_) => revision);
+        final url = Uri.parse('https://e-hentai.org/mytags');
+        if (waitingForProxy) {
+          NetworkProxy.beforeRequest = () => pending.future;
+          when(() => cookies.syncToWebView(url)).thenAnswer((_) async {});
+        } else {
+          when(() => cookies.syncToWebView(url))
+              .thenAnswer((_) => pending.future);
+        }
+        try {
+          await tester.pumpWidget(page(url));
+          await tester.pump();
+          revision++;
+          pending.complete();
+          await tester.pumpAndSettle();
+          expect(find.byType(InAppWebView), findsNothing);
+          expect(createdViews, isEmpty);
+          if (waitingForProxy) verifyNever(() => cookies.syncToWebView(url));
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+        } finally {
+          NetworkProxy.beforeRequest = null;
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+    }
+  }
 
   for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
     testWidgets('$platform waits for session sync before creating the WebView',

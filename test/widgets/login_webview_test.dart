@@ -1,3 +1,4 @@
+import 'package:oviewer/blocs/auth/auth_event.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -274,5 +275,67 @@ void main() {
     await tester.pumpAndSettle();
     expect(views, hasLength(1));
     expect(tester.takeException(), isNull);
+  });
+
+  for (final target in [TargetPlatform.android, TargetPlatform.iOS]) {
+    testWidgets(
+        '$target logout gates browser creation through cleanup and failure',
+        (tester) async {
+      final auth = MockAuthBloc();
+      final repository = MockAuthRepository();
+      var state =
+          const AuthState(status: AuthStatus.loggingOut, sessionGeneration: 1);
+      final states = StreamController<AuthState>.broadcast();
+      when(() => auth.state).thenAnswer((_) => state);
+      when(() => auth.stream).thenAnswer((_) => states.stream);
+      when(() => repository.loginPageUrl).thenReturn(loginUrl.toString());
+      GetIt.I.registerSingleton<AuthRepository>(repository);
+      await tester.pumpWidget(app(BlocProvider<AuthBloc>.value(
+          value: auth, child: const LoginScreen())));
+      await tester.pump();
+      expect(find.byType(LoginWebView), findsNothing);
+      expect(views, isEmpty);
+      expect(find.text('Signing out…'), findsOneWidget);
+      state = const AuthState(
+          status: AuthStatus.logoutFailed, sessionGeneration: 1);
+      states.add(state);
+      await tester.pump();
+      expect(find.byType(LoginWebView), findsNothing);
+      expect(find.text('Sign-out cleanup could not finish. Please retry.'),
+          findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      verify(() => auth.add(LogoutRequested())).called(1);
+      state = const AuthState(
+          status: AuthStatus.unauthenticated, sessionGeneration: 1);
+      states.add(state);
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginWebView), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await states.close();
+    }, variant: TargetPlatformVariant.only(target));
+  }
+
+  iosTest(
+      'disable then reenable cannot submit a cookie read from the previous generation',
+      (tester) async {
+    await tester.pumpWidget(page());
+    await tester.pumpAndSettle();
+    final oldRead = Completer<List<Map<String, String>>>();
+    readCookies = (_) => oldRead.future;
+    final notification = event('onCookiesChanged');
+    await tester.pump();
+    await tester.pumpWidget(page(enabled: false));
+    await tester.pump();
+    await tester.pumpWidget(page());
+    await tester.pump();
+    oldRead.complete(completeCookies);
+    await notification;
+    await tester.pump();
+    expect(submissions, isEmpty);
+    readCookies = (_) async => completeCookies;
+    await event('onCookiesChanged');
+    await tester.pump();
+    expect(submissions, hasLength(1));
   });
 }

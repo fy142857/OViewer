@@ -57,7 +57,7 @@ class AuthRepository {
     );
   }
 
-  /// Logout - clear all cookies
+  /// Clear authentication from both stores, preserving site preferences.
   Future<void> logout() async {
     await _cookieManager.clearCookies();
   }

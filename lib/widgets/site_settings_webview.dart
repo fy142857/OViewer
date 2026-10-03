@@ -38,8 +38,17 @@ class _SiteSettingsWebViewState extends State<SiteSettingsWebView>
   }
 
   void _prepareSession() {
-    _sessionReady = NetworkProxy.waitUntilReady()
-        .then((_) => GetIt.I<app.CookieManager>().syncToWebView(widget.url));
+    final cookies = GetIt.I<app.CookieManager>();
+    final revision = cookies.sessionRevision;
+    _sessionReady = NetworkProxy.waitUntilReady().then((_) async {
+      if (!mounted || revision != cookies.sessionRevision) {
+        throw StateError('Settings session expired');
+      }
+      await cookies.syncToWebView(widget.url);
+      if (!mounted || revision != cookies.sessionRevision) {
+        throw StateError('Settings session expired');
+      }
+    });
   }
 
   @override

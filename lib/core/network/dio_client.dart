@@ -110,7 +110,9 @@ class DioClient {
       final response = await _dio.get(
         targetUrl,
         cancelToken: cancelToken,
-        options: Options(followRedirects: followRedirects),
+        options: Options(
+            followRedirects: followRedirects,
+            extra: {app.CookieManager.sessionRequestKey: sessionRevision}),
       );
       if (cancelToken?.isCancelled != true &&
           sessionRevision == _cookieManager.sessionRevision) {
@@ -135,6 +137,7 @@ class DioClient {
     Map<String, dynamic>? headers,
     bool followPostRedirects = false,
   }) async {
+    final sessionRevision = _cookieManager.sessionRevision;
     try {
       if (cancelToken == null) {
         await NetworkProxy.waitUntilReady();
@@ -149,6 +152,7 @@ class DioClient {
         targetUrl,
         data: data,
         options: Options(
+            extra: {app.CookieManager.sessionRequestKey: sessionRevision},
             contentType: contentType,
             headers: headers,
             followRedirects: followPostRedirects ? false : null,
@@ -184,7 +188,9 @@ class DioClient {
           response = await _dio.get(target.toString(),
               cancelToken: cancelToken,
               options: Options(
-                  followRedirects: false, validateStatus: _isFormStatus));
+                  extra: {app.CookieManager.sessionRequestKey: sessionRevision},
+                  followRedirects: false,
+                  validateStatus: _isFormStatus));
         }
       }
       return response.data as String;

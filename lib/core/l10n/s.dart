@@ -58,6 +58,8 @@ class S {
   String get retry => _zh ? '重试' : 'Retry';
   String get reloadLoginPage => _zh ? '刷新登录页' : 'Reload login page';
   String get login => _zh ? '登录' : 'Login';
+  String get loggingOut => _zh ? '正在退出登录…' : 'Signing out…';
+  String get logoutCleanupFailed => _zh ? '登录信息清理未完成，请重试退出登录。' : 'Sign-out cleanup could not finish. Please retry.';
   String get logout => _zh ? '退出登录' : 'Logout';
   String get reset => _zh ? '重置' : 'Reset';
   String get submit => _zh ? '提交' : 'Submit';

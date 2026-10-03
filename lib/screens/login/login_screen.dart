@@ -61,6 +61,31 @@ class _LoginScreenState extends State<LoginScreen>
         }
       },
       builder: (context, state) {
+        if (state.status == AuthStatus.unknown ||
+            state.status == AuthStatus.loggingOut ||
+            state.status == AuthStatus.logoutFailed) {
+          return Scaffold(
+              appBar: AppBar(title: Text(s.account)),
+              body: Center(
+                  child: state.status == AuthStatus.logoutFailed
+                      ? Column(mainAxisSize: MainAxisSize.min, children: [
+                          Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(s.logoutCleanupFailed)),
+                          TextButton(
+                              onPressed: () => context
+                                  .read<AuthBloc>()
+                                  .add(LogoutRequested()),
+                              child: Text(s.retry)),
+                        ])
+                      : Column(mainAxisSize: MainAxisSize.min, children: [
+                          const CircularProgressIndicator(),
+                          if (state.status == AuthStatus.loggingOut)
+                            Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(s.loggingOut)),
+                        ])));
+        }
         if (state.isLoggedIn) {
           return _buildLoggedInView(context, state);
         }
@@ -159,10 +184,12 @@ class _LoginScreenState extends State<LoginScreen>
     return Stack(
       children: [
         LoginWebView(
+          key: ValueKey(state.sessionGeneration),
           url: Uri.parse(loginUrl),
           enabled: state.status != AuthStatus.loading,
-          onLogin: (cookies) =>
-              context.read<AuthBloc>().add(LoginFromWebView(cookies)),
+          onLogin: (cookies) => context.read<AuthBloc>().add(LoginFromWebView(
+              cookies,
+              sessionGeneration: state.sessionGeneration)),
         ),
         if (state.status == AuthStatus.loading)
           const Positioned.fill(
@@ -262,6 +289,7 @@ class _LoginScreenState extends State<LoginScreen>
                           memberId: memberId,
                           passHash: passHash,
                           igneous: igneous.isNotEmpty ? igneous : null,
+                          sessionGeneration: state.sessionGeneration,
                         ));
                   },
             child: state.status == AuthStatus.loading
