@@ -2094,8 +2094,53 @@
         }
       ],
       "version": "1.5.0"
+    },
+    {
+      "base_tag": "v1.4.2",
+      "branch": "dev",
+      "build_number": 50,
+      "build_sha": "df6dee3728eeaff30886ecf83020f2c9f2eeb9ac",
+      "candidate_id": "1.5.0+50",
+      "fingerprint": "e94f70ed787c0f5edf40c3f291d517bf6bf7443059dc74dc58b8fd95ea06b0d4",
+      "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "8ebc0732609862f33e49bee46f90fd85f373b207",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "新增账号每日自动签到、手动重试、成功奖励弹窗及持久化状态，属于新的独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "cb968d532f0ff771c790775da6da610d55d299f8",
+          "subject": "feat(check-in): collect daily Dawn rewards while using the app",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修正现有签到功能的未登录禁用状态、关闭自动请求后的明确奖励记录和弹窗按钮文案，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "7b8ed27425802794737588c33760607b93fcea26",
+          "subject": "fix(check-in): align signed-out controls and observed rewards",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "按维护者要求调整现有签到判定，无奖励提示或请求失败后静默持久化今日已签到并取消当天重试，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "8ebc0732609862f33e49bee46f90fd85f373b207",
+          "subject": "fix(check-in): complete the day silently after unsuccessful attempts",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.5.0"
     }
   ],
-  "last_build_number": 49,
+  "last_build_number": 50,
   "schema": 1
 }
