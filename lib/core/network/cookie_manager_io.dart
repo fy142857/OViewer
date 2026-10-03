@@ -8,6 +8,8 @@ import '../constants/app_constants.dart';
 import '../storage/reader_index_cache.dart';
 
 class CookieManager {
+  int _sessionRevision = 0;
+  int? get sessionRevision => _sessionRevision;
   static final _log = Logger();
   late final PersistCookieJar _cookieJar;
   bool _initialized = false;
@@ -116,6 +118,7 @@ class CookieManager {
     required String passHash,
     String? igneous,
   }) async {
+    _sessionRevision++;
     ReaderIndexCache.shared.clear();
     final ehUri = Uri.parse(AppConstants.ehBaseUrl);
     final exUri = Uri.parse(AppConstants.exBaseUrl);
@@ -201,6 +204,7 @@ class CookieManager {
   }
 
   Future<void> clearCookies() async {
+    _sessionRevision++;
     ReaderIndexCache.shared.clear();
     await _cookieJar.deleteAll();
     _log.i('All cookies cleared');

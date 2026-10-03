@@ -1,3 +1,5 @@
+import '../../blocs/daily_check_in/daily_check_in_cubit.dart';
+import '../../widgets/daily_check_in_tile.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -89,6 +91,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // ---- Site ----
               _sectionHeader(s.site),
+              if (GetIt.I.isRegistered<DailyCheckInCubit>())
+                DailyCheckInTile(cubit: GetIt.I<DailyCheckInCubit>()),
               ListTile(
                 leading: Icon(
                   state.useExHentai ? Icons.lock : Icons.public,

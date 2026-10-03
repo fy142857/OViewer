@@ -8,6 +8,9 @@ import 'network_proxy_io.dart';
 import '../storage/database.dart';
 
 class DioClient {
+  // Optional passive observation; failures must never affect gallery requests.
+  Object? Function()? captureResponseScope;
+  void Function(Uri uri, String html, Object? scope)? onHtmlResponse;
   static final _log = Logger();
   late final Dio _dio;
   final app.CookieManager _cookieManager;
@@ -87,7 +90,13 @@ class DioClient {
     String url, {
     Map<String, dynamic>? queryParams,
     CancelToken? cancelToken,
+    bool followRedirects = true,
   }) async {
+    Object? scope;
+    try {
+      scope = captureResponseScope?.call();
+    } catch (_) {/* Optional. */}
+    final sessionRevision = _cookieManager.sessionRevision;
     try {
       if (cancelToken == null) {
         await NetworkProxy.waitUntilReady();
@@ -101,7 +110,15 @@ class DioClient {
       final response = await _dio.get(
         targetUrl,
         cancelToken: cancelToken,
+        options: Options(followRedirects: followRedirects),
       );
+      if (cancelToken?.isCancelled != true &&
+          sessionRevision == _cookieManager.sessionRevision) {
+        try {
+          onHtmlResponse?.call(
+              response.realUri, response.data as String, scope);
+        } catch (_) {/* Optional observers cannot fail a normal request. */}
+      }
       return response.data as String;
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) rethrow;

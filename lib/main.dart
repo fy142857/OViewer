@@ -8,6 +8,8 @@ import 'core/services/startup_tasks.dart';
 import 'core/services/startup_timings.dart';
 import 'package:get_it/get_it.dart';
 import 'app.dart';
+import 'repositories/daily_check_in_repository.dart';
+import 'blocs/daily_check_in/daily_check_in_cubit.dart';
 import 'core/network/dio_client.dart';
 import 'core/network/cookie_manager.dart';
 import 'core/network/eh_image_cache_manager.dart';
@@ -59,6 +61,15 @@ Future<void> _initDependencies() async {
   NetworkProxy.beforeRequest = network.waitUntilReady;
   sl.registerSingleton<NetworkPreparation>(network,
       dispose: (value) => value.dispose());
+
+  final checkIn = DailyCheckInCubit(DailyCheckInRepository(dioClient, localStorage));
+  dioClient.captureResponseScope = checkIn.captureResponseScope;
+  dioClient.onHtmlResponse = checkIn.observeResponse;
+  sl.registerSingleton<DailyCheckInCubit>(checkIn, dispose: (value) async {
+    dioClient.captureResponseScope = null;
+    dioClient.onHtmlResponse = null;
+    await value.close();
+  });
 
   // Repositories
   sl.registerLazySingleton<UpdateRepository>(

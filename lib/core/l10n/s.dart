@@ -1,3 +1,4 @@
+import '../../models/daily_check_in.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/settings/settings_bloc.dart';
@@ -14,6 +15,24 @@ class S {
   S._(this._l);
 
   bool get _zh => _l == 'zh';
+
+  String get autoCheckIn => _zh ? '自动签到' : 'Automatic check-in';
+  String get dailyCheckIn => _zh ? '今日签到' : 'Daily check-in';
+  String get checkInNow => _zh ? '手动签到' : 'Check in';
+  String get checkInSuccess => _zh ? '签到成功' : 'Check-in successful';
+  String get checkInConfirmed => _zh ? '已收到站点的每日奖励确认。' : 'The site confirmed your daily reward.';
+  String get checkInSchedule => _zh ? '使用应用时自动签到，每日北京时间 08:00 重置' : 'Checks in while using the app. Resets daily at 00:00 UTC.';
+  String get checkInStorageError => _zh ? '签到设置或记录保存失败，请重试' : 'Could not save check-in settings or status. Please retry.';
+  String checkInStatus(CheckInStatus status) {
+    switch (status) {
+      case CheckInStatus.signedOut: return _zh ? '未登录' : 'Not signed in';
+      case CheckInStatus.pending: return _zh ? '待签到' : 'Not checked in yet';
+      case CheckInStatus.running: return _zh ? '签到中' : 'Checking in';
+      case CheckInStatus.confirmed: return _zh ? '今日已签到' : 'Checked in today';
+      case CheckInStatus.unconfirmed: return _zh ? '已尝试，未确认领取；可能已在其他设备领取' : 'Attempted, but not confirmed. You may have claimed the reward on another device.';
+      case CheckInStatus.failed: return _zh ? '请求失败，请重试（重试间隔 30 秒）' : 'Request failed. Retry after 30 seconds.';
+    }
+  }
 
   String get lowerCacheLimitWarning => _zh ? '调低限制后，自动清理超出部分！' : 'Lowering the limit will automatically remove excess cached images!';
   String get cacheLimitApplyFailed => _zh ? '缓存限制设置或清理失败，请重试' : 'Could not apply the cache limit or finish cleanup. Please retry.';
