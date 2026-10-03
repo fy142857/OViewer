@@ -1,23 +1,23 @@
 {
-  "base_tag": "v1.4.1",
+  "base_tag": "v1.4.2",
   "branch": "dev",
-  "build_number": 47,
-  "candidate_id": "1.4.2+47",
-  "fingerprint": "718e2a919f2ac7f699c70587542653c31c58838e1051d76cbbee19dad16a8ca1",
-  "notes": "### 新增\n\n### 修复\n\n- 优化启动空白屏：首帧前仅保留必要本地初始化，首页按保存的主题、语言和布局显示；代理探测、缓存维护和词库处理移到首帧后，网络请求等待统一代理准备结果。词库迁入独立缓存文件并在后台 isolate 解析，加载后自动刷新翻译和联想。\n\n### 变更\n\n### 已知限制",
+  "build_number": 48,
+  "candidate_id": "1.5.0+48",
+  "fingerprint": "96fd567a2f0db2ea64d0b62655a4f030d580275f4663be47db956f97dfc73c18",
+  "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "991cd00deb0a90400a0634e30edb26e58214af75",
+  "source_sha": "cb968d532f0ff771c790775da6da610d55d299f8",
   "summary": [
     {
-      "change_kind": "performance",
-      "classification_reason": "Reduce startup blank-screen time without adding a business capability or changing stored user data compatibility.",
+      "change_kind": "feature",
+      "classification_reason": "新增账号每日自动签到、手动重试、成功奖励弹窗及持久化状态，属于新的独立业务能力。",
       "classification_source": "commit-trailers",
-      "original_type": "perf",
-      "sha": "991cd00deb0a90400a0634e30edb26e58214af75",
-      "subject": "perf(startup): show the home shell before background preparation",
-      "type": "perf",
-      "version_impact": "patch"
+      "original_type": "feat",
+      "sha": "cb968d532f0ff771c790775da6da610d55d299f8",
+      "subject": "feat(check-in): collect daily Dawn rewards while using the app",
+      "type": "feat",
+      "version_impact": "minor"
     }
   ],
-  "version": "1.4.2"
+  "version": "1.5.0"
 }
