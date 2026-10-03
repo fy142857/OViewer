@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.4.2",
   "branch": "dev",
-  "build_number": 50,
-  "candidate_id": "1.5.0+50",
-  "fingerprint": "e94f70ed787c0f5edf40c3f291d517bf6bf7443059dc74dc58b8fd95ea06b0d4",
+  "build_number": 51,
+  "candidate_id": "1.5.0+51",
+  "fingerprint": "f0737664731bf7bc8b4fa5041193665c65817c65baf9fb0fdbde63625d9004ef",
   "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "8ebc0732609862f33e49bee46f90fd85f373b207",
+  "source_sha": "5f45cd6eae345f080e9240411a5f3e269794bea1",
   "summary": [
     {
       "change_kind": "feature",
@@ -35,6 +35,16 @@
       "original_type": "fix",
       "sha": "8ebc0732609862f33e49bee46f90fd85f373b207",
       "subject": "fix(check-in): complete the day silently after unsuccessful attempts",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "修正设置页今日签到文字缩进，使其与自动签到标题及说明对齐，仅调整既有界面布局。",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "5f45cd6eae345f080e9240411a5f3e269794bea1",
+      "subject": "fix(settings): align daily check-in text with automatic check-in",
       "type": "fix",
       "version_impact": "patch"
     }
