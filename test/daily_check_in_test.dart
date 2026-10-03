@@ -172,46 +172,53 @@ void main() {
     expect(cubit.state.needsDialog, isFalse);
     expect(repository.read('1', '2026-10-03').notified, isTrue);
   });
-  checkWidgets(
-      'failure and unconfirmed retry after 5 and 30 minutes, three automatic attempts max',
-      (tester) async {
-    ready();
-    repository.replies[0].completeError(StateError('offline'));
-    await tester.pump();
-    expect(cubit.state.status, CheckInStatus.failed);
-    time = time.add(const Duration(minutes: 5));
-    await tester.pump(const Duration(minutes: 5));
-    expect(repository.replies, hasLength(2));
-    repository.replies[1].complete(const DawnResult());
-    await tester.pump();
-    expect(cubit.state.status, CheckInStatus.unconfirmed);
-    time = time.add(const Duration(minutes: 30));
-    await tester.pump(const Duration(minutes: 30));
-    expect(repository.replies, hasLength(3));
-    repository.replies[2].complete(const DawnResult());
-    await tester.pump();
-    time = time.add(const Duration(hours: 2));
-    await tester.pump(const Duration(hours: 2));
-    cubit.setForeground(true);
-    expect(repository.replies, hasLength(3));
-    final manual = cubit.check(manual: true);
-    expect(repository.replies, hasLength(4));
-    repository.replies[3].complete(const DawnResult());
-    await manual;
-    expect(cubit.canCheckManually, isFalse);
-  });
-  checkWidgets('no background attempts; reopening resumes an overdue retry',
-      (tester) async {
-    ready();
-    repository.replies[0].complete(const DawnResult());
-    await tester.pump();
-    cubit.setForeground(false);
-    time = time.add(const Duration(minutes: 10));
-    await tester.pump(const Duration(minutes: 10));
-    expect(repository.replies, hasLength(1));
-    cubit.setForeground(true);
-    expect(repository.replies, hasLength(2));
-  });
+  for (final result in [
+    'no event',
+    'network error',
+    'timeout',
+    'parse error'
+  ]) {
+    checkWidgets(
+        '$result silently completes today, persists, and only retries next UTC day',
+        (tester) async {
+      ready();
+      if (result == 'no event') {
+        repository.replies.single.complete(const DawnResult());
+      } else {
+        if (result == 'timeout')
+          repository.tokens.single.cancel('Check-in timed out');
+        repository.replies.single.completeError(result == 'parse error'
+            ? const FormatException('Login, verification or malformed page')
+            : StateError(result));
+      }
+      await tester.pump();
+      expect(cubit.state.status, CheckInStatus.confirmed);
+      expect(cubit.state.needsDialog, isFalse);
+      expect(cubit.state.record.rewards, isEmpty);
+      expect(cubit.canCheckManually, isFalse);
+      expect(repository.read('1', '2026-10-03').notified, isTrue);
+      time = time.add(const Duration(hours: 6));
+      await tester.pump(const Duration(hours: 6));
+      cubit.setForeground(false);
+      cubit.setForeground(true);
+      await cubit.setEnabled(false);
+      await cubit.setEnabled(true);
+      await cubit.check(manual: true);
+      expect(repository.replies, hasLength(1));
+      final closing = cubit.close();
+      await tester.pump();
+      await closing;
+      cubit = DailyCheckInCubit(repository, clock: () => time);
+      ready();
+      expect(cubit.state.status, CheckInStatus.confirmed);
+      expect(cubit.state.needsDialog, isFalse);
+      expect(repository.replies, hasLength(1));
+      time = DateTime.utc(2026, 10, 4);
+      await tester.pump(const Duration(hours: 6));
+      expect(repository.replies, hasLength(2));
+      expect(cubit.state.record.day, '2026-10-04');
+    });
+  }
   checkWidgets('off disables automatic work but allows manual check-in',
       (tester) async {
     await cubit.setEnabled(false);
@@ -238,8 +245,7 @@ void main() {
     expect(cubit.state.status, CheckInStatus.running);
     repository.replies[1].complete(const DawnResult());
     await tester.pump();
-    expect(
-        repository.read('2', '2026-10-03').status, CheckInStatus.unconfirmed);
+    expect(repository.read('2', '2026-10-03').status, CheckInStatus.confirmed);
     expect(repository.read('1', '2026-10-03').status,
         isNot(CheckInStatus.confirmed));
   });
@@ -375,7 +381,7 @@ void main() {
     repository.replies.single.complete(const DawnResult(confirmed: true));
     await tester.pump();
     expect(cubit.state.needsDialog, isFalse);
-    expect(cubit.state.status, CheckInStatus.unconfirmed);
+    expect(cubit.state.status, CheckInStatus.pending);
     time = time.add(const Duration(seconds: 30));
     final retry = cubit.check(manual: true);
     repository.replies.last.complete(const DawnResult(confirmed: true));
@@ -468,68 +474,85 @@ void main() {
       expect(repository.replies, hasLength(1));
       repository.replies.single.complete(const DawnResult());
       await tester.pump();
-      expect(find.text(locale == 'zh' ? '重试' : 'Retry'), findsOneWidget);
+      expect(find.text(locale == 'zh' ? '今日已签到' : 'Checked in today'),
+          findsOneWidget);
+      expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed, isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
-    checkWidgets(
-        '$platform success popup waits for another modal and is shown only once',
-        (tester) async {
-      time = DateTime.now().toUtc();
-      debugDefaultTargetPlatformOverride = platform;
+    for (final response in ['reward', 'empty', 'error']) {
+      checkWidgets(
+          '$platform $response only real rewards show a popup, once and after other modals',
+          (tester) async {
+        time = DateTime.now().toUtc();
+        debugDefaultTargetPlatformOverride = platform;
 
-      final auth = MockAuthBloc();
-      when(() => auth.state).thenReturn(const AuthState(
-          status: AuthStatus.authenticated,
-          profile: UserProfile(memberId: '1', isLoggedIn: true)));
-      when(() => auth.stream)
-          .thenAnswer((_) => const Stream<AuthState>.empty());
-      final settings = MockSettingsBloc();
-      when(() => settings.stream)
-          .thenAnswer((_) => const Stream<SettingsState>.empty());
-      when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
-      GetIt.I.registerSingleton<DailyCheckInCubit>(cubit);
-      late BuildContext page;
-      await tester.pumpWidget(MultiBlocProvider(
-          providers: [
-            BlocProvider<AuthBloc>.value(value: auth),
-            BlocProvider<SettingsBloc>.value(value: settings)
-          ],
-          child: DailyCheckInHost(
-              builder: (key, observer) => MaterialApp(
-                  navigatorKey: key,
-                  navigatorObservers: [observer],
-                  home: Builder(builder: (context) {
-                    page = context;
-                    return const Scaffold(body: Text('Home'));
-                  })))));
-      await tester.pump();
-      cubit.firstFrameReady();
-      unawaited(showDialog<void>(
-          context: page,
-          builder: (context) => AlertDialog(
-                  title: const Text('Existing modal'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Close'))
-                  ])));
-      await tester.pumpAndSettle();
-      repository.replies.single
-          .complete(const DawnResult(confirmed: true, rewards: '500 Credits'));
-      await tester.pumpAndSettle();
-      expect(find.text('Check-in successful'), findsNothing);
-      await tester.tap(find.text('Close'));
-      await tester.pumpAndSettle();
-      expect(find.text('Check-in successful'), findsOneWidget);
-      expect(find.text('500 Credits'), findsOneWidget);
-      await tester.tap(find.text('OK'));
-      await tester.pumpAndSettle();
-      cubit.setForeground(true);
-      await tester.pumpAndSettle();
-      expect(find.text('Check-in successful'), findsNothing);
-      await tester.pumpWidget(const SizedBox.shrink());
-    });
+        final auth = MockAuthBloc();
+        when(() => auth.state).thenReturn(const AuthState(
+            status: AuthStatus.authenticated,
+            profile: UserProfile(memberId: '1', isLoggedIn: true)));
+        when(() => auth.stream)
+            .thenAnswer((_) => const Stream<AuthState>.empty());
+        final settings = MockSettingsBloc();
+        when(() => settings.stream)
+            .thenAnswer((_) => const Stream<SettingsState>.empty());
+        when(() => settings.state)
+            .thenReturn(const SettingsState(locale: 'en'));
+        GetIt.I.registerSingleton<DailyCheckInCubit>(cubit);
+        late BuildContext page;
+        await tester.pumpWidget(MultiBlocProvider(
+            providers: [
+              BlocProvider<AuthBloc>.value(value: auth),
+              BlocProvider<SettingsBloc>.value(value: settings)
+            ],
+            child: DailyCheckInHost(
+                builder: (key, observer) => MaterialApp(
+                    navigatorKey: key,
+                    navigatorObservers: [observer],
+                    home: Builder(builder: (context) {
+                      page = context;
+                      return const Scaffold(body: Text('Home'));
+                    })))));
+        await tester.pump();
+        cubit.firstFrameReady();
+        unawaited(showDialog<void>(
+            context: page,
+            builder: (context) => AlertDialog(
+                    title: const Text('Existing modal'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'))
+                    ])));
+        await tester.pumpAndSettle();
+        if (response == 'error') {
+          repository.replies.single.completeError(StateError('offline'));
+        } else {
+          repository.replies.single.complete(DawnResult(
+              confirmed: response == 'reward',
+              rewards: response == 'reward' ? '500 Credits' : ''));
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('Check-in successful'), findsNothing);
+        await tester.tap(find.text('Close'));
+        await tester.pumpAndSettle();
+        if (response == 'reward') {
+          expect(find.text('Check-in successful'), findsOneWidget);
+          expect(find.text('500 Credits'), findsOneWidget);
+          await tester.tap(find.text('OK'));
+          await tester.pumpAndSettle();
+        } else {
+          expect(find.text('Check-in successful'), findsNothing);
+          expect(cubit.state.status, CheckInStatus.confirmed);
+          expect(cubit.state.needsDialog, isFalse);
+        }
+        cubit.setForeground(true);
+        await tester.pumpAndSettle();
+        expect(find.text('Check-in successful'), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
   }
 }

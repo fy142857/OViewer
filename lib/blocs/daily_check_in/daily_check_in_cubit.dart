@@ -61,10 +61,9 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
       final r = state.record;
       _publish(DailyCheckInRecord(
           day: r.day,
-          status: CheckInStatus.unconfirmed,
+          status: CheckInStatus.pending,
           automaticAttempts: r.automaticAttempts,
-          lastAttempt: r.lastAttempt,
-          nextAttempt: r.nextAttempt));
+          lastAttempt: r.lastAttempt));
     }
     _generation++;
     _timer?.cancel();
@@ -84,10 +83,9 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
           record: r.status == CheckInStatus.running
               ? DailyCheckInRecord(
                   day: r.day,
-                  status: CheckInStatus.unconfirmed,
+                  status: CheckInStatus.pending,
                   automaticAttempts: r.automaticAttempts,
-                  lastAttempt: r.lastAttempt,
-                  nextAttempt: r.nextAttempt)
+                  lastAttempt: r.lastAttempt)
               : r));
       _tick();
     } catch (_) {
@@ -143,16 +141,7 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
       return;
     }
     final time = now().toUtc();
-    var due = DateTime.utc(time.year, time.month, time.day + 1);
-    final retry = state.record.nextAttempt;
-    if (state.enabled &&
-        state.status != CheckInStatus.confirmed &&
-        state.record.automaticAttempts < 3 &&
-        retry != null &&
-        retry.isAfter(time) &&
-        retry.isBefore(due)) {
-      due = retry;
-    }
+    final due = DateTime.utc(time.year, time.month, time.day + 1);
     _timer = Timer(due.difference(time), _tick);
   }
 
@@ -175,9 +164,7 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
     final old = state.record;
     if (manual) {
       if (!canCheckManually) return;
-    } else if (!state.enabled ||
-        old.automaticAttempts >= 3 ||
-        (old.nextAttempt != null && now().isBefore(old.nextAttempt!))) {
+    } else if (!state.enabled) {
       return;
     }
     final generation = _generation;
@@ -186,13 +173,11 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
     _request = token;
     final attempts = old.automaticAttempts + (manual ? 0 : 1);
     final started = now().toUtc();
-    final next = started.add(Duration(minutes: attempts <= 1 ? 5 : 30));
     _publish(DailyCheckInRecord(
         day: day,
         status: CheckInStatus.running,
         automaticAttempts: attempts,
-        lastAttempt: started,
-        nextAttempt: next));
+        lastAttempt: started));
     try {
       final result = await repository.check(token);
       if (!_valid(generation, day) || state.status == CheckInStatus.confirmed) {
@@ -201,21 +186,13 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
       if (result.confirmed) {
         _confirmed(result.rewards);
       } else {
-        _publish(DailyCheckInRecord(
-            day: day,
-            status: CheckInStatus.unconfirmed,
-            automaticAttempts: attempts,
-            lastAttempt: started,
-            nextAttempt: next));
+        _confirmed('', showDialog: false);
       }
     } catch (_) {
+      // Requested compatibility policy: a finished attempt closes the day even
+      // without a reward. Session cancellation/cross-day responses are excluded.
       if (_valid(generation, day) && state.status != CheckInStatus.confirmed) {
-        _publish(DailyCheckInRecord(
-            day: day,
-            status: CheckInStatus.failed,
-            automaticAttempts: attempts,
-            lastAttempt: started,
-            nextAttempt: next));
+        _confirmed('', showDialog: false);
       }
     } finally {
       if (identical(_request, token)) _request = null;
@@ -251,14 +228,15 @@ class DailyCheckInCubit extends Cubit<DailyCheckInState> {
     } catch (_) {/* Unrelated pages and verification errors aren't success. */}
   }
 
-  void _confirmed(String rewards) {
+  void _confirmed(String rewards, {bool showDialog = true}) {
     final old = state.record;
     _publish(DailyCheckInRecord(
         day: checkInDay(now()),
         status: CheckInStatus.confirmed,
         automaticAttempts: old.automaticAttempts,
         lastAttempt: old.lastAttempt,
-        rewards: rewards));
+        rewards: rewards,
+        notified: !showDialog));
     _schedule();
   }
 

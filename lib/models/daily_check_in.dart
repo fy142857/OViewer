@@ -7,13 +7,12 @@ enum CheckInStatus {
   failed
 }
 
-/// Only server-confirmed Dawn events count as a successful check-in.
+/// Daily local completion; failed attempts may be completed silently by policy.
 class DailyCheckInRecord {
   final String day;
   final CheckInStatus status;
   final int automaticAttempts;
   final DateTime? lastAttempt;
-  final DateTime? nextAttempt;
   final String rewards;
   final bool notified;
 
@@ -22,7 +21,6 @@ class DailyCheckInRecord {
       this.status = CheckInStatus.pending,
       this.automaticAttempts = 0,
       this.lastAttempt,
-      this.nextAttempt,
       this.rewards = '',
       this.notified = false});
 
@@ -31,21 +29,19 @@ class DailyCheckInRecord {
         'status': status.name,
         'attempts': automaticAttempts,
         'last': lastAttempt?.toIso8601String(),
-        'next': nextAttempt?.toIso8601String(),
         'rewards': rewards,
         'notified': notified,
       };
 
   factory DailyCheckInRecord.fromJson(Map<String, dynamic> json) {
     var status = CheckInStatus.values.byName(json['status'] as String);
-    // An interrupted request is not proof of success; preserve its retry budget.
-    if (status == CheckInStatus.running) status = CheckInStatus.unconfirmed;
+    // A process interruption is not a completed request; it remains eligible.
+    if (status == CheckInStatus.running) status = CheckInStatus.pending;
     return DailyCheckInRecord(
         day: json['day'] as String,
         status: status,
         automaticAttempts: json['attempts'] as int,
         lastAttempt: DateTime.tryParse(json['last'] as String? ?? ''),
-        nextAttempt: DateTime.tryParse(json['next'] as String? ?? ''),
         rewards: json['rewards'] as String? ?? '',
         notified: json['notified'] == true);
   }
