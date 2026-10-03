@@ -2045,7 +2045,7 @@
       "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "cb968d532f0ff771c790775da6da610d55d299f8",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "feature",
