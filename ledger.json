@@ -2284,8 +2284,43 @@
         }
       ],
       "version": "1.5.1"
+    },
+    {
+      "base_tag": "v1.5.0",
+      "branch": "dev",
+      "build_number": 54,
+      "build_sha": "458eb240f60d2441bbb749f337412eb89a82a3bd",
+      "candidate_id": "1.5.1+54",
+      "fingerprint": "045c9c10ac530bf3d43bbe10648a7f3e1f997f9bd46ab3db75335051b1cf0b93",
+      "notes": "### 新增\n\n### 修复\n\n- 阅读器在应用未关闭时重进优先复用清晰图片，磁盘缓存命中时跳过获取图片地址；限制保留内存并在系统内存紧张时回收，缓存失效后重新获取地址。图片缓存统计和清理同时覆盖新增阅读器内存。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "32efd967517fa3028790b91e2a5309137508720e",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复已缓存图片在同一次应用运行中重进阅读器仍需请求页面地址和重新加载的问题；限制运行期资源保留并纳入缓存统计与清理，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "615bc45d015786ba0b166bf55c5610e42c633fd7",
+          "subject": "fix(reader): reuse completed images when reopening the reader",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "为阅读器重进整页测试指定跨平台文件缓存后端，避免 macOS 单元测试依赖未注册的原生 SQLite 插件；应用运行行为不变。",
+          "classification_source": "commit-trailers",
+          "original_type": "test",
+          "sha": "32efd967517fa3028790b91e2a5309137508720e",
+          "subject": "test(reader): use a portable cache backend for reentry widgets",
+          "type": "chore",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.5.1"
     }
   ],
-  "last_build_number": 53,
+  "last_build_number": 54,
   "schema": 1
 }
