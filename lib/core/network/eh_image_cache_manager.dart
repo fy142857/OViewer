@@ -35,6 +35,13 @@ class EhImageCacheManager extends CacheManager {
     return _instance!;
   }
 
+  /// Install an explicit test backend instead of selecting a native database
+  /// from the host OS, which is unavailable in a Flutter unit-test process.
+  @visibleForTesting
+  static void initForTesting(Config config) {
+    _instance = EhImageCacheManager.forTesting(config);
+  }
+
   /// Call once during app startup, after [CookieManager.init].
   static void init(CookieManager cookieManager, {int limitMB = 500}) {
     ReaderReentryCache.shared.observeMemory();

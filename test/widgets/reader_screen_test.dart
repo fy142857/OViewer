@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -120,8 +121,11 @@ void main() {
               const MethodChannel('plugins.flutter.io/path_provider'),
               (_) async => directory!.path);
       await tester.runAsync(() async {
-        EhImageCacheManager.init(GetIt.I<CookieManager>());
-        await EhImageCacheManager.instance.getFileFromCache('initialize-warm-test');
+        EhImageCacheManager.initForTesting(Config('warm-screen-test',
+            repo: JsonCacheInfoRepository.withFile(
+                File('${directory!.path}/cache.json'))));
+        await EhImageCacheManager.instance
+            .getFileFromCache('initialize-warm-test');
       });
       final cache = ReaderReentryCache.shared;
       final key = (AppConstants.baseUrl, 42, 'token');
