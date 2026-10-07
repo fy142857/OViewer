@@ -1,63 +1,23 @@
 {
-  "base_tag": "v1.4.2",
+  "base_tag": "v1.5.0",
   "branch": "dev",
-  "build_number": 52,
-  "candidate_id": "1.5.0+52",
-  "fingerprint": "9ff617f4dd64e0dd6f5d7950cac9b6ba9336529aa94a9407892a222d7f730482",
-  "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
+  "build_number": 53,
+  "candidate_id": "1.5.1+53",
+  "fingerprint": "f2d583ded7ee23966af0ff3520b5b80cc1757e753ca46c49b9054bbeeea4243a",
+  "notes": "### 新增\n\n### 修复\n\n- 阅读器在应用未关闭时重进优先复用清晰图片，磁盘缓存命中时跳过获取图片地址；限制保留内存并在系统内存紧张时回收，缓存失效后重新获取地址。图片缓存统计和清理同时覆盖新增阅读器内存。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "c24c174a1d449ba811a98f4ccfac9d77f58bb721",
+  "source_sha": "615bc45d015786ba0b166bf55c5610e42c633fd7",
   "summary": [
     {
-      "change_kind": "feature",
-      "classification_reason": "新增账号每日自动签到、手动重试、成功奖励弹窗及持久化状态，属于新的独立业务能力。",
-      "classification_source": "commit-trailers",
-      "original_type": "feat",
-      "sha": "cb968d532f0ff771c790775da6da610d55d299f8",
-      "subject": "feat(check-in): collect daily Dawn rewards while using the app",
-      "type": "feat",
-      "version_impact": "minor"
-    },
-    {
       "change_kind": "fix",
-      "classification_reason": "修正现有签到功能的未登录禁用状态、关闭自动请求后的明确奖励记录和弹窗按钮文案，不新增独立业务能力。",
+      "classification_reason": "修复已缓存图片在同一次应用运行中重进阅读器仍需请求页面地址和重新加载的问题；限制运行期资源保留并纳入缓存统计与清理，不新增独立业务能力。",
       "classification_source": "commit-trailers",
       "original_type": "fix",
-      "sha": "7b8ed27425802794737588c33760607b93fcea26",
-      "subject": "fix(check-in): align signed-out controls and observed rewards",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "按维护者要求调整现有签到判定，无奖励提示或请求失败后静默持久化今日已签到并取消当天重试，不新增独立业务能力。",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "8ebc0732609862f33e49bee46f90fd85f373b207",
-      "subject": "fix(check-in): complete the day silently after unsuccessful attempts",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "修正设置页今日签到文字缩进，使其与自动签到标题及说明对齐，仅调整既有界面布局。",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "5f45cd6eae345f080e9240411a5f3e269794bea1",
-      "subject": "fix(settings): align daily check-in text with automatic check-in",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "修复退出后浏览器残留登录 Cookie 和旧异步响应恢复账号的问题，保留站点偏好并支持中断清理恢复，属于现有登录功能修复。",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "c24c174a1d449ba811a98f4ccfac9d77f58bb721",
-      "subject": "fix(auth): clear browser sessions and reject stale login callbacks",
+      "sha": "615bc45d015786ba0b166bf55c5610e42c633fd7",
+      "subject": "fix(reader): reuse completed images when reopening the reader",
       "type": "fix",
       "version_impact": "patch"
     }
   ],
-  "version": "1.5.0"
+  "version": "1.5.1"
 }
