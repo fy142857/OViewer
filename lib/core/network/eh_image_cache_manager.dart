@@ -14,6 +14,7 @@ import 'network_proxy_io.dart';
 import 'reader_request_controller.dart';
 import 'reader_image_cache_key.dart';
 import 'image_cache_quota.dart';
+import '../storage/reader_reentry_cache.dart';
 
 /// Custom [CacheManager] that injects cookies from the app [CookieManager]
 /// into every image request. This is required for ExHentai, which returns
@@ -26,6 +27,7 @@ class EhImageCacheManager extends CacheManager {
   Future<Map<String, List<String>>>? _legacyReaderKeys;
   Future<void>? _clearing;
   int _fileSequence = 0;
+  int _clearGeneration = 0;
 
   static EhImageCacheManager get instance {
     assert(_instance != null,
@@ -35,10 +37,13 @@ class EhImageCacheManager extends CacheManager {
 
   /// Call once during app startup, after [CookieManager.init].
   static void init(CookieManager cookieManager, {int limitMB = 500}) {
+    ReaderReentryCache.shared.observeMemory();
     _instance = EhImageCacheManager._(cookieManager, limitMB);
   }
 
-  ValueListenable<int> get changes => _quota.changes;
+  Listenable get changes =>
+      Listenable.merge([_quota.changes, ReaderReentryCache.shared.changes]);
+  int get retainedMemoryBytes => ReaderReentryCache.shared.memoryBytes;
   bool get cleanupFailed => _quota.cleanupFailed;
   Future<void> applyLimitMB(int mb) => _quota.setLimit(mb * 1024 * 1024);
   Future<void> enforceLimit() => _quota.enforce();
@@ -153,6 +158,7 @@ class EhImageCacheManager extends CacheManager {
       Duration maxAge,
       String extension,
       Future<void> Function(File) write) async {
+    final generation = _clearGeneration;
     _quota.pin(cacheKey);
     try {
       await _quota.drain();
@@ -161,12 +167,23 @@ class EhImageCacheManager extends CacheManager {
           'oviewer-${DateTime.now().microsecondsSinceEpoch}-${_fileSequence++}.$extension';
       final file = await _readerConfig.fileSystem.createFile(path);
       await write(file);
+      if (generation != _clearGeneration) {
+        await file.delete();
+        throw StateError('Image cache was cleared during write');
+      }
       await store.putFile(CacheObject(url,
           key: cacheKey,
           relativePath: path,
           validTill: DateTime.now().add(maxAge),
           eTag: eTag,
           length: await file.length()));
+      if (generation != _clearGeneration) {
+        // A newer write may already own this key. Delete only this writer's
+        // unique file; a stale missing-file index is discarded on its next read.
+        if (await file.exists()) await file.delete();
+        store.emptyMemoryCache();
+        throw StateError('Image cache was cleared during registration');
+      }
       return file;
     } finally {
       await _quota.unpin(cacheKey, check: true);
@@ -199,8 +216,8 @@ class EhImageCacheManager extends CacheManager {
   Future<int> getSizeBytes() async {
     final probe = await _readerConfig.fileSystem.createFile('__size_probe__');
     final directory = probe.parent;
-    if (!await directory.exists()) return 0;
-    var total = 0;
+    if (!await directory.exists()) return ReaderReentryCache.shared.memoryBytes;
+    var total = ReaderReentryCache.shared.memoryBytes;
     await for (final entity
         in directory.list(recursive: true, followLinks: false)) {
       try {
@@ -215,6 +232,8 @@ class EhImageCacheManager extends CacheManager {
   }
 
   Future<void> _clearImages() async {
+    _clearGeneration++;
+    ReaderReentryCache.shared.clear();
     _quota.pause();
     _legacyReaderKeys = null;
     final memory = PaintingBinding.instance.imageCache;
@@ -367,6 +386,9 @@ class _CookieHttpFileService extends FileService {
     ReaderRequestController? readerRequest,
   }) async {
     _ensureReaderRequestActive(readerRequest);
+    if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
+      debugPrint('[reader-metric] image_request');
+    }
     final request = http.Request('GET', Uri.parse(url));
     request.headers.addAll(headers);
     final client = readerRequest?.imageClient ??

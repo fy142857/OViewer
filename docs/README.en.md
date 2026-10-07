@@ -25,7 +25,7 @@ Choose **left-to-right paging, right-to-left paging, or continuous vertical scro
 
 Zoom into images and jump between pages using the progress slider or thumbnail strip. Opening a preview starts at the selected page, while the regular reading entry resumes your saved progress.
 
-Tap the reading area to show or hide the controls and status bar. Images load on demand and are cached after loading successfully for reuse when you return. Leaving the reader stops unfinished image loads, and failed images can be retried with a tap.
+Tap the reading area to show or hide the controls and status bar. While the app remains running, reopening the reader can display a recently retained full-resolution image immediately. Otherwise, a known cached file is read and decoded without first requesting its image page. Leaving the reader still stops unfinished loads; failed images can be retried.
 
 ## Favorites and history
 
@@ -63,7 +63,7 @@ Use Releases for published versions and Actions for development branch builds.
 
 - Downloads and offline reading are still being improved. Online reading is recommended for now.
 - Browsing history and reading progress do not yet sync across devices.
-- The cache size limit setting is saved, but automatic cleanup based on that limit is not yet implemented. You can clear the image cache manually.
+- The cache size limit controls disk files using least-recently-used cleanup. The displayed cache total also includes retained reader memory; manual clearing removes both.
 - iOS 12 is the deployment target; compatibility still needs to be verified on individual devices.
 
 ## Technical architecture

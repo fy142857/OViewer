@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'package:oviewer/core/storage/reader_reentry_cache.dart';
+import 'package:oviewer/models/gallery_image.dart';
+import 'package:oviewer/models/reader_index_page.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
@@ -135,6 +138,58 @@ void main() {
     expect(await manager.getSizeBytes(), png.length * 2 + 3);
     await unindexed.delete();
     await manager.emptyCache();
+    expect(await manager.getSizeBytes(), 0);
+  });
+
+  test(
+      'settings total includes retained reader memory and clear removes both layers',
+      () async {
+    final png = await makePng();
+    await manager.putFile('https://example.test/current', png);
+    final codec = await ui.instantiateImageCodec(png);
+    final frame = await codec.getNextFrame();
+    final cache = ReaderReentryCache.shared;
+    const key = ('https://e-hentai.org', 42, 'token');
+    final data = ReaderIndexPage(
+        totalPages: 1,
+        indexPage: 0,
+        indexPageCount: 1,
+        pageSize: 1,
+        thumbnails: {});
+    cache.prepare(key, data, {}, 0);
+    cache.complete(
+        cache.ticket(key, 0)!,
+        const GalleryImage(
+            index: 0,
+            pageUrl: 'page',
+            imageUrl: 'https://example.test/current'),
+        'key',
+        frame.image,
+        png,
+        durable: true);
+    expect(await manager.getSizeBytes(), png.length * 2 + 4);
+    expect(manager.retainedMemoryBytes, png.length + 4);
+    await manager.emptyCache();
+    expect(await manager.getSizeBytes(), 0);
+    expect(cache.get(key), isNull);
+    frame.image.dispose();
+    codec.dispose();
+  });
+
+  test('clearing during an unfinished disk write cannot restore a cache file',
+      () async {
+    final started = Completer<void>();
+    final source =
+        StreamController<List<int>>(onListen: () => started.complete());
+    final result = expectLater(
+        manager.putFileStream('https://example.test/late', source.stream),
+        throwsStateError);
+    await started.future;
+    await manager.emptyCache();
+    source.add(await makePng());
+    await source.close();
+    await result;
+    expect(await manager.getFileFromCache('https://example.test/late'), isNull);
     expect(await manager.getSizeBytes(), 0);
   });
 

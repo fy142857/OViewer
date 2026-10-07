@@ -12,6 +12,7 @@ import '../../blocs/reader/reader_state.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../core/network/reader_request_controller.dart';
 import '../../core/network/reader_image_provider.dart';
+import '../../core/storage/reader_reentry_cache.dart';
 import '../../core/network/cookie_manager.dart' as app;
 import '../../core/router/route_observer.dart';
 import '../../core/parser/gallery_detail_parser.dart';
@@ -54,6 +55,9 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
     _requests = ReaderRequestController();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _startup.start();
+    if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
+      debugPrint('[reader-metric] enter');
+    }
   }
 
   @override
@@ -110,6 +114,10 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
           GetIt.I<HistoryRepository>(),
           GetIt.I<SettingsRepository>(),
           requestController: _requests,
+          initialRequest: LoadReaderImages(
+              gid: widget.gid,
+              token: widget.token,
+              initialPage: widget.initialPage),
         )..add(LoadReaderImages(
             gid: widget.gid,
             token: widget.token,
@@ -226,6 +234,14 @@ class _ReaderViewState extends State<_ReaderView> {
 
   @override
   Widget build(BuildContext context) {
+    final initial = context.read<ReaderBloc>().state;
+    if (!_positionInitialized && initial.status == ReaderStatus.ready) {
+      _pageController.dispose();
+      _pageController =
+          PageController(initialPage: initial.currentPage, keepPage: false);
+      _positionInitialized = true;
+      _lastReadingMode = initial.readingMode;
+    }
     return BlocConsumer<ReaderBloc, ReaderState>(
       listenWhen: (prev, curr) =>
           prev.status != curr.status ||
@@ -352,7 +368,19 @@ class _ReaderViewState extends State<_ReaderView> {
       }
       files = _pageFiles[page]!.$2;
     }
+    final bloc = context.read<ReaderBloc>();
     return ReaderImageProvider(url,
+        reentry: ReaderReentryCache.shared,
+        ticket: page == null ? null : bloc.cacheTicket(page),
+        galleryImage: page == null ? null : bloc.state.loadedImages[page],
+        cacheOnly: page != null && bloc.state.cacheOnlyPages.contains(page),
+        onCacheMiss: page == null
+            ? null
+            : () {
+                if (mounted && !scope.isCancelled) {
+                  bloc.add(ReaderCachedImageMissing(page, attempt));
+                }
+              },
         requests: scope,
         fileService: files,
         onResourceReady: page == null
@@ -376,6 +404,14 @@ class _ReaderViewState extends State<_ReaderView> {
                     mounted &&
                     page == context.read<ReaderBloc>().state.currentPage) {
                   _firstImageLogged = true;
+                  if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && !scope.isCancelled) {
+                        debugPrint(
+                            '[reader-metric] visible_ms=${widget.startup.elapsedMilliseconds}');
+                      }
+                    });
+                  }
                   assert(() {
                     debugPrint(
                         '[reader] first image visible in ${widget.startup.elapsedMilliseconds}ms');
@@ -509,7 +545,10 @@ class _ReaderViewState extends State<_ReaderView> {
           initialScale: PhotoViewComputedScale.contained,
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 3,
-          errorBuilder: (_, __, ___) => _decodedImageError(state, index),
+          errorBuilder: (_, error, ___) => error is ReaderLocalCacheMiss
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white))
+              : _decodedImageError(state, index),
         );
       },
       onPageChanged: (page) {
@@ -565,8 +604,12 @@ class _ReaderViewState extends State<_ReaderView> {
                   child: ReaderPageImage(
                     image: _imageProvider(image.imageUrl,
                         page: index, attempt: state.imageAttempts[index] ?? 0),
-                    errorBuilder: (_, __, ___) =>
-                        _decodedImageError(state, index),
+                    errorBuilder: (_, error, ___) => error
+                            is ReaderLocalCacheMiss
+                        ? const Center(
+                            child:
+                                CircularProgressIndicator(color: Colors.white))
+                        : _decodedImageError(state, index),
                   ),
                 ));
           },

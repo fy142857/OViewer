@@ -9,19 +9,42 @@ import 'package:oviewer/widgets/clear_image_cache_tile.dart';
 
 class MockSettings extends Mock implements SettingsBloc {}
 
-Widget app(Future<void> Function() clear, {Future<int> Function()? readSize}) {
+Widget app(Future<void> Function() clear,
+    {Future<int> Function()? readSize,
+    int Function()? readMemorySize,
+    String locale = 'en'}) {
   final settings = MockSettings();
-  when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
+  when(() => settings.state).thenReturn(SettingsState(locale: locale));
   when(() => settings.stream).thenAnswer((_) => const Stream.empty());
   return BlocProvider<SettingsBloc>.value(
       value: settings,
       child: MaterialApp(
           home: Scaffold(
               body: ClearImageCacheTile(
-                  onClear: clear, readSize: readSize ?? () async => 0))));
+                  onClear: clear,
+                  readSize: readSize ?? () async => 0,
+                  readMemorySize: readMemorySize))));
 }
 
 void main() {
+  for (final locale in ['zh', 'en']) {
+    testWidgets(
+        'total includes reader memory with clear disk-limit explanation ($locale)',
+        (tester) async {
+      await tester.pumpWidget(app(() async {},
+          locale: locale,
+          readSize: () async => 3 * 1024 * 1024,
+          readMemorySize: () => 1024 * 1024));
+      await tester.pumpAndSettle();
+      expect(find.text('3.0 MB'), findsOneWidget);
+      expect(find.textContaining('1.0 MB'), findsOneWidget);
+      expect(
+          find.textContaining(
+              locale == 'zh' ? '容量限制仅用于磁盘缓存' : 'limit applies to disk cache'),
+          findsOneWidget);
+    });
+  }
+
   testWidgets(
       'only clear button starts cleanup and repeated taps cannot start another',
       (tester) async {

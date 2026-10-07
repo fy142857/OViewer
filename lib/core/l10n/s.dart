@@ -153,6 +153,7 @@ class S {
   String get supportsHttpSocks5 => _zh ? '支持HTTP和SOCKS5' : 'Supports HTTP and SOCKS5';
 
   String get storage => _zh ? '存储' : 'Storage';
+  String imageCacheMemory(String size) => _zh ? '含阅读器内存缓存 $size；容量限制仅用于磁盘缓存' : 'Includes $size of reader memory; the size limit applies to disk cache';
   String get imageCache => _zh ? '图片缓存' : 'Image Cache';
   String get tapToClear => _zh ? '点击清除' : 'Tap to clear';
   String get cacheCleared => _zh ? '缓存已清除' : 'Cache cleared';

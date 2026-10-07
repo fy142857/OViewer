@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../core/storage/reader_reentry_cache.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../repositories/gallery_repository.dart';
@@ -19,13 +20,80 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final SettingsRepository _settingsRepo;
   final ReaderRequestController _requests;
   ReaderIndexSession? _index;
+  final ReaderReentryCache _reentry;
+  final String _site = AppConstants.baseUrl;
+  int? _cacheGeneration;
+  bool _restored = false;
   bool _starting = false;
+  ReaderGalleryKey get galleryKey => (_site, state.gid, state.token);
+
+  static ReaderState _initial(SettingsRepository settings,
+      ReaderReentryCache cache, LoadReaderImages? request) {
+    final snapshot = request == null
+        ? null
+        : cache.get((AppConstants.baseUrl, request.gid, request.token));
+    if (snapshot == null) {
+      return ReaderState(readingMode: settings.getReadingMode());
+    }
+    final page = (request!.initialPage ?? snapshot.currentPage)
+        .clamp(0, snapshot.metadata.totalPages - 1);
+    return ReaderState(
+        status: ReaderStatus.ready,
+        gid: request.gid,
+        token: request.token,
+        readingMode: settings.getReadingMode(),
+        currentPage: page,
+        totalPages: snapshot.metadata.totalPages,
+        loadedImages: snapshot.pages.map((i, p) => MapEntry(i, p.image)),
+        thumbnails: Map.of(snapshot.thumbnails),
+        cacheOnlyPages: snapshot.pages.keys.toSet());
+  }
+
+  ReaderCacheTicket? cacheTicket(int page) {
+    if (_cacheGeneration != _reentry.generation) return null;
+    return _reentry.ticket(galleryKey, page);
+  }
+
+  void _prepareCache() {
+    final metadata = _index?.metadata;
+    if (metadata == null || _cacheGeneration != _reentry.generation) return;
+    _reentry.prepare(
+        galleryKey, metadata, _index!.thumbnails, state.currentPage);
+  }
+
   int _requestedStart = 0;
 
   ReaderBloc(this._galleryRepo, this._historyRepo, this._settingsRepo,
-      {ReaderRequestController? requestController})
+      {ReaderRequestController? requestController,
+      ReaderReentryCache? reentryCache,
+      LoadReaderImages? initialRequest})
       : _requests = requestController ?? ReaderRequestController(),
-        super(ReaderState(readingMode: _settingsRepo.getReadingMode())) {
+        _reentry = reentryCache ?? ReaderReentryCache.shared,
+        super(_initial(_settingsRepo, reentryCache ?? ReaderReentryCache.shared,
+            initialRequest)) {
+    _cacheGeneration = _reentry.generation;
+    if (state.status == ReaderStatus.ready) {
+      final snapshot = _reentry.get(galleryKey)!;
+      _index =
+          ReaderIndexSession(_galleryRepo, _requests, state.gid, state.token)
+            ..seed(snapshot.metadata, snapshot.thumbnails);
+      _restored = true;
+      _requestedStart = state.currentPage;
+    }
+    on<ReaderCachedImageMissing>((event, emit) async {
+      if (!_active ||
+          !state.cacheOnlyPages.contains(event.index) ||
+          (state.imageAttempts[event.index] ?? 0) != event.attempt) return;
+      _reentry.invalidatePage(galleryKey, event.index);
+      emit(state.copyWith(
+          cacheOnlyPages: {...state.cacheOnlyPages}..remove(event.index),
+          loadedImages: {...state.loadedImages}..remove(event.index),
+          imageAttempts: {
+            ...state.imageAttempts,
+            event.index: event.attempt + 1
+          }));
+      await _loadImage(event.index, emit);
+    });
     on<LoadReaderImages>(_onLoadImages);
     on<LoadImageAtIndex>(_onLoadImageAtIndex);
     on<LoadThumbnailAtIndex>(_onLoadThumbnail);
@@ -80,6 +148,15 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   Future<void> _onLoadImages(
       LoadReaderImages event, Emitter<ReaderState> emit) async {
     if (!_active || _starting) return;
+    if (_restored && event.gid == state.gid && event.token == state.token) {
+      _restored = false;
+      _reentry.focus(galleryKey, state.currentPage);
+      _saveProgress(state.currentPage);
+      if (!state.loadedImages.containsKey(state.currentPage)) {
+        add(LoadImageAtIndex(state.currentPage));
+      }
+      return;
+    }
     _starting = true;
     final watch = Stopwatch()..start();
     emit(ReaderState(
@@ -110,6 +187,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         debugPrint(
             '[reader] interface ready in ${watch.elapsedMilliseconds}ms');
       }
+      _prepareCache();
       _saveProgress(current);
       add(LoadImageAtIndex(current));
       // Neighbours are queued only after the current page URL is available.
@@ -142,7 +220,15 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   void _publishIndex(Emitter<ReaderState> emit) {
     final index = _index!;
+    _prepareCache();
+    final snapshot = _reentry.get(galleryKey);
+    final stale = state.cacheOnlyPages
+        .where((p) => snapshot?.pages.containsKey(p) != true)
+        .toSet();
     emit(state.copyWith(
+        loadedImages: {...state.loadedImages}
+          ..removeWhere((p, _) => stale.contains(p)),
+        cacheOnlyPages: {...state.cacheOnlyPages}..removeAll(stale),
         thumbnails: Map.of(index.thumbnails),
         totalPages: index.totalPages,
         currentPage: state.currentPage.clamp(0, index.totalPages - 1)));
@@ -158,6 +244,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         page >= state.totalPages ||
         (!retry && state.loadingIndices.contains(page))) return;
     final previous = state.loadedImages[page];
+    if (retry) _reentry.invalidatePage(galleryKey, page);
     final pageRequests =
         retry ? _requests.restartPage(page) : _requests.forPage(page);
     bool current() =>
@@ -168,6 +255,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     state.readyResources[page]?.releaseMemory();
     emit(state.copyWith(
         loadingIndices: {...state.loadingIndices, page},
+        cacheOnlyPages: {...state.cacheOnlyPages}..remove(page),
         readyResources: {...state.readyResources}..remove(page),
         failedIndices: {...state.failedIndices}..remove(page),
         imageAttempts: retry
@@ -284,6 +372,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final page = event.page.clamp(0, state.totalPages - 1);
     _index?.prioritize(page);
     emit(state.copyWith(currentPage: page));
+    _reentry.focus(galleryKey, page);
     _saveProgress(page);
     if (state.loadedImages.containsKey(page)) {
       _preloadAdjacent(page);

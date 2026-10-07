@@ -244,6 +244,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ClearImageCacheTile(
                 onClear: () => EhImageCacheManager.instance.emptyCache(),
                 readSize: () => EhImageCacheManager.instance.getSizeBytes(),
+                readMemorySize: () =>
+                    EhImageCacheManager.instance.retainedMemoryBytes,
                 changes: EhImageCacheManager.instance.changes,
                 cleanupFailed: () => EhImageCacheManager.instance.cleanupFailed,
                 retryCleanup: () => EhImageCacheManager.instance.enforceLimit(),

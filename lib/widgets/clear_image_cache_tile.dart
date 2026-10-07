@@ -5,6 +5,7 @@ class ClearImageCacheTile extends StatefulWidget {
   final Future<void> Function() onClear;
   final Future<int> Function() readSize;
   final Listenable? changes;
+  final int Function()? readMemorySize;
   final bool Function()? cleanupFailed;
   final Future<void> Function()? retryCleanup;
   const ClearImageCacheTile(
@@ -12,6 +13,7 @@ class ClearImageCacheTile extends StatefulWidget {
       required this.onClear,
       required this.readSize,
       this.changes,
+      this.readMemorySize,
       this.cleanupFailed,
       this.retryCleanup});
 
@@ -134,6 +136,11 @@ class _ClearImageCacheTileState extends State<ClearImageCacheTile> {
                 : _bytes == null
                     ? s.calculatingCacheSize
                     : _formatBytes(_bytes!)),
+        if (!_clearing &&
+            !_sizeFailed &&
+            _bytes != null &&
+            widget.readMemorySize != null)
+          Text(s.imageCacheMemory(_formatBytes(widget.readMemorySize!()))),
         if (widget.cleanupFailed?.call() == true)
           TextButton(
               key: const ValueKey('retry-cache-quota'),

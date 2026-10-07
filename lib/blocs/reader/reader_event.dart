@@ -78,3 +78,11 @@ class ReaderImageFailed extends ReaderEvent {
 }
 
 class AcceptReaderContentWarning extends ReaderEvent {}
+
+class ReaderCachedImageMissing extends ReaderEvent {
+  final int index;
+  final int attempt;
+  const ReaderCachedImageMissing(this.index, this.attempt);
+  @override
+  List<Object?> get props => [index, attempt];
+}

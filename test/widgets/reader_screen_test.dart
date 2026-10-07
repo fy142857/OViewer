@@ -1,4 +1,11 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:oviewer/core/constants/app_constants.dart';
+import 'package:oviewer/core/network/eh_image_cache_manager.dart';
+import 'package:oviewer/core/storage/reader_reentry_cache.dart';
+import '../core/network/reader_image_session_test.dart' show makePng;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +53,7 @@ void main() {
   setUpAll(() => registerFallbackValue(CancelToken()));
 
   setUp(() {
+    ReaderReentryCache.shared.clear();
     gallery = MockGallery();
     when(() => gallery.readerIndexCache).thenReturn(ReaderIndexCache());
     final history = MockHistory();
@@ -93,10 +101,82 @@ void main() {
   });
 
   tearDown(() async {
+    ReaderReentryCache.shared.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, null);
     await GetIt.I.reset();
   });
+
+  for (final mode in [0, 1, 2]) {
+    testWidgets(
+        'warm reader mode $mode shows restored full image without a loading frame',
+        (tester) async {
+      when(() => GetIt.I<SettingsRepository>().getReadingMode())
+          .thenReturn(mode);
+      final directory = await tester.runAsync(
+          () => Directory.systemTemp.createTemp('oviewer-warm-screen-'));
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+              const MethodChannel('plugins.flutter.io/path_provider'),
+              (_) async => directory!.path);
+      await tester.runAsync(() async {
+        EhImageCacheManager.init(GetIt.I<CookieManager>());
+        await EhImageCacheManager.instance.getFileFromCache('initialize-warm-test');
+      });
+      final cache = ReaderReentryCache.shared;
+      final key = (AppConstants.baseUrl, 42, 'token');
+      final data = ReaderIndexPage(
+          totalPages: 1,
+          indexPage: 0,
+          indexPageCount: 1,
+          pageSize: 1,
+          thumbnails: {
+            0: const ThumbnailInfo(
+                pageToken: 'page', pageIndex: 0, thumbUrl: '')
+          });
+      cache.prepare(key, data, data.thumbnails, 0);
+      await tester.runAsync(() async {
+        final png = await makePng();
+        final codec = await ui.instantiateImageCodec(png);
+        final frame = await codec.getNextFrame();
+        cache.complete(
+            cache.ticket(key, 0)!,
+            const GalleryImage(
+                index: 0,
+                pageUrl: 'page',
+                imageUrl: 'https://example.org/a.png'),
+            'cache-key',
+            frame.image,
+            Uint8List.fromList(png),
+            durable: true);
+        frame.image.dispose();
+        codec.dispose();
+      });
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settingsBloc,
+          child:
+              const MaterialApp(home: ReaderScreen(gid: 42, token: 'token'))));
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(
+          tester
+              .widgetList<RawImage>(find.byType(RawImage))
+              .any((w) => w.image != null),
+          true);
+      expect(pending, isEmpty);
+      verifyNever(() => gallery.fetchReaderIndexPage(any(), any(),
+          cancelToken: any(named: 'cancelToken')));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.runAsync(() async {
+        await EhImageCacheManager.instance.dispose();
+        expect(directory!.parent.absolute.path,
+            Directory.systemTemp.absolute.path);
+        await directory.delete(recursive: true);
+      });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+              const MethodChannel('plugins.flutter.io/path_provider'), null);
+    });
+  }
 
   void stubTwentyPages() {
     when(() => GetIt.I<SettingsRepository>().getReadingMode()).thenReturn(2);

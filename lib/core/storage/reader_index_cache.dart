@@ -1,4 +1,5 @@
 import '../../models/reader_index_page.dart';
+import 'reader_reentry_cache.dart';
 
 /// Completed index metadata only. Futures, full-image URLs and cancellation
 /// tokens never cross sessions. Reads do not extend the expiry time.
@@ -45,10 +46,12 @@ class ReaderIndexCache {
   }
 
   void removeGallery(int gid) {
+    ReaderReentryCache.shared.removeGallery(gid);
     _entries.removeWhere((key, _) => key.$2 == gid);
   }
 
   void clear() {
+    ReaderReentryCache.shared.clear();
     generation++;
     _entries.clear();
   }

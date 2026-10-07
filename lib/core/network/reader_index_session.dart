@@ -29,6 +29,12 @@ class ReaderIndexSession {
     requests.onCancel(_discardQueued);
   }
 
+  ReaderIndexPage? get metadata => _metadata;
+  void seed(ReaderIndexPage metadata, Map<int, ThumbnailInfo> known) {
+    _metadata = metadata;
+    thumbnails.addAll(known);
+  }
+
   int get totalPages => _metadata?.totalPages ?? 0;
   bool get isActive =>
       !requests.isCancelled &&
