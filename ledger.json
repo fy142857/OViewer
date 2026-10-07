@@ -2259,8 +2259,33 @@
         }
       ],
       "version": "1.5.0"
+    },
+    {
+      "base_tag": "v1.5.0",
+      "branch": "dev",
+      "build_number": 53,
+      "build_sha": "e7ea83ac7e620d5a5624b921e3e7e15dda58e9e9",
+      "candidate_id": "1.5.1+53",
+      "fingerprint": "f2d583ded7ee23966af0ff3520b5b80cc1757e753ca46c49b9054bbeeea4243a",
+      "notes": "### 新增\n\n### 修复\n\n- 阅读器在应用未关闭时重进优先复用清晰图片，磁盘缓存命中时跳过获取图片地址；限制保留内存并在系统内存紧张时回收，缓存失效后重新获取地址。图片缓存统计和清理同时覆盖新增阅读器内存。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "615bc45d015786ba0b166bf55c5610e42c633fd7",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复已缓存图片在同一次应用运行中重进阅读器仍需请求页面地址和重新加载的问题；限制运行期资源保留并纳入缓存统计与清理，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "615bc45d015786ba0b166bf55c5610e42c633fd7",
+          "subject": "fix(reader): reuse completed images when reopening the reader",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.5.1"
     }
   ],
-  "last_build_number": 52,
+  "last_build_number": 53,
   "schema": 1
 }
