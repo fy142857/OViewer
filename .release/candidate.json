@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.6.0",
   "branch": "dev",
-  "build_number": 64,
-  "candidate_id": "1.7.0+64",
-  "fingerprint": "d93db458147e0ff0b766a68dfb85c7bcd0c2288d0c373159153ef08007aded22",
+  "build_number": 65,
+  "candidate_id": "1.7.0+65",
+  "fingerprint": "76051b83a4ea26e9fe4776a09793ca024349abf750fba8d0d55ff12cf96f4d21",
   "notes": "### 新增\n\n- 设置“关于”的检查更新下方新增作者赞助入口，微信左、支付宝右等大正方形展示；分别异步保存原始赞助码并打开对应应用，保存和跳转互不阻塞，支持失败提示及中英文。README 顶部同步展示两张赞助码及支持说明。\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "003e8d4112118c2a803196e928672117fb1c04eb",
+  "source_sha": "9708dbb05a7d37ce74998c0894710d2b9ea86f5c",
   "summary": [
     {
       "change_kind": "feature",
@@ -17,6 +17,16 @@
       "subject": "feat(support): add author sponsorship codes and wallet launch",
       "type": "feat",
       "version_impact": "minor"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "修复关于页常驻赞助区域切换应用语言后文案未立即更新的问题，不改变赞助功能范围。",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "9708dbb05a7d37ce74998c0894710d2b9ea86f5c",
+      "subject": "fix(support): refresh sponsorship text when language changes",
+      "type": "fix",
+      "version_impact": "patch"
     }
   ],
   "version": "1.7.0"
