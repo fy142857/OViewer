@@ -2844,8 +2844,33 @@
         }
       ],
       "version": "1.6.0"
+    },
+    {
+      "base_tag": "v1.6.0",
+      "branch": "dev",
+      "build_number": 64,
+      "build_sha": "babc110af35bd5346183b0953e6922ad5c99e88e",
+      "candidate_id": "1.7.0+64",
+      "fingerprint": "d93db458147e0ff0b766a68dfb85c7bcd0c2288d0c373159153ef08007aded22",
+      "notes": "### 新增\n\n- 设置“关于”的检查更新下方新增作者赞助入口，微信左、支付宝右等大正方形展示；分别异步保存原始赞助码并打开对应应用，保存和跳转互不阻塞，支持失败提示及中英文。README 顶部同步展示两张赞助码及支持说明。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "003e8d4112118c2a803196e928672117fb1c04eb",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "新增作者赞助能力，在关于页展示微信和支付宝赞助码，独立异步保存原图与打开对应应用，并在 README 展示赞助入口。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "003e8d4112118c2a803196e928672117fb1c04eb",
+          "subject": "feat(support): add author sponsorship codes and wallet launch",
+          "type": "feat",
+          "version_impact": "minor"
+        }
+      ],
+      "version": "1.7.0"
     }
   ],
-  "last_build_number": 63,
+  "last_build_number": 64,
   "schema": 1
 }
