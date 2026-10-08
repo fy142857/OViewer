@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oviewer/core/utils/uploader_search_query.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:oviewer/core/constants/app_constants.dart';
 import 'package:oviewer/core/network/dio_client.dart';
@@ -16,6 +17,31 @@ void main() {
   tearDown(() => AppConstants.useExHentai = originalSite);
 
   for (final ex in [false, true]) {
+    for (final name in [
+      'Name With Spaces',
+      '中文上传者',
+      '12345',
+      'Name | Alias',
+      'A&B+/#'
+    ]) {
+      test('uploader search keeps full account and filters: EX=$ex, name=$name',
+          () async {
+        AppConstants.useExHentai = ex;
+        final dio = MockDio();
+        when(() => dio.get(any())).thenAnswer((_) async => '<html></html>');
+        final query = uploaderSearchQuery(name)!;
+        expect(SearchRepository.parseGid(query), isNull);
+        await SearchRepository(dio, MockStorage()).search(
+            SearchFilter(keyword: query, categories: ['Manga'], minRating: 3));
+        final uri = Uri.parse(
+            verify(() => dio.get(captureAny())).captured.single as String);
+        expect(uri.host, ex ? 'exhentai.org' : 'e-hentai.org');
+        expect(uri.queryParameters['f_search'], 'uploader:"$name"');
+        expect(uri.queryParameters['f_cats'], '1019');
+        expect(uri.queryParameters['f_srdd'], '3');
+      });
+    }
+
     test(
         'similar title remains quoted through URL construction on ${ex ? "EX" : "EH"}',
         () async {

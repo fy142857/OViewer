@@ -63,182 +63,198 @@ void main() {
     await GetIt.I.reset();
   });
 
-  for (final completeBeforePop in [true, false]) {
-    testWidgets(
-        'search → detail → similar → back preserves results and cursor '
-        '(similar completes before pop: $completeBeforePop)', (tester) async {
-      final search = MockSearch();
-      final favorites = MockFavorites();
-      final gallery = MockGallery();
-      final history = MockHistory();
-      final settings = MockSettings();
-      final similar = Completer<SearchResult>();
-      const similarQuery =
-          'title:"Similar title" OR title:"共通題名" OR title:"日本語題名"';
-      final navigator = GlobalKey<NavigatorState>();
-      final original = List.generate(20, (i) => preview(i + 1));
-      final secondPage = List.generate(10, (i) => preview(i + 21));
-      final requests = <(String?, int, String?)>[];
+  for (final entry in ['Similar Galleries', 'uploader']) {
+    for (final completeBeforePop in [true, false]) {
+      testWidgets(
+          'search → detail → similar → back preserves results and cursor '
+          '(entry: $entry, completes before pop: $completeBeforePop)',
+          (tester) async {
+        final search = MockSearch();
+        final favorites = MockFavorites();
+        final gallery = MockGallery();
+        final history = MockHistory();
+        final settings = MockSettings();
+        final similar = Completer<SearchResult>();
+        final similarQuery = entry == 'uploader'
+            ? 'uploader:"test"'
+            : 'title:"Similar title" OR title:"共通題名" OR title:"日本語題名"';
+        final navigator = GlobalKey<NavigatorState>();
+        final original = List.generate(20, (i) => preview(i + 1));
+        final secondPage = List.generate(10, (i) => preview(i + 21));
+        final requests = <(String?, int, String?)>[];
 
-      when(() => search.getSearchHistory()).thenReturn(['original']);
-      when(() => search.addSearchHistory(any())).thenAnswer((_) async {});
-      when(() => search.search(any(),
-          page: any(named: 'page'),
-          nextUrl: any(named: 'nextUrl'))).thenAnswer((call) async {
-        final filter = call.positionalArguments.single as SearchFilter;
-        final page = call.namedArguments[#page] as int? ?? 0;
-        final cursor = call.namedArguments[#nextUrl] as String?;
-        requests.add((filter.keyword, page, cursor));
-        if (filter.keyword == similarQuery) return similar.future;
-        return SearchResult(
-          galleries:
-              page == 0 ? original : (page == 1 ? secondPage : [preview(31)]),
-          totalPages: 3,
-          totalResults: 31,
-          nextPageUrl: page < 2 ? '/?original-page=${page + 1}' : null,
+        when(() => search.getSearchHistory()).thenReturn(['original']);
+        when(() => search.addSearchHistory(any())).thenAnswer((_) async {});
+        when(() => search.search(any(),
+            page: any(named: 'page'),
+            nextUrl: any(named: 'nextUrl'))).thenAnswer((call) async {
+          final filter = call.positionalArguments.single as SearchFilter;
+          final page = call.namedArguments[#page] as int? ?? 0;
+          final cursor = call.namedArguments[#nextUrl] as String?;
+          requests.add((filter.keyword, page, cursor));
+          if (filter.keyword == similarQuery) return similar.future;
+          return SearchResult(
+            galleries:
+                page == 0 ? original : (page == 1 ? secondPage : [preview(31)]),
+            totalPages: 3,
+            totalResults: 31,
+            nextPageUrl: page < 2 ? '/?original-page=${page + 1}' : null,
+          );
+        });
+        when(() => favorites.getLocalFavoriteGids())
+            .thenAnswer((_) async => <int>{});
+        when(() => gallery.fetchGalleryDetail(any(), any())).thenAnswer(
+          (call) async => GalleryDetail(
+            gid: call.positionalArguments.first as int,
+            token: 'token',
+            title: 'Similar title | 共通題名',
+            titleJpn: '[作者] 日本語題名 | 共通題名 [Digital]',
+            totalCommentCount: completeBeforePop ? 202 : 0,
+            comments: completeBeforePop
+                ? [
+                    GalleryComment(
+                        id: 1,
+                        author: 'Test',
+                        postedAt: DateTime.utc(2026),
+                        content: 'Test comment')
+                  ]
+                : [],
+            thumbUrl: thumbUrl,
+            category: 'Manga',
+            uploader: 'test',
+            postedAt: DateTime(2026),
+            fileCount: 10,
+            rating: 4,
+          ),
         );
+        when(() => history.getProgress(any())).thenAnswer((_) async => null);
+        when(() => history.recordVisit(any())).thenAnswer((_) async {});
+        when(() => history.getAllHistory()).thenAnswer((_) async => []);
+        when(() => settings.state)
+            .thenReturn(const SettingsState(locale: 'en'));
+        when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+        GetIt.I.registerSingleton<SearchRepository>(search);
+        GetIt.I.registerSingleton<FavoritesRepository>(favorites);
+        GetIt.I.registerSingleton<GalleryRepository>(gallery);
+        GetIt.I.registerSingleton<HistoryRepository>(history);
+
+        // Seed decoded pixels so the navigation test never starts image IO.
+        EhImageCacheManager.init(MockCookies());
+        final recorder = ui.PictureRecorder();
+        Canvas(recorder).drawColor(Colors.white, BlendMode.src);
+        final picture = recorder.endRecording();
+        final pixels = await tester.runAsync(() => picture.toImage(1, 1));
+        picture.dispose();
+        PaintingBinding.instance.imageCache.putIfAbsent(
+          const CachedNetworkImageProvider(thumbUrl),
+          () => OneFrameImageStreamCompleter(
+              Future.value(ImageInfo(image: pixels!))),
+        );
+
+        await tester.pumpWidget(MultiBlocProvider(
+          providers: [
+            BlocProvider<SettingsBloc>.value(value: settings),
+            BlocProvider(create: (_) => HistoryBloc(history)),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigator,
+            onGenerateRoute: AppRouter.generateRoute,
+            home: Builder(
+                builder: (context) => Scaffold(
+                      body: TextButton(
+                        onPressed: () => Navigator.pushNamed(
+                            context, AppRouter.search,
+                            arguments: 'original'),
+                        child: const Text('Open search'),
+                      ),
+                    )),
+          ),
+        ));
+        await tester.tap(find.text('Open search'));
+        await tester.pumpAndSettle();
+        final originalBloc =
+            tester.element(find.byType(GalleryCard).first).read<SearchBloc>();
+        originalBloc.add(LoadMoreSearchResults());
+        await tester.pumpAndSettle();
+        final list = tester.widget<ListView>(find.byType(ListView));
+        list.controller!.jumpTo(450);
+        await tester.pumpAndSettle();
+        final offset = list.controller!.offset;
+        final savedState = originalBloc.state;
+
+        await tester.tap(find.byType(GalleryCard).hitTestable().first);
+        await tester.pumpAndSettle();
+        expect(find.text('View all ${completeBeforePop ? 202 : 0} comments'),
+            findsOneWidget);
+        final commentHeading =
+            find.text('Comments (${completeBeforePop ? 202 : 0})');
+        final commentLink = find.byKey(const ValueKey('view-all-comments'));
+        expect(tester.getCenter(commentLink).dx,
+            greaterThan(tester.getCenter(commentHeading).dx));
+        expect(
+            (tester.getCenter(commentLink).dy -
+                    tester.getCenter(commentHeading).dy)
+                .abs(),
+            lessThan(2));
+        final entryFinder = entry == 'uploader'
+            ? find.descendant(
+                of: find.byKey(const ValueKey('gallery-tags-uploader')),
+                matching: find.text('test'))
+            : find.text('Similar Galleries');
+        await tester.ensureVisible(entryFinder);
+        await tester.pumpAndSettle();
+        await tester.tap(entryFinder);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        final similarBloc =
+            tester.element(find.byType(TextField)).read<SearchBloc>();
+        expect(identical(similarBloc, originalBloc), isFalse);
+        expect(requests.last.$1, similarQuery);
+        expect(originalBloc.state, savedState);
+        final similarResult = SearchResult(
+          galleries: [preview(100)],
+          totalPages: 1,
+          totalResults: 1,
+        );
+        if (completeBeforePop) {
+          similar.complete(similarResult);
+          await tester.pumpAndSettle();
+          expect(find.text('Gallery 100'), findsOneWidget);
+        }
+
+        navigator.currentState!.pop();
+        await tester.pumpAndSettle();
+        navigator.currentState!.pop();
+        await tester.pumpAndSettle();
+        if (!completeBeforePop) {
+          similar.complete(similarResult);
+          await tester.pumpAndSettle();
+        }
+        await tester.pump();
+        expect(originalBloc.state, savedState);
+        expect(list.controller!.offset, offset);
+        expect(find.text('Gallery 100'), findsNothing);
+        expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            'original');
+        expect(
+            requests.where((r) => r.$1 == 'original' && r.$2 == 0).length, 1);
+        if (entry == 'uploader') {
+          verify(() => search.addSearchHistory(similarQuery)).called(1);
+        } else {
+          verifyNever(() => search.addSearchHistory(similarQuery));
+        }
+
+        list.controller!.jumpTo(list.controller!.position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        expect(requests.last, ('original', 2, '/?original-page=2'));
+        expect(originalBloc.state.results.map((g) => g.gid),
+            List.generate(31, (i) => i + 1));
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await tester.pump();
       });
-      when(() => favorites.getLocalFavoriteGids())
-          .thenAnswer((_) async => <int>{});
-      when(() => gallery.fetchGalleryDetail(any(), any())).thenAnswer(
-        (call) async => GalleryDetail(
-          gid: call.positionalArguments.first as int,
-          token: 'token',
-          title: 'Similar title | 共通題名',
-          titleJpn: '[作者] 日本語題名 | 共通題名 [Digital]',
-          totalCommentCount: completeBeforePop ? 202 : 0,
-          comments: completeBeforePop
-              ? [
-                  GalleryComment(
-                      id: 1,
-                      author: 'Test',
-                      postedAt: DateTime.utc(2026),
-                      content: 'Test comment')
-                ]
-              : [],
-          thumbUrl: thumbUrl,
-          category: 'Manga',
-          uploader: 'test',
-          postedAt: DateTime(2026),
-          fileCount: 10,
-          rating: 4,
-        ),
-      );
-      when(() => history.getProgress(any())).thenAnswer((_) async => null);
-      when(() => history.recordVisit(any())).thenAnswer((_) async {});
-      when(() => history.getAllHistory()).thenAnswer((_) async => []);
-      when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
-      when(() => settings.stream).thenAnswer((_) => const Stream.empty());
-      GetIt.I.registerSingleton<SearchRepository>(search);
-      GetIt.I.registerSingleton<FavoritesRepository>(favorites);
-      GetIt.I.registerSingleton<GalleryRepository>(gallery);
-      GetIt.I.registerSingleton<HistoryRepository>(history);
-
-      // Seed decoded pixels so the navigation test never starts image IO.
-      EhImageCacheManager.init(MockCookies());
-      final recorder = ui.PictureRecorder();
-      Canvas(recorder).drawColor(Colors.white, BlendMode.src);
-      final picture = recorder.endRecording();
-      final pixels = await tester.runAsync(() => picture.toImage(1, 1));
-      picture.dispose();
-      PaintingBinding.instance.imageCache.putIfAbsent(
-        const CachedNetworkImageProvider(thumbUrl),
-        () => OneFrameImageStreamCompleter(
-            Future.value(ImageInfo(image: pixels!))),
-      );
-
-      await tester.pumpWidget(MultiBlocProvider(
-        providers: [
-          BlocProvider<SettingsBloc>.value(value: settings),
-          BlocProvider(create: (_) => HistoryBloc(history)),
-        ],
-        child: MaterialApp(
-          navigatorKey: navigator,
-          onGenerateRoute: AppRouter.generateRoute,
-          home: Builder(
-              builder: (context) => Scaffold(
-                    body: TextButton(
-                      onPressed: () => Navigator.pushNamed(
-                          context, AppRouter.search,
-                          arguments: 'original'),
-                      child: const Text('Open search'),
-                    ),
-                  )),
-        ),
-      ));
-      await tester.tap(find.text('Open search'));
-      await tester.pumpAndSettle();
-      final originalBloc =
-          tester.element(find.byType(GalleryCard).first).read<SearchBloc>();
-      originalBloc.add(LoadMoreSearchResults());
-      await tester.pumpAndSettle();
-      final list = tester.widget<ListView>(find.byType(ListView));
-      list.controller!.jumpTo(450);
-      await tester.pumpAndSettle();
-      final offset = list.controller!.offset;
-      final savedState = originalBloc.state;
-
-      await tester.tap(find.byType(GalleryCard).hitTestable().first);
-      await tester.pumpAndSettle();
-      expect(find.text('View all ${completeBeforePop ? 202 : 0} comments'),
-          findsOneWidget);
-      final commentHeading =
-          find.text('Comments (${completeBeforePop ? 202 : 0})');
-      final commentLink = find.byKey(const ValueKey('view-all-comments'));
-      expect(tester.getCenter(commentLink).dx,
-          greaterThan(tester.getCenter(commentHeading).dx));
-      expect(
-          (tester.getCenter(commentLink).dy -
-                  tester.getCenter(commentHeading).dy)
-              .abs(),
-          lessThan(2));
-      await tester.ensureVisible(find.text('Similar Galleries'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Similar Galleries'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      final similarBloc =
-          tester.element(find.byType(TextField)).read<SearchBloc>();
-      expect(identical(similarBloc, originalBloc), isFalse);
-      expect(requests.last.$1, similarQuery);
-      expect(originalBloc.state, savedState);
-      final similarResult = SearchResult(
-        galleries: [preview(100)],
-        totalPages: 1,
-        totalResults: 1,
-      );
-      if (completeBeforePop) {
-        similar.complete(similarResult);
-        await tester.pumpAndSettle();
-        expect(find.text('Gallery 100'), findsOneWidget);
-      }
-
-      navigator.currentState!.pop();
-      await tester.pumpAndSettle();
-      navigator.currentState!.pop();
-      await tester.pumpAndSettle();
-      if (!completeBeforePop) {
-        similar.complete(similarResult);
-        await tester.pumpAndSettle();
-      }
-      await tester.pump();
-      expect(originalBloc.state, savedState);
-      expect(list.controller!.offset, offset);
-      expect(find.text('Gallery 100'), findsNothing);
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          'original');
-      expect(requests.where((r) => r.$1 == 'original' && r.$2 == 0).length, 1);
-      verifyNever(() => search.addSearchHistory(similarQuery));
-
-      list.controller!.jumpTo(list.controller!.position.maxScrollExtent);
-      await tester.pumpAndSettle();
-      expect(requests.last, ('original', 2, '/?original-page=2'));
-      expect(originalBloc.state.results.map((g) => g.gid),
-          List.generate(31, (i) => i + 1));
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-      await tester.pump();
-    });
+    }
   }
 }

@@ -14,7 +14,6 @@ import '../../blocs/history/history_event.dart';
 import '../../core/l10n/s.dart';
 import '../../models/gallery_detail.dart';
 import '../../models/gallery_preview.dart';
-import '../../models/gallery_tag.dart';
 import '../../repositories/gallery_repository.dart';
 import '../../repositories/favorites_repository.dart';
 import '../../models/reading_progress.dart';
@@ -22,11 +21,10 @@ import '../../repositories/history_repository.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/network/eh_image_cache_manager.dart';
 import '../../core/utils/title_extractor.dart';
-import '../../core/utils/tag_search_query.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/rating_bar.dart';
-import '../../widgets/tag_chip.dart';
+import '../../widgets/gallery_tag_section.dart';
 import '../../widgets/thumbnail_grid.dart';
 import '../comments/comments_screen.dart';
 import '../../widgets/comment_card.dart';
@@ -406,62 +404,13 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
     );
   }
 
-  Widget _buildTagSection(BuildContext context, GalleryDetail detail) {
-    if (detail.tags.isEmpty) return const SizedBox.shrink();
-
-    final s = S.of(context);
-
-    // Group tags by namespace
-    final grouped = <String, List<GalleryTag>>{};
-    for (final tag in detail.tags) {
-      grouped.putIfAbsent(tag.namespace, () => []).add(tag);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(s.tags, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        ...grouped.entries.map((entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 72,
-                    child: Text(
-                      '${entry.key}:',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: entry.value
-                          .map((tag) => TagChip(
-                                tag: tag,
-                                onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/search',
-                                    arguments:
-                                        exactTagQuery(tag.namespace, tag.key),
-                                  );
-                                },
-                              ))
-                          .toList(),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-      ],
-    );
-  }
+  Widget _buildTagSection(BuildContext context, GalleryDetail detail) =>
+      GalleryTagSection(
+        tags: detail.tags,
+        uploader: detail.uploader,
+        onSearch: (query) =>
+            Navigator.pushNamed(context, '/search', arguments: query),
+      );
 
   Widget _buildThumbnailSection(BuildContext context, GalleryDetail detail) {
     final displayThumbs = detail.thumbnails.length > 20
