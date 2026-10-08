@@ -1,5 +1,19 @@
 # OViewer
 
+<table>
+  <tr>
+    <td align="center"><strong>微信 / WeChat</strong></td>
+    <td align="center"><strong>支付宝 / Alipay</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="../assets/sponsors/wechat.png" width="220" alt="微信赞助码 / WeChat support code" /></td>
+    <td align="center"><img src="../assets/sponsors/alipay.jpg" width="220" alt="支付宝赞助码 / Alipay support code" /></td>
+  </tr>
+</table>
+
+制作不易，您的支持是我开发的最大动力 (:3 」∠ )
+
+
 [中文](../README.md) / **[English](README.en.md)**
 
 OViewer (Old Viewer) is a Flutter manga reader for Android and iOS, with support for E-Hentai and ExHentai. Browse galleries, search by tags, manage favorites, and choose how you read.

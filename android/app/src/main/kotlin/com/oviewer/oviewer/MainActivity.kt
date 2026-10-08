@@ -9,6 +9,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
     private var exporter: PageImageExporter? = null
+    private var sponsor: SponsorBridge? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,14 +27,17 @@ class MainActivity: FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/release_link")
             .setMethodCallHandler(ReleaseLinkOpener(this))
+        sponsor = SponsorBridge(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/sponsor")
+            .setMethodCallHandler(sponsor)
         exporter = PageImageExporter(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/page_image_export")
             .setMethodCallHandler(exporter)
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (exporter?.permissionResult(requestCode, grantResults) != true) {
+        if (sponsor?.permissionResult(requestCode, grantResults) != true && exporter?.permissionResult(requestCode, grantResults) != true) {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
-    override fun onDestroy() { exporter?.dispose(); super.onDestroy() }
+    override fun onDestroy() { sponsor?.dispose(); exporter?.dispose(); super.onDestroy() }
 }

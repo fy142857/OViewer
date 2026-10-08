@@ -1,3 +1,4 @@
+import '../../widgets/sponsor_panel.dart';
 import '../../blocs/daily_check_in/daily_check_in_cubit.dart';
 import '../../widgets/daily_check_in_tile.dart';
 import 'dart:async';
@@ -280,6 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 repository: GetIt.I<UpdateRepository>(),
                 openRelease: GetIt.I<ReleaseLinkOpener>().open,
               ),
+              const SponsorPanel(),
               const SizedBox(height: 32),
             ],
           );

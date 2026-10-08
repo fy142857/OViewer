@@ -4,10 +4,13 @@ import ImageIO
 
 final class PageImageExporter {
   private var busy = false
+  private let allowConcurrent: Bool
+
+  init(allowConcurrent: Bool = false) { self.allowConcurrent = allowConcurrent }
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard call.method == "saveImage" else { result(FlutterMethodNotImplemented); return }
-    guard !busy else { result("busy"); return }
+    guard allowConcurrent || !busy else { result("busy"); return }
     guard let args = call.arguments as? [String: Any],
           let path = args["path"] as? String,
           let name = args["name"] as? String else { result("save_failed"); return }

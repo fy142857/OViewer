@@ -2,6 +2,10 @@
     package="com.oviewer.oviewer">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+    <queries>
+        <package android:name="com.tencent.mm"/>
+        <package android:name="com.eg.android.AlipayGphone"/>
+    </queries>
     <application
         android:label="oviewer"
         android:name="${applicationName}"

@@ -177,6 +177,14 @@ class S {
   String get cacheSizeLimit => _zh ? '缓存大小限制' : 'Cache Size Limit';
   String get downloadsStorage => _zh ? '下载' : 'Downloads';
 
+  String get sponsorWechatAction => _zh ? '保存图片跳转微信' : 'Save image & open WeChat';
+  String get sponsorAlipayAction => _zh ? '保存图片跳转支付宝' : 'Save image & open Alipay';
+  String get sponsorMessage => _zh ? '制作不易，您的支持是我开发的最大动力 (:3 」∠ )' : 'Your support is my biggest motivation to keep developing (:3 」∠ )';
+  String sponsorCode(bool wechat) => _zh ? '${wechat ? '微信' : '支付宝'}赞助码' : '${wechat ? 'WeChat' : 'Alipay'} support code';
+  String sponsorSaved(bool wechat) => _zh ? '${wechat ? '微信' : '支付宝'}赞助码已保存到相册' : '${wechat ? 'WeChat' : 'Alipay'} code saved to Photos';
+  String sponsorSaveFailed(bool wechat) => _zh ? '${wechat ? '微信' : '支付宝'}赞助码保存失败，请重试' : 'Could not save the ${wechat ? 'WeChat' : 'Alipay'} code. Please retry.';
+  String sponsorOpenFailed(bool wechat) => _zh ? '无法打开${wechat ? '微信' : '支付宝'}，请确认已安装或手动打开' : 'Could not open ${wechat ? 'WeChat' : 'Alipay'}. Check that it is installed or open it manually.';
+  String get sponsorPhotoPermission => _zh ? '无法保存赞助码，请在系统设置中允许保存图片' : 'Could not save the code. Allow photo saving in system settings.';
   String get about => _zh ? '关于' : 'About';
   String get appDescription => _zh ? 'Flutter漫画阅读器 for E-Hentai\nfyaaa142857' : 'Flutter manga reader for E-Hentai\nfyaaa142857';
 
