@@ -1,16 +1,20 @@
 import UIKit
 import Flutter
+import UserNotifications
 
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
   private let pageExporter = PageImageExporter()
-  private let sponsorExporter = PageImageExporter(allowConcurrent: true)
+  private let sponsorNotifications = SponsorNotifications()
+  private lazy var sponsorExporter = PageImageExporter(allowConcurrent: true,
+      onSaved: { [weak self] message in self?.sponsorNotifications.show(message) })
 
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    UNUserNotificationCenter.current().delegate = sponsorNotifications
     if let registrar = registrar(forPlugin: "OViewerReleaseLink") {
       FlutterMethodChannel(name: "oviewer/release_link", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { call, result in
@@ -38,7 +42,10 @@ import Flutter
     if let registrar = registrar(forPlugin: "OViewerSponsor") {
       FlutterMethodChannel(name: "oviewer/sponsor", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { [weak self] call, result in
-          if call.method == "saveImage" {
+          if call.method == "prepareNotifications" {
+            guard let self = self else { result(false); return }
+            self.sponsorNotifications.prepare { allowed in result(allowed) }
+          } else if call.method == "saveImage" {
             guard let name = (call.arguments as? [String: Any])?["name"] as? String,
                   name.range(of: "^OViewer_sponsor_(wechat_[0-9]+\\.png|alipay_[0-9]+\\.jpg)$", options: .regularExpression) != nil
             else { result("save_failed"); return }

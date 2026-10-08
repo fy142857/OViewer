@@ -48,6 +48,32 @@ void main() {
             .having((e) => e.code, 'code', 'permission_denied')));
     expect(await root.list().toList(), isEmpty);
   });
+  test(
+      'successful native save receives notification text without a second Dart notification call',
+      () async {
+    final methods = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SponsorService.channel, (call) async {
+      methods.add(call.method);
+      expect((call.arguments as Map)['notificationBody'], 'Saved');
+      return 'saved';
+    });
+    await SponsorService(temporaryDirectory: () async => root)
+        .saveCode(SponsorPlatform.wechat, notificationBody: 'Saved');
+    expect(methods, ['saveImage']);
+  });
+  test('notification authorization failure is independent of saving', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SponsorService.channel, (call) async {
+      if (call.method == 'prepareNotifications')
+        throw PlatformException(code: 'denied');
+      return 'saved';
+    });
+    final service = SponsorService(temporaryDirectory: () async => root);
+    expect(await service.prepareNotifications(), false);
+    await service.saveCode(SponsorPlatform.alipay, notificationBody: 'Saved');
+    expect(await root.list().toList(), isEmpty);
+  });
   test('app launch uses only the selected provider and returns platform result',
       () async {
     final service = SponsorService();

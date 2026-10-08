@@ -1,12 +1,17 @@
 import Flutter
 import Photos
 import ImageIO
+import UserNotifications
 
 final class PageImageExporter {
   private var busy = false
   private let allowConcurrent: Bool
+  private let onSaved: ((String) -> Void)?
 
-  init(allowConcurrent: Bool = false) { self.allowConcurrent = allowConcurrent }
+  init(allowConcurrent: Bool = false, onSaved: ((String) -> Void)? = nil) {
+    self.allowConcurrent = allowConcurrent
+    self.onSaved = onSaved
+  }
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard call.method == "saveImage" else { result(FlutterMethodNotImplemented); return }
@@ -25,7 +30,13 @@ final class PageImageExporter {
           CGImageSourceGetCount(source) > 0 else { result("unsupported_format"); return }
     busy = true
     let finish: (String) -> Void = { status in
-      DispatchQueue.main.async { self.busy = false; result(status) }
+      DispatchQueue.main.async {
+        self.busy = false
+        if status == "saved", let message = args["notificationBody"] as? String {
+          self.onSaved?(message)
+        }
+        result(status)
+      }
     }
     let save = {
       PHPhotoLibrary.shared().performChanges({
@@ -59,4 +70,67 @@ final class PageImageExporter {
     else { status = PHPhotoLibrary.authorizationStatus() }
     return status == .denied || status == .restricted
   }
+}
+
+// Local notifications are independent of Photos and wallet launch completion.
+final class SponsorNotifications: NSObject, UNUserNotificationCenterDelegate {
+  private let center = UNUserNotificationCenter.current()
+  private var preparing = false
+  private var waiters: [(Bool) -> Void] = []
+  private var pendingMessages: [String] = []
+
+  func prepare(_ completion: @escaping (Bool) -> Void) {
+    waiters.append(completion)
+    guard !preparing else { return }
+    preparing = true
+    center.getNotificationSettings { settings in
+      if settings.authorizationStatus == .notDetermined {
+        self.center.requestAuthorization(options: [.alert]) { allowed, _ in
+          self.finish(allowed)
+        }
+      } else {
+        self.finish(settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional)
+      }
+    }
+  }
+
+  private func finish(_ allowed: Bool) {
+    DispatchQueue.main.async {
+      self.preparing = false
+      let callbacks = self.waiters
+      self.waiters.removeAll()
+      let messages = self.pendingMessages
+      self.pendingMessages.removeAll()
+      callbacks.forEach { $0(allowed) }
+      if allowed { messages.forEach { self.post($0) } }
+    }
+  }
+
+  func show(_ message: String) {
+    guard !message.isEmpty else { return }
+    if preparing { pendingMessages.append(message); return }
+    center.getNotificationSettings { settings in
+      if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
+        self.post(message)
+      }
+    }
+  }
+
+  private func post(_ message: String) {
+    let content = UNMutableNotificationContent()
+    content.title = "OViewer"
+    content.body = message
+    let request = UNNotificationRequest(identifier: "oviewer.sponsor.saved." + UUID().uuidString,
+        content: content, trigger: nil)
+    center.add(request) { _ in /* Delivery failures never change the image save result. */ }
+  }
+  func userNotificationCenter(_ center: UNUserNotificationCenter,
+      willPresent notification: UNNotification,
+      withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    guard notification.request.identifier.hasPrefix("oviewer.sponsor.saved.")
+    else { completionHandler([]); return }
+    if #available(iOS 14, *) { completionHandler([.banner, .list]) }
+    else { completionHandler([.alert]) }
+  }
+
 }

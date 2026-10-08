@@ -184,6 +184,7 @@ class S {
   String sponsorSaved(bool wechat) => _zh ? '${wechat ? '微信' : '支付宝'}赞助码已保存到相册' : '${wechat ? 'WeChat' : 'Alipay'} code saved to Photos';
   String sponsorSaveFailed(bool wechat) => _zh ? '${wechat ? '微信' : '支付宝'}赞助码保存失败，请重试' : 'Could not save the ${wechat ? 'WeChat' : 'Alipay'} code. Please retry.';
   String sponsorOpenFailed(bool wechat) => _zh ? '无法打开${wechat ? '微信' : '支付宝'}，请确认已安装或手动打开' : 'Could not open ${wechat ? 'WeChat' : 'Alipay'}. Check that it is installed or open it manually.';
+  String get sponsorNotificationsDisabled => _zh ? '系统通知未开启，图片保存和跳转仍可正常进行；可在系统设置中开启通知' : 'Notifications are disabled. Saving and opening apps still work; enable notifications in system settings.';
   String get sponsorPhotoPermission => _zh ? '无法保存赞助码，请在系统设置中允许保存图片' : 'Could not save the code. Allow photo saving in system settings.';
   String get about => _zh ? '关于' : 'About';
   String get appDescription => _zh ? 'Flutter漫画阅读器 for E-Hentai\nfyaaa142857' : 'Flutter manga reader for E-Hentai\nfyaaa142857';

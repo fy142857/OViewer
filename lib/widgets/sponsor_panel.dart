@@ -21,6 +21,7 @@ class _SponsorPanelState extends State<SponsorPanel>
   final _opening = <SponsorPlatform>{};
   final _messages = <String>[];
   AppLifecycleState? _lifecycle;
+  bool _notificationHintShown = false;
 
   @override
   void initState() {
@@ -81,15 +82,24 @@ class _SponsorPanelState extends State<SponsorPanel>
       _saving.add(platform);
       _opening.add(platform);
     });
-    // Launch each operation immediately; neither waits for the other's result.
+    // Permission, saving and launching do not wait for each other.
+    unawaited(_prepareNotifications(s));
     unawaited(_save(platform, s));
     unawaited(_open(platform, s));
   }
 
+  Future<void> _prepareNotifications(S s) async {
+    final allowed = await _service.prepareNotifications();
+    if (!allowed && mounted && !_notificationHintShown) {
+      _notificationHintShown = true;
+      _message(s.sponsorNotificationsDisabled);
+    }
+  }
+
   Future<void> _save(SponsorPlatform platform, S s) async {
     try {
-      await _service.saveCode(platform);
-      _message(s.sponsorSaved(platform == SponsorPlatform.wechat));
+      await _service.saveCode(platform,
+          notificationBody: s.sponsorSaved(platform == SponsorPlatform.wechat));
     } catch (error) {
       _message(error is PlatformException && error.code == 'permission_denied'
           ? s.sponsorPhotoPermission

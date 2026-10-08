@@ -11,7 +11,7 @@
   </tr>
 </table>
 
-制作不易，您的支持是我开发的最大动力 (:3 」∠ )
+Your support is my biggest motivation to keep developing (:3 」∠ )
 
 
 [中文](../README.md) / **[English](README.en.md)**

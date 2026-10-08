@@ -39,5 +39,7 @@ class MainActivity: FlutterActivity() {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
+    override fun onResume() { super.onResume(); sponsor?.onResume() }
+    override fun onPause() { sponsor?.onPause(); super.onPause() }
     override fun onDestroy() { sponsor?.dispose(); exporter?.dispose(); super.onDestroy() }
 }

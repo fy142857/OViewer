@@ -21,7 +21,16 @@ class SponsorService {
       : bundle = bundle ?? rootBundle,
         temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
-  Future<void> saveCode(SponsorPlatform platform) async {
+  Future<bool> prepareNotifications() async {
+    try {
+      return await channel.invokeMethod<bool>('prepareNotifications') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> saveCode(SponsorPlatform platform,
+      {String? notificationBody}) async {
     final data = await bundle.load(platform.asset);
     final root = await temporaryDirectory();
     final folder = await root.createTemp('oviewer-sponsor-');
@@ -34,6 +43,7 @@ class SponsorService {
           flush: true);
       final status = await channel.invokeMethod<String>('saveImage', {
         'path': file.path,
+        if (notificationBody != null) 'notificationBody': notificationBody,
         'name': name,
         'mime': platform.mime,
       });

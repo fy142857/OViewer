@@ -20,6 +20,7 @@ Future<void> boot(WidgetTester tester, Service service,
     bool dark = false}) async {
   await tester.binding.setSurfaceSize(Size(width, 900));
   addTearDown(() => tester.binding.setSurfaceSize(null));
+  when(() => service.prepareNotifications()).thenAnswer((_) async => true);
   final settings = Settings();
   when(() => settings.state).thenReturn(SettingsState(locale: locale));
   when(() => settings.stream).thenAnswer((_) => const Stream.empty());
@@ -106,14 +107,17 @@ void main() {
       for (final p in SponsorPlatform.values) p: Completer<bool>()
     };
     for (final p in SponsorPlatform.values) {
-      when(() => service.saveCode(p)).thenAnswer((_) => saves[p]!.future);
+      when(() => service.saveCode(p,
+              notificationBody: any(named: 'notificationBody')))
+          .thenAnswer((_) => saves[p]!.future);
       when(() => service.openApp(p)).thenAnswer((_) => opens[p]!.future);
     }
     await boot(tester, service);
     for (final p in SponsorPlatform.values) {
       await tester.tap(find.byKey(ValueKey('sponsor-action-${p.name}')));
       await tester.pump();
-      verify(() => service.saveCode(p)).called(1);
+      verify(() => service.saveCode(p,
+          notificationBody: any(named: 'notificationBody'))).called(1);
       verify(() => service.openApp(p)).called(1);
     }
     saves[SponsorPlatform.wechat]!
@@ -141,7 +145,8 @@ void main() {
       (tester) async {
     final service = Service();
     final opening = Completer<bool>();
-    when(() => service.saveCode(SponsorPlatform.wechat))
+    when(() => service.saveCode(SponsorPlatform.wechat,
+            notificationBody: any(named: 'notificationBody')))
         .thenThrow(StateError('disk'));
     when(() => service.openApp(SponsorPlatform.wechat))
         .thenAnswer((_) => opening.future);
@@ -157,11 +162,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
-  testWidgets('save result is deferred while another app is foreground',
+  testWidgets('native save notification replaces the in-app success message',
       (tester) async {
     final service = Service();
     final saving = Completer<void>();
-    when(() => service.saveCode(SponsorPlatform.alipay))
+    when(() => service.saveCode(SponsorPlatform.alipay,
+            notificationBody: any(named: 'notificationBody')))
         .thenAnswer((_) => saving.future);
     when(() => service.openApp(SponsorPlatform.alipay))
         .thenAnswer((_) async => true);
@@ -174,7 +180,9 @@ void main() {
     expect(find.text('支付宝赞助码已保存到相册'), findsNothing);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
-    expect(find.text('支付宝赞助码已保存到相册'), findsOneWidget);
+    expect(find.text('支付宝赞助码已保存到相册'), findsNothing);
+    verify(() => service.saveCode(SponsorPlatform.alipay,
+        notificationBody: '支付宝赞助码已保存到相册')).called(1);
     expect(tester.takeException(), isNull);
   });
 }

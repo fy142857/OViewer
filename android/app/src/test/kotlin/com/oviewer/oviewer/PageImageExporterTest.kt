@@ -73,4 +73,21 @@ class PageImageExporterTest {
         assertFalse(saved!!.exists())
         exporter.dispose()
     }
+    @Test fun notificationFailureDoesNotChangeSuccessfulSave() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        Shadows.shadowOf(activity.application).grantPermissions(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        val result = Result()
+        var calls = 0
+        var saved: File? = null
+        val exporter = PageImageExporter(activity, Executor { it.run() },
+            onSaved = { calls++; throw IllegalStateException("notifications disabled") },
+            scan = { file, _, done -> saved = file; done(true) })
+        val base = call(activity, "OViewer_1_p0001_987.gif")
+        val args = (base.arguments as Map<String, Any>) + mapOf("notificationBody" to "saved")
+        exporter.onMethodCall(MethodCall("saveImage", args), result)
+        assertEquals("saved", result.value)
+        assertEquals(1, calls)
+        saved!!.delete(); exporter.dispose()
+    }
+
 }

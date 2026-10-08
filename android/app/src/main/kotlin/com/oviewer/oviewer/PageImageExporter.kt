@@ -22,9 +22,10 @@ class PageImageExporter(
     private val allowConcurrent: Boolean = false,
     private val permissionRequest: Int = PERMISSION_REQUEST,
     private val namePattern: Regex = Regex("OViewer_[0-9]+_p[0-9]+_[0-9]+\\.(jpg|png|gif|webp)"),
+    private val onSaved: ((String) -> Unit)? = null,
     private val scan: ((File, String, (Boolean) -> Unit) -> Unit)? = null
 ) : MethodChannel.MethodCallHandler {
-    private data class Job(val source: File, val name: String, val mime: String, val result: MethodChannel.Result)
+    private data class Job(val source: File, val name: String, val mime: String, val result: MethodChannel.Result, val notificationBody: String?)
     private val pending = mutableSetOf<Job>()
     private val waitingPermission = mutableListOf<Job>()
     private var disposed = false
@@ -47,7 +48,7 @@ class PageImageExporter(
         if (mime !in listOf("image/jpeg", "image/png", "image/gif", "image/webp")) {
             result.success("unsupported_format"); return
         }
-        val job = Job(source, name, mime, result)
+        val job = Job(source, name, mime, result, call.argument<String>("notificationBody"))
         pending.add(job)
         if (Build.VERSION.SDK_INT in 23..28 && activity.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             waitingPermission.add(job)
@@ -120,7 +121,10 @@ class PageImageExporter(
     }
 
     private fun finish(job: Job, status: String) = activity.runOnUiThread {
-        if (pending.remove(job)) job.result.success(status)
+        if (pending.remove(job)) {
+            if (status == "saved") job.notificationBody?.let { message -> runCatching { onSaved?.invoke(message) } }
+            job.result.success(status)
+        }
     }
 
     fun dispose() {
