@@ -2559,8 +2559,93 @@
         }
       ],
       "version": "1.5.1"
+    },
+    {
+      "base_tag": "v1.5.0",
+      "branch": "dev",
+      "build_number": 59,
+      "build_sha": "8cb029fcae24c15c06c93bff946e20c3fece91b2",
+      "candidate_id": "1.5.1+59",
+      "fingerprint": "73b9f9dfb632d6dca5abfae3747d7e28fd067ca65c1be87d2f900d39c2530b29",
+      "notes": "### 新增\n\n### 修复\n\n- 首页与侧栏收藏统一支持全部及 Favorite 0–9，新增同步并记住选择的三横杠筛选按钮；补齐侧栏分页、重复页去重与失败重试，并防止切换分组、账号或站点后的旧响应混入当前列表。\n\n- 搜索框直接输入上传者名时，同时检索普通标题/标签与上传者，合并去重并保留两路分页；显式搜索条件保持原意，搜索框和历史记录保留原始输入（#50）。\n\n- 相似画廊同时使用主标题与独立日文标题生成搜索条件，保留两字段内以 `|` / `｜` 分隔的备选名称，并跨字段去重、合并搜索结果（#52）。\n\n- 阅读器在应用未关闭时重进优先复用清晰图片，磁盘缓存命中时跳过获取图片地址；限制保留内存并在系统内存紧张时回收，缓存失效后重新获取地址。图片缓存统计和清理同时覆盖新增阅读器内存。\n\n### 变更\n\n- 详情页爱心正上方增加三横杠按钮，可选择新收藏的目标 Favorite 0–9；独立记住选择并在重启后恢复，EH/EX 共用。\n\n- 详情页标签区在 `other` 下方增加可点击搜索的 `uploader` 行；按完整上传者名称生成搜索条件，支持空格和中英文用户名，沿用现有搜索筛选及分页。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "1580f8c285f872b7d01e652e4ff0237f7183a55c",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复已缓存图片在同一次应用运行中重进阅读器仍需请求页面地址和重新加载的问题；限制运行期资源保留并纳入缓存统计与清理，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "615bc45d015786ba0b166bf55c5610e42c633fd7",
+          "subject": "fix(reader): reuse completed images when reopening the reader",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "为阅读器重进整页测试指定跨平台文件缓存后端，避免 macOS 单元测试依赖未注册的原生 SQLite 插件；应用运行行为不变。",
+          "classification_source": "commit-trailers",
+          "original_type": "test",
+          "sha": "32efd967517fa3028790b91e2a5309137508720e",
+          "subject": "test(reader): use a portable cache backend for reentry widgets",
+          "type": "chore",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复相似画廊仅使用主标题而遗漏独立日文标题的问题，复用现有多标题检索、去重与分页逻辑，没有新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "438e4a1644daa9d03e307b28e4001698dab5ee74",
+          "subject": "fix(search): include the separate Japanese title in similar galleries",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "为现有支持的 uploader 搜索条件增加详情页快捷入口，按完整用户名检索并沿用已有筛选和分页，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "f8bf841d5af5ef16cb6e948f983108130ea648ab",
+          "subject": "fix(search): expose uploader search from gallery details",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复直接输入上传者名称不能检索其画廊的问题，合并现有关键词与上传者检索并保留去重和分页，显式搜索语法保持原意。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "7a1ec742a06d441279669d16015ef28a26c0399f",
+          "subject": "fix(search): include uploader matches for plain search input",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复收藏入口读取范围和分页不一致的问题，统一全部及 Favorite 0–9 的筛选、状态与持久化，完善已有云端收藏浏览能力，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "4edf02a3fb198dec2390cbb2943842f125a49dcc",
+          "subject": "fix(favorites): share category filters and complete cloud pagination",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "在现有详情页云端收藏流程增加 Favorite 0-9 目标选择与本地持久化，沿用收藏和取消收藏能力，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "1580f8c285f872b7d01e652e4ff0237f7183a55c",
+          "subject": "fix(favorites): remember destination category on gallery details",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.5.1"
     }
   ],
-  "last_build_number": 58,
+  "last_build_number": 59,
   "schema": 1
 }
