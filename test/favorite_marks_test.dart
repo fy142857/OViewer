@@ -52,6 +52,7 @@ void main() {
   setUp(() {
     cached = {};
     db = MockDb();
+    when(() => db.getLocalFavorite(any())).thenAnswer((_) async => null);
     when(() => db.getLocalFavoriteGids()).thenAnswer((_) async => {...cached});
     when(() => db.addLocalFavorite(any())).thenAnswer((call) async {
       cached.add((call.positionalArguments.single as LocalFavoritesCompanion)

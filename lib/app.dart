@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'widgets/daily_check_in_host.dart';
+import 'widgets/favorites_session_host.dart';
 import 'core/router/app_router.dart';
 import 'core/network/network_preparation.dart';
 import 'core/router/route_observer.dart';
@@ -39,7 +40,8 @@ class OViewerApp extends StatelessWidget {
               AuthBloc(sl<AuthRepository>())..add(CheckLoginStatus()),
         ),
         BlocProvider(
-          create: (_) => FavoritesBloc(sl<FavoritesRepository>()),
+          create: (_) => FavoritesBloc(sl<FavoritesRepository>(),
+              settings: sl<SettingsRepository>()),
         ),
         BlocProvider(
           lazy: false,
@@ -56,33 +58,34 @@ class OViewerApp extends StatelessWidget {
               DownloadBloc(sl<DownloadRepository>(), sl<GalleryRepository>()),
         ),
       ],
-      child: DailyCheckInHost(
-          builder: (navigatorKey, checkInObserver) =>
-              BlocBuilder<SettingsBloc, SettingsState>(
-                buildWhen: (prev, curr) =>
-                    prev.themeMode != curr.themeMode ||
-                    prev.locale != curr.locale,
-                builder: (context, settingsState) {
-                  return MaterialApp(
-                    title: 'OViewer',
-                    navigatorKey: navigatorKey,
-                    debugShowCheckedModeBanner: false,
-                    theme: AppTheme.light,
-                    darkTheme: AppTheme.dark,
-                    themeMode: _mapThemeMode(settingsState.themeMode),
-                    locale: Locale(settingsState.locale),
-                    supportedLocales: const [Locale('zh'), Locale('en')],
-                    localizationsDelegates: const [
-                      GlobalMaterialLocalizations.delegate,
-                      GlobalWidgetsLocalizations.delegate,
-                      GlobalCupertinoLocalizations.delegate,
-                    ],
-                    initialRoute: AppRouter.home,
-                    onGenerateRoute: AppRouter.generateRoute,
-                    navigatorObservers: [appRouteObserver, checkInObserver],
-                  );
-                },
-              )),
+      child: FavoritesSessionHost(
+          child: DailyCheckInHost(
+              builder: (navigatorKey, checkInObserver) =>
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    buildWhen: (prev, curr) =>
+                        prev.themeMode != curr.themeMode ||
+                        prev.locale != curr.locale,
+                    builder: (context, settingsState) {
+                      return MaterialApp(
+                        title: 'OViewer',
+                        navigatorKey: navigatorKey,
+                        debugShowCheckedModeBanner: false,
+                        theme: AppTheme.light,
+                        darkTheme: AppTheme.dark,
+                        themeMode: _mapThemeMode(settingsState.themeMode),
+                        locale: Locale(settingsState.locale),
+                        supportedLocales: const [Locale('zh'), Locale('en')],
+                        localizationsDelegates: const [
+                          GlobalMaterialLocalizations.delegate,
+                          GlobalWidgetsLocalizations.delegate,
+                          GlobalCupertinoLocalizations.delegate,
+                        ],
+                        initialRoute: AppRouter.home,
+                        onGenerateRoute: AppRouter.generateRoute,
+                        navigatorObservers: [appRouteObserver, checkInObserver],
+                      );
+                    },
+                  ))),
     );
   }
 

@@ -86,6 +86,9 @@ class DioClient {
     ));
   }
 
+  /// Lets repository work guard awaits before it starts an authenticated request.
+  int? get sessionRevision => _cookieManager.sessionRevision;
+
   Future<String> get(
     String url, {
     Map<String, dynamic>? queryParams,

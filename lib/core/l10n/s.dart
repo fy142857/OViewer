@@ -80,6 +80,12 @@ class S {
 
   // ---- Home Drawer ----
   String get home => _zh ? '首页' : 'Home';
+  String get favoriteCategories => _zh ? '收藏分组' : 'Favorite categories';
+  String get allFavorites => _zh ? '显示全部' : 'All favorites';
+  String favoriteCategory(int category) => category < 0 ? allFavorites : 'Favorite $category';
+  String get favoriteFilterSaveFailed => _zh ? '无法保存收藏筛选，请重试' : 'Could not save favorite filter. Please retry.';
+  String get favoriteActionFailed => _zh ? '收藏操作失败，请重试' : 'Favorite action failed. Please retry.';
+  String get noFavoritesInCategory => _zh ? '该分组暂无收藏' : 'No favorites in this category';
   String get favorites => _zh ? '收藏' : 'Favorites';
   String get history => _zh ? '历史' : 'History';
   String get downloads => _zh ? '下载' : 'Downloads';

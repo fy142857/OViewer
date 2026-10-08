@@ -8,6 +8,7 @@ class AdaptiveGalleryGrid extends StatelessWidget {
   final IndexedWidgetBuilder itemBuilder;
   final ScrollController? controller;
   final ScrollPhysics physics;
+  final EdgeInsetsGeometry contentPadding;
 
   const AdaptiveGalleryGrid({
     super.key,
@@ -15,6 +16,7 @@ class AdaptiveGalleryGrid extends StatelessWidget {
     required this.itemBuilder,
     this.controller,
     this.physics = const AlwaysScrollableScrollPhysics(),
+    this.contentPadding = const EdgeInsets.all(8),
   });
 
   static const spacing = 8.0;
@@ -36,7 +38,7 @@ class AdaptiveGalleryGrid extends StatelessWidget {
       return MasonryGridView.count(
         controller: controller,
         physics: physics,
-        padding: const EdgeInsets.all(padding),
+        padding: contentPadding,
         crossAxisCount: columns,
         mainAxisSpacing: spacing,
         crossAxisSpacing: spacing,

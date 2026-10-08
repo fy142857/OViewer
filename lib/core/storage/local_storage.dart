@@ -18,12 +18,26 @@ class LocalStorage {
 
   // Keep a detected update across settings visits and application restarts.
   static const _keyLatestReleaseVersion = 'latest_release_version';
-  String? getLatestReleaseVersion() => _prefs.getString(_keyLatestReleaseVersion);
+  String? getLatestReleaseVersion() =>
+      _prefs.getString(_keyLatestReleaseVersion);
   Future<void> setLatestReleaseVersion(String? version) async {
     final saved = version == null
         ? await _prefs.remove(_keyLatestReleaseVersion)
         : await _prefs.setString(_keyLatestReleaseVersion, version);
-    if (!saved) throw StateError('Could not persist the latest release version.');
+    if (!saved)
+      throw StateError('Could not persist the latest release version.');
+  }
+
+  int? getFavoriteCategory() {
+    final value = _prefs.get('favorite_category');
+    return value is int ? value : null;
+  }
+
+  Future<void> setFavoriteCategory(int category) async {
+    if (category < -1 || category > 9) throw ArgumentError.value(category);
+    if (!await _prefs.setInt('favorite_category', category)) {
+      throw StateError('Could not save favorite category');
+    }
   }
 
   // Theme
@@ -33,7 +47,8 @@ class LocalStorage {
 
   // Reading mode
   static const _keyReadingMode = 'reading_mode';
-  int getReadingMode() => _prefs.getInt(_keyReadingMode) ?? 0; // 0=LR, 1=RL, 2=vertical
+  int getReadingMode() =>
+      _prefs.getInt(_keyReadingMode) ?? 0; // 0=LR, 1=RL, 2=vertical
   Future<void> setReadingMode(int mode) => _prefs.setInt(_keyReadingMode, mode);
 
   // Search history
@@ -73,7 +88,8 @@ class LocalStorage {
   // ExHentai mode
   static const _keyUseExHentai = 'use_exhentai';
   bool getUseExHentai() => _prefs.getBool(_keyUseExHentai) ?? false;
-  Future<void> setUseExHentai(bool value) => _prefs.setBool(_keyUseExHentai, value);
+  Future<void> setUseExHentai(bool value) =>
+      _prefs.setBool(_keyUseExHentai, value);
 
   // Hidden tags (My Tags)
   static const _keyHiddenTags = 'hidden_tags';
@@ -83,12 +99,12 @@ class LocalStorage {
     final list = jsonDecode(json);
     return (list as List).cast<String>();
   }
+
   Future<void> setHiddenTags(List<String> tags) =>
       _prefs.setString(_keyHiddenTags, jsonEncode(tags));
 
   // Locale (zh / en)
   static const _keyLocale = 'locale';
   String getLocale() => _prefs.getString(_keyLocale) ?? 'zh';
-  Future<void> setLocale(String locale) =>
-      _prefs.setString(_keyLocale, locale);
+  Future<void> setLocale(String locale) => _prefs.setString(_keyLocale, locale);
 }

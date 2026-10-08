@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
+import 'package:oviewer/blocs/favorites/favorites_bloc.dart';
+import 'package:oviewer/widgets/favorites_session_host.dart';
+import 'package:oviewer/screens/favorites/favorites_screen.dart';
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -74,6 +78,8 @@ int selected(WidgetTester tester) =>
 
 void main() {
   late MockGallery repo;
+  late MockFavorites favorites;
+  late FavoritesBloc favoritesBloc;
   late MockHistory historyRepo;
   late MockSettings settings;
   late MockAuth auth;
@@ -83,6 +89,7 @@ void main() {
   late StreamController<SettingsState> settingsStream;
   late StreamController<AuthState> authStream;
 
+  setUpAll(() => registerFallbackValue(CancelToken()));
   setUp(() {
     repo = MockGallery();
     historyRepo = MockHistory();
@@ -106,7 +113,15 @@ void main() {
             nextUrl: 'https://example.test/favorites-next'));
     when(() => historyRepo.getAllHistory()).thenAnswer((_) async => []);
     when(() => historyRepo.deleteHistory(any())).thenAnswer((_) async {});
-    final favorites = MockFavorites();
+    favorites = MockFavorites();
+    when(() => favorites.fetchCloudFavorites(
+            cat: any(named: 'cat'), cancelToken: any(named: 'cancelToken')))
+        .thenAnswer((_) async => FavoritesResult(
+            galleries: galleries('Favorite').galleries, totalPages: 1));
+    when(() =>
+            favorites.rebuildCache(any(), isCurrent: any(named: 'isCurrent')))
+        .thenAnswer((_) async {});
+    when(() => favorites.clearConfirmationCache()).thenAnswer((_) async {});
     when(() => favorites.getLocalFavoriteGids()).thenAnswer((_) async => {});
     final preferences = MockSettingsRepo();
     when(() => preferences.getHiddenTags()).thenReturn([]);
@@ -117,6 +132,7 @@ void main() {
 
   tearDown(() async {
     await history.close();
+    await favoritesBloc.close();
     await settingsStream.close();
     await authStream.close();
     PaintingBinding.instance.imageCache
@@ -128,6 +144,7 @@ void main() {
   Future<void> boot(WidgetTester tester,
       {int displayMode = 0, Widget screen = const HomeScreen()}) async {
     history = HistoryBloc(historyRepo);
+    favoritesBloc = FavoritesBloc(favorites);
     EhImageCacheManager.init(MockCookies());
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -142,11 +159,17 @@ void main() {
       () =>
           OneFrameImageStreamCompleter(Future.value(ImageInfo(image: pixels!))),
     );
-    await tester.pumpWidget(MultiBlocProvider(providers: [
-      BlocProvider<SettingsBloc>.value(value: settings),
-      BlocProvider<AuthBloc>.value(value: auth),
-      BlocProvider<HistoryBloc>.value(value: history),
-    ], child: MaterialApp(home: screen)));
+    await tester.pumpWidget(MultiBlocProvider(
+        providers: [
+          BlocProvider<SettingsBloc>.value(value: settings),
+          BlocProvider<AuthBloc>.value(value: auth),
+          BlocProvider<HistoryBloc>.value(value: history),
+          BlocProvider<FavoritesBloc>.value(value: favoritesBloc),
+        ],
+        child: FavoritesSessionHost(
+            child: MaterialApp(
+                home: screen,
+                routes: {'/favorites': (_) => const FavoritesScreen()}))));
     await frames(tester);
   }
 
@@ -218,6 +241,8 @@ void main() {
       expect(find.text('No reading history'), findsOneWidget);
       await swipe(tester);
       expect(selected(tester), 3);
+      expect(favoritesBloc.state.status.name, 'loaded',
+          reason: favoritesBloc.state.toString());
       expect(find.text('Favorite 0'), findsOneWidget);
       await swipe(tester);
       expect(selected(tester), 3);
@@ -230,15 +255,121 @@ void main() {
       await tester.tap(find.widgetWithText(Tab, 'Favorites'));
       await frames(tester);
       expect(selected(tester), 3);
+      expect(favoritesBloc.state.status.name, 'loaded',
+          reason: favoritesBloc.state.toString());
       expect(find.text('Favorite 0'), findsOneWidget);
       verify(() => repo.fetchGalleryList(nextUrl: null)).called(1);
       verify(() => repo.fetchPopularList()).called(1);
-      verify(() => repo.fetchFavoritesList(nextUrl: null)).called(1);
+      verify(() => favorites.fetchCloudFavorites(
+          cat: -1, cancelToken: any(named: 'cancelToken'))).called(1);
       verifyNever(() =>
           repo.fetchGalleryList(nextUrl: 'https://example.test/latest-next'));
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets(
+      'small menu buttons share selection across home and drawer favorites',
+      (tester) async {
+    await boot(tester);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    await tester.tap(find.widgetWithText(Tab, 'Favorites'));
+    await frames(tester);
+    final button = find.byType(FloatingActionButton);
+    expect(tester.getSize(button), const Size(48, 48));
+    expect(find.descendant(of: button, matching: find.byIcon(Icons.menu)),
+        findsOneWidget);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    final sheet = find.byType(BottomSheet);
+    final options = find.descendant(of: sheet, matching: find.byType(ListView));
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('favorite-category-9')), 250,
+        scrollable:
+            find.descendant(of: options, matching: find.byType(Scrollable)));
+    await tester.tap(find.byKey(const ValueKey('favorite-category-9')));
+    await frames(tester);
+    expect(favoritesBloc.state.category, 9);
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .pushNamed('/favorites');
+    await tester.pumpAndSettle();
+    expect(
+        tester.getSize(find.byType(FloatingActionButton)), const Size(48, 48));
+    verify(() => favorites.fetchCloudFavorites(
+        cat: 9, cancelToken: any(named: 'cancelToken'))).called(1);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    final secondOptions = find.descendant(
+        of: find.byType(BottomSheet), matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('favorite-category-9')), 250,
+        scrollable: secondOptions);
+    expect(
+        tester
+            .widget<ListTile>(find.byKey(const ValueKey('favorite-category-9')))
+            .selected,
+        true);
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('favorite-category-3')), -250,
+        scrollable: secondOptions);
+    await tester.tap(find.byKey(const ValueKey('favorite-category-3')));
+    await frames(tester);
+    expect(favoritesBloc.state.category, 3);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await frames(tester);
+    expect(favoritesBloc.state.category, 3);
+    expect(find.text('Favorite 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('favorite button stays above the system bottom inset',
+      (tester) async {
+    await boot(tester,
+        screen: const MediaQuery(
+            data: MediaQueryData(
+                size: Size(360, 800), viewPadding: EdgeInsets.only(bottom: 24)),
+            child: FavoritesScreen()));
+    expect(tester.getBottomLeft(find.byType(FloatingActionButton)).dy,
+        lessThanOrEqualTo(776));
+    expect(
+        tester.getSize(find.byType(FloatingActionButton)), const Size(48, 48));
+  });
+
+  testWidgets(
+      'sidebar scroll loads next page and retries without losing current favorites',
+      (tester) async {
+    var fail = true;
+    const next = 'https://e-hentai.org/favorites.php?next=1';
+    when(() => favorites.fetchCloudFavorites(
+            cat: -1, cancelToken: any(named: 'cancelToken')))
+        .thenAnswer((_) async => FavoritesResult(
+            galleries: galleries('Favorite').galleries,
+            totalPages: 2,
+            nextPageUrl: next));
+    when(() => favorites.fetchCloudFavorites(
+        cat: -1,
+        page: 1,
+        nextUrl: next,
+        cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
+      if (fail) throw StateError('offline');
+      return FavoritesResult(
+          galleries: galleries('More').galleries, totalPages: 2);
+    });
+    await boot(tester, screen: const FavoritesScreen());
+    final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    scroll.position.jumpTo(scroll.position.maxScrollExtent);
+    await frames(tester);
+    expect(favoritesBloc.state.loadMoreFailed, true);
+    expect(favoritesBloc.state.favorites.length, 40);
+    fail = false;
+    await tester.ensureVisible(find.text('Retry'));
+    await tester.tap(find.text('Retry'));
+    await frames(tester);
+    expect(favoritesBloc.state.favorites.length, 80);
+    expect(favoritesBloc.state.hasReachedEnd, true);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
       'vertical scrolling and refresh do not change tabs; position survives a round trip',
@@ -289,7 +420,9 @@ void main() {
     await tester.tap(find.widgetWithText(Tab, 'Favorites'));
     await frames(tester);
     expect(find.text('Login to favorite!'), findsOneWidget);
-    verifyNever(() => repo.fetchFavoritesList(nextUrl: any(named: 'nextUrl')));
+    expect(find.byType(FloatingActionButton), findsNothing);
+    verifyNever(() => favorites.fetchCloudFavorites(
+        cat: any(named: 'cat'), cancelToken: any(named: 'cancelToken')));
     authState = const AuthState(status: AuthStatus.authenticated);
     authStream.add(authState);
     await frames(tester);
@@ -299,6 +432,7 @@ void main() {
     authStream.add(authState);
     await frames(tester);
     expect(find.text('Login to favorite!'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.text('Favorite 0'), findsNothing);
     await swipe(tester, right: true);
     expect(selected(tester), 2);

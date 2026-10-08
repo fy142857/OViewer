@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../../widgets/favorites_content.dart';
+import '../../widgets/favorites_filter_button.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -62,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Map<GalleryTab, GalleryListBloc> _createGalleryBlocs() => {
         for (final tab in _tabs)
-          if (tab != GalleryTab.watched)
+          if (tab != GalleryTab.watched && tab != GalleryTab.favorites)
             tab: GalleryListBloc(GetIt.I<GalleryRepository>(), initialTab: tab),
       };
 
@@ -83,8 +85,7 @@ class _HomeScreenState extends State<HomeScreen>
       }
       return;
     }
-    if (tab == GalleryTab.favorites &&
-        !context.read<AuthBloc>().state.isLoggedIn) return;
+    if (tab == GalleryTab.favorites) return;
     final bloc = _galleryBlocs[tab]!;
     if (bloc.state.status == GalleryListStatus.initial) {
       bloc.add(const FetchGalleries());
@@ -264,6 +265,11 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ),
+      floatingActionButton: _currentIndex == 3
+          ? FavoritesFilterButton(
+              heroTag: 'home-favorites-filter',
+              bottomInset: MediaQuery.of(context).viewPadding.bottom)
+          : null,
       drawer: _buildDrawer(),
     );
   }
@@ -274,44 +280,18 @@ class _HomeScreenState extends State<HomeScreen>
           key: const ValueKey('home-history-tab'),
           child: _buildHistoryContent(context));
     }
+    if (tab == GalleryTab.favorites) {
+      return FavoritesContent(
+          storageKey: 'home-favorites',
+          allowGrid: true,
+          active: _currentIndex == 3);
+    }
     final bloc = _galleryBlocs[tab]!;
     return BlocProvider.value(
       key: ObjectKey(bloc),
       value: bloc,
       child: BlocBuilder<GalleryListBloc, GalleryListState>(
         builder: (context, state) {
-          if (tab == GalleryTab.favorites) {
-            return BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, authState) {
-                final s = S.of(context);
-                if (authState.status == AuthStatus.unknown) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!authState.isLoggedIn) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.favorite_border,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.outline),
-                        const SizedBox(height: 16),
-                        Text(s.loginToFavorite,
-                            style: Theme.of(context).textTheme.bodyLarge),
-                        const SizedBox(height: 16),
-                        FilledButton.icon(
-                            onPressed: () =>
-                                Navigator.pushNamed(context, '/login'),
-                            icon: const Icon(Icons.login),
-                            label: Text(s.login)),
-                      ],
-                    ),
-                  );
-                }
-                return _buildGalleryContent(context, state);
-              },
-            );
-          }
           return _buildGalleryContent(context, state);
         },
       ),

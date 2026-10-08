@@ -5,6 +5,10 @@ class SettingsRepository {
 
   SettingsRepository(this._storage);
 
+  int? getFavoriteCategory() => _storage.getFavoriteCategory();
+  Future<void> setFavoriteCategory(int category) =>
+      _storage.setFavoriteCategory(category);
+
   // Theme (0=system, 1=light, 2=dark)
   int getThemeMode() => _storage.getThemeMode();
   Future<void> setThemeMode(int mode) => _storage.setThemeMode(mode);

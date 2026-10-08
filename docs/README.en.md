@@ -30,6 +30,8 @@ Tap the reading area to show or hide the controls and status bar. While the app 
 
 ## Favorites and history
 
+Use the three-line button at the bottom right of either favorites view to select All favorites or Favorite 0–9. Both entries share the selection and restore it after restarting. Pull to refresh and scroll to load subsequent pages.
+
 After signing in, you can manage cloud favorites and recognize favorited galleries by the **red heart** in list and grid views.
 
 If you add or remove a favorite on another device using the same account, pull to refresh the current list to update its marker.

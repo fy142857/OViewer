@@ -37,3 +37,19 @@ class RemoveFavorite extends FavoritesEvent {
   @override
   List<Object?> get props => [gid];
 }
+
+class SelectFavoriteCategory extends FavoritesEvent {
+  final int category;
+  const SelectFavoriteCategory(this.category);
+  @override
+  List<Object?> get props => [category];
+}
+
+class EnsureFavoritesLoaded extends FavoritesEvent {}
+
+class FavoritesScopeReset extends FavoritesEvent {
+  final int generation;
+  const FavoritesScopeReset(this.generation);
+  @override
+  List<Object?> get props => [generation];
+}

@@ -9,12 +9,13 @@ class ApiEndpoints {
   static String galleryList({int page = 0}) => '$_base/?page=$page';
   static String popular() => '$_base/popular';
   static String watched({int page = 0}) => '$_base/watched?page=$page';
-  static String favorites({int page = 0, int cat = -1}) =>
-      '$_base/favorites.php?page=$page${cat >= 0 ? '&favcat=$cat' : ''}';
+  static String favorites({int page = 0, int cat = -1}) {
+    if (cat < -1 || cat > 9) throw ArgumentError.value(cat, 'cat');
+    return '$_base/favorites.php?page=$page${cat >= 0 ? '&favcat=$cat' : ''}';
+  }
 
   // Gallery detail
-  static String galleryDetail(int gid, String token) =>
-      '$_base/g/$gid/$token/';
+  static String galleryDetail(int gid, String token) => '$_base/g/$gid/$token/';
 
   // Gallery image page
   static String imagePage(String pageToken, int gid, int page) =>
