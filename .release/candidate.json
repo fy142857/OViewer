@@ -1,43 +1,23 @@
 {
-  "base_tag": "v1.5.1",
+  "base_tag": "v1.6.0",
   "branch": "dev",
-  "build_number": 63,
-  "candidate_id": "1.6.0+63",
-  "fingerprint": "ef56c949f8ae3f4df67841c62de74d34e860dda7db54fa64a973350a60d67a87",
-  "notes": "### 新增\n\n- 首页和侧栏收藏增加当前分组内搜索，复用标签联想、搜索历史、上传者与 GID 查询；两个入口的关键词、分组、结果、分页及滚动位置独立，支持清除搜索恢复列表，并将旧共享分组迁移为各自持久化的选择（#55）。\n\n### 修复\n\n### 变更\n\n- 缩小首页和侧栏收藏搜索框的高度，并同步调整清除按钮尺寸（#55）。\n\n### 已知限制",
+  "build_number": 64,
+  "candidate_id": "1.7.0+64",
+  "fingerprint": "d93db458147e0ff0b766a68dfb85c7bcd0c2288d0c373159153ef08007aded22",
+  "notes": "### 新增\n\n- 设置“关于”的检查更新下方新增作者赞助入口，微信左、支付宝右等大正方形展示；分别异步保存原始赞助码并打开对应应用，保存和跳转互不阻塞，支持失败提示及中英文。README 顶部同步展示两张赞助码及支持说明。\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "163fd105a2f806f269d4bc08903389558be73668",
+  "source_sha": "003e8d4112118c2a803196e928672117fb1c04eb",
   "summary": [
     {
       "change_kind": "feature",
-      "classification_reason": "新增此前不存在的收藏范围内检索能力，包括两个独立入口的查询、分组、分页和滚动状态；复用现有搜索代码不改变新增功能的业务性质，原 enhancement 分类误标。",
-      "classification_source": "correction",
-      "original_type": "fix",
-      "sha": "a2035f888b0e77eb1ddfac4ecc2e063b78437a29",
-      "subject": "fix(favorites): add independent scoped search to both entries",
+      "classification_reason": "新增作者赞助能力，在关于页展示微信和支付宝赞助码，独立异步保存原图与打开对应应用，并在 README 展示赞助入口。",
+      "classification_source": "commit-trailers",
+      "original_type": "feat",
+      "sha": "003e8d4112118c2a803196e928672117fb1c04eb",
+      "subject": "feat(support): add author sponsorship codes and wallet launch",
       "type": "feat",
       "version_impact": "minor"
-    },
-    {
-      "change_kind": "enhancement",
-      "classification_reason": "缩小首页与侧栏收藏搜索框的纵向留白，并同步调整清除按钮尺寸；仅调整既有界面布局，不新增业务能力。",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "4bcf392fbd5bef97416bda2caf01a16de9cd4893",
-      "subject": "fix(favorites): reduce search field height",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "maintenance",
-      "classification_reason": "通过分类纠正记录将收藏范围内搜索的原提交改判为 feature，并补充版本判定说明；不修改应用行为，不重写已推送历史或手动分配版本。",
-      "classification_source": "commit-trailers",
-      "original_type": "chore",
-      "sha": "163fd105a2f806f269d4bc08903389558be73668",
-      "subject": "chore(version): classify favorites search as a new feature",
-      "type": "chore",
-      "version_impact": "patch"
     }
   ],
-  "version": "1.6.0"
+  "version": "1.7.0"
 }
