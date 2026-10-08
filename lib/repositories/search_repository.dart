@@ -1,10 +1,12 @@
-import 'dart:convert';
 import 'package:html/parser.dart' as html_parser;
 import '../core/network/dio_client.dart';
 import '../core/parser/search_parser.dart';
 import '../core/storage/local_storage.dart';
 import '../core/utils/tag_search_query.dart';
 import '../core/utils/uploader_search_query.dart';
+import '../core/utils/search_queries.dart';
+import '../models/search_result.dart';
+export '../models/search_result.dart';
 import '../models/gallery_preview.dart';
 import '../models/search_filter.dart';
 import '../core/constants/app_constants.dart';
@@ -66,7 +68,7 @@ class SearchRepository {
     int page = 0,
     String? nextUrl,
   }) async {
-    final alternatives = _titleAlternatives(filter.keyword ?? '');
+    final alternatives = titleSearchAlternatives(filter.keyword ?? '');
     if (alternatives.length > 1) {
       return _searchAlternatives(filter, alternatives, page, nextUrl);
     }
@@ -100,86 +102,26 @@ class SearchRepository {
     );
   }
 
-  // Accept both generated OR chains and pasted/old bilingual title queries.
-  // A pipe inside title quotes separates alternatives, not a literal phrase.
-  List<String> _titleAlternatives(String query) {
-    if (!RegExp(r'^title:"[^"]+"(?: OR title:"[^"]+")*$')
-        .hasMatch(query.trim())) {
-      return [];
-    }
-    return RegExp(r'title:"([^"]+)"')
-        .allMatches(query)
-        .expand((m) => m[1]!.split(RegExp(r'[|｜]')))
-        .map((title) => title.trim())
-        .where((title) => title.isNotEmpty)
-        .map((title) => 'title:"$title"')
-        .toSet()
-        .toList();
-  }
-
   static const _unionCursorPrefix = 'oviewer-title-union:';
 
   Future<SearchResult> _searchAlternatives(
-      SearchFilter filter, List<String> queries, int page, String? cursor,
-      {String cursorPrefix = _unionCursorPrefix}) async {
-    final seen = <int>{};
-    var urls = queries
-        .map((query) => _buildSearchUrl(filter.copyWith(keyword: query), 0))
-        .toList();
-    if (cursor != null) {
-      if (!cursor.startsWith(cursorPrefix)) {
-        throw const FormatException('Invalid combined search cursor');
-      }
-      final saved = jsonDecode(utf8
-              .decode(base64Url.decode(cursor.substring(cursorPrefix.length))))
-          as Map<String, dynamic>;
-      if (saved['site'] != AppConstants.baseUrl ||
-          saved['query'] != filter.keyword ||
-          saved.containsKey('filter') &&
-              saved['filter'] != _buildSearchUrl(filter, 0)) {
-        throw const FormatException(
-            'Combined search cursor belongs to another search');
-      }
-      urls = List<String>.from(saved['urls'] as List);
-      seen.addAll(List<int>.from(saved['seen'] as List));
-    }
-    final results = <GalleryPreview>[];
-    final visited = <String>{};
-    // A page consisting entirely of duplicates must not end pagination while
-    // either source still has another page. Work locally until a batch succeeds,
-    // so retry after a failure never advances the caller's cursor.
-    while (urls.isNotEmpty && results.isEmpty) {
-      final next = <String>[];
-      for (final url in urls) {
-        if (!visited.add(url)) {
-          throw const FormatException('Repeated combined search cursor');
-        }
-        final result = await _searchSingle(filter, nextUrl: url);
-        for (final gallery in result.galleries) {
-          if (seen.add(gallery.gid)) results.add(gallery);
-        }
-        if (result.nextPageUrl != null) next.add(_resolve(result.nextPageUrl!));
-      }
-      urls = next.toSet().toList();
-    }
-    results.sort((a, b) => b.gid.compareTo(a.gid));
-    final nextCursor = urls.isEmpty
-        ? null
-        : cursorPrefix +
-            base64Url.encode(utf8.encode(jsonEncode({
-              'site': AppConstants.baseUrl,
-              'query': filter.keyword,
-              'filter': _buildSearchUrl(filter, 0),
-              'urls': urls,
-              'seen': seen.toList(),
-            })));
-    // There is no exact combined total until both streams are exhausted.
-    return SearchResult(
-        galleries: results,
-        totalPages: page + 1,
-        totalResults: urls.isEmpty ? seen.length : 0,
-        nextPageUrl: nextCursor);
-  }
+          SearchFilter filter, List<String> queries, int page, String? cursor,
+          {String cursorPrefix = _unionCursorPrefix}) =>
+      mergeSearchResults(
+        initialUrls: queries
+            .map((q) => _buildSearchUrl(filter.copyWith(keyword: q), 0))
+            .toList(),
+        scope: {
+          'site': AppConstants.baseUrl,
+          'query': filter.keyword,
+          'filter': _buildSearchUrl(filter, 0)
+        },
+        cursorPrefix: cursorPrefix,
+        cursor: cursor,
+        page: page,
+        loadPage: (url) => _searchSingle(filter, nextUrl: url),
+        resolveNext: _resolve,
+      );
 
   /// Get search history
   List<String> getSearchHistory() => _storage.getSearchHistory();
@@ -240,18 +182,4 @@ class SearchRepository {
     final query = params.isNotEmpty ? '?${params.join('&')}' : '';
     return '${AppConstants.baseUrl}/$query';
   }
-}
-
-class SearchResult {
-  final List<GalleryPreview> galleries;
-  final int totalPages;
-  final int totalResults;
-  final String? nextPageUrl;
-
-  const SearchResult({
-    required this.galleries,
-    required this.totalPages,
-    required this.totalResults,
-    this.nextPageUrl,
-  });
 }

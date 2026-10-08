@@ -18,6 +18,7 @@ import 'blocs/settings/settings_event.dart';
 import 'blocs/settings/settings_state.dart';
 import 'blocs/download/download_bloc.dart';
 import 'repositories/gallery_repository.dart';
+import 'repositories/search_repository.dart';
 import 'repositories/favorites_repository.dart';
 import 'repositories/history_repository.dart';
 import 'repositories/auth_repository.dart';
@@ -41,7 +42,7 @@ class OViewerApp extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => FavoritesBloc(sl<FavoritesRepository>(),
-              settings: sl<SettingsRepository>()),
+              settings: sl<SettingsRepository>(), search: sl<SearchRepository>()),
         ),
         BlocProvider(
           lazy: false,

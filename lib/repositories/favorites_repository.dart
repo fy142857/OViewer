@@ -1,4 +1,9 @@
 import 'package:dio/dio.dart';
+import '../core/utils/search_queries.dart';
+import '../core/utils/tag_search_query.dart';
+import '../core/utils/eh_url_parser.dart';
+import '../models/search_result.dart';
+import 'search_repository.dart' show SearchRepository;
 import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart' as html_parser;
 import '../core/constants/app_constants.dart';
@@ -21,13 +26,76 @@ class FavoritesRepository {
 
   // --- Cloud Favorites (requires login) ---
 
+  Future<FavoritesResult> fetchCloudFavorites(
+      {int page = 0,
+      int cat = -1,
+      String? nextUrl,
+      CancelToken? cancelToken,
+      String? keyword}) async {
+    final query = keyword?.trim() ?? '';
+    if (query.isEmpty) {
+      return _fetchPage(
+          page: page, cat: cat, nextUrl: nextUrl, cancelToken: cancelToken);
+    }
+    final site = AppConstants.baseUrl;
+    final session = _dio.sessionRevision;
+    final link = EhUrlParser.parseGalleryUrl(query);
+    final gid = SearchRepository.parseGid(query);
+    final queries = link != null
+        ? ['gid:${link.$1}']
+        : [...expandSearchQueries(query), if (gid != null) 'gid:$gid'];
+    final normalized = queries.map(normalizeTagSearchQuery).toSet();
+    String first(String q) =>
+        Uri.parse(ApiEndpoints.favorites(cat: cat)).replace(queryParameters: {
+          'f_search': q,
+          'sn': 'on',
+          'st': 'on',
+          if (cat >= 0) 'favcat': '$cat'
+        }).toString();
+    final scope = {'site': site, 'query': query, 'category': cat};
+    final result = await mergeSearchResults(
+        initialUrls: normalized.map(first).toList(),
+        scope: scope,
+        cursorPrefix: 'oviewer-favorites-union:',
+        cursor: nextUrl,
+        page: page,
+        resolveNext: (url) =>
+            Uri.parse('$site/favorites.php').resolve(url).toString(),
+        loadPage: (url) async {
+          if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
+          if (site != AppConstants.baseUrl || session != _dio.sessionRevision) {
+            throw StateError('Favorites session expired');
+          }
+          final branch = Uri.parse(url).queryParameters['f_search'];
+          if (!normalized.contains(branch))
+            throw const FormatException('Invalid favorites query cursor');
+          final r = await _fetchPage(
+              cat: cat,
+              page: page,
+              nextUrl: url,
+              cancelToken: cancelToken,
+              keyword: branch);
+          return SearchResult(
+              galleries: r.galleries,
+              totalPages: r.totalPages,
+              totalResults: 0,
+              nextPageUrl: r.nextPageUrl);
+        });
+    return FavoritesResult(
+        galleries: result.galleries,
+        totalPages: result.totalPages,
+        nextPageUrl: result.nextPageUrl,
+        requestUrl: nextUrl);
+  }
+
   /// Every page stays on the selected site and favorite category. A server
   /// cursor supplies ordering/position, never a different account or category.
-  Future<FavoritesResult> fetchCloudFavorites({
+  Future<FavoritesResult> _fetchPage({
     int page = 0,
     int cat = -1,
     String? nextUrl,
     CancelToken? cancelToken,
+    String? keyword,
   }) async {
     final first = ApiEndpoints.favorites(page: page, cat: cat);
     final origin = Uri.parse(AppConstants.baseUrl);
@@ -40,10 +108,16 @@ class FavoritesRepository {
       }
       final params = {...uri.queryParameters}..remove('favcat');
       if (cat >= 0) params['favcat'] = '$cat';
+      params.remove('f_search');
+      if (keyword != null) {
+        params.addAll({'f_search': keyword, 'sn': 'on', 'st': 'on'});
+      }
       return uri.replace(queryParameters: params).removeFragment().toString();
     }
 
     final url = scoped(nextUrl ?? first);
+    final serverPage =
+        int.tryParse(Uri.parse(url).queryParameters['page'] ?? '') ?? page;
     final html = cancelToken == null
         ? await _dio.get(url)
         : await _dio.get(url, cancelToken: cancelToken);
@@ -67,13 +141,13 @@ class FavoritesRepository {
       next = scoped(next);
       final numericPage =
           int.tryParse(Uri.parse(next).queryParameters['page'] ?? '');
-      if (numericPage != null && numericPage <= page) next = null;
+      if (numericPage != null && numericPage <= serverPage) next = null;
     } else {
       next = null;
       if (button == null &&
           document.querySelector('table.ptt a[href*="page="]') != null &&
-          pageCount > page + 1) {
-        next = ApiEndpoints.favorites(page: page + 1, cat: cat);
+          pageCount > serverPage + 1) {
+        next = scoped(ApiEndpoints.favorites(page: serverPage + 1, cat: cat));
       }
     }
     if (const bool.fromEnvironment('FAVORITES_DIAGNOSTICS')) {

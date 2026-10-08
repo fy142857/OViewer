@@ -1,0 +1,1 @@
+enum FavoritesEntry { home, sidebar }

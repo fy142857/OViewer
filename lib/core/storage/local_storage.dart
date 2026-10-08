@@ -9,6 +9,11 @@ class LocalStorage {
     if (_initialized) return;
     _prefs = await SharedPreferences.getInstance();
     _initialized = true;
+    try {
+      await migrateFavoriteCategories();
+    } catch (_) {
+      // Keep the legacy key and retry on the next write/startup.
+    }
   }
 
   SharedPreferences get prefs {
@@ -28,16 +33,68 @@ class LocalStorage {
       throw StateError('Could not persist the latest release version.');
   }
 
-  int? getFavoriteCategory() {
-    final value = _prefs.get('favorite_category');
-    return value is int ? value : null;
+  final Map<String, int> _favoriteCategories = {};
+  Future<void>? _favoriteMigration;
+  static bool _validFavoriteCategory(Object? value) =>
+      value is int && value >= -1 && value <= 9;
+  static String _favoriteKey(String entry) {
+    if (entry != 'home' && entry != 'sidebar') throw ArgumentError.value(entry);
+    return 'favorite_category_$entry';
   }
 
-  Future<void> setFavoriteCategory(int category) async {
-    if (category < -1 || category > 9) throw ArgumentError.value(category);
-    if (!await _prefs.setInt('favorite_category', category)) {
-      throw StateError('Could not save favorite category');
+  Future<void> migrateFavoriteCategories() =>
+      _favoriteMigration ??= _migrateFavoriteCategories()
+          .whenComplete(() => _favoriteMigration = null);
+
+  Future<void> _migrateFavoriteCategories() async {
+    try {
+      final legacy = _prefs.get('favorite_category');
+      for (final entry in ['home', 'sidebar']) {
+        final key = _favoriteKey(entry);
+        if (!_prefs.containsKey(key)) {
+          final value = _validFavoriteCategory(legacy) ? legacy as int : -1;
+          if (!await _prefs.setInt(key, value)) {
+            throw StateError('Could not migrate favorite category');
+          }
+        }
+      }
+      if (_prefs.containsKey('favorite_category') &&
+          !await _prefs.remove('favorite_category')) {
+        throw StateError('Could not finish favorite category migration');
+      }
+    } catch (_) {
+      // Both false and thrown platform failures may leave optimistic values
+      // in SharedPreferences' cache. Only persisted keys count on a retry.
+      await _prefs.reload();
+      rethrow;
     }
+  }
+
+  int? getFavoriteCategory({String entry = 'home'}) {
+    final key = _favoriteKey(entry);
+    final value = _prefs.containsKey(key)
+        ? _prefs.get(key)
+        : _prefs.get('favorite_category');
+    return _favoriteCategories[entry] ??
+        (_validFavoriteCategory(value) ? value as int : -1);
+  }
+
+  Future<void> setFavoriteCategory(int category,
+      {String entry = 'home'}) async {
+    if (!_validFavoriteCategory(category)) throw ArgumentError.value(category);
+    final key = _favoriteKey(entry);
+    _favoriteCategories.putIfAbsent(
+        entry, () => getFavoriteCategory(entry: entry)!);
+    await migrateFavoriteCategories();
+    try {
+      if (!await _prefs.setInt(key, category)) {
+        throw StateError('Could not save favorite category');
+      }
+    } catch (_) {
+      await _prefs.reload();
+      rethrow;
+    }
+    _favoriteCategories[entry] = category;
   }
 
   // Destination for new favorites, independent of the list filter.

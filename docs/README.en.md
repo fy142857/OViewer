@@ -30,7 +30,9 @@ Tap the reading area to show or hide the controls and status bar. While the app 
 
 ## Favorites and history
 
-Use the three-line button at the bottom right of either favorites view to select All favorites or Favorite 0–9. Both entries share the selection and restore it after restarting. Pull to refresh and scroll to load subsequent pages.
+Use the gray search field at the top of either favorites view to search titles, tags, uploaders, or gallery GIDs within its selected category. Search history and tag suggestions are reused. The three-line button selects All favorites or Favorite 0–9; the × button clears the query and restores that category’s favorites.
+
+Home and sidebar favorites keep separate queries, categories, results, pagination, and scroll positions. Only search history is shared. Changing categories preserves that view’s query; restarting restores each category and clears the queries. Pull to refresh and scroll for more results.
 
 On gallery details, Download, favorite settings (the three-line button), and the heart appear in that order on a right-aligned row above the full-width Read button. “Favorite category preference” selects the destination for new favorites (Favorite 0–9), persists across restarts, and is shared by EH/EX independently of the list filter. A favorited gallery displays its current Favorite x inside the heart button.
 

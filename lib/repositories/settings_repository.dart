@@ -5,9 +5,10 @@ class SettingsRepository {
 
   SettingsRepository(this._storage);
 
-  int? getFavoriteCategory() => _storage.getFavoriteCategory();
-  Future<void> setFavoriteCategory(int category) =>
-      _storage.setFavoriteCategory(category);
+  int? getFavoriteCategory({String entry = 'home'}) =>
+      _storage.getFavoriteCategory(entry: entry);
+  Future<void> setFavoriteCategory(int category, {String entry = 'home'}) =>
+      _storage.setFavoriteCategory(category, entry: entry);
 
   int getFavoriteDestination() => _storage.getFavoriteDestination();
   Future<void> setFavoriteDestination(int slot) =>

@@ -84,6 +84,9 @@ class S {
   String get favoriteDestination => _zh ? '收藏到' : 'Save favorites to';
   String get favoriteDestinationSaveFailed => _zh ? '无法保存收藏目标分组，请重试' : 'Could not save favorite destination. Please retry.';
   String get removeFavorite => _zh ? '取消收藏' : 'Remove favorite';
+  String get searchFavorites => _zh ? '搜索当前分组收藏' : 'Search this favorite category';
+  String get clearFavoriteSearch => _zh ? '清除搜索' : 'Clear search';
+  String get noFavoriteSearchResults => _zh ? '当前分组没有匹配的收藏' : 'No matching favorites in this category';
   String get favoriteCategories => _zh ? '收藏分组' : 'Favorite categories';
   String get allFavorites => _zh ? '显示全部' : 'All favorites';
   String favoriteCategory(int category) => category < 0 ? allFavorites : 'Favorite $category';

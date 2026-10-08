@@ -18,6 +18,7 @@ import 'package:oviewer/repositories/favorites_repository.dart';
 import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
+import 'package:oviewer/repositories/search_repository.dart';
 import 'package:oviewer/screens/home/home_screen.dart';
 
 class MockAuth extends Mock implements AuthRepository {}
@@ -27,6 +28,8 @@ class MockFavorites extends Mock implements FavoritesRepository {}
 class MockGallery extends Mock implements GalleryRepository {}
 
 class MockHistory extends Mock implements HistoryRepository {}
+
+class MockSearch extends Mock implements SearchRepository {}
 
 class MockSettings extends Mock implements SettingsRepository {}
 
@@ -75,6 +78,7 @@ void main() {
       GetIt.I.registerSingleton<AuthRepository>(auth);
       GetIt.I.registerSingleton<FavoritesRepository>(favorites);
       GetIt.I.registerSingleton<SettingsRepository>(settings);
+      GetIt.I.registerSingleton<SearchRepository>(MockSearch());
       GetIt.I.registerSingleton<DioClient>(MockDio());
       EhImageCacheManager.init(MockCookies());
       const thumb = 'https://example.test/preloaded-history.png';

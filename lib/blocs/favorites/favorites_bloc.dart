@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show PageStorageBucket;
+import '../../repositories/search_repository.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/gallery_preview.dart';
@@ -7,12 +9,34 @@ import '../../repositories/favorites_repository.dart';
 import '../../repositories/settings_repository.dart';
 import 'favorites_event.dart';
 import 'favorites_state.dart';
+export 'favorites_entry.dart';
 
 class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
   final FavoritesRepository _repository;
+  final FavoritesEntry entry;
+  final SearchRepository? _search;
+  FavoritesBloc? _sidebar;
+  PageStorageBucket scrollStorage = PageStorageBucket();
+  bool _dirty = false;
+  String? _account;
+  int? _revision;
+
+  FavoritesBloc forEntry(FavoritesEntry target) =>
+      target == entry ? this : _sidebar!;
+
+  @override
+  void add(FavoritesEvent event) {
+    if (entry == FavoritesEntry.home && event.entry == FavoritesEntry.sidebar) {
+      _sidebar!.add(event);
+    } else {
+      super.add(event);
+    }
+  }
+
   final SettingsRepository? _settings;
   int _generation = 0, _views = 0, _choice = 0;
   Object? _scope;
+  Object? get sessionScope => _scope;
   bool _signedIn = false;
   bool _closing = false;
   CancelToken? _request;
@@ -20,24 +44,38 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
   Future<void> _preferences = Future.value();
   final _visited = <String>{};
 
-  static int _saved(SettingsRepository? settings) {
-    final value = settings?.getFavoriteCategory() ?? -1;
+  static int _saved(SettingsRepository? settings, FavoritesEntry entry) {
+    final value = (entry == FavoritesEntry.home
+            ? settings?.getFavoriteCategory()
+            : settings?.getFavoriteCategory(entry: 'sidebar')) ??
+        -1;
     return value >= -1 && value <= 9 ? value : -1;
   }
 
-  FavoritesBloc(this._repository, {SettingsRepository? settings})
+  FavoritesBloc(this._repository,
+      {SettingsRepository? settings,
+      SearchRepository? search,
+      this.entry = FavoritesEntry.home})
       : _settings = settings,
-        super(FavoritesState(category: _saved(settings))) {
+        _search = search,
+        super(FavoritesState(category: _saved(settings, entry))) {
+    if (entry == FavoritesEntry.home) {
+      _sidebar = FavoritesBloc(_repository,
+          settings: settings, search: search, entry: FavoritesEntry.sidebar);
+    }
     _repository.changes?.addListener(_favoritesChanged);
     on<FavoritesScopeReset>((event, emit) {
       if (event.generation != _generation) return;
+      scrollStorage = PageStorageBucket();
       emit(FavoritesState(
-          category: state.category, scopeRevision: state.scopeRevision + 1));
+          keyword: event.clearKeyword ? '' : state.keyword,
+          category: state.category,
+          scopeRevision: state.scopeRevision + 1));
       if (_views > 0 && _signedIn) add(EnsureFavoritesLoaded());
     });
     on<LoadFavorites>((event, emit) => _load(emit));
     on<EnsureFavoritesLoaded>((event, emit) async {
-      if (state.status == FavoritesStatus.initial) await _load(emit);
+      if (state.status == FavoritesStatus.initial || _dirty) await _load(emit);
     });
     on<RefreshFavorites>((event, emit) async {
       try {
@@ -48,6 +86,34 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     });
     on<LoadMoreFavorites>(_more);
     on<SelectFavoriteCategory>(_select);
+    on<FavoritesInvalidated>((event, emit) async {
+      _dirty = true;
+      if (_views > 0 && _signedIn) {
+        await _load(emit);
+      } else {
+        _generation++;
+        _request?.cancel('Hidden favorites invalidated');
+        emit(state.copyWith(isLoadingMore: false));
+      }
+    });
+    on<SearchFavorites>((event, emit) async {
+      if (!_signedIn) return;
+      final keyword = event.keyword.trim();
+      _generation++;
+      _request?.cancel('Favorite query changed');
+      _visited.clear();
+      scrollStorage = PageStorageBucket();
+      emit(FavoritesState(
+          keyword: keyword,
+          savingCategory: state.savingCategory,
+          category: state.category,
+          scopeRevision: state.scopeRevision + 1));
+      // History persistence must not delay or discard the query result.
+      if (keyword.isNotEmpty && _search != null) {
+        unawaited(_search!.addSearchHistory(keyword).catchError((Object _) {}));
+      }
+      await _load(emit);
+    });
     on<AddFavorite>((event, emit) async {
       final generation = _generation;
       try {
@@ -85,7 +151,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
         !isClosed &&
         _signedIn &&
         state.status != FavoritesStatus.initial) {
-      add(const LoadFavorites());
+      add(FavoritesInvalidated());
     }
   }
 
@@ -98,17 +164,26 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     final next = (site, signedIn, revision, account);
     if (_scope == next || isClosed || _closing) return;
     final previous = _scope;
-    _scope = next;
+    if (previous != null) {
+      _cacheReady = Future<void>.sync(_repository.clearConfirmationCache);
+      unawaited(_cacheReady.catchError((Object _) {}));
+    }
+    _applySession(next, signedIn, revision, account, _cacheReady);
+    _sidebar?._applySession(next, signedIn, revision, account, _cacheReady);
+  }
+
+  void _applySession(Object scope, bool signedIn, int revision, String? account,
+      Future<void> cacheReady) {
+    final clear = !signedIn || account != _account || revision != _revision;
+    _scope = scope;
     _signedIn = signedIn;
+    _account = account;
+    _revision = revision;
+    _cacheReady = cacheReady;
     _generation++;
     _request?.cancel('Favorites session changed');
     _visited.clear();
-    if (previous != null) {
-      _cacheReady = Future<void>.sync(_repository.clearConfirmationCache);
-      // Observe errors immediately; _load still awaits and reports a failed clear.
-      unawaited(_cacheReady.catchError((Object _) {}));
-    }
-    add(FavoritesScopeReset(_generation));
+    add(FavoritesScopeReset(_generation, clearKeyword: clear));
   }
 
   void attachView() {
@@ -126,11 +201,12 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
   Future<void> _select(
       SelectFavoriteCategory event, Emitter<FavoritesState> emit) async {
     if (event.category < -1 || event.category > 9 || !_signedIn) return;
-    if (event.category == state.category && !state.savingCategory) return;
+    if (state.savingCategory || event.category == state.category) return;
     final choice = ++_choice;
     emit(state.copyWith(savingCategory: true, errorMessage: null));
-    final saved = _preferences
-        .then((_) => _settings?.setFavoriteCategory(event.category));
+    final saved = _preferences.then((_) => entry == FavoritesEntry.home
+        ? _settings?.setFavoriteCategory(event.category)
+        : _settings?.setFavoriteCategory(event.category, entry: 'sidebar'));
     _preferences =
         saved.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     try {
@@ -139,8 +215,11 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       _generation++;
       _request?.cancel('Favorite category changed');
       _visited.clear();
+      scrollStorage = PageStorageBucket();
       emit(FavoritesState(
-          category: event.category, scopeRevision: state.scopeRevision + 1));
+          keyword: state.keyword,
+          category: event.category,
+          scopeRevision: state.scopeRevision + 1));
       if (_signedIn) await _load(emit);
     } catch (_) {
       if (!isClosed && choice == _choice) {
@@ -152,6 +231,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
 
   Future<void> _load(Emitter<FavoritesState> emit) async {
     if (!_signedIn || _closing) return;
+    _dirty = false;
     final generation = ++_generation;
     _request?.cancel('Favorites refreshed');
     final request = _request = CancelToken();
@@ -170,8 +250,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
         await _cacheReady;
       }
       if (!_current(generation)) return;
-      final result = await _repository.fetchCloudFavorites(
-          cat: category, cancelToken: request);
+      final result = await _fetch(category, request);
       if (!_current(generation)) return;
       await _repository.rebuildCache(result.galleries,
           isCurrent: () => _current(generation));
@@ -218,8 +297,8 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
         if (!visited.add(url)) {
           throw const FormatException('Repeated favorites cursor');
         }
-        final result = await _repository.fetchCloudFavorites(
-            cat: category, page: page + 1, nextUrl: url, cancelToken: request);
+        final result =
+            await _fetch(category, request, page: page + 1, nextUrl: url);
         if (!_current(generation)) return;
         if (result.requestUrl != null &&
             result.requestUrl != url &&
@@ -250,6 +329,18 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     }
   }
 
+  Future<FavoritesResult> _fetch(int category, CancelToken request,
+          {int page = 0, String? nextUrl}) =>
+      state.keyword.isEmpty
+          ? _repository.fetchCloudFavorites(
+              cat: category, page: page, nextUrl: nextUrl, cancelToken: request)
+          : _repository.fetchCloudFavorites(
+              cat: category,
+              page: page,
+              nextUrl: nextUrl,
+              cancelToken: request,
+              keyword: state.keyword);
+
   @override
   Future<void> close() {
     _closing = true;
@@ -257,6 +348,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     _generation++;
     _repository.changes?.removeListener(_favoritesChanged);
     _request?.cancel('Favorites closed');
-    return super.close();
+    return Future.wait(
+        [super.close(), if (_sidebar != null) _sidebar!.close()]);
   }
 }

@@ -120,12 +120,12 @@ void main() {
     final next = FavoritesBloc(Repo(), settings: SettingsRepository(reopened));
     expect(next.state.category, 9);
     await next.close();
-    await reopened.prefs.setInt('favorite_category', 99);
+    await reopened.prefs.setInt('favorite_category_home', 99);
     final invalid =
         FavoritesBloc(Repo(), settings: SettingsRepository(reopened));
     expect(invalid.state.category, -1);
     await invalid.close();
-    await reopened.prefs.setString('favorite_category', 'invalid');
+    await reopened.prefs.setString('favorite_category_home', 'invalid');
     final corrupt =
         FavoritesBloc(Repo(), settings: SettingsRepository(reopened));
     expect(corrupt.state.category, -1);
@@ -271,7 +271,7 @@ void main() {
       expect(bloc.state.loadMoreFailed, true);
       expect(bloc.state.hasReachedEnd, false);
     });
-    test('rapid selections serialize persistence and final choice wins',
+    test('selection is blocked until the current preference save completes',
         () async {
       final firstSave = Completer<void>();
       final saved = <int>[];
@@ -288,9 +288,9 @@ void main() {
       await flush();
       firstSave.complete();
       await flush();
-      expect(saved, [1, 9]);
-      expect(bloc.state.category, 9);
-      expect(bloc.state.favorites.single.gid, 9);
+      expect(saved, [1]);
+      expect(bloc.state.category, 1);
+      expect(bloc.state.favorites.single.gid, 1);
     });
     test('site/account changes reject previous pending page completion',
         () async {

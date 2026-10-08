@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:oviewer/blocs/favorites/favorites_bloc.dart';
+import 'package:oviewer/blocs/favorites/favorites_event.dart';
+import 'package:oviewer/core/router/route_observer.dart';
 import 'package:oviewer/widgets/favorites_session_host.dart';
 import 'package:oviewer/screens/favorites/favorites_screen.dart';
 import 'dart:ui' as ui;
@@ -168,6 +170,7 @@ void main() {
         ],
         child: FavoritesSessionHost(
             child: MaterialApp(
+                navigatorObservers: [appRouteObserver],
                 home: screen,
                 routes: {'/favorites': (_) => const FavoritesScreen()}))));
     await frames(tester);
@@ -268,8 +271,7 @@ void main() {
     });
   }
 
-  testWidgets(
-      'small menu buttons share selection across home and drawer favorites',
+  testWidgets('small menu buttons keep independent home and drawer selections',
       (tester) async {
     await boot(tester);
     expect(find.byType(FloatingActionButton), findsNothing);
@@ -309,19 +311,70 @@ void main() {
         tester
             .widget<ListTile>(find.byKey(const ValueKey('favorite-category-9')))
             .selected,
-        true);
+        false);
     await tester.scrollUntilVisible(
         find.byKey(const ValueKey('favorite-category-3')), -250,
         scrollable: secondOptions);
     await tester.tap(find.byKey(const ValueKey('favorite-category-3')));
     await frames(tester);
-    expect(favoritesBloc.state.category, 3);
+    expect(favoritesBloc.forEntry(FavoritesEntry.sidebar).state.category, 3);
+    expect(favoritesBloc.state.category, 9);
     tester.state<NavigatorState>(find.byType(Navigator)).pop();
     await frames(tester);
-    expect(favoritesBloc.state.category, 3);
+    expect(favoritesBloc.state.category, 9);
     expect(find.text('Favorite 0'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final grid in [0, 1]) {
+    testWidgets(
+        'entry scroll offsets survive close/reopen and other entry reset: grid=$grid',
+        (tester) async {
+      await boot(tester, displayMode: grid);
+      await tester.tap(find.widgetWithText(Tab, 'Favorites'));
+      await frames(tester);
+      Finder content(String name) => find.byKey(PageStorageKey(
+          '$name-1-${name == 'sidebar-favorites' || grid == 0 ? 'list' : 'grid'}'));
+      Finder scroll(String name) =>
+          find.descendant(of: content(name), matching: find.byType(Scrollable));
+      await tester.drag(content('home-favorites'), const Offset(0, -450));
+      await frames(tester);
+      final homeOffset = tester
+          .state<ScrollableState>(scroll('home-favorites'))
+          .position
+          .pixels;
+      expect(homeOffset, greaterThan(0));
+      final nav = tester.state<NavigatorState>(find.byType(Navigator));
+      nav.pushNamed('/favorites');
+      await frames(tester);
+      await tester.drag(content('sidebar-favorites'), const Offset(0, -700));
+      await frames(tester);
+      final sideOffset = tester
+          .state<ScrollableState>(scroll('sidebar-favorites'))
+          .position
+          .pixels;
+      expect(sideOffset, greaterThan(0));
+      nav.pop();
+      await frames(tester);
+      expect(
+          tester
+              .state<ScrollableState>(scroll('home-favorites'))
+              .position
+              .pixels,
+          closeTo(homeOffset, 1));
+      favoritesBloc.add(const SearchFavorites(''));
+      await frames(tester);
+      nav.pushNamed('/favorites');
+      await frames(tester);
+      expect(
+          tester
+              .state<ScrollableState>(scroll('sidebar-favorites'))
+              .position
+              .pixels,
+          closeTo(sideOffset, 1));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('favorite button stays above the system bottom inset',
       (tester) async {
@@ -360,14 +413,20 @@ void main() {
     final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
     scroll.position.jumpTo(scroll.position.maxScrollExtent);
     await frames(tester);
-    expect(favoritesBloc.state.loadMoreFailed, true);
-    expect(favoritesBloc.state.favorites.length, 40);
+    expect(favoritesBloc.forEntry(FavoritesEntry.sidebar).state.loadMoreFailed,
+        true);
+    expect(
+        favoritesBloc.forEntry(FavoritesEntry.sidebar).state.favorites.length,
+        40);
     fail = false;
     await tester.ensureVisible(find.text('Retry'));
     await tester.tap(find.text('Retry'));
     await frames(tester);
-    expect(favoritesBloc.state.favorites.length, 80);
-    expect(favoritesBloc.state.hasReachedEnd, true);
+    expect(
+        favoritesBloc.forEntry(FavoritesEntry.sidebar).state.favorites.length,
+        80);
+    expect(favoritesBloc.forEntry(FavoritesEntry.sidebar).state.hasReachedEnd,
+        true);
     expect(tester.takeException(), isNull);
   });
 

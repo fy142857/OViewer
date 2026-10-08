@@ -17,11 +17,12 @@ import 'package:oviewer/repositories/favorites_repository.dart';
 import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
+import 'package:oviewer/repositories/search_repository.dart';
 import 'package:oviewer/widgets/shimmer_loading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oviewer/main.dart' as entry;
 import '../widget_test.dart'
-    show MockAuth, MockFavorites, MockGallery, MockHistory, MockSettings;
+    show MockAuth, MockFavorites, MockGallery, MockHistory, MockSettings, MockSearch;
 
 void main() {
   tearDown(() async {
@@ -93,6 +94,7 @@ void main() {
     GetIt.I.registerSingleton<FavoritesRepository>(favorites);
     GetIt.I.registerSingleton<GalleryRepository>(gallery);
     GetIt.I.registerSingleton<SettingsRepository>(settings);
+    GetIt.I.registerSingleton<SearchRepository>(MockSearch());
     const initial = SettingsState(locale: 'en', themeMode: 2, displayMode: 1);
     final firstFrame = Completer<void>();
     final jobs = StartupTasks(

@@ -6,13 +6,15 @@ enum FavoritesStatus { initial, loading, loaded, error }
 const _unset = Object();
 
 class FavoritesState extends Equatable {
+  final String keyword;
   final FavoritesStatus status;
   final List<GalleryPreview> favorites;
   final int category, currentPage, totalPages, scopeRevision;
   final bool isLoadingMore, hasReachedEnd, loadMoreFailed, savingCategory;
   final String? nextPageUrl, errorMessage;
   const FavoritesState(
-      {this.status = FavoritesStatus.initial,
+      {this.keyword = '',
+      this.status = FavoritesStatus.initial,
       this.favorites = const [],
       this.category = -1,
       this.currentPage = 0,
@@ -25,7 +27,8 @@ class FavoritesState extends Equatable {
       this.nextPageUrl,
       this.errorMessage});
   FavoritesState copyWith(
-          {FavoritesStatus? status,
+          {String? keyword,
+          FavoritesStatus? status,
           List<GalleryPreview>? favorites,
           int? category,
           int? currentPage,
@@ -38,6 +41,7 @@ class FavoritesState extends Equatable {
           Object? nextPageUrl = _unset,
           Object? errorMessage = _unset}) =>
       FavoritesState(
+          keyword: keyword ?? this.keyword,
           status: status ?? this.status,
           favorites: favorites ?? this.favorites,
           category: category ?? this.category,
@@ -56,6 +60,7 @@ class FavoritesState extends Equatable {
               : errorMessage as String?);
   @override
   List<Object?> get props => [
+        keyword,
         status,
         favorites,
         category,

@@ -24,8 +24,13 @@ import '../../widgets/shimmer_loading.dart';
 class SearchScreen extends StatelessWidget {
   final String? initialKeyword;
   final bool saveHistory;
+  final bool inputOnly;
 
-  const SearchScreen({super.key, this.initialKeyword, this.saveHistory = true});
+  const SearchScreen(
+      {super.key,
+      this.initialKeyword,
+      this.saveHistory = true,
+      this.inputOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +40,7 @@ class SearchScreen extends StatelessWidget {
       child: _SearchView(
         initialKeyword: initialKeyword,
         saveHistory: saveHistory,
+        inputOnly: inputOnly,
       ),
     );
   }
@@ -43,8 +49,12 @@ class SearchScreen extends StatelessWidget {
 class _SearchView extends StatefulWidget {
   final String? initialKeyword;
   final bool saveHistory;
+  final bool inputOnly;
 
-  const _SearchView({this.initialKeyword, required this.saveHistory});
+  const _SearchView(
+      {this.initialKeyword,
+      required this.saveHistory,
+      required this.inputOnly});
 
   @override
   State<_SearchView> createState() => _SearchViewState();
@@ -76,8 +86,10 @@ class _SearchViewState extends State<_SearchView> {
     }
     if (widget.initialKeyword != null) {
       _controller.text = widget.initialKeyword!;
-      _showHistory = false;
-      _performSearch();
+      if (!widget.inputOnly) {
+        _showHistory = false;
+        _performSearch();
+      }
     }
     _hasText.value = _controller.text.isNotEmpty;
     _focusNode.addListener(() {
@@ -87,7 +99,7 @@ class _SearchViewState extends State<_SearchView> {
       }
       if (_focusNode.hasFocus) {
         _scheduleSuggestions();
-      } else {
+      } else if (!widget.inputOnly) {
         _clearSuggestions();
       }
     });
@@ -111,6 +123,10 @@ class _SearchViewState extends State<_SearchView> {
   void _performSearch() {
     _clearSuggestions();
     final keyword = _controller.text.trim();
+    if (widget.inputOnly) {
+      Navigator.pop(context, keyword);
+      return;
+    }
 
     // If the input is a gallery URL, navigate directly to it
     final parsed = EhUrlParser.parseGalleryUrl(keyword);
@@ -290,7 +306,8 @@ class _SearchViewState extends State<_SearchView> {
                 builder: (context, constraints) => TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      autofocus: widget.initialKeyword == null,
+                      autofocus:
+                          widget.inputOnly || widget.initialKeyword == null,
                       decoration: InputDecoration(
                         hintText: s.searchGalleries,
                         hintStyle: _fittedHintStyle(context,
@@ -332,12 +349,13 @@ class _SearchViewState extends State<_SearchView> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FloatingActionButton.small(
-            heroTag: 'filter',
-            onPressed: _showFilterDialog,
-            child: const Icon(Icons.tune),
-          ),
-          const SizedBox(height: 12),
+          if (!widget.inputOnly)
+            FloatingActionButton.small(
+              heroTag: 'filter',
+              onPressed: _showFilterDialog,
+              child: const Icon(Icons.tune),
+            ),
+          if (!widget.inputOnly) const SizedBox(height: 12),
           FloatingActionButton(
             heroTag: 'search',
             onPressed: _performSearch,
@@ -730,8 +748,9 @@ class _SearchViewState extends State<_SearchView> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(s.recentSearches,
-                  style: Theme.of(context).textTheme.titleMedium),
+              Expanded(
+                  child: Text(s.recentSearches,
+                      style: Theme.of(context).textTheme.titleMedium)),
               TextButton(
                 onPressed: () =>
                     context.read<SearchBloc>().add(ClearSearchHistory()),
