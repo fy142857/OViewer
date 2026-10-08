@@ -15,7 +15,7 @@ The project targets **Android 5.0 and iOS 12.0** as its minimum OS versions, kee
 - See matching search history first as you type, followed by tag suggestions.
 - Search with Chinese tag translations, multiword tags, and tag aliases.
 - Find similar galleries from a gallery's detail page, or tap a tag to explore further.
-- Tap the username in the `uploader` row below `other` to search that account's galleries, or enter `uploader:"User Name"` in the search box.
+- Enter an uploader name directly to search both ordinary title/tag matches and that account's galleries, with duplicates removed. Tap the username in the `uploader` row below `other`, or enter `uploader:"User Name"`, to search only that uploader.
 - Paste a gallery URL to open its details directly.
 
 Gallery details include the cover, uploader, language, page count, tags, and thumbnails, along with ratings, comments, and comment voting.

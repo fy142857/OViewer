@@ -4,6 +4,7 @@ import '../core/network/dio_client.dart';
 import '../core/parser/search_parser.dart';
 import '../core/storage/local_storage.dart';
 import '../core/utils/tag_search_query.dart';
+import '../core/utils/uploader_search_query.dart';
 import '../models/gallery_preview.dart';
 import '../models/search_filter.dart';
 import '../core/constants/app_constants.dart';
@@ -67,11 +68,17 @@ class SearchRepository {
   }) async {
     final alternatives = _titleAlternatives(filter.keyword ?? '');
     if (alternatives.length > 1) {
-      return _searchTitleAlternatives(filter, alternatives, page, nextUrl);
+      return _searchAlternatives(filter, alternatives, page, nextUrl);
     }
     if (alternatives.length == 1) {
       return _searchSingle(filter.copyWith(keyword: alternatives.single),
           page: page, nextUrl: nextUrl);
+    }
+    final uploader = plainUploaderSearchQuery(filter.keyword ?? '');
+    if (uploader != null) {
+      return _searchAlternatives(
+          filter, [filter.keyword!, uploader], page, nextUrl,
+          cursorPrefix: 'oviewer-uploader-union:');
     }
     return _searchSingle(filter, page: page, nextUrl: nextUrl);
   }
@@ -112,23 +119,26 @@ class SearchRepository {
 
   static const _unionCursorPrefix = 'oviewer-title-union:';
 
-  Future<SearchResult> _searchTitleAlternatives(SearchFilter filter,
-      List<String> queries, int page, String? cursor) async {
+  Future<SearchResult> _searchAlternatives(
+      SearchFilter filter, List<String> queries, int page, String? cursor,
+      {String cursorPrefix = _unionCursorPrefix}) async {
     final seen = <int>{};
     var urls = queries
         .map((query) => _buildSearchUrl(filter.copyWith(keyword: query), 0))
         .toList();
     if (cursor != null) {
-      if (!cursor.startsWith(_unionCursorPrefix)) {
-        throw const FormatException('Invalid title search cursor');
+      if (!cursor.startsWith(cursorPrefix)) {
+        throw const FormatException('Invalid combined search cursor');
       }
-      final saved = jsonDecode(utf8.decode(
-              base64Url.decode(cursor.substring(_unionCursorPrefix.length))))
+      final saved = jsonDecode(utf8
+              .decode(base64Url.decode(cursor.substring(cursorPrefix.length))))
           as Map<String, dynamic>;
       if (saved['site'] != AppConstants.baseUrl ||
-          saved['query'] != filter.keyword) {
+          saved['query'] != filter.keyword ||
+          saved.containsKey('filter') &&
+              saved['filter'] != _buildSearchUrl(filter, 0)) {
         throw const FormatException(
-            'Title search cursor belongs to another search');
+            'Combined search cursor belongs to another search');
       }
       urls = List<String>.from(saved['urls'] as List);
       seen.addAll(List<int>.from(saved['seen'] as List));
@@ -136,13 +146,13 @@ class SearchRepository {
     final results = <GalleryPreview>[];
     final visited = <String>{};
     // A page consisting entirely of duplicates must not end pagination while
-    // either title still has another page. Work locally until a batch succeeds,
+    // either source still has another page. Work locally until a batch succeeds,
     // so retry after a failure never advances the caller's cursor.
     while (urls.isNotEmpty && results.isEmpty) {
       final next = <String>[];
       for (final url in urls) {
         if (!visited.add(url)) {
-          throw const FormatException('Repeated title search cursor');
+          throw const FormatException('Repeated combined search cursor');
         }
         final result = await _searchSingle(filter, nextUrl: url);
         for (final gallery in result.galleries) {
@@ -155,10 +165,11 @@ class SearchRepository {
     results.sort((a, b) => b.gid.compareTo(a.gid));
     final nextCursor = urls.isEmpty
         ? null
-        : _unionCursorPrefix +
+        : cursorPrefix +
             base64Url.encode(utf8.encode(jsonEncode({
               'site': AppConstants.baseUrl,
               'query': filter.keyword,
+              'filter': _buildSearchUrl(filter, 0),
               'urls': urls,
               'seen': seen.toList(),
             })));
