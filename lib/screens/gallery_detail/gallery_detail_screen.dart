@@ -341,64 +341,73 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
 
   Widget _buildActionButtons(BuildContext context, GalleryDetail detail) {
     final s = S.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: () async {
-              await Navigator.pushNamed(context, '/reader', arguments: {
-                'gid': widget.gid,
-                'token': widget.token,
-              });
-              _loadReadingProgress();
-            },
-            icon: const Icon(Icons.auto_stories),
-            label: Text(_readingProgress != null &&
-                    _readingProgress!.lastReadPage > 0
-                ? 'P.${_readingProgress!.lastReadPage + 1} / ${_readingProgress!.totalPages}'
-                : s.read),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton.outlined(
+                key: const ValueKey('download-gallery'),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(s.startDownloadConfirm),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(s.cancel),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(s.download),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true || !context.mounted) return;
+                  context.read<DownloadBloc>().add(StartDownload(
+                        gid: detail.gid,
+                        token: detail.token,
+                        title: detail.title,
+                        thumbUrl: detail.thumbUrl,
+                        totalPages: detail.fileCount,
+                      ));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(s.downloadStarted)),
+                  );
+                },
+                icon: const Icon(Icons.download, size: 20),
+                tooltip: s.download,
+              ),
+              const SizedBox(width: 8),
+              GalleryFavoriteButtons(
+                settings: GetIt.I<SettingsRepository>(),
+                favoritedSlot: detail.favoritedSlot,
+                onToggle: (slot) => _toggleFavorite(context, detail, slot),
+              ),
+            ]),
           ),
         ),
-        const SizedBox(width: 8),
-        GalleryFavoriteButtons(
-          settings: GetIt.I<SettingsRepository>(),
-          isFavorited: detail.isFavorited,
-          onToggle: (slot) => _toggleFavorite(context, detail, slot),
-        ),
-        const SizedBox(width: 8),
-        IconButton.outlined(
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          key: const ValueKey('read-gallery'),
           onPressed: () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(s.startDownloadConfirm),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: Text(s.cancel),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(s.download),
-                  ),
-                ],
-              ),
-            );
-            if (confirmed != true || !context.mounted) return;
-            context.read<DownloadBloc>().add(StartDownload(
-                  gid: detail.gid,
-                  token: detail.token,
-                  title: detail.title,
-                  thumbUrl: detail.thumbUrl,
-                  totalPages: detail.fileCount,
-                ));
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(s.downloadStarted)),
-            );
+            await Navigator.pushNamed(context, '/reader', arguments: {
+              'gid': widget.gid,
+              'token': widget.token,
+            });
+            _loadReadingProgress();
           },
-          icon: const Icon(Icons.download, size: 20),
-          tooltip: s.download,
+          icon: const Icon(Icons.auto_stories),
+          label: Text(_readingProgress != null &&
+                  _readingProgress!.lastReadPage > 0
+              ? 'P.${_readingProgress!.lastReadPage + 1} / ${_readingProgress!.totalPages}'
+              : s.read),
         ),
       ],
     );

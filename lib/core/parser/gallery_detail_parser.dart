@@ -408,25 +408,31 @@ class GalleryDetailParser {
 
   // ---- Favorite slot detection ----
   static int? _parseFavoritedSlot(Document document) {
-    // Check for favorited state via the #fav div or gdf id
-    final favDiv = document.querySelector('#fav .i, #favoritelink');
-    if (favDiv == null) return null;
+    final link = document.querySelector('#favoritelink');
+    final icon = document.querySelector('#fav .i');
+    final text = link?.text.trim() ?? '';
+    if (text.toLowerCase().contains('add to favorites')) return null;
+    if (icon == null && text.isEmpty) return null;
 
-    // "Add to Favorites" means not favorited
-    final favText = favDiv.text.trim();
-    if (favText.contains('Add to Favorites')) return null;
-
-    // If favorited, try to determine slot from style or text
-    final style = favDiv.attributes['style'] ?? '';
-    final bgPos =
-        RegExp(r'background-position:\s*0px\s+(-?\d+)px').firstMatch(style);
-    if (bgPos != null) {
-      final y = int.parse(bgPos.group(1)!).abs();
-      return (y ~/ 19).clamp(0, 9);
+    // The colored favorite sprite carries the numeric slot even for renamed
+    // folders. The default label is a fallback, never the saved destination.
+    final style = (icon ?? link)?.attributes['style'] ?? '';
+    final position = RegExp(r'background-position:\s*0(?:px)?\s+(-?\d+)px',
+            caseSensitive: false)
+        .firstMatch(style);
+    if (position != null) {
+      final y = -int.parse(position.group(1)!);
+      if (y >= 0 && (y % 19 == 2 || y % 19 == 0) && y ~/ 19 <= 9) {
+        return y ~/ 19;
+      }
     }
-
-    // Already favorited but can't determine slot
-    return 0;
+    for (final label in [text, icon?.attributes['title'] ?? '']) {
+      final match = RegExp(r'^Favorites?\s+([0-9])$', caseSensitive: false)
+          .firstMatch(label.trim());
+      if (match != null) return int.parse(match.group(1)!);
+    }
+    // Preserve known membership without inventing a Favorite 0 label.
+    return -1;
   }
 
   // ---- Utilities ----

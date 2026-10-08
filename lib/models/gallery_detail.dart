@@ -20,6 +20,7 @@ class GalleryDetail extends Equatable {
   final double rating;
   final int ratingCount;
   final int favoriteCount;
+  /// null: not favorited; -1: favorited but the server slot is unknown.
   final int? favoritedSlot;
   final List<GalleryTag> tags;
   final List<GalleryComment> comments;

@@ -110,7 +110,7 @@ void main() {
 
   for (final locale in ['zh', 'en']) {
     testWidgets(
-        'menu above heart selects all ten slots, persists and cancels ($locale)',
+        'menu beside heart selects all ten slots, persists and cancels ($locale)',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 640));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -126,16 +126,17 @@ void main() {
                   body: Center(
                       child: GalleryFavoriteButtons(
                           settings: prefs,
-                          isFavorited: false,
+                          favoritedSlot: null,
                           onToggle: actions.add))))));
       await mount();
       final menu = find.byKey(const ValueKey('choose-favorite-destination'));
       final heart = find.byKey(const ValueKey('toggle-gallery-favorite'));
-      expect(tester.getCenter(menu).dx, tester.getCenter(heart).dx);
-      expect(tester.getRect(menu).bottom, lessThan(tester.getRect(heart).top));
+      expect(tester.getCenter(menu).dy, tester.getCenter(heart).dy);
+      expect(tester.getRect(menu).right, lessThan(tester.getRect(heart).left));
       await tester.tap(menu);
       await tester.pumpAndSettle();
-      expect(find.text(locale == 'zh' ? '收藏到' : 'Save favorites to'),
+      expect(
+          find.text(locale == 'zh' ? '收藏分组偏好' : 'Favorite category preference'),
           findsOneWidget);
       expect(
           (tester.widget<ListView>(find.byType(ListView)).childrenDelegate
@@ -167,6 +168,35 @@ void main() {
     });
   }
 
+  for (final slot in [0, 1, 9, -1]) {
+    testWidgets('heart displays actual slot $slot independently of preference',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({'favorite_destination': 4});
+      final prefs = await settings();
+      final bloc = SettingsBloc(prefs, initialState: const SettingsState());
+      addTearDown(bloc.close);
+      await tester.pumpWidget(BlocProvider.value(
+          value: bloc,
+          child: MaterialApp(
+              home: Scaffold(
+                  body: GalleryFavoriteButtons(
+                      settings: prefs,
+                      favoritedSlot: slot,
+                      onToggle: (_) {})))));
+      final heart = find.byKey(const ValueKey('toggle-gallery-favorite'));
+      expect(find.descendant(of: heart, matching: find.byIcon(Icons.favorite)),
+          findsOneWidget);
+      expect(find.descendant(of: heart, matching: find.text('Favorite $slot')),
+          slot >= 0 ? findsOneWidget : findsNothing);
+      expect(find.text('Favorite 4'), findsNothing);
+      if (slot >= 0) {
+        expect(tester.getCenter(find.byIcon(Icons.favorite)).dx,
+            lessThan(tester.getCenter(find.text('Favorite $slot')).dx));
+      }
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   testWidgets(
       'saving blocks heart; failed save reports error and keeps old choice',
       (tester) async {
@@ -181,7 +211,7 @@ void main() {
             home: Scaffold(
                 body: GalleryFavoriteButtons(
                     settings: prefs,
-                    isFavorited: true,
+                    favoritedSlot: 7,
                     onToggle: (_) => fail('Must not toggle during save'))))));
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
@@ -189,7 +219,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
         tester
-            .widget<IconButton>(
+            .widget<OutlinedButton>(
                 find.byKey(const ValueKey('toggle-gallery-favorite')))
             .onPressed,
         isNull);

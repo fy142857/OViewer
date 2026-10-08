@@ -55,8 +55,13 @@ SearchResult results(List<int> ids) => SearchResult(
     totalResults: ids.length);
 
 Future<void> boot(WidgetTester tester, MockSearch repo,
-    {String locale = 'zh', bool grid = false, String keyword = '00042'}) async {
-  await tester.binding.setSurfaceSize(const Size(360, 800));
+    {String locale = 'zh',
+    bool grid = false,
+    String keyword = '00042',
+    double width = 360,
+    double textScale = 1,
+    int? favoritedSlot}) async {
+  await tester.binding.setSurfaceSize(Size(width, 800));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   final settings = MockSettings();
   final favorites = MockFavorites();
@@ -71,6 +76,7 @@ Future<void> boot(WidgetTester tester, MockSearch repo,
   when(() => galleries.fetchGalleryDetail(42, 'abcdef1234')).thenAnswer(
       (_) async => GalleryDetail(
           gid: 42,
+          favoritedSlot: favoritedSlot,
           token: 'abcdef1234',
           title: 'Gallery 42',
           thumbUrl: thumb,
@@ -105,6 +111,9 @@ Future<void> boot(WidgetTester tester, MockSearch repo,
         BlocProvider(create: (_) => HistoryBloc(history)),
       ],
       child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaleFactor: textScale),
+              child: child!),
           onGenerateRoute: AppRouter.generateRoute,
           home: SearchScreen(initialKeyword: keyword))));
   await tester.pump();
@@ -120,6 +129,63 @@ void main() {
     PaintingBinding.instance.imageCache.clearLiveImages();
     await GetIt.I.reset();
   });
+  for (final layout in [(320.0, 1.0), (360.0, 1.3), (800.0, 1.0)]) {
+    for (final slot in [null, 0, 9]) {
+      testWidgets(
+          'detail action row and full-width read button at $layout slot=$slot',
+          (tester) async {
+        final repo = MockSearch();
+        when(() => repo.search(any())).thenAnswer((_) async => results([]));
+        await boot(tester, repo,
+            keyword: 'first',
+            width: layout.$1,
+            textScale: layout.$2,
+            favoritedSlot: slot);
+        await tester.pumpAndSettle();
+        await tester.enterText(
+            find.byType(TextField), 'https://e-hentai.org/g/42/abcdef1234/');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await tester.pumpAndSettle();
+        final read = find.byKey(const ValueKey('read-gallery'));
+        await tester.ensureVisible(read);
+        await tester.pumpAndSettle();
+        final download = find.byKey(const ValueKey('download-gallery'));
+        final menu = find.byKey(const ValueKey('choose-favorite-destination'));
+        final heart = find.byKey(const ValueKey('toggle-gallery-favorite'));
+        expect(tester.getCenter(download).dy,
+            closeTo(tester.getCenter(menu).dy, 0.1));
+        expect(tester.getCenter(menu).dy,
+            closeTo(tester.getCenter(heart).dy, 0.1));
+        expect(tester.getBottomRight(download).dx,
+            lessThan(tester.getTopLeft(menu).dx));
+        expect(tester.getBottomRight(menu).dx,
+            lessThan(tester.getTopLeft(heart).dx));
+        expect(tester.getBottomRight(heart).dy,
+            lessThan(tester.getTopLeft(read).dy));
+        expect(tester.getTopLeft(read).dx, closeTo(16, 0.1));
+        expect(tester.getBottomRight(read).dx, closeTo(layout.$1 - 16, 0.1));
+        expect(tester.getBottomRight(heart).dx,
+            closeTo(tester.getBottomRight(read).dx, 0.1));
+        if (slot != null) {
+          expect(
+              find.descendant(of: heart, matching: find.text('Favorite $slot')),
+              findsOneWidget);
+        } else {
+          expect(find.descendant(of: heart, matching: find.byType(Text)),
+              findsNothing);
+        }
+        await tester.tap(download);
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await tester.tap(find.text('取消'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      });
+    }
+  }
+
   testWidgets('pasted complete gallery URL keeps direct navigation',
       (tester) async {
     final repo = MockSearch();

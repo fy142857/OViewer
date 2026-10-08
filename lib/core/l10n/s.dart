@@ -80,6 +80,7 @@ class S {
 
   // ---- Home Drawer ----
   String get home => _zh ? '首页' : 'Home';
+  String get favoriteCategoryPreference => _zh ? '收藏分组偏好' : 'Favorite category preference';
   String get favoriteDestination => _zh ? '收藏到' : 'Save favorites to';
   String get favoriteDestinationSaveFailed => _zh ? '无法保存收藏目标分组，请重试' : 'Could not save favorite destination. Please retry.';
   String get removeFavorite => _zh ? '取消收藏' : 'Remove favorite';

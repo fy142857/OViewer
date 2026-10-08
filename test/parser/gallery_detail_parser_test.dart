@@ -2,6 +2,45 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oviewer/core/parser/gallery_detail_parser.dart';
 
 void main() {
+  for (var slot = 0; slot <= 9; slot++) {
+    test('favorite slot $slot comes from sprite even with a renamed folder',
+        () {
+      final detail = GalleryDetailParser.parse(
+          '<div id="fav"><div class="i" style="background-position:0px -${2 + slot * 19}px" title="Custom folder"></div></div>'
+              '<a id="favoritelink">Custom folder</a>',
+          42,
+          'abc');
+      expect(detail.favoritedSlot, slot);
+      for (final label in ['Favorite $slot', 'Favorites $slot']) {
+        expect(
+            GalleryDetailParser.parse(
+                    '<a id="favoritelink">$label</a>', 42, 'abc')
+                .favoritedSlot,
+            slot);
+      }
+    });
+  }
+  test('unfavorited and unknown folders never fabricate Favorite 0', () {
+    expect(
+        GalleryDetailParser.parse(
+                '<a id="favoritelink">Add to Favorites</a>', 42, 'abc')
+            .favoritedSlot,
+        isNull);
+    expect(GalleryDetailParser.parse('', 42, 'abc').favoritedSlot, isNull);
+    for (final style in [
+      '',
+      'background-position:0px -999px',
+      'background-position:0px 21px'
+    ]) {
+      final detail = GalleryDetailParser.parse(
+          '<div id="fav"><div class="i" style="$style"></div></div><a id="favoritelink">My folder</a>',
+          42,
+          'abc');
+      expect(detail.isFavorited, true);
+      expect(detail.favoritedSlot, -1);
+    }
+  });
+
   group('GalleryDetailParser', () {
     test('parseThumbnails extracts page tokens from thumbnail links', () {
       const html = '''
