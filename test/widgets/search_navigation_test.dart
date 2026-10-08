@@ -23,6 +23,7 @@ import 'package:oviewer/repositories/favorites_repository.dart';
 import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/search_repository.dart';
+import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/widgets/gallery_card.dart';
 
 class MockSearch extends Mock implements SearchRepository {}
@@ -34,6 +35,8 @@ class MockGallery extends Mock implements GalleryRepository {}
 class MockHistory extends Mock implements HistoryRepository {}
 
 class MockSettings extends Mock implements SettingsBloc {}
+
+class MockPreferences extends Mock implements SettingsRepository {}
 
 class MockCookies extends Mock implements CookieManager {}
 
@@ -137,6 +140,9 @@ void main() {
         GetIt.I.registerSingleton<FavoritesRepository>(favorites);
         GetIt.I.registerSingleton<GalleryRepository>(gallery);
         GetIt.I.registerSingleton<HistoryRepository>(history);
+        final preferences = MockPreferences();
+        when(() => preferences.getFavoriteDestination()).thenReturn(0);
+        GetIt.I.registerSingleton<SettingsRepository>(preferences);
 
         // Seed decoded pixels so the navigation test never starts image IO.
         EhImageCacheManager.init(MockCookies());

@@ -25,6 +25,8 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/rating_bar.dart';
 import '../../widgets/gallery_tag_section.dart';
+import '../../widgets/gallery_favorite_buttons.dart';
+import '../../repositories/settings_repository.dart';
 import '../../widgets/thumbnail_grid.dart';
 import '../comments/comments_screen.dart';
 import '../../widgets/comment_card.dart';
@@ -340,6 +342,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
   Widget _buildActionButtons(BuildContext context, GalleryDetail detail) {
     final s = S.of(context);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
           child: FilledButton.icon(
@@ -358,13 +361,10 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
           ),
         ),
         const SizedBox(width: 8),
-        IconButton.outlined(
-          onPressed: () => _toggleFavorite(context, detail),
-          icon: Icon(
-            detail.isFavorited ? Icons.favorite : Icons.favorite_border,
-            size: 20,
-            color: detail.isFavorited ? Colors.red : null,
-          ),
+        GalleryFavoriteButtons(
+          settings: GetIt.I<SettingsRepository>(),
+          isFavorited: detail.isFavorited,
+          onToggle: (slot) => _toggleFavorite(context, detail, slot),
         ),
         const SizedBox(width: 8),
         IconButton.outlined(
@@ -531,9 +531,9 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
     ]);
   }
 
-  void _toggleFavorite(BuildContext context, GalleryDetail detail) {
+  void _toggleFavorite(BuildContext context, GalleryDetail detail, int slot) {
     final authStatus = context.read<AuthBloc>().state.status;
-    if (authStatus == AuthStatus.unauthenticated) {
+    if (authStatus != AuthStatus.authenticated) {
       final s = S.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.loginToFavorite)),
@@ -541,7 +541,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
       return;
     }
     context.read<GalleryDetailBloc>().add(
-          ToggleFavorite(gid: detail.gid, token: detail.token),
+          ToggleFavorite(gid: detail.gid, token: detail.token, slot: slot),
         );
   }
 

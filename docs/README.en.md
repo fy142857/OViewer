@@ -32,6 +32,8 @@ Tap the reading area to show or hide the controls and status bar. While the app 
 
 Use the three-line button at the bottom right of either favorites view to select All favorites or Favorite 0–9. Both entries share the selection and restore it after restarting. Pull to refresh and scroll to load subsequent pages.
 
+The menu button directly above the heart on gallery details chooses the destination for new favorites (Favorite 0–9). Tap the heart to save to that category. The choice persists across restarts, is shared by EH/EX, and is independent of the favorites list filter.
+
 After signing in, you can manage cloud favorites and recognize favorited galleries by the **red heart** in list and grid views.
 
 If you add or remove a favorite on another device using the same account, pull to refresh the current list to update its marker.

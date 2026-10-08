@@ -19,6 +19,7 @@ import 'package:oviewer/repositories/favorites_repository.dart';
 import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/search_repository.dart';
+import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/screens/search/search_screen.dart';
 import 'package:oviewer/widgets/gallery_card.dart';
 import 'package:oviewer/widgets/gallery_grid_item.dart';
@@ -32,6 +33,8 @@ class MockGallery extends Mock implements GalleryRepository {}
 class MockHistory extends Mock implements HistoryRepository {}
 
 class MockSettings extends Mock implements SettingsBloc {}
+
+class MockPreferences extends Mock implements SettingsRepository {}
 
 class MockCookies extends Mock implements CookieManager {}
 
@@ -83,6 +86,9 @@ Future<void> boot(WidgetTester tester, MockSearch repo,
   GetIt.I.registerSingleton<FavoritesRepository>(favorites);
   GetIt.I.registerSingleton<GalleryRepository>(galleries);
   GetIt.I.registerSingleton<HistoryRepository>(history);
+  final preferences = MockPreferences();
+  when(() => preferences.getFavoriteDestination()).thenReturn(0);
+  GetIt.I.registerSingleton<SettingsRepository>(preferences);
   EhImageCacheManager.init(MockCookies());
   final recorder = ui.PictureRecorder();
   Canvas(recorder).drawColor(Colors.blue, BlendMode.src);

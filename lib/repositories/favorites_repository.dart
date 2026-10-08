@@ -101,6 +101,7 @@ class FavoritesRepository {
   /// Add to cloud favorites (auto-caches locally)
   Future<void> addCloudFavorite(int gid, String token,
       {int slot = 0, GalleryPreview? preview}) async {
+    if (slot < 0 || slot > 9) throw ArgumentError.value(slot);
     final cacheGeneration = _cacheGeneration;
     final session = _dio.sessionRevision;
     bool current() =>

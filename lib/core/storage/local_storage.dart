@@ -40,6 +40,23 @@ class LocalStorage {
     }
   }
 
+  // Destination for new favorites, independent of the list filter.
+  int? _favoriteDestination;
+  int getFavoriteDestination() {
+    final value = _prefs.get('favorite_destination');
+    return _favoriteDestination ??=
+        value is int && value >= 0 && value <= 9 ? value : 0;
+  }
+
+  Future<void> setFavoriteDestination(int slot) async {
+    if (slot < 0 || slot > 9) throw ArgumentError.value(slot);
+    getFavoriteDestination(); // Retain the last confirmed choice if saving fails.
+    if (!await _prefs.setInt('favorite_destination', slot)) {
+      throw StateError('Could not save favorite destination');
+    }
+    _favoriteDestination = slot;
+  }
+
   // Theme
   static const _keyThemeMode = 'theme_mode';
   int getThemeMode() => _prefs.getInt(_keyThemeMode) ?? 0; // 0=system
