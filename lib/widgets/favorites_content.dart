@@ -116,32 +116,42 @@ class _FavoritesContentState extends State<FavoritesContent> with RouteAware {
             color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
             clipBehavior: Clip.antiAlias,
-            child: Row(children: [
-              Expanded(
-                  child: InkWell(
-                      key: ValueKey('favorites-search-${widget.entry.name}'),
-                      onTap: _search,
-                      child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(children: [
-                            const Icon(Icons.search, size: 22),
-                            const SizedBox(width: 8),
-                            Expanded(
-                                child: Text(
-                                    state.keyword.isEmpty
-                                        ? s.searchFavorites
-                                        : state.keyword,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis)),
-                          ])))),
-              if (state.keyword.isNotEmpty)
-                IconButton(
-                    key: ValueKey('favorites-clear-${widget.entry.name}'),
-                    tooltip: s.clearFavoriteSearch,
-                    icon: const Icon(Icons.close),
-                    onPressed: () =>
-                        _bloc.add(SearchFavorites('', entry: widget.entry))),
-            ])));
+            child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 40),
+                child: Row(children: [
+                  Expanded(
+                      child: InkWell(
+                          key:
+                              ValueKey('favorites-search-${widget.entry.name}'),
+                          onTap: _search,
+                          child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              child: Row(children: [
+                                const Icon(Icons.search, size: 22),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                    child: Text(
+                                        state.keyword.isEmpty
+                                            ? s.searchFavorites
+                                            : state.keyword,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis)),
+                              ])))),
+                  if (state.keyword.isNotEmpty)
+                    IconButton(
+                        key: ValueKey('favorites-clear-${widget.entry.name}'),
+                        tooltip: s.clearFavoriteSearch,
+                        constraints:
+                            const BoxConstraints(minWidth: 40, minHeight: 40),
+                        padding: const EdgeInsets.all(8),
+                        iconSize: 20,
+                        style: const ButtonStyle(
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        icon: const Icon(Icons.close),
+                        onPressed: () => _bloc
+                            .add(SearchFavorites('', entry: widget.entry))),
+                ]))));
   }
 
   @override
