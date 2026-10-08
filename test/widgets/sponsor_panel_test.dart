@@ -72,6 +72,30 @@ void main() {
       });
     }
   }
+  testWidgets(
+      'locale changes update the existing panel without reopening settings',
+      (tester) async {
+    final settings = Settings();
+    var state = const SettingsState(locale: 'zh');
+    final changes = StreamController<SettingsState>.broadcast();
+    when(() => settings.state).thenAnswer((_) => state);
+    when(() => settings.stream).thenAnswer((_) => changes.stream);
+    await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+        value: settings,
+        child: MaterialApp(
+            home: Scaffold(
+                body: BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (_, __) => const SponsorPanel())))));
+    await tester.pumpAndSettle();
+    expect(find.text('保存图片跳转微信'), findsOneWidget);
+    state = const SettingsState(locale: 'en');
+    changes.add(state);
+    await tester.pumpAndSettle();
+    expect(find.text('Save image & open WeChat'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await changes.close();
+  });
+
   testWidgets('both providers and both operations start independently',
       (tester) async {
     final service = Service();

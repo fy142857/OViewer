@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/settings/settings_bloc.dart';
 import '../core/l10n/s.dart';
 import '../core/router/route_observer.dart';
 import '../core/services/sponsor_service.dart';
@@ -110,6 +112,7 @@ class _SponsorPanelState extends State<SponsorPanel>
 
   @override
   Widget build(BuildContext context) {
+    context.select((SettingsBloc bloc) => bloc.state.locale);
     final s = S.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
