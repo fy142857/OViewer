@@ -2739,8 +2739,33 @@
         }
       ],
       "version": "1.5.1"
+    },
+    {
+      "base_tag": "v1.5.1",
+      "branch": "dev",
+      "build_number": 61,
+      "build_sha": "b922fdc0c2b752f8c8da366a3683bb7446d66bfa",
+      "candidate_id": "1.5.2+61",
+      "fingerprint": "510a525dbbbff825f26e5a375edcf8abfeeb71b67ab99c6da4f88744665cba8a",
+      "notes": "### 新增\n\n### 修复\n\n### 变更\n\n- 首页和侧栏收藏增加当前分组内搜索，复用标签联想、搜索历史、上传者与 GID 查询；两个入口的关键词、分组、结果、分页及滚动位置独立，支持清除搜索恢复列表，并将旧共享分组迁移为各自持久化的选择（#55）。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "a2035f888b0e77eb1ddfac4ecc2e063b78437a29",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "在现有收藏浏览中接入站点收藏搜索，复用已有查询与历史，拆分两个入口的分组、请求、分页和滚动状态并迁移旧偏好；没有新增独立业务能力或破坏已有数据兼容性。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "a2035f888b0e77eb1ddfac4ecc2e063b78437a29",
+          "subject": "fix(favorites): add independent scoped search to both entries",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.5.2"
     }
   ],
-  "last_build_number": 60,
+  "last_build_number": 61,
   "schema": 1
 }
