@@ -2904,8 +2904,53 @@
         }
       ],
       "version": "1.7.0"
+    },
+    {
+      "base_tag": "v1.6.0",
+      "branch": "dev",
+      "build_number": 66,
+      "build_sha": "c2f77c27fb529ffe0682536be8e092f4c50aa83c",
+      "candidate_id": "1.7.0+66",
+      "fingerprint": "5d3ff8754cdc3833ae0b212127d44ef823cdeb485a5104027ce70f8753ac0f89",
+      "notes": "### 新增\n\n- 设置“关于”的检查更新下方新增作者赞助入口，微信左、支付宝右等大正方形展示；分别异步保存原始赞助码并打开对应应用，保存和跳转互不阻塞，支持失败提示及中英文。README 顶部同步展示两张赞助码及支持说明。\n\n### 修复\n\n### 变更\n\n- 微信/支付宝赞助码的保存成功提示改为系统本地通知，离开应用也可查看；通知权限与图片保存、应用跳转独立处理，阅读器保存提示保持原样。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "e5b5abb244fecb20b6aea8541c19fadf2c69ad1a",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "新增作者赞助能力，在关于页展示微信和支付宝赞助码，独立异步保存原图与打开对应应用，并在 README 展示赞助入口。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "003e8d4112118c2a803196e928672117fb1c04eb",
+          "subject": "feat(support): add author sponsorship codes and wallet launch",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复关于页常驻赞助区域切换应用语言后文案未立即更新的问题，不改变赞助功能范围。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "9708dbb05a7d37ce74998c0894710d2b9ea86f5c",
+          "subject": "fix(support): refresh sponsorship text when language changes",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "将已有赞助码保存成功反馈改为系统本地通知，独立处理通知授权并保留阅读器提示，同时修正英文 README 配文；不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "e5b5abb244fecb20b6aea8541c19fadf2c69ad1a",
+          "subject": "fix(support): notify sponsor image saves through the system",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.7.0"
     }
   ],
-  "last_build_number": 65,
+  "last_build_number": 66,
   "schema": 1
 }
