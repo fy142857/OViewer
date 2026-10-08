@@ -3,6 +3,38 @@ import 'package:oviewer/core/utils/title_extractor.dart';
 
 void main() {
   group('TitleExtractor.similarSearchQuery', () {
+    test('combines independently cleaned main and Japanese title fields', () {
+      expect(
+          TitleExtractor.similarSearchQuery(
+              '(C103) [Circle | Alias] English Title [English]',
+              titleJpn: '(C103) [作者 | 別名] 日本語題名 [日本語] [Digital]'),
+          'title:"English Title" OR title:"日本語題名"');
+    });
+    test(
+        'splits both fields and deduplicates normalized alternatives across them',
+        () {
+      expect(
+          TitleExtractor.similarSearchQuery('English Title | 日本語題名',
+              titleJpn: '日本語題名｜ english   title | 別題'),
+          'title:"English Title" OR title:"日本語題名" OR title:"別題"');
+    });
+    test('handles absent, blank and Japanese-only title fields safely', () {
+      for (final japanese in [null, '', '  ', ' | ｜ ', ' " " ']) {
+        expect(TitleExtractor.similarSearchQuery('English', titleJpn: japanese),
+            'title:"English"');
+      }
+      expect(
+          TitleExtractor.similarSearchQuery('',
+              titleJpn: '[作者] 日本語題名 [Digital]'),
+          'title:"日本語題名"');
+      expect(
+          TitleExtractor.similarSearchQuery(' ', titleJpn: ' | ｜ '), isEmpty);
+      expect(
+          TitleExtractor.similarSearchQuery('English',
+              titleJpn: '日本語 "題名" -language:english'),
+          'title:"English" OR title:"日本語 題名 -language:english"');
+    });
+
     test('bilingual titles keep both sides as independent alternatives', () {
       const original = 'Buzama Joushiki Kaihen ~Okorase Kyousei Hatsujou~';
       for (final separator in [' | ', '|', ' ｜ ']) {

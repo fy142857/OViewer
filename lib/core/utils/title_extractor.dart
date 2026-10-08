@@ -1,13 +1,17 @@
 class TitleExtractor {
   /// A gallery title is data, not EH search syntax. Qualifying and quoting it
   /// prevents ~, -, : and short words from being interpreted as tag filters.
-  static String similarSearchQuery(String title) {
-    final core = extractCoreTitle(title);
+  static String similarSearchQuery(String title, {String? titleJpn}) {
     // Each pipe-separated title is an alternative. OR is resolved by the
     // app because the site does not support OR between title: terms.
     final seen = <String>{};
-    final phrases = (core.isEmpty ? title : core)
-        .split(RegExp(r'[|｜]'))
+    final phrases = [title, if (titleJpn != null) titleJpn]
+        .expand((value) {
+          // Strip each field's author/format groups before splitting aliases;
+          // pipes inside those groups are not alternative gallery titles.
+          final core = extractCoreTitle(value);
+          return (core.isEmpty ? value : core).split(RegExp(r'[|｜]'));
+        })
         .map((part) =>
             part.replaceAll('"', ' ').replaceAll(RegExp(r'\s+'), ' ').trim())
         .where((part) => part.isNotEmpty && seen.add(part.toLowerCase()));

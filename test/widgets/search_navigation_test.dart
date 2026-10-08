@@ -73,6 +73,8 @@ void main() {
       final history = MockHistory();
       final settings = MockSettings();
       final similar = Completer<SearchResult>();
+      const similarQuery =
+          'title:"Similar title" OR title:"共通題名" OR title:"日本語題名"';
       final navigator = GlobalKey<NavigatorState>();
       final original = List.generate(20, (i) => preview(i + 1));
       final secondPage = List.generate(10, (i) => preview(i + 21));
@@ -87,7 +89,7 @@ void main() {
         final page = call.namedArguments[#page] as int? ?? 0;
         final cursor = call.namedArguments[#nextUrl] as String?;
         requests.add((filter.keyword, page, cursor));
-        if (filter.keyword == 'title:"Similar title"') return similar.future;
+        if (filter.keyword == similarQuery) return similar.future;
         return SearchResult(
           galleries:
               page == 0 ? original : (page == 1 ? secondPage : [preview(31)]),
@@ -102,7 +104,8 @@ void main() {
         (call) async => GalleryDetail(
           gid: call.positionalArguments.first as int,
           token: 'token',
-          title: 'Similar title',
+          title: 'Similar title | 共通題名',
+          titleJpn: '[作者] 日本語題名 | 共通題名 [Digital]',
           totalCommentCount: completeBeforePop ? 202 : 0,
           comments: completeBeforePop
               ? [
@@ -197,6 +200,7 @@ void main() {
       final similarBloc =
           tester.element(find.byType(TextField)).read<SearchBloc>();
       expect(identical(similarBloc, originalBloc), isFalse);
+      expect(requests.last.$1, similarQuery);
       expect(originalBloc.state, savedState);
       final similarResult = SearchResult(
         galleries: [preview(100)],
@@ -224,7 +228,7 @@ void main() {
       expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
           'original');
       expect(requests.where((r) => r.$1 == 'original' && r.$2 == 0).length, 1);
-      verifyNever(() => search.addSearchHistory('title:"Similar title"'));
+      verifyNever(() => search.addSearchHistory(similarQuery));
 
       list.controller!.jumpTo(list.controller!.position.maxScrollExtent);
       await tester.pumpAndSettle();

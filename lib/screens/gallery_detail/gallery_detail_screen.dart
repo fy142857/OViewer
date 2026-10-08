@@ -523,7 +523,8 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
   Widget _buildSimilarGalleriesButton(
       BuildContext context, GalleryDetail detail) {
     final s = S.of(context);
-    final query = TitleExtractor.similarSearchQuery(detail.title);
+    final query = TitleExtractor.similarSearchQuery(detail.title,
+        titleJpn: detail.titleJpn);
     return ListTile(
       leading: const Icon(Icons.find_in_page),
       title: Text(s.similarGalleries),

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oviewer/core/utils/title_extractor.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:oviewer/core/constants/app_constants.dart';
 import 'package:oviewer/core/network/dio_client.dart';
@@ -21,6 +22,32 @@ void main() {
       categories: ['Manga'],
       minRating: 3);
   for (final ex in [false, true]) {
+    test(
+        'both title fields search each unique alternative and merge results: EX=$ex',
+        () async {
+      AppConstants.useExHentai = ex;
+      final dio = MockDio();
+      final queries = <String>[];
+      when(() => dio.get(any())).thenAnswer((call) async {
+        final uri = Uri.parse(call.positionalArguments.single as String);
+        expect(uri.host, ex ? 'exhentai.org' : 'e-hentai.org');
+        final q = uri.queryParameters['f_search']!;
+        queries.add(q);
+        return html(q == 'title:"English"'
+            ? [1, 2]
+            : q == 'title:"日本語題名"'
+                ? [2, 3]
+                : [1, 4]);
+      });
+      final query = TitleExtractor.similarSearchQuery(
+          '[Circle] English | 日本語題名 [English]',
+          titleJpn: '[作者] 日本語題名｜別題 [Digital]');
+      final result = await SearchRepository(dio, MockStorage())
+          .search(SearchFilter(keyword: query));
+      expect(queries, ['title:"English"', 'title:"日本語題名"', 'title:"別題"']);
+      expect(result.galleries.map((g) => g.gid), [4, 3, 2, 1]);
+    });
+
     for (final pipe in [' | ', '｜']) {
       test(
           'pasted bilingual quoted title searches both sides: EX=$ex, pipe=$pipe',
