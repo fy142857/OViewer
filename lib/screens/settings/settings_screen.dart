@@ -2,6 +2,8 @@ import '../../widgets/sponsor_panel.dart';
 import '../../blocs/daily_check_in/daily_check_in_cubit.dart';
 import '../../widgets/daily_check_in_tile.dart';
 import 'dart:async';
+import 'dart:io';
+import '../../blocs/update/update_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -278,6 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               CheckUpdateTile(
+                androidUpdater: Platform.isAndroid ? GetIt.I<UpdateCubit>() : null,
                 repository: GetIt.I<UpdateRepository>(),
                 openRelease: GetIt.I<ReleaseLinkOpener>().open,
               ),

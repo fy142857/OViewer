@@ -1,4 +1,9 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'blocs/update/update_cubit.dart';
+import 'core/services/apk_download_service.dart';
+import 'core/services/apk_installer.dart';
 import 'package:flutter/material.dart';
 import 'blocs/settings/settings_bloc.dart';
 import 'core/constants/app_constants.dart';
@@ -74,6 +79,10 @@ Future<void> _initDependencies() async {
   // Repositories
   sl.registerLazySingleton<UpdateRepository>(
       () => UpdateRepository(storage: sl<LocalStorage>()));
+  sl.registerLazySingleton<ApkDownloadService>(() => ApkDownloadService());
+  sl.registerLazySingleton<UpdateCubit>(() => UpdateCubit(sl<UpdateRepository>(),
+      sl<ApkDownloadService>(), ApkInstaller(language: localStorage.getLocale)),
+      dispose: (value) => value.close());
   sl.registerLazySingleton<ReleaseLinkOpener>(() => ReleaseLinkOpener());
   sl.registerLazySingleton<GalleryRepository>(
     () => GalleryRepository(sl<DioClient>()),
@@ -116,7 +125,16 @@ Future<void> _startApp() async {
     final initial = SettingsBloc.readSaved(sl<SettingsRepository>());
     final tasks = StartupTasks(
       prepareNetwork: network.start,
-      maintainCache: EhImageCacheManager.instance.enforceLimit,
+      maintainCache: () async {
+        await Future.wait([
+          EhImageCacheManager.instance.enforceLimit(),
+          if (Platform.isAndroid) (() async {
+            final installed = await PackageInfo.fromPlatform();
+            await sl<ApkDownloadService>().maintain(int.parse(installed.buildNumber));
+            await sl<UpdateRepository>().restoreUpdateStatus();
+          })(),
+        ]);
+      },
       loadTranslations: () async {
         final translations = sl<TagTranslationRepository>();
         await translations.loadTranslations();

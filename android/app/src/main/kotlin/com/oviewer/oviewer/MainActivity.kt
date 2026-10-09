@@ -10,6 +10,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity: FlutterActivity() {
     private var exporter: PageImageExporter? = null
     private var sponsor: SponsorBridge? = null
+    private var updater: ApkUpdateBridge? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +26,9 @@ class MainActivity: FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        updater = ApkUpdateBridge(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/apk_update")
+            .setMethodCallHandler(updater)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/release_link")
             .setMethodCallHandler(ReleaseLinkOpener(this))
         sponsor = SponsorBridge(this)
@@ -39,5 +43,5 @@ class MainActivity: FlutterActivity() {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
-    override fun onDestroy() { sponsor?.dispose(); exporter?.dispose(); super.onDestroy() }
+    override fun onDestroy() { updater?.dispose(); sponsor?.dispose(); exporter?.dispose(); super.onDestroy() }
 }

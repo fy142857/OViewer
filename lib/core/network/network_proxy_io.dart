@@ -29,6 +29,11 @@ class NetworkProxy {
     return client;
   }
 
+  /// Update packages must use normal TLS verification, including via a proxy.
+  static HttpClient createUpdateHttpClient() => HttpClient()
+    ..findProxy = ((uri) => _proxyDirective())
+    ..connectionTimeout = const Duration(seconds: 30);
+
   static String _proxyDirective() {
     final proxyUrl = _proxyUrl;
     if (proxyUrl == null || proxyUrl.isEmpty) return 'DIRECT';

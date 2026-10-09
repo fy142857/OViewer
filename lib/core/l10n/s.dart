@@ -16,6 +16,43 @@ class S {
 
   bool get _zh => _l == 'zh';
 
+  String get updateNow => _zh ? '立即更新' : 'Update now';
+  String get installNow => _zh ? '立即安装' : 'Install now';
+  String get updateReleaseLink => _zh ? '跳转发布页' : 'Open release page';
+  String get updateHide => _zh ? '隐藏' : 'Hide';
+  String get updateDownloadCancel => _zh ? '取消下载' : 'Cancel download';
+  String get updateDownloading => _zh ? '正在下载安装包…' : 'Downloading update…';
+  String get updateVerifying => _zh ? '正在校验安装包…' : 'Verifying package…';
+  String get updatePermission => _zh ? '等待安装授权' : 'Waiting for installation permission';
+  String get updateReady => _zh ? '安装包已就绪，请在系统界面确认安装' : 'Package ready. Confirm installation in the system installer.';
+  String get updateHiddenHint => _zh ? '隐藏后下载继续；进程退出后需重新下载。' : 'Downloading continues when hidden. If the app process exits, download again.';
+  String get updateNoNotes => _zh ? '此版本没有“新增”或“变更”说明。' : 'No Added or Changed notes for this release.';
+  String get updateCheckAgain => _zh ? '重新检查版本' : 'Check again';
+  String updateApkError(String code) {
+    final messages = <String, List<String>>{
+      'metadata': ['此版本无法应用内更新，请打开发布页。', 'In-app update is unavailable for this release. Open the release page.'],
+      'newer_build': ['当前构建号不低于此安装包，不能覆盖降级。', 'Your installed build is at least as new as this package. Downgrades are blocked.'],
+      'not_newer': ['当前构建号不低于此安装包，请重新检查版本。', 'This package is not newer. Check for updates again.'],
+      'integrity': ['安装包校验失败，请重新下载。', 'Package verification failed. Download again.'],
+      'storage': ['安装包读写失败，请检查存储后重试。', 'Could not read or write the package. Check storage and retry.'],
+      'space': ['存储空间不足，请释放空间后重试。', 'Not enough storage. Free space and retry.'],
+      'timeout': ['更新连接超时，请重试。', 'The update connection timed out. Retry.'],
+      'signature_mismatch': ['安装包签名与当前应用不一致，无法覆盖安装。', 'The package signature differs from this app. It cannot update this installation.'],
+      'package_mismatch': ['安装包不属于 OViewer，已停止安装。', 'The package is not OViewer. Installation stopped.'],
+      'version_mismatch': ['安装包版本与发布信息不一致，请重新检查。', 'Package version differs from the release. Check again.'],
+      'invalid_apk': ['安装包无法解析，请重新下载。', 'Could not read the APK. Download again.'],
+      'invalid_path': ['安装包不存在或位置无效，请重新下载。', 'Package missing or invalid location. Download again.'],
+      'permission': ['未获得安装权限，可再次点击安装。', 'Installation permission was not granted. Tap install to retry.'],
+      'no_installer': ['无法打开系统安装器或授权设置，请打开发布页。', 'Could not open the system installer or permission settings. Open the release page.'],
+      'unavailable': ['安装界面暂不可用，请重试。', 'Installation is temporarily unavailable. Retry.'],
+      'rateLimited': ['更新请求过于频繁，请稍后重试。', 'Too many update requests. Try again later.'],
+      'invalidResponse': ['更新信息无效，请稍后重试。', 'Invalid update response. Try again later.'],
+      'version': ['无法读取当前应用版本。', 'Could not read the installed app version.'],
+    };
+    final message = messages[code] ?? ['更新失败，请检查网络后重试。', 'Update failed. Check your network and retry.'];
+    return message[_zh ? 0 : 1];
+  }
+
   String get autoCheckIn => _zh ? '自动签到' : 'Automatic check-in';
   String get dailyCheckIn => _zh ? '今日签到' : 'Daily check-in';
   String get checkInNow => _zh ? '手动签到' : 'Check in';

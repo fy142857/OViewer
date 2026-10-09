@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import '../blocs/update/update_cubit.dart';
+import 'android_update_dialog.dart';
 
 import '../core/l10n/s.dart';
 import '../repositories/update_repository.dart';
@@ -8,10 +11,12 @@ class CheckUpdateTile extends StatefulWidget {
     super.key,
     required this.repository,
     required this.openRelease,
+    this.androidUpdater,
   });
 
   final UpdateRepository repository;
   final Future<bool> Function(Uri) openRelease;
+  final UpdateCubit? androidUpdater;
 
   @override
   State<CheckUpdateTile> createState() => _CheckUpdateTileState();
@@ -21,11 +26,15 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
   UpdateCheckOperation? _operation;
   bool _busy = false;
   bool _checking = false;
+  StreamSubscription<ApkUpdateState>? _updates;
 
   @override
   void initState() {
     super.initState();
     _restoreUpdateStatus();
+    _updates = widget.androidUpdater?.stream.listen((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _restoreUpdateStatus() async {
@@ -68,6 +77,17 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
 
   Future<void> _check() async {
     if (_busy) return;
+    if (widget.androidUpdater != null) {
+      setState(() => _busy = true);
+      final updater = widget.androidUpdater!;
+      unawaited(updater.check());
+      await showDialog<void>(
+          context: context,
+          builder: (_) => AndroidUpdateDialog(
+              cubit: updater, openRelease: widget.openRelease));
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
     setState(() {
       _busy = true;
       _checking = true;
@@ -144,6 +164,7 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
   @override
   void dispose() {
     _operation?.cancel();
+    _updates?.cancel();
     super.dispose();
   }
 
@@ -154,7 +175,14 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
       key: const ValueKey('check-update'),
       leading: const Icon(Icons.system_update),
       title: Text(s.checkUpdate),
-      subtitle: Text(_checking ? s.checkingUpdate : s.checkUpdateHint),
+      subtitle:
+          Text(widget.androidUpdater?.state.phase == ApkUpdatePhase.downloading
+              ? s.updateDownloading
+              : widget.androidUpdater?.state.phase == ApkUpdatePhase.ready
+                  ? s.installNow
+                  : _checking
+                      ? s.checkingUpdate
+                      : s.checkUpdateHint),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
