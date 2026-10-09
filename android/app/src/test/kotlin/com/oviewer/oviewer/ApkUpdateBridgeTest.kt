@@ -2,8 +2,10 @@ package com.oviewer.oviewer
 
 import android.app.Activity
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.content.pm.PackageInfo
 import android.content.pm.Signature
+import android.content.pm.SigningInfo
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import org.junit.Assert.*
@@ -18,6 +20,9 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [21, 26, 28, 35])
 class ApkUpdateBridgeTest {
+    class NoSettingsActivity : Activity() {
+        override fun startActivity(intent: Intent) { throw ActivityNotFoundException() }
+    }
     private val cert = "b".repeat(64)
     private fun info(code: Int, version: String = "1.8.0", name: String = "com.oviewer.oviewer") = PackageInfo().apply {
         packageName = name; versionName = version; versionCode = code
@@ -80,6 +85,7 @@ class ApkUpdateBridgeTest {
             val dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
             assertEquals("Allow update installation", Shadows.shadowOf(dialog).title)
             dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).performClick()
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
             assertEquals(false, result.value)
             assertNull(Shadows.shadowOf(activity).nextStartedActivity)
         }
@@ -94,10 +100,50 @@ class ApkUpdateBridgeTest {
         bridge.onMethodCall(MethodCall("openSettings", mapOf("language" to "zh")), result)
         org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
             .getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
         val intent = Shadows.shadowOf(activity).nextStartedActivity
         assertEquals(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, intent.action)
         assertEquals("package:${activity.packageName}", intent.data.toString())
         assertEquals(true, result.value)
         bridge.dispose()
     }
+
+    @Test fun extractsCurrentSigningCertificateOnOldAndNewApis() {
+        val signature = Signature(byteArrayOf(1, 2, 3))
+        val packageInfo = info(70)
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            packageInfo.signingInfo = org.robolectric.util.ReflectionHelpers.callConstructor(SigningInfo::class.java)
+            Shadows.shadowOf(packageInfo.signingInfo).setSignatures(arrayOf(signature))
+        } else {
+            packageInfo.signatures = arrayOf(signature)
+        }
+        assertEquals(setOf("039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81"),
+            ApkUpdateBridge.certificates(packageInfo))
+    }
+
+    @Test fun checksPerApplicationInstallPermission() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val bridge = ApkUpdateBridge(activity)
+        val result = Result()
+        for (allowed in listOf(false, true)) {
+            Shadows.shadowOf(activity.packageManager).setCanRequestPackageInstalls(allowed)
+            bridge.onMethodCall(MethodCall("canInstall", null), result)
+            assertEquals(android.os.Build.VERSION.SDK_INT < 26 || allowed, result.value)
+        }
+        bridge.dispose()
+    }
+
+    @Test fun missingPermissionSettingsReturnsActionableFailure() {
+        if (android.os.Build.VERSION.SDK_INT < 26) return
+        val activity = Robolectric.buildActivity(NoSettingsActivity::class.java).setup().get()
+        val bridge = ApkUpdateBridge(activity)
+        val result = Result()
+        bridge.onMethodCall(MethodCall("openSettings", mapOf("language" to "en")), result)
+        org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
+            .getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertEquals("no_installer", result.value)
+        bridge.dispose()
+    }
 }
+

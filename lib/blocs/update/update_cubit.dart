@@ -88,7 +88,7 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
     final generation = ++_generation;
     emit(const ApkUpdateState(ApkUpdatePhase.checking));
     try {
-      final saved = await downloads.restore();
+      var saved = await downloads.restore();
       if (!_active(generation)) return;
       if (saved != null) {
         _set(ApkUpdatePhase.checking,
@@ -112,6 +112,7 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
           }
         } on PlatformException catch (error) {
           await downloads.discard();
+          saved = null;
           if (error.code != 'not_newer') rethrow;
         }
       }

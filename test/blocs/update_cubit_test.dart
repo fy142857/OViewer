@@ -205,6 +205,8 @@ void main() {
     await cubit.check();
     expect(downloads.discards, 1);
     expect(repo.checks, 1);
+    expect(cubit.state.phase, ApkUpdatePhase.available);
+    expect(cubit.state.path, isNull);
   });
 
   test('rechecking same release reuses already verified package', () async {
