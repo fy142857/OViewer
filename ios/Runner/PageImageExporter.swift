@@ -32,7 +32,7 @@ final class PageImageExporter {
     let finish: (String) -> Void = { status in
       DispatchQueue.main.async {
         self.busy = false
-        if status == "saved", let message = args["notificationBody"] as? String {
+        if status == "saved", let message = args["successMessage"] as? String {
           self.onSaved?(message)
         }
         result(status)

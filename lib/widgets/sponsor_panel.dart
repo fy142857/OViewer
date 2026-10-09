@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/settings/settings_bloc.dart';
@@ -82,8 +84,11 @@ class _SponsorPanelState extends State<SponsorPanel>
       _saving.add(platform);
       _opening.add(platform);
     });
-    // Permission, saving and launching do not wait for each other.
-    unawaited(_prepareNotifications(s));
+    // Android Toast needs no permission; iOS keeps notification-center notices.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      unawaited(_prepareNotifications(s));
+    }
+    // Saving and launching do not wait for each other.
     unawaited(_save(platform, s));
     unawaited(_open(platform, s));
   }
@@ -99,7 +104,7 @@ class _SponsorPanelState extends State<SponsorPanel>
   Future<void> _save(SponsorPlatform platform, S s) async {
     try {
       await _service.saveCode(platform,
-          notificationBody: s.sponsorSaved(platform == SponsorPlatform.wechat));
+          successMessage: s.sponsorSaved(platform == SponsorPlatform.wechat));
     } catch (error) {
       _message(error is PlatformException && error.code == 'permission_denied'
           ? s.sponsorPhotoPermission

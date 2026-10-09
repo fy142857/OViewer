@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,7 +21,6 @@ Future<void> boot(WidgetTester tester, Service service,
     bool dark = false}) async {
   await tester.binding.setSurfaceSize(Size(width, 900));
   addTearDown(() => tester.binding.setSurfaceSize(null));
-  when(() => service.prepareNotifications()).thenAnswer((_) async => true);
   final settings = Settings();
   when(() => settings.state).thenReturn(SettingsState(locale: locale));
   when(() => settings.stream).thenAnswer((_) => const Stream.empty());
@@ -107,8 +107,8 @@ void main() {
       for (final p in SponsorPlatform.values) p: Completer<bool>()
     };
     for (final p in SponsorPlatform.values) {
-      when(() => service.saveCode(p,
-              notificationBody: any(named: 'notificationBody')))
+      when(() =>
+              service.saveCode(p, successMessage: any(named: 'successMessage')))
           .thenAnswer((_) => saves[p]!.future);
       when(() => service.openApp(p)).thenAnswer((_) => opens[p]!.future);
     }
@@ -116,8 +116,9 @@ void main() {
     for (final p in SponsorPlatform.values) {
       await tester.tap(find.byKey(ValueKey('sponsor-action-${p.name}')));
       await tester.pump();
-      verify(() => service.saveCode(p,
-          notificationBody: any(named: 'notificationBody'))).called(1);
+      verify(() =>
+              service.saveCode(p, successMessage: any(named: 'successMessage')))
+          .called(1);
       verify(() => service.openApp(p)).called(1);
     }
     saves[SponsorPlatform.wechat]!
@@ -146,7 +147,7 @@ void main() {
     final service = Service();
     final opening = Completer<bool>();
     when(() => service.saveCode(SponsorPlatform.wechat,
-            notificationBody: any(named: 'notificationBody')))
+            successMessage: any(named: 'successMessage')))
         .thenThrow(StateError('disk'));
     when(() => service.openApp(SponsorPlatform.wechat))
         .thenAnswer((_) => opening.future);
@@ -162,12 +163,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
-  testWidgets('native save notification replaces the in-app success message',
+  testWidgets('iOS still prepares notification-center permission independently',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final service = Service();
+      final permission = Completer<bool>();
+      when(() => service.prepareNotifications())
+          .thenAnswer((_) => permission.future);
+      when(() => service.saveCode(SponsorPlatform.wechat,
+              successMessage: any(named: 'successMessage')))
+          .thenAnswer((_) async {});
+      when(() => service.openApp(SponsorPlatform.wechat))
+          .thenAnswer((_) async => true);
+      await boot(tester, service);
+      await tester.tap(find.byKey(const ValueKey('sponsor-action-wechat')));
+      await tester.pump();
+      verify(() => service.prepareNotifications()).called(1);
+      verify(() => service.saveCode(SponsorPlatform.wechat,
+          successMessage: '微信赞助码已保存到相册')).called(1);
+      verify(() => service.openApp(SponsorPlatform.wechat)).called(1);
+      expect(permission.isCompleted, false);
+      permission.complete(true);
+      await tester.pumpAndSettle();
+      expect(find.text('微信赞助码已保存到相册'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('Android native Toast replaces the in-app success message',
       (tester) async {
     final service = Service();
     final saving = Completer<void>();
     when(() => service.saveCode(SponsorPlatform.alipay,
-            notificationBody: any(named: 'notificationBody')))
+            successMessage: any(named: 'successMessage')))
         .thenAnswer((_) => saving.future);
     when(() => service.openApp(SponsorPlatform.alipay))
         .thenAnswer((_) async => true);
@@ -181,8 +212,9 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     expect(find.text('支付宝赞助码已保存到相册'), findsNothing);
+    verifyNever(() => service.prepareNotifications());
     verify(() => service.saveCode(SponsorPlatform.alipay,
-        notificationBody: '支付宝赞助码已保存到相册')).called(1);
+        successMessage: '支付宝赞助码已保存到相册')).called(1);
     expect(tester.takeException(), isNull);
   });
 }

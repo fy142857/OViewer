@@ -25,7 +25,7 @@ class PageImageExporter(
     private val onSaved: ((String) -> Unit)? = null,
     private val scan: ((File, String, (Boolean) -> Unit) -> Unit)? = null
 ) : MethodChannel.MethodCallHandler {
-    private data class Job(val source: File, val name: String, val mime: String, val result: MethodChannel.Result, val notificationBody: String?)
+    private data class Job(val source: File, val name: String, val mime: String, val result: MethodChannel.Result, val successMessage: String?)
     private val pending = mutableSetOf<Job>()
     private val waitingPermission = mutableListOf<Job>()
     private var disposed = false
@@ -48,7 +48,7 @@ class PageImageExporter(
         if (mime !in listOf("image/jpeg", "image/png", "image/gif", "image/webp")) {
             result.success("unsupported_format"); return
         }
-        val job = Job(source, name, mime, result, call.argument<String>("notificationBody"))
+        val job = Job(source, name, mime, result, call.argument<String>("successMessage"))
         pending.add(job)
         if (Build.VERSION.SDK_INT in 23..28 && activity.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             waitingPermission.add(job)
@@ -122,7 +122,11 @@ class PageImageExporter(
 
     private fun finish(job: Job, status: String) = activity.runOnUiThread {
         if (pending.remove(job)) {
-            if (status == "saved") job.notificationBody?.let { message -> runCatching { onSaved?.invoke(message) } }
+            if (status == "saved") job.successMessage?.let { message ->
+                runCatching { onSaved?.invoke(message) }.onFailure {
+                    android.util.Log.w("OViewerSaveFeedback", "Saved-image feedback failed", it)
+                }
+            }
             job.result.success(status)
         }
     }
