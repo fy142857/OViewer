@@ -1,53 +1,23 @@
 {
-  "base_tag": "v1.6.0",
+  "base_tag": "v1.7.0",
   "branch": "dev",
-  "build_number": 67,
-  "candidate_id": "1.7.0+67",
-  "fingerprint": "0d797968f031d89bb65e819ffd6743c585dc98fbe83834b2a7b853d669267448",
-  "notes": "### 新增\n\n- 设置“关于”的检查更新下方新增作者赞助入口，微信左、支付宝右等大正方形展示；分别异步保存原始赞助码并打开对应应用，保存和跳转互不阻塞，支持失败提示及中英文。README 顶部同步展示两张赞助码及支持说明。\n\n### 修复\n\n### 变更\n\n- 微信/支付宝赞助码保存成功后，Android 使用短暂显示的原生 Toast，iOS 保留通知中心通知；图片保存与应用跳转独立处理，阅读器保存提示保持原样。\n\n### 已知限制\n\n- 部分华为设备会通过“后台弹窗”权限拦截跨应用 Toast；如保存后跳转微信/支付宝看不到提示，可在系统应用信息 → OViewer → 其他权限中允许“后台弹窗”。图片保存与应用跳转不受该提示权限影响。",
+  "build_number": 68,
+  "candidate_id": "1.8.0+68",
+  "fingerprint": "b7f6a40640d047cb67229fa2348df511e6d0b0258675216f81510bcbced6e90a",
+  "notes": "### 新增\n\n- Android 检查更新支持应用内下载 APK、显示进度、校验并调起系统安装；隐藏弹窗后继续下载，完整安装包可恢复使用。iOS 保留确认后跳转发布页。\n\n### 修复\n\n### 变更\n\n- Android 更新弹窗仅展示最新正式版本的“新增”“变更”说明，并提供“跳转发布页”链接。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "2a11bf03fca2c05b273d099996be1b0a5dd6fb6a",
+  "source_sha": "554835d0457ea8bb5b5de12c927f13f1f4ba5101",
   "summary": [
     {
       "change_kind": "feature",
-      "classification_reason": "新增作者赞助能力，在关于页展示微信和支付宝赞助码，独立异步保存原图与打开对应应用，并在 README 展示赞助入口。",
+      "classification_reason": "Android users can download verified release APKs and continue to the system installer without leaving the app; iOS retains its release-page flow.",
       "classification_source": "commit-trailers",
       "original_type": "feat",
-      "sha": "003e8d4112118c2a803196e928672117fb1c04eb",
-      "subject": "feat(support): add author sponsorship codes and wallet launch",
+      "sha": "554835d0457ea8bb5b5de12c927f13f1f4ba5101",
+      "subject": "feat(update): download and verify Android APK updates in app",
       "type": "feat",
       "version_impact": "minor"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "修复关于页常驻赞助区域切换应用语言后文案未立即更新的问题，不改变赞助功能范围。",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "9708dbb05a7d37ce74998c0894710d2b9ea86f5c",
-      "subject": "fix(support): refresh sponsorship text when language changes",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "enhancement",
-      "classification_reason": "将已有赞助码保存成功反馈改为系统本地通知，独立处理通知授权并保留阅读器提示，同时修正英文 README 配文；不新增独立业务能力。",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "e5b5abb244fecb20b6aea8541c19fadf2c69ad1a",
-      "subject": "fix(support): notify sponsor image saves through the system",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "修正已有赞助码保存成功提示的类型，Android 改为原生短 Toast，iOS 保留通知中心，保持保存与跳转并行并记录华为后台弹窗权限要求。",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "2a11bf03fca2c05b273d099996be1b0a5dd6fb6a",
-      "subject": "fix(support): use native Android toast for saved sponsorship codes",
-      "type": "fix",
-      "version_impact": "patch"
     }
   ],
-  "version": "1.7.0"
+  "version": "1.8.0"
 }
