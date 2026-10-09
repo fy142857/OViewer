@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.7.0",
   "branch": "dev",
-  "build_number": 68,
-  "candidate_id": "1.8.0+68",
-  "fingerprint": "b7f6a40640d047cb67229fa2348df511e6d0b0258675216f81510bcbced6e90a",
+  "build_number": 69,
+  "candidate_id": "1.8.0+69",
+  "fingerprint": "1624a236c405b9389cb1641da7d93d1033d4a49a35f2802e0bac5b6beee1d137",
   "notes": "### 新增\n\n- Android 检查更新支持应用内下载 APK、显示进度、校验并调起系统安装；隐藏弹窗后继续下载，完整安装包可恢复使用。iOS 保留确认后跳转发布页。\n\n### 修复\n\n### 变更\n\n- Android 更新弹窗仅展示最新正式版本的“新增”“变更”说明，并提供“跳转发布页”链接。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "554835d0457ea8bb5b5de12c927f13f1f4ba5101",
+  "source_sha": "3388a5c488812cc2468e09dc6c31beeec112b49c",
   "summary": [
     {
       "change_kind": "feature",
@@ -17,6 +17,16 @@
       "subject": "feat(update): download and verify Android APK updates in app",
       "type": "feat",
       "version_impact": "minor"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Prevent discarded cached packages from becoming installable again, and synchronize native dialog tests with the main looper while covering certificate extraction and unavailable settings.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "3388a5c488812cc2468e09dc6c31beeec112b49c",
+      "subject": "fix(update): invalidate discarded packages and verify native permission flow",
+      "type": "fix",
+      "version_impact": "patch"
     }
   ],
   "version": "1.8.0"
