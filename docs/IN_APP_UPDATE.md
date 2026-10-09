@@ -31,3 +31,12 @@ iOS 保留原有确认后打开 Release 的流程，不请求 APK 清单，不�
 - `python -m scripts.versioning.analyze`：现有静态分析基线；Windows 可传 `--dart C:\flutter\bin\cache\dart-sdk\bin\dart.exe`。
 - `android/gradlew :app:testDebugUnitTest`：原生包信息、证书、路径和安装授权测试，API 21、26、28、35；测试依赖 Robolectric 4.14.1，应用最低系统要求保持不变。
 - 真机验收需同一正式签名的递增构建，检查授权、覆盖安装，以及登录、历史、设置保留。自动化测试不替代真实系统安装器验收。
+
+## 2026-10-09 验证记录
+
+- 最终候选为 `1.8.0+69`，构建提交 `602fe49842b2f3451a519382b48a11caad86393b`。[Android 构建及原生测试](https://github.com/fy142857/OViewer/actions/runs/37915925474)与 [iOS 未签名 IPA 构建](https://github.com/fy142857/OViewer/actions/runs/37915932409)均成功；未创建正式 Release。
+- 完整 Flutter 回归 684 项通过；现有 Python 发布回归 52 项通过；静态分析基线无新增错误或警告。原生测试覆盖 API 21、26、28、35，包括当前签名读取、包名/构建号/签名拒绝、受限 FileProvider、授权弹窗和设置不可用。
+- 另用生产客户端通过本机代理访问真实公开 `v1.7.0` Release，正常 TLS 校验、GitHub CDN 重定向、29,721,215 字节 APK 下载、完整 SHA-256 校验及缓存恢复均通过。此验证未安装 APK，也未改变正式发布。
+- 360×640 组件场景验证长说明滚动、发布页链接点击和更新按钮可见性；中英文下载隐藏、再次打开及安装触发由回归测试覆盖。
+- Windows 本地 Gradle 启动仍受 Java 回环连接故障影响，原生测试及打包以以上 Linux CI 结果为准。
+- 已连接 Android 10 真机上的 `1.7.0+66` 使用开发签名，与正式包签名不一致。仅备份并核对原 APK，没有卸载、覆盖安装、清除或修改应用数据。因此本次未验证正式签名包的真机覆盖升级及升级后的登录、历史、设置保留；需在同一正式签名的测试安装上补充验收。iOS 未进行真机安装验证。
