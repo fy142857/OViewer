@@ -101,7 +101,17 @@ class GalleryGridItem extends StatelessWidget {
                         ),
                         if (language != null && language.isNotEmpty) ...[
                           const SizedBox(width: 4),
-                          _badge(Text(language)),
+                          _badge(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.language,
+                                    size: 10, color: Colors.white70),
+                                const SizedBox(width: 2),
+                                Text(language),
+                              ],
+                            ),
+                          ),
                         ],
                       ],
                     ),
