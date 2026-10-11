@@ -14,6 +14,9 @@ class SystemProxyDetector {
     8118,
     10808,
     10809,
+    2080,
+    7892,
+    3128,
   ];
 
   static String? detectEnvProxy() {
