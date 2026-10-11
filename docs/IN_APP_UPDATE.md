@@ -40,3 +40,12 @@ iOS 保留原有确认后打开 Release 的流程，不请求 APK 清单，不�
 - 360×640 组件场景验证长说明滚动、发布页链接点击和更新按钮可见性；中英文下载隐藏、再次打开及安装触发由回归测试覆盖。
 - Windows 本地 Gradle 启动仍受 Java 回环连接故障影响，原生测试及打包以以上 Linux CI 结果为准。
 - 已连接 Android 10 真机上的 `1.7.0+66` 使用开发签名，与正式包签名不一致。仅备份并核对原 APK，没有卸载、覆盖安装、清除或修改应用数据。因此本次未验证正式签名包的真机覆盖升级及升级后的登录、历史、设置保留；需在同一正式签名的测试安装上补充验收。iOS 未进行真机安装验证。
+
+## 2026-10-11 正式发布
+
+按用户授权发布 [v1.8.0（69）](https://github.com/fy142857/OViewer/releases/tag/v1.8.0)。[发布预检](https://github.com/fy142857/OViewer/actions/runs/38116426241)和[正式发布](https://github.com/fy142857/OViewer/actions/runs/38116507937)均成功。标签固定在已验证构建提交 `602fe49842b2f3451a519382b48a11caad86393b`；直接复用上述 Android/iOS 构建，未重新编译或签名。
+
+- 公开附件包含 `OViewer.apk`、`OViewer.ipa`、`release-manifest.json` 和 `SHA256SUMS.txt`，已核对大小及 SHA-256 与原候选一致；Android 继续使用固定正式证书，iOS IPA 未签名。
+- APK SHA-256：`0397d2c915466a4efae0862ca491c0fc935a7fb1430200c09180b6861fb5bf67`。
+- IPA SHA-256：`d47700502945a72a3ef4c78daf839488975fb6f0cd915f6224485bb35c4147a8`。
+- 此次发布不包含手机卸载或安装操作，以上真机验收限制仍然适用。
