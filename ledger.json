@@ -3064,8 +3064,33 @@
         }
       ],
       "version": "1.8.0"
+    },
+    {
+      "base_tag": "v1.8.0",
+      "branch": "dev",
+      "build_number": 70,
+      "build_sha": "99c323960c6114afaaaffd71f459a3aa9c291210",
+      "candidate_id": "1.8.1+70",
+      "fingerprint": "a4d306ff8a17ed5470cb6956ae91925ccb35be1230f27a92816046e568dd0b2f",
+      "notes": "### 新增\n\n### 修复\n\n- 更新弹窗加粗“新增”“变更”标题，简化下载提示，将链接文案改为“跳转发布页（下载更稳）”；系统通知未开启时不再显示应用内提示，图片保存及应用跳转保持原有行为。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "42e785e44c4b83cbdb2db6aa9cb241a45594aacb",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Apply requested update heading emphasis and download wording, and remove the in-app notification-disabled hint without affecting image saving or app launch.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "42e785e44c4b83cbdb2db6aa9cb241a45594aacb",
+          "subject": "fix(ui): refine update dialog and silence disabled notification hint",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.8.1"
     }
   ],
-  "last_build_number": 69,
+  "last_build_number": 70,
   "schema": 1
 }
