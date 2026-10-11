@@ -3284,8 +3284,33 @@
         }
       ],
       "version": "1.8.2"
+    },
+    {
+      "base_tag": "v1.8.2",
+      "branch": "dev",
+      "build_number": 76,
+      "build_sha": "c78ef3f7ebf99a4921df23fae0a40231072979ac",
+      "candidate_id": "1.8.3+76",
+      "fingerprint": "dda136293ef951dcc7933511fd4ba3ffb78ca174ca889f6ed8ee4cceef0f61cd",
+      "notes": "### 新增\n\n### 修复\n\n### 变更\n\n- Android 更新窗口加入最新发布说明中的“修复”部分，与“新增”“变更”一样加粗章节标题。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "d78a4d3a002d0be32896d8bb7de54373782ed6e6",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Extend existing update notes filtering and heading styling to include the current release Fixed section in Chinese and English.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "d78a4d3a002d0be32896d8bb7de54373782ed6e6",
+          "subject": "fix(updater): include fixes in release notes dialog",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.8.3"
     }
   ],
-  "last_build_number": 75,
+  "last_build_number": 76,
   "schema": 1
 }
