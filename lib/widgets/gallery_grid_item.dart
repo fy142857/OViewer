@@ -13,6 +13,7 @@ class GalleryGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final language = gallery.language?.trim();
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -66,7 +67,7 @@ class GalleryGridItem extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Page count badge
+                  // Favorite badge
                   if (gallery.isFavorited)
                     const Positioned(
                       top: 4,
@@ -84,28 +85,25 @@ class GalleryGridItem extends StatelessWidget {
                   Positioned(
                     bottom: 4,
                     right: 4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.photo,
-                              size: 10, color: Colors.white70),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${gallery.fileCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                            ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _badge(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.photo,
+                                  size: 10, color: Colors.white70),
+                              const SizedBox(width: 2),
+                              Text('${gallery.fileCount}'),
+                            ],
                           ),
+                        ),
+                        if (language != null && language.isNotEmpty) ...[
+                          const SizedBox(width: 4),
+                          _badge(Text(language)),
                         ],
-                      ),
+                      ],
                     ),
                   ),
                 ],
@@ -144,4 +142,16 @@ class GalleryGridItem extends StatelessWidget {
       ),
     );
   }
+
+  Widget _badge(Widget child) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: DefaultTextStyle(
+          style: const TextStyle(color: Colors.white, fontSize: 10),
+          child: child,
+        ),
+      );
 }
