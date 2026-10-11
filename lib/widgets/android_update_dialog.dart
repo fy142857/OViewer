@@ -13,6 +13,20 @@ class AndroidUpdateDialog extends StatelessWidget {
   static String size(int bytes) =>
       '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 
+  Widget _releaseNotes(String notes) {
+    final lines = notes.split('\n');
+    return Text.rich(TextSpan(children: [
+      for (var i = 0; i < lines.length; i++)
+        TextSpan(
+          text: '${i == 0 ? '' : '\n'}${lines[i]}',
+          style: const {'新增', '变更', 'added', 'changed'}
+                  .contains(lines[i].trim().toLowerCase())
+              ? const TextStyle(fontWeight: FontWeight.bold)
+              : null,
+        ),
+    ]));
+  }
+
   @override
   Widget build(BuildContext context) => BlocBuilder<UpdateCubit,
           ApkUpdateState>(
@@ -82,7 +96,10 @@ class AndroidUpdateDialog extends StatelessWidget {
                     if (result?.status == UpdateStatus.available ||
                         update != null) ...[
                       const SizedBox(height: 16),
-                      Text(notes.isEmpty ? s.updateNoNotes : notes),
+                      if (notes.isEmpty)
+                        Text(s.updateNoNotes)
+                      else
+                        _releaseNotes(notes),
                     ],
                     if (url != null)
                       TextButton(

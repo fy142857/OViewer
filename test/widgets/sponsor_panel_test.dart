@@ -163,7 +163,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
-  testWidgets('iOS still prepares notification-center permission independently',
+  testWidgets(
+      'iOS notification denial is silent and does not block save or open',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     try {
@@ -184,9 +185,10 @@ void main() {
           successMessage: '微信赞助码已保存到相册')).called(1);
       verify(() => service.openApp(SponsorPlatform.wechat)).called(1);
       expect(permission.isCompleted, false);
-      permission.complete(true);
+      permission.complete(false);
       await tester.pumpAndSettle();
       expect(find.text('微信赞助码已保存到相册'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
       await tester.pumpWidget(const SizedBox());
     } finally {
       debugDefaultTargetPlatformOverride = null;

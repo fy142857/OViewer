@@ -18,14 +18,14 @@ class S {
 
   String get updateNow => _zh ? '立即更新' : 'Update now';
   String get installNow => _zh ? '立即安装' : 'Install now';
-  String get updateReleaseLink => _zh ? '跳转发布页' : 'Open release page';
+  String get updateReleaseLink => _zh ? '跳转发布页（下载更稳）' : 'Open release page (more reliable download)';
   String get updateHide => _zh ? '隐藏' : 'Hide';
   String get updateDownloadCancel => _zh ? '取消下载' : 'Cancel download';
   String get updateDownloading => _zh ? '正在下载安装包…' : 'Downloading update…';
   String get updateVerifying => _zh ? '正在校验安装包…' : 'Verifying package…';
   String get updatePermission => _zh ? '等待安装授权' : 'Waiting for installation permission';
   String get updateReady => _zh ? '安装包已就绪，请在系统界面确认安装' : 'Package ready. Confirm installation in the system installer.';
-  String get updateHiddenHint => _zh ? '隐藏后下载继续；进程退出后需重新下载。' : 'Downloading continues when hidden. If the app process exits, download again.';
+  String get updateHiddenHint => _zh ? '隐藏后下载继续。' : 'Downloading continues when hidden.';
   String get updateNoNotes => _zh ? '此版本没有“新增”或“变更”说明。' : 'No Added or Changed notes for this release.';
   String get updateCheckAgain => _zh ? '重新检查版本' : 'Check again';
   String updateApkError(String code) {
@@ -221,7 +221,6 @@ class S {
   String sponsorSaved(bool wechat) => _zh ? '${wechat ? '微信' : '支付宝'}赞助码已保存到相册' : '${wechat ? 'WeChat' : 'Alipay'} code saved to Photos';
   String sponsorSaveFailed(bool wechat) => _zh ? '${wechat ? '微信' : '支付宝'}赞助码保存失败，请重试' : 'Could not save the ${wechat ? 'WeChat' : 'Alipay'} code. Please retry.';
   String sponsorOpenFailed(bool wechat) => _zh ? '无法打开${wechat ? '微信' : '支付宝'}，请确认已安装或手动打开' : 'Could not open ${wechat ? 'WeChat' : 'Alipay'}. Check that it is installed or open it manually.';
-  String get sponsorNotificationsDisabled => _zh ? '系统通知未开启，图片保存和跳转仍可正常进行；可在系统设置中开启通知' : 'Notifications are disabled. Saving and opening apps still work; enable notifications in system settings.';
   String get sponsorPhotoPermission => _zh ? '无法保存赞助码，请在系统设置中允许保存图片' : 'Could not save the code. Allow photo saving in system settings.';
   String get about => _zh ? '关于' : 'About';
   String get appDescription => _zh ? 'Flutter漫画阅读器 for E-Hentai\nfyaaa142857' : 'Flutter manga reader for E-Hentai\nfyaaa142857';
