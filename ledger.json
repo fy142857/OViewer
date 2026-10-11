@@ -3124,8 +3124,33 @@
         }
       ],
       "version": "1.8.1"
+    },
+    {
+      "base_tag": "v1.8.1",
+      "branch": "dev",
+      "build_number": 72,
+      "build_sha": "0345291883b6f929f1f330e4c8c4b8f2fdb27372",
+      "candidate_id": "1.8.2+72",
+      "fingerprint": "a50dccb6df38887060c415ae50b0c81950fcc10e03d8f775dea86c2660aba314",
+      "notes": "### 新增\n\n### 修复\n\n### 变更\n\n- 卡片视图在封面右下角的页数右侧显示语言标识，使用与页数一致的样式并整体靠右对齐；无语言标识时仅显示页数。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "f213ce35487cf07c8d32d9bb8f0585478d290c27",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Refine existing card view metadata by showing available language badges beside the page count with matching styling and bottom-right alignment.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "f213ce35487cf07c8d32d9bb8f0585478d290c27",
+          "subject": "fix(ui): show language beside grid card page count",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.8.2"
     }
   ],
-  "last_build_number": 71,
+  "last_build_number": 72,
   "schema": 1
 }
