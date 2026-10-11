@@ -74,3 +74,12 @@ iOS 保留原有确认后打开 Release 的流程，不请求 APK 清单，不�
 VOG-AL10 真机当前安装的 `1.8.1+71` APK 与原正式附件 SHA-256 完全一致。该包与正式 `1.8.2+75` 更新包经 `apksigner` 验证，证书均为 `a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4`。
 
 只读探针在此机复现：`getPackageArchiveInfo` 单独传 `GET_SIGNING_CERTIFICATES` 返回空的 `signingInfo` 和 `signatures`；同时传入 `GET_SIGNATURES` 后，`SigningInfo.apkContentsSigners` 返回与已安装应用一致的正式证书。修复为同时请求两个标志，保留当前签名与清单的严格比对。探针与手机临时 APK 已删除，未安装、卸载或清除应用数据；本次验证的是签名读取兼容性，未执行系统覆盖安装。
+
+## 2026-10-11 v1.8.3 发布
+
+按用户授权发布 [v1.8.3（77）](https://github.com/fy142857/OViewer/releases/tag/v1.8.3)，包含上述华为 Android 10 签名误报修复，以及更新窗口显示“修复”章节。[Android 构建与原生测试](https://github.com/fy142857/OViewer/actions/runs/38124665988)、[iOS 构建](https://github.com/fy142857/OViewer/actions/runs/38124669021)、[发布预检](https://github.com/fy142857/OViewer/actions/runs/38125473232)与[正式发布](https://github.com/fy142857/OViewer/actions/runs/38125559988)均成功。
+
+标签固定在已验证候选提交 `404fddbbc679af73f2125ef6a32cb56f5fbde88c`，复用原始构建产物。公开的四个附件已核对大小及 SHA-256；Android 使用原固定正式证书，iOS IPA 未签名。受旧版签名误报影响的设备需先从发布页下载修复包，手动覆盖安装一次，无需卸载应用。本次发布未执行手机安装操作。
+
+- APK SHA-256：`51d4cc4f7ff34a29b97d4009cf6ef05103e8265287b8a1f4aab5d8e1ddedadf1`。
+- IPA SHA-256：`4a0016cd92cb39ae0db77010c1326d05c87d564c4b06db9923f9d3358c946771`。
