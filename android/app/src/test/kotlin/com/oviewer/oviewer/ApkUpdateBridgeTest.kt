@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.ActivityNotFoundException
 import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.content.pm.SigningInfo
 import io.flutter.plugin.common.MethodCall
@@ -18,7 +19,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [21, 26, 28, 35])
+@Config(sdk = [21, 26, 28, 29, 35])
 class ApkUpdateBridgeTest {
     class NoSettingsActivity : Activity() {
         override fun startActivity(intent: Intent) { throw ActivityNotFoundException() }
@@ -119,6 +120,17 @@ class ApkUpdateBridgeTest {
         }
         assertEquals(setOf("039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81"),
             ApkUpdateBridge.certificates(packageInfo))
+    }
+
+    @Suppress("DEPRECATION")
+    @Test fun requestsArchiveCertificateCollectionOnOldAndNewApis() {
+        val flags = ApkUpdateBridge.signatureFlags()
+        assertTrue(flags and PackageManager.GET_SIGNATURES != 0)
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            assertTrue(flags and PackageManager.GET_SIGNING_CERTIFICATES != 0)
+        } else {
+            assertEquals(PackageManager.GET_SIGNATURES, flags)
+        }
     }
 
     @Test fun checksPerApplicationInstallPermission() {

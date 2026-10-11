@@ -39,6 +39,14 @@ class ApkUpdateBridge(private val activity: Activity) : MethodChannel.MethodCall
             if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
 
         @Suppress("DEPRECATION")
+        internal fun signatureFlags(): Int =
+            // Some Android 10 devices only collect archive certificates when
+            // GET_SIGNATURES is also present, even when returning SigningInfo.
+            if (Build.VERSION.SDK_INT >= 28)
+                PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
+            else PackageManager.GET_SIGNATURES
+
+        @Suppress("DEPRECATION")
         internal fun certificates(info: PackageInfo): Set<String> {
             val signatures = if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.apkContentsSigners
                 else info.signatures
@@ -77,7 +85,7 @@ class ApkUpdateBridge(private val activity: Activity) : MethodChannel.MethodCall
     private fun inspect(call: MethodCall): File {
         val path = call.argument<String>("path") ?: throw Failure("invalid_path")
         val file = try { packageFile(activity.cacheDir, path) } catch (_: Exception) { throw Failure("invalid_path") }
-        val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        val flags = signatureFlags()
         val archive = activity.packageManager.getPackageArchiveInfo(file.path, flags) ?: throw Failure("invalid_apk")
         val installed = activity.packageManager.getPackageInfo(activity.packageName, flags)
         validate(archive, installed,

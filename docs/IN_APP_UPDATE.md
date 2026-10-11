@@ -14,6 +14,7 @@ iOS 保留原有确认后打开 Release 的流程，不请求 APK 清单，不�
 - 更新客户端独立于站点客户端，不发送 Cookie；使用现有代理路由，但始终正常校验 TLS 证书。只允许 GitHub 及其下载 CDN 的 HTTPS 重定向。
 - 流式保存至私有缓存 `updates/package.part`，检查大小及 SHA-256 后改名为 `package.apk`，更新描述通过临时文件原子保存。下载使用连接和数据停滞超时，不限制总下载为 15 秒；版本检查仍有 15 秒总预算。
 - 安装前重新校验文件，并由原生层检查包名、版本、递增构建号和证书。证书必须同时匹配当前已安装应用与清单；固定签名策略不支持签名轮换。Debug 签名安装无法覆盖为正式签名安装，提示用户处理，不卸载应用。
+- Android 9 及以上同时请求 `GET_SIGNING_CERTIFICATES` 与 `GET_SIGNATURES`，兼容部分华为 Android 10 系统必须带旧标志才收集 APK 证书的行为；校验仍读取 `SigningInfo.apkContentsSigners`，不跳过或放宽证书一致性检查。
 - FileProvider 只暴露私有缓存 `updates/`，安装桥接只接受其中的固定 APK 文件，授予安装器临时只读权限。
 - 清单缺失、无效或构建号不高于当前安装时，保留新版提示并提供发布页入口，不绕过校验安装。
 
@@ -29,7 +30,7 @@ iOS 保留原有确认后打开 Release 的流程，不请求 APK 清单，不�
 
 - `flutter test --no-pub`：更新信息、下载完整性、恢复/取消、前后台及中英文组件回归。
 - `python -m scripts.versioning.analyze`：现有静态分析基线；Windows 可传 `--dart C:\flutter\bin\cache\dart-sdk\bin\dart.exe`。
-- `android/gradlew :app:testDebugUnitTest`：原生包信息、证书、路径和安装授权测试，API 21、26、28、35；测试依赖 Robolectric 4.14.1，应用最低系统要求保持不变。
+- `android/gradlew :app:testDebugUnitTest`：原生包信息、证书、路径和安装授权测试，API 21、26、28、29、35；测试依赖 Robolectric 4.14.1，应用最低系统要求保持不变。
 - 真机验收需同一正式签名的递增构建，检查授权、覆盖安装，以及登录、历史、设置保留。自动化测试不替代真实系统安装器验收。
 
 ## 2026-10-09 验证记录
@@ -67,3 +68,9 @@ iOS 保留原有确认后打开 Release 的流程，不请求 APK 清单，不�
 
 - APK SHA-256：`310f99999421fccb0dca454ecd8330cd4ccd45974fe7c213fbdd9ed0582b9126`。
 - IPA SHA-256：`252f03804a7d97a7129223b9e2b987109dcfe8ac3e857be3f3c9a8e35dd42832`。
+
+## 2026-10-11 华为 Android 10 签名误报排查
+
+VOG-AL10 真机当前安装的 `1.8.1+71` APK 与原正式附件 SHA-256 完全一致。该包与正式 `1.8.2+75` 更新包经 `apksigner` 验证，证书均为 `a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4`。
+
+只读探针在此机复现：`getPackageArchiveInfo` 单独传 `GET_SIGNING_CERTIFICATES` 返回空的 `signingInfo` 和 `signatures`；同时传入 `GET_SIGNATURES` 后，`SigningInfo.apkContentsSigners` 返回与已安装应用一致的正式证书。修复为同时请求两个标志，保留当前签名与清单的严格比对。探针与手机临时 APK 已删除，未安装、卸载或清除应用数据；本次验证的是签名读取兼容性，未执行系统覆盖安装。
