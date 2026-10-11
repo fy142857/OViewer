@@ -19,7 +19,7 @@ class AndroidUpdateDialog extends StatelessWidget {
       for (var i = 0; i < lines.length; i++)
         TextSpan(
           text: '${i == 0 ? '' : '\n'}${lines[i]}',
-          style: const {'新增', '变更', 'added', 'changed'}
+          style: const {'新增', '修复', '变更', 'added', 'fixed', 'changed'}
                   .contains(lines[i].trim().toLowerCase())
               ? const TextStyle(fontWeight: FontWeight.bold)
               : null,

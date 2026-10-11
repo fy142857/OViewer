@@ -64,7 +64,7 @@ class ApkUpdate {
       };
 }
 
-/// Only the requested version's Added/Changed sections, never build provenance.
+/// Only the requested version's Added/Fixed/Changed sections, never build provenance.
 String updateReleaseNotes(String body, String version) {
   final output = <String>[];
   var include = false;
@@ -96,8 +96,8 @@ String updateReleaseNotes(String body, String version) {
         if (inVersion) output.add(line);
         continue;
       }
-      include =
-          const ['新增', '变更', 'added', 'changed'].contains(title.toLowerCase());
+      include = const ['新增', '修复', '变更', 'added', 'fixed', 'changed']
+          .contains(title.toLowerCase());
       sectionLevel = level;
       if (include && inVersion) output.add('\n$title');
     } else if (include && inVersion) {

@@ -26,7 +26,7 @@ class S {
   String get updatePermission => _zh ? '等待安装授权' : 'Waiting for installation permission';
   String get updateReady => _zh ? '安装包已就绪，请在系统界面确认安装' : 'Package ready. Confirm installation in the system installer.';
   String get updateHiddenHint => _zh ? '隐藏后下载继续。' : 'Downloading continues when hidden.';
-  String get updateNoNotes => _zh ? '此版本没有“新增”或“变更”说明。' : 'No Added or Changed notes for this release.';
+  String get updateNoNotes => _zh ? '此版本没有“新增”“修复”或“变更”说明。' : 'No Added, Fixed or Changed notes for this release.';
   String get updateCheckAgain => _zh ? '重新检查版本' : 'Check again';
   String updateApkError(String code) {
     final messages = <String, List<String>>{

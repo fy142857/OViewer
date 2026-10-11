@@ -35,7 +35,7 @@ Map<String, dynamic> apkRelease() => {
       'prerelease': false,
       'html_url': 'https://github.com/fy142857/OViewer/releases/tag/v1.8.0',
       'body':
-          '## [1.8.0]\n### 新增\n- 新功能\n### 修复\n- 隐藏修复\n### 变更\n- 调整\n### 构建来源\n不显示',
+          '## [1.8.0]\n### 新增\n- 新功能\n### 修复\n- 问题修复\n### 变更\n- 调整\n### 构建来源\n不显示',
       'assets': [
         for (final name in ['OViewer.apk', 'release-manifest.json'])
           {
@@ -49,7 +49,7 @@ Map<String, dynamic> apkRelease() => {
 
 void main() {
   test(
-      'only current Added/Changed sections survive provenance and older versions',
+      'only current Added/Fixed/Changed sections survive provenance and older versions',
       () {
     final notes = updateReleaseNotes('''# 更新日志
 ## [Unreleased]
@@ -72,13 +72,14 @@ old''', '1.8.0');
     expect(notes, contains('new'));
     expect(notes, contains('detail'));
     expect(notes, contains('change'));
-    for (final hidden in ['future', 'fix', 'internal', 'old']) {
+    expect(notes, contains('修复\nfix'));
+    for (final hidden in ['future', 'internal', 'old']) {
       expect(notes, isNot(contains(hidden)));
     }
     expect(
         updateReleaseNotes(
             '### Added\nnew\n### Changed\nchange\n### Fixed\nfix', '1.8.0'),
-        'Added\nnew\n\nChanged\nchange');
+        'Added\nnew\n\nChanged\nchange\n\nFixed\nfix');
   });
 
   test('Android resolves exact assets and consistent manifest', () async {
@@ -98,7 +99,8 @@ old''', '1.8.0');
     final result = await repo.check(android: true).result;
     expect(result.apk!.buildNumber, 70);
     expect(result.apk!.size, 4);
-    expect(result.apk!.notes, isNot(contains('隐藏修复')));
+    expect(result.apk!.notes, contains('修复\n- 问题修复'));
+    expect(result.apk!.notes, isNot(contains('不显示')));
     expect(calls.length, 2);
     expect(repo.updateAvailable, isTrue);
   });
