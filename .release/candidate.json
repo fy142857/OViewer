@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.8.2",
   "branch": "dev",
-  "build_number": 76,
-  "candidate_id": "1.8.3+76",
-  "fingerprint": "dda136293ef951dcc7933511fd4ba3ffb78ca174ca889f6ed8ee4cceef0f61cd",
-  "notes": "### 新增\n\n### 修复\n\n### 变更\n\n- Android 更新窗口加入最新发布说明中的“修复”部分，与“新增”“变更”一样加粗章节标题。\n\n### 已知限制",
+  "build_number": 77,
+  "candidate_id": "1.8.3+77",
+  "fingerprint": "fa8d23999e082e21bd66120e6ba2d07aef6e9cbbb4cbaf506e75e9676f4fc520",
+  "notes": "### 新增\n\n### 修复\n\n- 修复部分华为 Android 10 设备读取更新 APK 签名为空、将相同正式签名误报为不一致的问题，继续严格校验更新包、当前应用与发布清单的证书。\n\n### 变更\n\n- Android 更新窗口加入最新发布说明中的“修复”部分，与“新增”“变更”一样加粗章节标题。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "d78a4d3a002d0be32896d8bb7de54373782ed6e6",
+  "source_sha": "a92fef1a313100a5060328d2a1aa1497e33ca455",
   "summary": [
     {
       "change_kind": "fix",
@@ -15,6 +15,16 @@
       "original_type": "fix",
       "sha": "d78a4d3a002d0be32896d8bb7de54373782ed6e6",
       "subject": "fix(updater): include fixes in release notes dialog",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Request both signing flags so affected Android 10 archive parsers populate current signer certificates, avoiding false mismatches without weakening signature validation.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "a92fef1a313100a5060328d2a1aa1497e33ca455",
+      "subject": "fix(updater): collect APK signing certificates on Huawei Android 10",
       "type": "fix",
       "version_impact": "patch"
     }
