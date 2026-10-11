@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.8.1",
   "branch": "dev",
-  "build_number": 73,
-  "candidate_id": "1.8.2+73",
-  "fingerprint": "a0833e4a68649551fcf2d8469ae68898625af67dce75b918d16e4e26961461fc",
-  "notes": "### 新增\n\n### 修复\n\n### 变更\n\n- 卡片视图在封面右下角的页数右侧显示语言标识，使用与页数一致的样式并整体靠右对齐；无语言标识时仅显示页数。\n- 设置中的图片缓存说明补充阅读器内存缓存会在应用退出后自动释放。\n\n### 已知限制",
+  "build_number": 74,
+  "candidate_id": "1.8.2+74",
+  "fingerprint": "33cb1d80a16da1df28f9dc86ef56313369e9b2433a244a7456b122bf96d494f2",
+  "notes": "### 新增\n\n### 修复\n\n### 变更\n\n- 卡片视图在封面右下角的页数右侧显示语言标识，语言缩写左侧带语言图标，使用与页数一致的样式并整体靠右对齐；无语言标识时仅显示页数。\n- 设置中的图片缓存说明补充阅读器内存缓存会在应用退出后自动释放。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "bcaaa780439ea01d8739d8b5a3136a4553b9a4f1",
+  "source_sha": "68d61eb19acd66568c27583115157e3df5c52ed5",
   "summary": [
     {
       "change_kind": "fix",
@@ -25,6 +25,16 @@
       "original_type": "fix",
       "sha": "bcaaa780439ea01d8739d8b5a3136a4553b9a4f1",
       "subject": "fix(settings): clarify reader memory cache lifetime",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Refine the existing language badge with an icon matching the page count badge size, color and spacing.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "68d61eb19acd66568c27583115157e3df5c52ed5",
+      "subject": "fix(ui): add language icon to grid card badge",
       "type": "fix",
       "version_impact": "patch"
     }
