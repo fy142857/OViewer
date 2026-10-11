@@ -49,3 +49,12 @@ iOS 保留原有确认后打开 Release 的流程，不请求 APK 清单，不�
 - APK SHA-256：`0397d2c915466a4efae0862ca491c0fc935a7fb1430200c09180b6861fb5bf67`。
 - IPA SHA-256：`d47700502945a72a3ef4c78daf839488975fb6f0cd915f6224485bb35c4147a8`。
 - 此次发布不包含手机卸载或安装操作，以上真机验收限制仍然适用。
+
+## 2026-10-11 v1.8.1 发布
+
+按用户授权发布 [v1.8.1（71）](https://github.com/fy142857/OViewer/releases/tag/v1.8.1)，包含更新弹窗展示及通知提示调整，以及自动代理探测端口补全。[Android 构建](https://github.com/fy142857/OViewer/actions/runs/38118021235)、[iOS 构建](https://github.com/fy142857/OViewer/actions/runs/38118025103)、[发布预检](https://github.com/fy142857/OViewer/actions/runs/38120737631)与[正式发布](https://github.com/fy142857/OViewer/actions/runs/38120806294)均成功。
+
+标签固定在已验证候选提交 `b03132390e45492415fcad390b19096bb6409812`，复用原始构建产物。公开的四个附件已核对大小及 SHA-256；Android 使用原固定正式证书，iOS IPA 未签名。本次不包含手机卸载或安装操作。
+
+- APK SHA-256：`ba76fe802f7d1b2ea9e01e9ab265c0f351aa28fc3f43ce12318cc1d7b2ada5b0`。
+- IPA SHA-256：`2ce8e225b95a1f3a425bf01529b4dbf83f00f5f8a65e3114f5c8e2c7be14a679`。
