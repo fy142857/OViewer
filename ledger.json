@@ -3344,8 +3344,33 @@
         }
       ],
       "version": "1.8.3"
+    },
+    {
+      "base_tag": "v1.8.3",
+      "branch": "dev",
+      "build_number": 78,
+      "build_sha": "2435dc428143d037dceda3f53945f983b45c8dfe",
+      "candidate_id": "1.9.0+78",
+      "fingerprint": "f72daae6f798b86c26fcd5f4dbc8d1a685d628b7e8e56b113eaa61822c4ffab6",
+      "notes": "### 新增\n\n- 支持整本漫画离线缓存，下载前确认 EH/EX 来源；已缓存漫画优先本地阅读，提供暂停、继续、失败补下和独立文件管理。\n- 设置中新增同时下载漫画数与全局图片并行数，默认 2 本、4 张；Android 支持带进度通知的后台下载，进程重启后手动继续。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "0bb92d2802fb8cbab6e3bfec5d2a3bbb01d2e085",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "Introduce durable offline gallery reading with explicit EH/EX source identity, configurable global download concurrency, recoverable validated files, and Android foreground-service execution.",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "0bb92d2802fb8cbab6e3bfec5d2a3bbb01d2e085",
+          "subject": "feat(offline): add persistent gallery downloads and local reading",
+          "type": "feat",
+          "version_impact": "minor"
+        }
+      ],
+      "version": "1.9.0"
     }
   ],
-  "last_build_number": 77,
+  "last_build_number": 78,
   "schema": 1
 }
