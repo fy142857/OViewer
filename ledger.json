@@ -3515,7 +3515,7 @@
       "notes": "### 新增\n\n- 支持整本漫画离线缓存，下载前确认 EH/EX 来源；已缓存漫画优先本地阅读，提供暂停、继续、失败补下和独立文件管理。\n- 设置中新增同时下载漫画数与全局图片并行数，默认 2 本、4 张；Android 支持带进度通知的后台下载，进程重启后手动继续。\n\n### 修复\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "2b1955d8e08e0d3b624a48e710c2df99ece43855",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "feature",
