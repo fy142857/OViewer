@@ -40,4 +40,4 @@ Windows 本机 Gradle 如遇 `Unable to establish loopback connection`，使用�
 
 `/control?delay=2` 设置单页响应延迟；`/control?enabled=0` 让后续请求失败；`/control?reset=1` 清除请求统计；`/stats` 返回请求路径与图片请求峰值。验收需要记录后台/锁屏下载、暂停及恢复、退出进程、断网后本地阅读、来源隔离、设置变化和清缓存保留下载等证据。
 
-当前实施验收尚在进行，最终模拟器与 CI 结果将在完成后补充。
+开发候选 `1.9.0+82` 已完成 Android 模拟器验收：断网逐页阅读、来源隔离、后台/锁屏、Activity 销毁后恢复、通知暂停、系统超时、进程重启及删除均已检查。完整 Flutter 测试 736 项、发布脚本测试 52 项、Android 原生检查及 Android/iOS 构建通过。iOS 生命周期通过自动化测试，未进行 iOS 设备运行验收。详见[验收记录](OFFLINE_CACHE_VALIDATION.md)。此次未发布正式版。
