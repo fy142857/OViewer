@@ -259,6 +259,20 @@ void main() {
     await stopping;
     await until(() => coordinator.activePages == 0);
   });
+  test('repair on the wrong site leaves a completed local book intact',
+      () async {
+    final id = await coordinator.enqueue(key, 'Book', 3);
+    await until(() async => (await repo.get(id))!.complete);
+    final calls = Map<String, int>.of(network.calls);
+    network.source = GallerySource.ex;
+    await expectLater(
+        coordinator.repair(id, 0),
+        throwsA(isA<OfflineFailure>()
+            .having((e) => e.code, 'code', 'source_changed')));
+    expect((await repo.get(id))!.complete, isTrue);
+    expect(network.calls, calls);
+    expect(await repo.valid((await repo.pages(id)).first), isTrue);
+  });
   test('source and session changes prevent stale writes', () async {
     network.hold = true;
     final id = await coordinator.enqueue(key, 'Book', 3);

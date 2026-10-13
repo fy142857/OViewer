@@ -464,9 +464,21 @@ class OfflineDownloadCoordinator {
   }
 
   Future<void> repair(String id, int page) async {
+    final book = await repository.get(id);
+    if (book == null) return;
+    if (book.source == null) throw const OfflineFailure('source_required');
+    if (book.source != network.source)
+      throw const OfflineFailure('source_changed');
+    final epoch = _epoch;
+    final session = network.session;
     await pause(id);
     final job = _jobs[id];
     if (job != null) await job.drained.future;
+    if (epoch != _epoch ||
+        session != network.session ||
+        book.source != network.source) {
+      throw const OfflineFailure('session_changed');
+    }
     await repository.failPage(id, page, 'repair');
     await repository.setStatus(id, OfflineStatus.paused);
     await resume(id);
