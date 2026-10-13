@@ -3,6 +3,8 @@ import '../core/storage/database.dart';
 import '../core/storage/reader_index_cache.dart';
 import '../models/gallery_preview.dart';
 import '../models/reading_progress.dart';
+import '../models/gallery_source.dart';
+import '../models/offline_book.dart';
 
 class HistoryRepository {
   final AppDatabase _db;
@@ -13,15 +15,30 @@ class HistoryRepository {
   Future<List<HistoryEntry>> getAllHistory() => _db.getAllHistory();
 
   /// Record a gallery visit
-  Future<void> recordVisit(GalleryPreview gallery) =>
+  Future<void> recordVisit(GalleryPreview gallery, {GallerySource? source}) =>
       _db.upsertHistory(HistoryEntriesCompanion(
         gid: Value(gallery.gid),
+        source: Value(source?.name),
         token: Value(gallery.token),
         title: Value(gallery.title),
         thumbUrl: Value(gallery.thumbUrl),
         category: Value(gallery.category),
         rating: Value(gallery.rating),
         fileCount: Value(gallery.fileCount),
+        lastReadAt: Value(DateTime.now()),
+      ));
+
+  Future<void> recordOfflineVisit(OfflineBook book) =>
+      _db.upsertHistory(HistoryEntriesCompanion(
+        gid: Value(book.record.gid),
+        token: Value(book.record.token),
+        source: Value(book.source?.name),
+        title: Value(book.record.title),
+        thumbUrl: const Value(''),
+        category: const Value('Misc'),
+        fileCount: Value(book.record.totalPages),
+        totalPages: Value(book.record.totalPages),
+        lastReadPage: Value(book.record.lastReadPage),
         lastReadAt: Value(DateTime.now()),
       ));
 

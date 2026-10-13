@@ -1,4 +1,5 @@
 import 'app_constants.dart';
+import '../../models/gallery_source.dart';
 
 class ApiEndpoints {
   ApiEndpoints._();
@@ -15,11 +16,13 @@ class ApiEndpoints {
   }
 
   // Gallery detail
-  static String galleryDetail(int gid, String token) => '$_base/g/$gid/$token/';
+  static String galleryDetail(int gid, String token, {GallerySource? source}) =>
+      '${source?.baseUrl ?? _base}/g/$gid/$token/';
 
   // Gallery image page
-  static String imagePage(String pageToken, int gid, int page) =>
-      '$_base/s/$pageToken/$gid-${page + 1}';
+  static String imagePage(String pageToken, int gid, int page,
+          {GallerySource? source}) =>
+      '${source?.baseUrl ?? _base}/s/$pageToken/$gid-${page + 1}';
 
   // Search
   static String search({String? keyword, int page = 0}) {
@@ -47,8 +50,9 @@ class ApiEndpoints {
       '$_base/g/$gid/$token/';
 
   // Thumbnails
-  static String galleryThumbnails(int gid, String token, {int page = 0}) =>
-      '$_base/g/$gid/$token/?p=$page';
+  static String galleryThumbnails(int gid, String token,
+          {int page = 0, GallerySource? source}) =>
+      '${source?.baseUrl ?? _base}/g/$gid/$token/?p=$page';
 
   // Tag translation data source
   static const String ehTagTranslationUrl =

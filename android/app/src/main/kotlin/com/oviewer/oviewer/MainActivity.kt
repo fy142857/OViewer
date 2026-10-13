@@ -2,18 +2,25 @@ package com.oviewer.oviewer
 
 import android.os.Build
 import android.os.Bundle
+import android.content.Context
+import android.content.Intent
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
+    private val runtime get() = application as OViewerApplication
+    override fun provideFlutterEngine(context: Context): FlutterEngine = runtime.acquireEngine()
+    override fun shouldDestroyEngineWithHost(): Boolean = false
     private var exporter: PageImageExporter? = null
     private var sponsor: SponsorBridge? = null
     private var updater: ApkUpdateBridge? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        runtime.attach(this)
+        if (intent?.action == OfflineDownloadService.OPEN) runtime.openDownloads()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             // Keep the same window bounds when the reader toggles system bars.
             // DEFAULT excludes the cutout only in fullscreen on some devices,
@@ -43,5 +50,19 @@ class MainActivity: FlutterActivity() {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
-    override fun onDestroy() { updater?.dispose(); sponsor?.dispose(); exporter?.dispose(); super.onDestroy() }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.action == OfflineDownloadService.OPEN) runtime.openDownloads()
+    }
+    override fun onDestroy() {
+        updater?.dispose(); sponsor?.dispose(); exporter?.dispose()
+        flutterEngine?.let { engine ->
+            for (name in listOf("oviewer/apk_update", "oviewer/release_link", "oviewer/sponsor", "oviewer/page_image_export")) {
+                MethodChannel(engine.dartExecutor.binaryMessenger, name).setMethodCallHandler(null)
+            }
+        }
+        super.onDestroy()
+        runtime.detach(this)
+    }
 }

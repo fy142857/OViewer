@@ -17,13 +17,13 @@ import 'blocs/settings/settings_bloc.dart';
 import 'blocs/settings/settings_event.dart';
 import 'blocs/settings/settings_state.dart';
 import 'blocs/download/download_bloc.dart';
-import 'repositories/gallery_repository.dart';
+import 'core/services/offline_platform.dart';
 import 'repositories/search_repository.dart';
 import 'repositories/favorites_repository.dart';
 import 'repositories/history_repository.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/settings_repository.dart';
-import 'repositories/download_repository.dart';
+import 'core/services/offline_download_coordinator.dart';
 
 class OViewerApp extends StatelessWidget {
   final SettingsState? initialSettings;
@@ -42,7 +42,8 @@ class OViewerApp extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => FavoritesBloc(sl<FavoritesRepository>(),
-              settings: sl<SettingsRepository>(), search: sl<SearchRepository>()),
+              settings: sl<SettingsRepository>(),
+              search: sl<SearchRepository>()),
         ),
         BlocProvider(
           lazy: false,
@@ -55,8 +56,7 @@ class OViewerApp extends StatelessWidget {
             ..add(LoadSettings()),
         ),
         BlocProvider(
-          create: (_) =>
-              DownloadBloc(sl<DownloadRepository>(), sl<GalleryRepository>()),
+          create: (_) => DownloadBloc(sl<OfflineDownloadCoordinator>()),
         ),
       ],
       child: FavoritesSessionHost(
@@ -67,6 +67,13 @@ class OViewerApp extends StatelessWidget {
                         prev.themeMode != curr.themeMode ||
                         prev.locale != curr.locale,
                     builder: (context, settingsState) {
+                      if (sl.isRegistered<OfflinePlatform>()) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          sl<OfflinePlatform>().attachNavigator(() =>
+                              navigatorKey.currentState
+                                  ?.pushNamed('/downloads'));
+                        });
+                      }
                       return MaterialApp(
                         title: 'OViewer',
                         navigatorKey: navigatorKey,

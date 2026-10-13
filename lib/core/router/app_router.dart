@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'reader_route.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/gallery_detail/gallery_detail_screen.dart';
-import '../../screens/reader/reader_screen.dart';
+import '../../screens/reader/reader_entry_screen.dart';
+import '../../models/gallery_source.dart';
 import '../../screens/search/search_screen.dart';
 import '../../screens/favorites/favorites_screen.dart';
 import '../../screens/history/history_screen.dart';
@@ -43,10 +44,12 @@ class AppRouter {
         final args = routeSettings.arguments as Map<String, dynamic>;
         return ReaderRoute(
           settings: routeSettings,
-          builder: (_) => ReaderScreen(
+          builder: (_) => ReaderEntryScreen(
             gid: args['gid'] as int,
             token: args['token'] as String,
             initialPage: args['initialPage'] as int?,
+            source: args['source'] as GallerySource?,
+            offlineId: args['offlineId'] as String?,
           ),
         );
 
@@ -68,27 +71,22 @@ class AppRouter {
         );
 
       case favorites:
-        return MaterialPageRoute(
-            builder: (_) => const FavoritesScreen());
+        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
 
       case history:
-        return MaterialPageRoute(
-            builder: (_) => const HistoryScreen());
+        return MaterialPageRoute(builder: (_) => const HistoryScreen());
 
       case login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
 
       case downloads:
-        return MaterialPageRoute(
-            builder: (_) => const DownloadScreen());
+        return MaterialPageRoute(builder: (_) => const DownloadScreen());
 
       case settings:
-        return MaterialPageRoute(
-            builder: (_) => const SettingsScreen());
+        return MaterialPageRoute(builder: (_) => const SettingsScreen());
 
       case myTags:
-        return MaterialPageRoute(
-            builder: (_) => const MyTagsScreen());
+        return MaterialPageRoute(builder: (_) => const MyTagsScreen());
 
       case thumbnailPreview:
         final args = routeSettings.arguments as Map<String, dynamic>;
@@ -97,6 +95,7 @@ class AppRouter {
             gid: args['gid'] as int,
             token: args['token'] as String,
             fileCount: args['fileCount'] as int,
+            source: args['source'] as GallerySource?,
           ),
         );
 

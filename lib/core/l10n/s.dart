@@ -6,6 +6,124 @@ import '../../blocs/settings/settings_bloc.dart';
 /// Simple map-based localization. Supports zh (Chinese) and en (English).
 /// Usage: `S.of(context).settings`
 class S {
+  String get offlineCache => _zh ? '离线缓存' : 'Offline cache';
+  String get offlineParallelGalleries =>
+      _zh ? '同时下载的漫画数' : 'Parallel galleries';
+  String get offlineParallelPages => _zh ? '全局图片并行数' : 'Global parallel pages';
+  String get offlineParallelHint =>
+      _zh ? '图片并行数由所有漫画共享' : 'Page slots are shared by all galleries';
+  String get offlineSourceRequired => _zh ? '来源待确认' : 'Confirm source';
+  String get offlineChooseSource => _zh ? '选择漫画来源' : 'Choose gallery source';
+  String get offlineSourceHint => _zh
+      ? '选择原下载来源；验证成功后才会继续下载。'
+      : 'Choose the original source. Downloads resume only after verification.';
+  String offlineDownloadFrom(String source, int pages) => _zh
+      ? '下载来源：$source\n共 $pages 页'
+      : 'Download source: $source\n$pages pages';
+  String get offlineNotCached => _zh ? '尚未缓存' : 'Not cached yet';
+  String get offlineReload => _zh ? '重新读取' : 'Read again';
+  String get offlineRepair => _zh ? '修复缓存（联网）' : 'Repair cache (online)';
+  String get offlinePageActions => _zh ? '页面操作' : 'Page actions';
+  String get offlineDeleteConfirm => _zh
+      ? '删除这本漫画的离线文件及下载任务？'
+      : 'Delete this gallery’s offline files and download task?';
+  String get offlineStorageHint => _zh
+      ? '独立保存，清除图片缓存不会删除已下载漫画'
+      : 'Stored separately; clearing image cache does not delete downloads';
+  String get offlineSettingsFailed =>
+      _zh ? '并行设置保存失败，请重试' : 'Could not save download settings. Please retry.';
+  String get offlineResume => _zh ? '继续下载' : 'Resume download';
+  String get offlinePause => _zh ? '暂停' : 'Pause';
+  String get offlineRead => _zh ? '离线阅读' : 'Read offline';
+  String get offlineManage => _zh ? '管理下载' : 'Manage downloads';
+  String offlineStatus(String status) {
+    const values = {
+      'queued': ['等待下载', 'Queued'],
+      'preparing': ['准备目录', 'Preparing index'],
+      'downloading': ['下载中', 'Downloading'],
+      'paused': ['已暂停', 'Paused'],
+      'completed': ['已完成', 'Completed'],
+      'failed': ['下载未完成', 'Incomplete'],
+      'deleting': ['等待删除', 'Pending deletion'],
+      'sourceRequired': ['来源待确认', 'Confirm source'],
+    };
+    return values[status]?[_zh ? 0 : 1] ?? status;
+  }
+
+  String offlineError(String code) {
+    const values = {
+      'source_changed': [
+        '请先切换到该漫画的 EH/EX 来源，再继续下载',
+        'Switch to this gallery’s EH/EX source before resuming'
+      ],
+      'source_required': [
+        '无法确定来源，请重新打开详情页',
+        'Source unavailable. Reopen the gallery details'
+      ],
+      'source_mismatch': [
+        '站点返回的漫画与任务来源不一致',
+        'The returned gallery does not match the task source'
+      ],
+      'session_changed': [
+        '站点或登录状态已变化，请确认后继续',
+        'Site or login changed. Confirm before resuming'
+      ],
+      'authentication': [
+        '需要登录或重新验证访问权限',
+        'Sign in or verify access before resuming'
+      ],
+      'quota': ['站点访问限额已触发，请稍后继续', 'Site access limit reached. Resume later'],
+      'content_warning': [
+        '请在详情页确认内容提示后继续',
+        'Confirm the content notice in gallery details first'
+      ],
+      'storage': ['存储空间不足或文件写入失败', 'Not enough storage or file write failed'],
+      'network': [
+        '网络不可用，请恢复网络后继续',
+        'Network unavailable. Resume after reconnecting'
+      ],
+      'invalid_index': [
+        '漫画目录不完整，请重新验证来源',
+        'Gallery index is incomplete. Verify the source'
+      ],
+      'pages_failed': [
+        '部分页面未完成，可重试补下',
+        'Some pages failed. Retry missing pages'
+      ],
+      'invalid_image': ['返回内容不是有效图片', 'Response is not a valid image'],
+      'incomplete_file': ['图片未下载完整', 'Image download is incomplete'],
+      'missing_file': [
+        '本地文件缺失，可联网修复',
+        'Local file missing. Repair when online'
+      ],
+      'damaged_file': [
+        '本地文件损坏，可联网修复',
+        'Local file damaged. Repair when online'
+      ],
+      'delete_failed': ['文件删除失败，请重试删除', 'File deletion failed. Retry deletion'],
+      'background_unavailable': [
+        '无法启动下载服务，请返回应用后重试',
+        'Download service unavailable. Return to the app and retry'
+      ],
+      'service_timeout': [
+        '后台运行时间已达系统限制，请返回应用继续',
+        'Background time limit reached. Return to the app to resume'
+      ],
+      'interrupted': [
+        '上次下载已中断，点击继续',
+        'Previous download interrupted. Tap resume'
+      ],
+      'background': [
+        '应用进入后台，下载已暂停',
+        'Paused while the app is in the background'
+      ],
+      'user': ['已手动暂停', 'Paused by you'],
+      'server': ['服务器暂时不可用', 'Server temporarily unavailable'],
+    };
+    return values[code]?[_zh ? 0 : 1] ??
+        (_zh ? '操作未完成，请重试' : 'Operation incomplete. Please retry');
+  }
+
   static S of(BuildContext context) {
     final locale = context.read<SettingsBloc>().state.locale;
     return S._(locale);

@@ -15,6 +15,10 @@ on:
         description: 'Registered candidate, for example 1.0.1+2'
         required: true
         type: string
+      offline_emulator_apk:
+        description: 'Also build isolated offline fixture APK for local emulator acceptance'
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -154,3 +158,18 @@ jobs:
       - name: Remove temporary signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/oviewer-release.jks"
+
+      - name: Build isolated offline emulator APK
+        if: github.event_name == 'workflow_dispatch' && inputs.offline_emulator_apk
+        env:
+          OVIEWER_OFFLINE_TEST: '1'
+        run: flutter build apk --debug --no-pub --target-platform android-x64 --target test_driver/offline_validation.dart
+
+      - name: Upload offline emulator APK
+        if: github.event_name == 'workflow_dispatch' && inputs.offline_emulator_apk
+        uses: actions/upload-artifact@v7
+        with:
+          name: offline-emulator-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error

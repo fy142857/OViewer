@@ -5,6 +5,13 @@ class SettingsRepository {
 
   SettingsRepository(this._storage);
 
+  int getOfflineParallelGalleries() => _storage.getOfflineParallelGalleries();
+  int getOfflineParallelPages() => _storage.getOfflineParallelPages();
+  Future<void> setOfflineParallelGalleries(int value) =>
+      _storage.setOfflineParallelGalleries(value);
+  Future<void> setOfflineParallelPages(int value) =>
+      _storage.setOfflineParallelPages(value);
+
   int? getFavoriteCategory({String entry = 'home'}) =>
       _storage.getFavoriteCategory(entry: entry);
   Future<void> setFavoriteCategory(int category, {String entry = 'home'}) =>

@@ -45,6 +45,9 @@ void main() {
       VALUES (42, 'abc', 'Test', '', 100, 7)''');
     // The three original tables have the same schema in versions 1 and 2.
     await db.customStatement('DROP TABLE gallery_warning_acceptances');
+    await db.customStatement('DROP TABLE offline_pages');
+    await db.customStatement('DROP TABLE offline_galleries');
+    await db.customStatement('ALTER TABLE history_entries DROP COLUMN source');
     await db.customStatement('PRAGMA user_version = 1');
     await db.close();
     db = AppDatabase.forTesting(NativeDatabase(file));

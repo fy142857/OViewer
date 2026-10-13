@@ -1,3 +1,5 @@
+import 'dart:async';
+import '../../models/gallery_source.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class DownloadEvent extends Equatable {
@@ -14,6 +16,8 @@ class StartDownload extends DownloadEvent {
   final String title;
   final String thumbUrl;
   final int totalPages;
+  final GallerySource? source;
+  final Completer<void>? completer;
 
   const StartDownload({
     required this.gid,
@@ -21,6 +25,8 @@ class StartDownload extends DownloadEvent {
     required this.title,
     required this.thumbUrl,
     required this.totalPages,
+    this.source,
+    this.completer,
   });
 
   @override
@@ -28,23 +34,22 @@ class StartDownload extends DownloadEvent {
 }
 
 class PauseDownload extends DownloadEvent {
-  final int gid;
-  const PauseDownload(this.gid);
+  final String id;
+  const PauseDownload(this.id);
   @override
-  List<Object?> get props => [gid];
+  List<Object?> get props => [id];
 }
 
 class ResumeDownload extends DownloadEvent {
-  final int gid;
-  final String token;
-  const ResumeDownload({required this.gid, required this.token});
+  final String id;
+  const ResumeDownload(this.id);
   @override
-  List<Object?> get props => [gid];
+  List<Object?> get props => [id];
 }
 
 class DeleteDownload extends DownloadEvent {
-  final int gid;
-  const DeleteDownload(this.gid);
+  final String id;
+  const DeleteDownload(this.id);
   @override
-  List<Object?> get props => [gid];
+  List<Object?> get props => [id];
 }

@@ -14,6 +14,7 @@ import '../core/constants/api_endpoints.dart';
 import '../core/constants/app_constants.dart';
 import '../models/gallery_preview.dart';
 import '../models/gallery_detail.dart';
+import '../models/gallery_source.dart';
 import '../models/gallery_image.dart';
 import '../models/reader_index_page.dart';
 import '../core/storage/reader_index_cache.dart';
@@ -31,9 +32,10 @@ class GalleryRepository {
   Future<void> acceptGalleryWarning(int gid, String token) => _dio
       .allowGalleryWarning(Uri.parse(ApiEndpoints.galleryDetail(gid, token)));
 
-  void _checkWarning(String html, int gid, String token) {
-    final warning = GalleryContentWarning.parse(
-        html, Uri.parse(ApiEndpoints.galleryDetail(gid, token)));
+  void _checkWarning(String html, int gid, String token,
+      {GallerySource? source}) {
+    final warning = GalleryContentWarning.parse(html,
+        Uri.parse(ApiEndpoints.galleryDetail(gid, token, source: source)));
     if (warning != null) throw warning;
   }
 
@@ -166,27 +168,32 @@ class GalleryRepository {
     int gid,
     String token, {
     CancelToken? cancelToken,
+    GallerySource? source,
   }) async {
-    final url = ApiEndpoints.galleryDetail(gid, token);
-    final site = AppConstants.baseUrl;
+    final origin = source ?? GallerySource.current;
+    final url = ApiEndpoints.galleryDetail(gid, token, source: origin);
+    final site = origin.baseUrl;
     final generation = readerIndexCache.generation;
     if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
       debugPrint('[reader-metric] html_request');
     }
     final html = await _dio.get(url, cancelToken: cancelToken);
-    _checkWarning(html, gid, token);
+    _checkWarning(html, gid, token, source: origin);
     _seedReaderIndex(html, site, generation, gid, token, 0, cancelToken);
     _cacheApiCredentials(gid, html);
-    final detail = GalleryDetailParser.parse(html, gid, token);
+    final parsed = GalleryDetailParser.parse(html, gid, token);
+    final detail = parsed.withComments(parsed.comments, source: origin);
 
     if (detail.titleJpn == null) {
       final titleJpn = await _fetchTitleJpnFromApi(
         gid,
         token,
+        source: origin,
         cancelToken: cancelToken,
       );
       if (titleJpn != null && titleJpn.isNotEmpty) {
         return GalleryDetail(
+          source: origin,
           gid: detail.gid,
           token: detail.token,
           title: detail.title,
@@ -220,10 +227,11 @@ class GalleryRepository {
     int gid,
     String token, {
     CancelToken? cancelToken,
+    GallerySource? source,
   }) async {
     try {
       final response = await _dio.post(
-        ApiEndpoints.apiEndpoint,
+        '${(source ?? GallerySource.current).baseUrl}/api.php',
         cancelToken: cancelToken,
         data: {
           'method': 'gdata',
@@ -250,15 +258,18 @@ class GalleryRepository {
     String token, {
     int page = 0,
     CancelToken? cancelToken,
+    GallerySource? source,
   }) async {
-    final url = ApiEndpoints.galleryThumbnails(gid, token, page: page);
-    final site = AppConstants.baseUrl;
+    final origin = source ?? GallerySource.current;
+    final url =
+        ApiEndpoints.galleryThumbnails(gid, token, page: page, source: origin);
+    final site = origin.baseUrl;
     final generation = readerIndexCache.generation;
     if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
       debugPrint('[reader-metric] html_request');
     }
     final html = await _dio.get(url, cancelToken: cancelToken);
-    _checkWarning(html, gid, token);
+    _checkWarning(html, gid, token, source: origin);
     _seedReaderIndex(html, site, generation, gid, token, page, cancelToken);
     final thumbnails = GalleryDetailParser.parseThumbnails(html);
     final totalPages = GalleryDetailParser.parseThumbnailPageCount(html);
@@ -271,8 +282,10 @@ class GalleryRepository {
     int gid,
     int pageIndex, {
     CancelToken? cancelToken,
+    GallerySource? source,
   }) async {
-    final url = ApiEndpoints.imagePage(pageToken, gid, pageIndex);
+    final url =
+        ApiEndpoints.imagePage(pageToken, gid, pageIndex, source: source);
     if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
       debugPrint('[reader-metric] html_request');
     }
@@ -288,9 +301,10 @@ class GalleryRepository {
     int pageIndex,
     String nlKey, {
     CancelToken? cancelToken,
+    GallerySource? source,
   }) async {
     final url =
-        '${ApiEndpoints.imagePage(pageToken, gid, pageIndex)}?nl=$nlKey';
+        '${ApiEndpoints.imagePage(pageToken, gid, pageIndex, source: source)}?nl=$nlKey';
     if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
       debugPrint('[reader-metric] html_request');
     }

@@ -14,6 +14,25 @@ import UserNotifications
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    if let registrar = registrar(forPlugin: "OViewerOfflineFiles") {
+      FlutterMethodChannel(name: "oviewer/offline_files", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { call, result in
+          guard call.method == "excludeFromBackup" else { result(FlutterMethodNotImplemented); return }
+          do {
+            let root = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask,
+                                                   appropriateFor: nil, create: true)
+            for name in ["offline", "downloads"] {
+              var url = root.appendingPathComponent(name, isDirectory: true)
+              if FileManager.default.fileExists(atPath: url.path) {
+                var values = URLResourceValues()
+                values.isExcludedFromBackup = true
+                try url.setResourceValues(values)
+              }
+            }
+            result(nil)
+          } catch { result(FlutterError(code: "storage", message: "Could not exclude offline files from backup", details: nil)) }
+        }
+    }
     UNUserNotificationCenter.current().delegate = sponsorNotifications
     if let registrar = registrar(forPlugin: "OViewerReleaseLink") {
       FlutterMethodChannel(name: "oviewer/release_link", binaryMessenger: registrar.messenger())

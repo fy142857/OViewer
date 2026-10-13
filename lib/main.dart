@@ -25,15 +25,20 @@ import 'repositories/search_repository.dart';
 import 'repositories/favorites_repository.dart';
 import 'repositories/history_repository.dart';
 import 'repositories/auth_repository.dart';
-import 'repositories/download_repository.dart';
 import 'repositories/settings_repository.dart';
 import 'repositories/tag_translation_repository.dart';
 import 'repositories/update_repository.dart';
 import 'core/services/release_link_opener.dart';
+import 'core/services/offline_download_coordinator.dart';
+import 'core/services/offline_platform.dart';
+import 'core/storage/offline_files.dart';
+import 'core/network/offline_download_network.dart';
+import 'repositories/offline_repository.dart';
 
 final sl = GetIt.instance;
 
-Future<void> _initDependencies() async {
+Future<void> _initDependencies(
+    {DioClient Function(CookieManager, AppDatabase)? dioFactory}) async {
   // Core - Storage
   final localStorage = LocalStorage();
   await localStorage.init();
@@ -56,7 +61,8 @@ Future<void> _initDependencies() async {
   sl.registerSingleton<AppDatabase>(database, dispose: (db) => db.close());
 
   // Core - Network
-  final dioClient = DioClient(cookieManager, database);
+  final dioClient = dioFactory?.call(cookieManager, database) ??
+      DioClient(cookieManager, database);
   sl.registerSingleton<DioClient>(dioClient);
 
   final network = NetworkPreparation(
@@ -67,7 +73,8 @@ Future<void> _initDependencies() async {
   sl.registerSingleton<NetworkPreparation>(network,
       dispose: (value) => value.dispose());
 
-  final checkIn = DailyCheckInCubit(DailyCheckInRepository(dioClient, localStorage));
+  final checkIn =
+      DailyCheckInCubit(DailyCheckInRepository(dioClient, localStorage));
   dioClient.captureResponseScope = checkIn.captureResponseScope;
   dioClient.onHtmlResponse = checkIn.observeResponse;
   sl.registerSingleton<DailyCheckInCubit>(checkIn, dispose: (value) async {
@@ -80,8 +87,9 @@ Future<void> _initDependencies() async {
   sl.registerLazySingleton<UpdateRepository>(
       () => UpdateRepository(storage: sl<LocalStorage>()));
   sl.registerLazySingleton<ApkDownloadService>(() => ApkDownloadService());
-  sl.registerLazySingleton<UpdateCubit>(() => UpdateCubit(sl<UpdateRepository>(),
-      sl<ApkDownloadService>(), ApkInstaller(language: localStorage.getLocale)),
+  sl.registerLazySingleton<UpdateCubit>(
+      () => UpdateCubit(sl<UpdateRepository>(), sl<ApkDownloadService>(),
+          ApkInstaller(language: localStorage.getLocale)),
       dispose: (value) => value.close());
   sl.registerLazySingleton<ReleaseLinkOpener>(() => ReleaseLinkOpener());
   sl.registerLazySingleton<GalleryRepository>(
@@ -99,13 +107,27 @@ Future<void> _initDependencies() async {
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepository(sl<DioClient>(), sl<CookieManager>()),
   );
-  sl.registerLazySingleton<DownloadRepository>(
-    () => DownloadRepository(
-        sl<DioClient>(), sl<AppDatabase>(), sl<GalleryRepository>()),
-  );
   sl.registerLazySingleton<SettingsRepository>(
     () => SettingsRepository(sl<LocalStorage>()),
   );
+  final offline = OfflineRepository(database, OfflineFiles());
+  sl.registerSingleton<OfflineRepository>(offline, dispose: (r) => r.dispose());
+  final offlinePlatform = OfflinePlatform(localStorage.getLocale);
+  sl.registerSingleton<OfflinePlatform>(offlinePlatform,
+      dispose: (p) => p.dispose());
+  final downloads = OfflineDownloadCoordinator(
+      offline, SiteOfflineDownloadNetwork(dioClient, cookieManager),
+      galleryLimit: localStorage.getOfflineParallelGalleries(),
+      pageLimit: localStorage.getOfflineParallelPages(),
+      startBackground: offlinePlatform.start,
+      stopBackground: offlinePlatform.stop);
+  sl.registerSingleton<OfflineDownloadCoordinator>(downloads,
+      dispose: (c) => c.dispose());
+  offlinePlatform.bind(downloads);
+  cookieManager.onSessionChanged =
+      () => unawaited(downloads.pauseAll(reason: 'session_changed'));
+  AppConstants.onSiteChanged =
+      () => unawaited(downloads.pauseAll(reason: 'source_changed'));
   sl.registerLazySingleton<TagTranslationRepository>(
     () => TagTranslationRepository(sl<DioClient>(), sl<LocalStorage>()),
     dispose: (repository) => repository.dispose(),
@@ -118,6 +140,23 @@ Future<void> main() async {
   await _startApp();
 }
 
+/// Separate debug entrypoint used by the emulator fixture APK only. Production
+/// main never accepts transport overrides or contacts the fixture server.
+Future<void> startOfflineValidation(
+    DioClient Function(CookieManager, AppDatabase) dioFactory) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  const release = bool.fromEnvironment('dart.vm.product');
+  if (release) throw StateError('Offline validation is debug-only');
+  await _initDependencies(dioFactory: dioFactory);
+  await sl<LocalStorage>().setLocale('en');
+  await sl<LocalStorage>().setAutoProxy(false);
+  await sl<NetworkPreparation>().configure(manualProxy: null, autoProxy: false);
+  await sl<OfflineDownloadCoordinator>().initialize();
+  runApp(OViewerApp(
+      initialSettings: SettingsBloc.readSaved(sl<SettingsRepository>()),
+      network: sl<NetworkPreparation>()));
+}
+
 Future<void> _startApp() async {
   try {
     await StartupTimings.measure('essential_init', _initDependencies);
@@ -127,12 +166,15 @@ Future<void> _startApp() async {
       prepareNetwork: network.start,
       maintainCache: () async {
         await Future.wait([
+          sl<OfflineDownloadCoordinator>().initialize(),
           EhImageCacheManager.instance.enforceLimit(),
-          if (Platform.isAndroid) (() async {
-            final installed = await PackageInfo.fromPlatform();
-            await sl<ApkDownloadService>().maintain(int.parse(installed.buildNumber));
-            await sl<UpdateRepository>().restoreUpdateStatus();
-          })(),
+          if (Platform.isAndroid)
+            (() async {
+              final installed = await PackageInfo.fromPlatform();
+              await sl<ApkDownloadService>()
+                  .maintain(int.parse(installed.buildNumber));
+              await sl<UpdateRepository>().restoreUpdateStatus();
+            })(),
         ]);
       },
       loadTranslations: () async {

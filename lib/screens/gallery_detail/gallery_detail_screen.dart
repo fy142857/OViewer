@@ -1,3 +1,5 @@
+import '../../models/offline_book.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -116,7 +118,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
             fileCount: d.fileCount,
             postedAt: d.postedAt,
           );
-          GetIt.I<HistoryRepository>().recordVisit(preview);
+          GetIt.I<HistoryRepository>().recordVisit(preview, source: d.source);
           // Refresh history BLoC
           context.read<HistoryBloc>().add(LoadHistory());
         }
@@ -357,29 +359,45 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: Text(s.startDownloadConfirm),
+                      content: Text(
+                          '${detail.title}\n\n${s.offlineDownloadFrom(detail.source?.label ?? s.offlineSourceRequired, detail.fileCount)}'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
                           child: Text(s.cancel),
                         ),
                         FilledButton(
-                          onPressed: () => Navigator.pop(ctx, true),
+                          onPressed: detail.source == null
+                              ? null
+                              : () => Navigator.pop(ctx, true),
                           child: Text(s.download),
                         ),
                       ],
                     ),
                   );
                   if (confirmed != true || !context.mounted) return;
+                  final completion = Completer<void>();
                   context.read<DownloadBloc>().add(StartDownload(
+                        source: detail.source,
+                        completer: completion,
                         gid: detail.gid,
                         token: detail.token,
                         title: detail.title,
                         thumbUrl: detail.thumbUrl,
                         totalPages: detail.fileCount,
                       ));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(s.downloadStarted)),
-                  );
+                  try {
+                    await completion.future;
+                    if (context.mounted)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(s.downloadStarted)));
+                  } catch (error) {
+                    if (context.mounted)
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(s.offlineError(error is OfflineFailure
+                              ? error.code
+                              : 'storage'))));
+                  }
                 },
                 icon: const Icon(Icons.download, size: 20),
                 tooltip: s.download,

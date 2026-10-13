@@ -16,6 +16,7 @@ class HistoryEntries extends Table {
   IntColumn get lastReadPage => integer().withDefault(const Constant(0))();
   IntColumn get totalPages => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastReadAt => dateTime()();
+  TextColumn get source => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {gid};
@@ -61,11 +62,46 @@ class GalleryWarningAcceptances extends Table {
 
 // --- Database ---
 
+class OfflineGalleries extends Table {
+  TextColumn get id => text()();
+  TextColumn get source => text().nullable()();
+  IntColumn get gid => integer()();
+  TextColumn get token => text()();
+  TextColumn get title => text()();
+  IntColumn get totalPages => integer()();
+  TextColumn get status => text().withDefault(const Constant('paused'))();
+  TextColumn get reason => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  IntColumn get lastReadPage => integer().withDefault(const Constant(0))();
+  BoolColumn get indexReady => boolean().withDefault(const Constant(false))();
+  BoolColumn get everCompleted =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get legacyGid => integer().nullable()();
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class OfflinePages extends Table {
+  TextColumn get bookId => text().references(OfflineGalleries, #id)();
+  IntColumn get pageIndex => integer()();
+  TextColumn get pageToken => text()();
+  TextColumn get relativePath => text().nullable()();
+  TextColumn get format => text().nullable()();
+  IntColumn get bytes => integer().withDefault(const Constant(0))();
+  TextColumn get sha256 => text().nullable()();
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+  TextColumn get error => text().nullable()();
+  @override
+  Set<Column> get primaryKey => {bookId, pageIndex};
+}
+
 @DriftDatabase(tables: [
   HistoryEntries,
   LocalFavorites,
   DownloadTasks,
-  GalleryWarningAcceptances
+  GalleryWarningAcceptances,
+  OfflineGalleries,
+  OfflinePages,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
@@ -73,13 +109,18 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
           if (from < 2) await m.createTable(galleryWarningAcceptances);
+          if (from < 3) {
+            await m.addColumn(historyEntries, historyEntries.source);
+            await m.createTable(offlineGalleries);
+            await m.createTable(offlinePages);
+          }
         },
       );
 

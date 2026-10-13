@@ -73,6 +73,7 @@ android {
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        manifestPlaceholders.appLabel = System.getenv('OVIEWER_OFFLINE_TEST') == '1' ? 'OViewer Offline Test' : 'oviewer'
     }
 
     signingConfigs {
@@ -87,6 +88,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (System.getenv('OVIEWER_OFFLINE_TEST') == '1') {
+                applicationIdSuffix '.offline_test'
+            }
+        }
         release {
             signingConfig signingConfigs.release
         }
@@ -98,6 +104,9 @@ android {
 tasks.configureEach { task ->
     if (task.name == 'preReleaseBuild') {
         task.doFirst {
+            if (System.getenv('OVIEWER_OFFLINE_TEST') == '1') {
+                throw new GradleException('Offline fixture builds must never be release installers.')
+            }
             if (!hasReleaseSigning || !rootProject.file(releaseSigning.storeFile).isFile()) {
                 throw new GradleException('Release signing requires all four ANDROID_KEYSTORE_PATH / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD environment variables, or (local builds only, with no signing environment variables set) android/key.properties containing storeFile / storePassword / keyAlias / keyPassword. Debug signing is never used for release builds.')
             }

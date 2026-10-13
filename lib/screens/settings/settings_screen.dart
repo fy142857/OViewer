@@ -1,3 +1,6 @@
+import '../../widgets/offline_settings_panel.dart';
+import '../../repositories/settings_repository.dart';
+import '../../core/services/offline_download_coordinator.dart';
 import '../../widgets/sponsor_panel.dart';
 import '../../blocs/daily_check_in/daily_check_in_cubit.dart';
 import '../../widgets/daily_check_in_tile.dart';
@@ -15,7 +18,6 @@ import '../../blocs/settings/settings_state.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/l10n/s.dart';
 import '../../core/network/eh_image_cache_manager.dart';
-import '../../repositories/download_repository.dart';
 import '../../widgets/site_settings_webview.dart';
 import '../../widgets/app_version_subtitle.dart';
 import '../../widgets/clear_image_cache_tile.dart';
@@ -33,24 +35,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _downloadSize = '0 B';
-
-  @override
-  void initState() {
-    super.initState();
-    _calculateSizes();
-  }
-
-  Future<void> _calculateSizes() async {
-    try {
-      final dlRepo = GetIt.I<DownloadRepository>();
-      final bytes = await dlRepo.getTotalDownloadSize();
-      setState(() => _downloadSize = _formatBytes(bytes));
-    } catch (_) {
-      setState(() => _downloadSize = '0 B');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
@@ -193,6 +177,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => _showReadingModeDialog(context, state.readingMode),
               ),
 
+              if (GetIt.I.isRegistered<OfflineDownloadCoordinator>()) ...[
+                _sectionHeader(s.offlineCache),
+                OfflineSettingsPanel(
+                    settings: GetIt.I<SettingsRepository>(),
+                    coordinator: GetIt.I<OfflineDownloadCoordinator>()),
+              ],
+
               // ---- Network ----
               _sectionHeader(s.network),
               SwitchListTile(
@@ -263,11 +254,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return completer.future;
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.download),
-                title: Text(s.downloadsStorage),
-                subtitle: Text(_downloadSize),
-              ),
 
               // ---- About ----
               _sectionHeader(s.about),
@@ -280,7 +266,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               CheckUpdateTile(
-                androidUpdater: Platform.isAndroid ? GetIt.I<UpdateCubit>() : null,
+                androidUpdater:
+                    Platform.isAndroid ? GetIt.I<UpdateCubit>() : null,
                 repository: GetIt.I<UpdateRepository>(),
                 openRelease: GetIt.I<ReleaseLinkOpener>().open,
               ),
@@ -451,17 +438,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
-  }
-
-  String _formatBytes(int bytes) {
-    if (bytes >= 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-    } else if (bytes >= 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    } else if (bytes >= 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    }
-    return '$bytes B';
   }
 }
 

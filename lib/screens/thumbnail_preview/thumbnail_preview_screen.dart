@@ -1,3 +1,4 @@
+import '../../models/gallery_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -17,12 +18,14 @@ class ThumbnailPreviewScreen extends StatelessWidget {
   final int gid;
   final String token;
   final int fileCount;
+  final GallerySource? source;
 
   const ThumbnailPreviewScreen({
     super.key,
     required this.gid,
     required this.token,
     required this.fileCount,
+    this.source,
   });
 
   @override
@@ -34,6 +37,7 @@ class ThumbnailPreviewScreen extends StatelessWidget {
         gid: gid,
         token: token,
         fileCount: fileCount,
+        source: source ?? GallerySource.current,
       ),
     );
   }
@@ -43,11 +47,13 @@ class _ThumbnailPreviewView extends StatefulWidget {
   final int gid;
   final String token;
   final int fileCount;
+  final GallerySource? source;
 
   const _ThumbnailPreviewView({
     required this.gid,
     required this.token,
     required this.fileCount,
+    this.source,
   });
 
   @override
@@ -142,6 +148,7 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
                   onTap: () {
                     Navigator.pushNamed(context, '/reader', arguments: {
                       'gid': widget.gid,
+                      'source': widget.source,
                       'token': widget.token,
                       'initialPage': thumb.pageIndex,
                     });

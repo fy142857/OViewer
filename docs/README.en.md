@@ -83,7 +83,7 @@ Use Releases for published versions and Actions for development branch builds.
 
 ## Current limitations
 
-- Downloads and offline reading are still being improved. Online reading is recommended for now.
+- Cache complete galleries from their confirmed EH/EX source and manage tasks in Downloads. Completed galleries open locally; partial downloads allow reading saved pages. Settings control concurrent galleries and global page slots. Android supports foreground-service downloads; iOS pauses in the background. Interrupted tasks resume manually after restart. See [offline cache details](OFFLINE_CACHE.md).
 - Browsing history and reading progress do not yet sync across devices.
 - The cache size limit controls disk files using least-recently-used cleanup. The displayed cache total also includes retained reader memory; manual clearing removes both.
 - iOS 12 is the deployment target; compatibility still needs to be verified on individual devices.

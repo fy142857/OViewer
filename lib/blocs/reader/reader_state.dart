@@ -1,11 +1,13 @@
 import 'package:equatable/equatable.dart';
 import '../../models/gallery_image.dart';
 import '../../models/reader_page_resource.dart';
+import '../../models/offline_book.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 
-enum ReaderStatus { initial, loading, ready, contentWarning, error }
+enum ReaderStatus { initial, loading, ready, contentWarning, error, deleted }
 
 class ReaderState extends Equatable {
+  final OfflineBook? offlineBook;
   final ReaderStatus status;
   final int gid;
   final String token;
@@ -25,6 +27,7 @@ class ReaderState extends Equatable {
   final String? errorMessage;
 
   const ReaderState({
+    this.offlineBook,
     this.status = ReaderStatus.initial,
     this.gid = 0,
     this.token = '',
@@ -47,6 +50,7 @@ class ReaderState extends Equatable {
   GalleryImage? get currentImage => loadedImages[currentPage];
 
   ReaderState copyWith({
+    OfflineBook? offlineBook,
     ReaderStatus? status,
     int? gid,
     String? token,
@@ -66,6 +70,7 @@ class ReaderState extends Equatable {
     String? errorMessage,
   }) {
     return ReaderState(
+      offlineBook: offlineBook ?? this.offlineBook,
       status: status ?? this.status,
       gid: gid ?? this.gid,
       token: token ?? this.token,
@@ -88,6 +93,7 @@ class ReaderState extends Equatable {
 
   @override
   List<Object?> get props => [
+        offlineBook,
         status,
         gid,
         token,

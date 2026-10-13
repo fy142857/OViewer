@@ -1,5 +1,13 @@
 import 'package:equatable/equatable.dart';
 import '../../models/reader_page_resource.dart';
+import '../../models/offline_book.dart';
+
+class OfflineReaderChanged extends ReaderEvent {
+  final OfflineBook? book;
+  const OfflineReaderChanged(this.book);
+  @override
+  List<Object?> get props => [book];
+}
 
 abstract class ReaderEvent extends Equatable {
   const ReaderEvent();

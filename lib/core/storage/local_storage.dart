@@ -21,6 +21,32 @@ class LocalStorage {
     return _prefs;
   }
 
+  int _offlineLimit(String key, int maximum, int fallback) {
+    final value = _prefs.get(key);
+    return value is int && value >= 1 && value <= maximum ? value : fallback;
+  }
+
+  int getOfflineParallelGalleries() =>
+      _offlineLimit('offline_parallel_galleries', 3, 2);
+  int getOfflineParallelPages() =>
+      _offlineLimit('offline_parallel_pages', 6, 4);
+
+  Future<void> _setOfflineLimit(String key, int value, int maximum) async {
+    if (value < 1 || value > maximum) throw ArgumentError.value(value);
+    try {
+      if (!await _prefs.setInt(key, value))
+        throw StateError('Could not save offline settings');
+    } catch (_) {
+      await _prefs.reload();
+      rethrow;
+    }
+  }
+
+  Future<void> setOfflineParallelGalleries(int value) =>
+      _setOfflineLimit('offline_parallel_galleries', value, 3);
+  Future<void> setOfflineParallelPages(int value) =>
+      _setOfflineLimit('offline_parallel_pages', value, 6);
+
   // Keep a detected update across settings visits and application restarts.
   static const _keyLatestReleaseVersion = 'latest_release_version';
   String? getLatestReleaseVersion() =>

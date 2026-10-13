@@ -60,9 +60,11 @@ class EhImageCacheManager extends CacheManager {
   /// in-flight requests. A new reader can request the same URL immediately.
   static FileService readerFileService(
     CookieManager cookies,
-    ReaderRequestController requests,
-  ) =>
-      _CookieHttpFileService(cookies, readerRequest: requests);
+    ReaderRequestController requests, {
+    int maxAttempts = 3,
+  }) =>
+      _CookieHttpFileService(cookies,
+          readerRequest: requests, maxAttempts: maxAttempts);
 
   EhImageCacheManager._(CookieManager cookieManager, int limitMB)
       : this._configured(
@@ -279,11 +281,13 @@ class _CookieHttpFileService extends FileService {
   final CookieManager _cookieManager;
   http.Client? _defaultHttpClient;
   final ReaderRequestController? readerRequest;
+  final int maxAttempts;
 
   _CookieHttpFileService(
     this._cookieManager, {
     http.Client? httpClient,
     this.readerRequest,
+    this.maxAttempts = 3,
   }) : _defaultHttpClient = httpClient;
 
   @override
@@ -305,6 +309,7 @@ class _CookieHttpFileService extends FileService {
     if (preferredUrl == null) {
       return _getWithRetries(
         url,
+        maxAttempts: maxAttempts,
         headers: headers,
         readerRequest: readerRequest,
       );
@@ -336,6 +341,7 @@ class _CookieHttpFileService extends FileService {
 
     return _getWithRetries(
       url,
+      maxAttempts: maxAttempts,
       headers: headers,
       readerRequest: readerRequest,
     );

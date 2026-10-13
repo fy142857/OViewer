@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../blocs/download/download_bloc.dart';
 import '../../blocs/download/download_event.dart';
 import '../../blocs/download/download_state.dart';
 import '../../core/l10n/s.dart';
-import '../../core/network/eh_image_cache_manager.dart';
-import '../../models/download_task.dart';
-import '../../widgets/loading_indicator.dart';
+import '../../core/network/offline_image_provider.dart';
+import '../../models/gallery_source.dart';
+import '../../models/offline_book.dart';
 
 class DownloadScreen extends StatefulWidget {
   const DownloadScreen({super.key});
-
   @override
   State<DownloadScreen> createState() => _DownloadScreenState();
 }
@@ -24,213 +21,193 @@ class _DownloadScreenState extends State<DownloadScreen> {
     context.read<DownloadBloc>().add(LoadDownloads());
   }
 
+  Future<void> _delete(OfflineBook book) async {
+    final s = S.of(context);
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                title: Text(s.delete),
+                content: Text(s.offlineDeleteConfirm),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(s.cancel)),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text(s.delete)),
+                ]));
+    if (confirmed == true && mounted)
+      context.read<DownloadBloc>().add(DeleteDownload(book.id));
+  }
+
+  Future<void> _source(OfflineBook book) async {
+    final s = S.of(context);
+    final source = await showDialog<GallerySource>(
+        context: context,
+        builder: (ctx) =>
+            SimpleDialog(title: Text(s.offlineChooseSource), children: [
+              Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(s.offlineSourceHint)),
+              for (final source in GallerySource.values)
+                SimpleDialogOption(
+                    onPressed: () => Navigator.pop(ctx, source),
+                    child: Text(source.label))
+            ]));
+    if (source == null || !mounted) return;
+    try {
+      await context
+          .read<DownloadBloc>()
+          .coordinator
+          .confirmLegacy(book.id, source);
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(s.offlineError(
+                error is OfflineFailure ? error.code : 'storage'))));
+    }
+  }
+
+  void _read(OfflineBook book) =>
+      Navigator.pushNamed(context, '/reader', arguments: {
+        'gid': book.record.gid,
+        'token': book.record.token,
+        'source': book.source,
+        'offlineId': book.id,
+      });
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final s = S.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(s.downloads)),
-      body: BlocBuilder<DownloadBloc, DownloadState>(
-        builder: (context, state) {
-          if (state.status == DownloadListStatus.loading &&
-              state.tasks.isEmpty) {
-            return const LoadingIndicator();
-          }
-          if (state.tasks.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.download_done,
-                      size: 64, color: theme.colorScheme.outline),
-                  const SizedBox(height: 16),
-                  Text(s.noDownloads, style: theme.textTheme.bodyLarge),
-                  const SizedBox(height: 4),
-                  Text(
-                    s.downloadFromDetail,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            itemCount: state.tasks.length,
-            itemBuilder: (context, index) {
-              final task = state.tasks[index];
-              return _buildDownloadItem(context, task, state);
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildDownloadItem(
-      BuildContext context, DownloadTask task, DownloadState state) {
-    final theme = Theme.of(context);
-    final isActive = state.activeDownloads.contains(task.gid);
-
-    return Slidable(
-      key: ValueKey(task.gid),
-      endActionPane: ActionPane(
-        motion: const BehindMotion(),
-        children: [
-          SlidableAction(
-            onPressed: (_) {
-              context.read<DownloadBloc>().add(DeleteDownload(task.gid));
-            },
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            icon: Icons.delete,
-            label: S.of(context).delete,
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: SizedBox(
-            width: 50,
-            height: 68,
-            child: CachedNetworkImage(
-              imageUrl: task.thumbUrl,
-              fit: BoxFit.cover,
-              cacheManager: EhImageCacheManager.instance,
-              errorWidget: (_, __, ___) => Container(
-                color: theme.colorScheme.surfaceVariant,
-                child: const Icon(Icons.broken_image, size: 20),
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          task.title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: task.progress,
-                minHeight: 4,
-                backgroundColor: theme.colorScheme.surfaceVariant,
-                color: _statusColor(task.status),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(_statusIcon(task.status),
-                    size: 14, color: _statusColor(task.status)),
-                const SizedBox(width: 4),
-                Text(
-                  _statusText(task),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: _statusColor(task.status),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${task.downloadedPages}/${task.totalPages}',
-                  style: theme.textTheme.labelSmall,
-                ),
-              ],
-            ),
-          ],
-        ),
-        trailing: _buildActionButton(context, task, isActive),
-        onTap: task.isComplete
-            ? () {
-                Navigator.pushNamed(context, '/reader', arguments: {
-                      'gid': task.gid,
-                      'token': task.token,
-                    });
-              }
-            : null,
-      ),
-    );
-  }
-
-  Widget? _buildActionButton(
-      BuildContext context, DownloadTask task, bool isActive) {
-    switch (task.status) {
-      case DownloadStatus.downloading:
-        return IconButton(
-          icon: const Icon(Icons.pause),
-          onPressed: () =>
-              context.read<DownloadBloc>().add(PauseDownload(task.gid)),
-        );
-      case DownloadStatus.paused:
-      case DownloadStatus.failed:
-        return IconButton(
-          icon: const Icon(Icons.play_arrow),
-          onPressed: () => context.read<DownloadBloc>().add(
-                ResumeDownload(gid: task.gid, token: task.token),
-              ),
-        );
-      case DownloadStatus.completed:
-        return const Icon(Icons.check_circle, color: Colors.green);
-      case DownloadStatus.pending:
-        return const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        );
-    }
-  }
-
-  IconData _statusIcon(DownloadStatus status) {
-    switch (status) {
-      case DownloadStatus.downloading:
-        return Icons.downloading;
-      case DownloadStatus.paused:
-        return Icons.pause_circle;
-      case DownloadStatus.completed:
-        return Icons.check_circle;
-      case DownloadStatus.failed:
-        return Icons.error;
-      case DownloadStatus.pending:
-        return Icons.hourglass_empty;
-    }
-  }
-
-  Color _statusColor(DownloadStatus status) {
-    switch (status) {
-      case DownloadStatus.downloading:
-        return Colors.blue;
-      case DownloadStatus.paused:
-        return Colors.orange;
-      case DownloadStatus.completed:
-        return Colors.green;
-      case DownloadStatus.failed:
-        return Colors.red;
-      case DownloadStatus.pending:
-        return Colors.grey;
-    }
-  }
-
-  String _statusText(DownloadTask task) {
-    final s = S.of(context);
-    switch (task.status) {
-      case DownloadStatus.downloading:
-        return s.downloading((task.progress * 100).toInt());
-      case DownloadStatus.paused:
-        return s.paused;
-      case DownloadStatus.completed:
-        return s.completed;
-      case DownloadStatus.failed:
-        return s.failedTapRetry;
-      case DownloadStatus.pending:
-        return s.pending;
-    }
+        appBar: AppBar(title: Text(s.downloads)),
+        body: BlocConsumer<DownloadBloc, DownloadState>(
+          listenWhen: (a, b) =>
+              b.errorMessage != null && a.errorMessage != b.errorMessage,
+          listener: (context, state) => ScaffoldMessenger.of(context)
+              .showSnackBar(
+                  SnackBar(content: Text(s.offlineError(state.errorMessage!)))),
+          builder: (context, state) {
+            if (state.status == DownloadListStatus.initial ||
+                state.status == DownloadListStatus.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state.tasks.isEmpty)
+              return Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(state.status == DownloadListStatus.error
+                    ? s.offlineError('storage')
+                    : s.noDownloads),
+                if (state.status == DownloadListStatus.error)
+                  TextButton(
+                      onPressed: () =>
+                          context.read<DownloadBloc>().add(LoadDownloads()),
+                      child: Text(s.retry)),
+              ]));
+            return ListView.builder(
+                itemCount: state.tasks.length,
+                itemBuilder: (context, index) {
+                  final book = state.tasks[index];
+                  final completed = book.pages.where(
+                      (p) => p.status == 'completed' && p.relativePath != null);
+                  final active = const [
+                    OfflineStatus.queued,
+                    OfflineStatus.preparing,
+                    OfflineStatus.downloading
+                  ].contains(book.status);
+                  return Card(
+                      child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SizedBox(
+                                          width: 52,
+                                          height: 72,
+                                          child: completed.isEmpty
+                                              ? const Icon(Icons.menu_book)
+                                              : Image(
+                                                  image: OfflineImageProvider(
+                                                      context
+                                                          .read<DownloadBloc>()
+                                                          .coordinator
+                                                          .repository
+                                                          .files,
+                                                      completed.first),
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      const Icon(
+                                                          Icons.broken_image))),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                          child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                            Text(book.record.title,
+                                                maxLines: 2,
+                                                overflow:
+                                                    TextOverflow.ellipsis),
+                                            Text(
+                                                '${book.source?.shortName ?? s.offlineSourceRequired} · ${s.offlineStatus(book.record.status)}'),
+                                            Text(
+                                                '${book.completedPages}/${book.record.totalPages} · ${(book.bytes / 1048576).toStringAsFixed(1)} MB'),
+                                          ])),
+                                    ]),
+                                const SizedBox(height: 8),
+                                LinearProgressIndicator(
+                                    value: book.record.totalPages <= 0
+                                        ? 0
+                                        : book.completedPages /
+                                            book.record.totalPages),
+                                if (book.record.reason != null)
+                                  Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: Text(
+                                          s.offlineError(book.record.reason!))),
+                                Wrap(
+                                    alignment: WrapAlignment.end,
+                                    spacing: 8,
+                                    children: [
+                                      if (book.source != null &&
+                                          book.completedPages > 0 &&
+                                          book.status != OfflineStatus.deleting)
+                                        TextButton(
+                                            onPressed: () => _read(book),
+                                            child: Text(s.offlineRead)),
+                                      if (book.source == null)
+                                        TextButton(
+                                            onPressed: () => _source(book),
+                                            child: Text(s.offlineChooseSource)),
+                                      if (active)
+                                        TextButton(
+                                            onPressed: () => context
+                                                .read<DownloadBloc>()
+                                                .add(PauseDownload(book.id)),
+                                            child: Text(s.offlinePause)),
+                                      if (book.source != null &&
+                                          !active &&
+                                          !const [
+                                            OfflineStatus.completed,
+                                            OfflineStatus.deleting
+                                          ].contains(book.status))
+                                        TextButton(
+                                            onPressed: () => context
+                                                .read<DownloadBloc>()
+                                                .add(ResumeDownload(book.id)),
+                                            child: Text(s.offlineResume)),
+                                      IconButton(
+                                          tooltip: s.delete,
+                                          onPressed: () => _delete(book),
+                                          icon:
+                                              const Icon(Icons.delete_outline)),
+                                    ]),
+                              ])));
+                });
+          },
+        ));
   }
 }

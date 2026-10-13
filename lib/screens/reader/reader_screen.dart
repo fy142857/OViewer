@@ -28,17 +28,23 @@ import '../../core/services/page_image_exporter.dart';
 import '../../models/reader_page_resource.dart';
 import '../../widgets/reader_page_menu.dart';
 import '../../widgets/gallery_warning_view.dart';
+import '../../core/network/offline_image_provider.dart';
+import '../../core/services/offline_download_coordinator.dart';
+import '../../models/offline_book.dart';
+import '../../repositories/offline_repository.dart';
 
 class ReaderScreen extends StatefulWidget {
   final int gid;
   final String token;
   final int? initialPage;
+  final OfflineBook? offlineBook;
 
   const ReaderScreen({
     super.key,
     required this.gid,
     required this.token,
     this.initialPage,
+    this.offlineBook,
   });
 
   @override
@@ -114,6 +120,9 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
           GetIt.I<HistoryRepository>(),
           GetIt.I<SettingsRepository>(),
           requestController: _requests,
+          offlineBook: widget.offlineBook,
+          offlineRepository:
+              widget.offlineBook == null ? null : GetIt.I<OfflineRepository>(),
           initialRequest: LoadReaderImages(
               gid: widget.gid,
               token: widget.token,
@@ -163,7 +172,13 @@ class _ReaderViewState extends State<_ReaderView> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(keepPage: false);
+    final initial = context.read<ReaderBloc>().state;
+    _pageController =
+        PageController(initialPage: initial.currentPage, keepPage: false);
+    if (initial.offlineBook != null) {
+      _positionInitialized = true;
+      _lastReadingMode = initial.readingMode;
+    }
     _imageFiles = EhImageCacheManager.readerFileService(
       GetIt.I<app.CookieManager>(),
       widget.requests,
@@ -250,6 +265,10 @@ class _ReaderViewState extends State<_ReaderView> {
           prev.showUI != curr.showUI,
       listener: (context, state) {
         if (widget.requests.isCancelled) return;
+        if (state.status == ReaderStatus.deleted) {
+          Navigator.of(context).pop();
+          return;
+        }
         if (state.status == ReaderStatus.ready &&
             (!_positionInitialized || _lastReadingMode != state.readingMode)) {
           _pageController.dispose();
@@ -279,6 +298,8 @@ class _ReaderViewState extends State<_ReaderView> {
         }
       },
       builder: (context, state) {
+        if (state.status == ReaderStatus.deleted)
+          return const SizedBox.shrink();
         if (state.status == ReaderStatus.initial ||
             state.status == ReaderStatus.loading) {
           return Scaffold(
@@ -353,6 +374,48 @@ class _ReaderViewState extends State<_ReaderView> {
 
   // ---- Horizontal PageView Reader (LR / RL) ----
   void _toggleUI() => context.read<ReaderBloc>().add(ToggleReaderUI());
+
+  OfflineImageProvider? _offlineProvider(ReaderState state, int index,
+      {bool thumbnail = false}) {
+    final matching = state.offlineBook!.pages.where((p) =>
+        p.pageIndex == index &&
+        p.status == 'completed' &&
+        p.relativePath != null &&
+        p.sha256 != null);
+    if (matching.isEmpty) return null;
+    final provider =
+        OfflineImageProvider(GetIt.I<OfflineRepository>().files, matching.first,
+            session: widget.requests,
+            attempt: state.imageAttempts[index] ?? 0,
+            onResource: thumbnail
+                ? null
+                : (resource) {
+                    if (!mounted || widget.requests.isCancelled) {
+                      resource.releaseMemory();
+                      return;
+                    }
+                    if (!_isResourceVisible(index)) resource.releaseMemory();
+                    context.read<ReaderBloc>().add(ReaderImageReady(
+                        index, state.imageAttempts[index] ?? 0, resource));
+                  });
+    widget.requests
+        .onCancel(() => PaintingBinding.instance.imageCache.evict(provider));
+    return provider;
+  }
+
+  Widget _offlineMissing(int index, {bool damaged = false}) => Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.offline_pin_outlined, color: Colors.white54, size: 40),
+        const SizedBox(height: 8),
+        Text(
+            damaged
+                ? S.of(context).offlineError('damaged_file')
+                : S.of(context).offlineNotCached,
+            style: const TextStyle(color: Colors.white70)),
+        TextButton(
+            onPressed: () => _showPageMenu(index),
+            child: Text(S.of(context).offlinePageActions)),
+      ]));
 
   ReaderImageProvider _imageProvider(String url, {int attempt = 0, int? page}) {
     final scope =
@@ -456,6 +519,16 @@ class _ReaderViewState extends State<_ReaderView> {
     if (!mounted || widget.requests.isCancelled) return;
     if (result == 'reload') {
       bloc.add(RetryImageAtIndex(page));
+    } else if (result == 'repair' && bloc.state.offlineBook != null) {
+      try {
+        await GetIt.I<OfflineDownloadCoordinator>()
+            .repair(bloc.state.offlineBook!.id, page);
+      } catch (error) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(s.offlineError(
+                  error is OfflineFailure ? error.code : 'network'))));
+      }
     } else if (result is ReaderPageResource &&
         !_savingPages.value.contains(page)) {
       _savingPages.value = {..._savingPages.value, page};
@@ -528,6 +601,22 @@ class _ReaderViewState extends State<_ReaderView> {
       itemCount: state.totalPages,
       reverse: state.readingMode == 1, // RTL
       builder: (context, index) {
+        if (state.offlineBook != null) {
+          final provider = _offlineProvider(state, index);
+          if (provider == null)
+            return PhotoViewGalleryPageOptions.customChild(
+                disableGestures: true,
+                child: GestureDetector(
+                    onTap: _toggleUI, child: _offlineMissing(index)));
+          return PhotoViewGalleryPageOptions(
+              onTapUp: (_, __, ___) => _toggleUI(),
+              imageProvider: provider,
+              initialScale: PhotoViewComputedScale.contained,
+              minScale: PhotoViewComputedScale.contained,
+              maxScale: PhotoViewComputedScale.covered * 3,
+              errorBuilder: (_, __, ___) =>
+                  _offlineMissing(index, damaged: true));
+        }
         final image = state.loadedImages[index];
         if (image == null ||
             state.loadingIndices.contains(index) ||
@@ -577,6 +666,18 @@ class _ReaderViewState extends State<_ReaderView> {
           itemPositionsListener: _verticalPositionsListener,
           initialScrollIndex: state.currentPage,
           itemBuilder: (context, index) {
+            if (state.offlineBook != null) {
+              final provider = _offlineProvider(state, index);
+              return _pageSurface(
+                  index,
+                  provider == null
+                      ? SizedBox(height: 300, child: _offlineMissing(index))
+                      : ReaderPageImage(
+                          image: provider,
+                          errorBuilder: (_, __, ___) => SizedBox(
+                              height: 300,
+                              child: _offlineMissing(index, damaged: true))));
+            }
             final image = state.loadedImages[index];
             if (image == null ||
                 state.loadingIndices.contains(index) ||
@@ -645,7 +746,7 @@ class _ReaderViewState extends State<_ReaderView> {
             ),
             Expanded(
               child: Text(
-                '${state.currentPage + 1} / ${state.totalPages}',
+                '${state.offlineBook == null ? '' : '${state.offlineBook!.source?.shortName ?? ''} · '}${state.currentPage + 1} / ${state.totalPages}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
@@ -823,6 +924,19 @@ class _ReaderViewState extends State<_ReaderView> {
   }
 
   Widget _buildStripThumbnail(ThumbnailInfo thumb, int index) {
+    final state = context.read<ReaderBloc>().state;
+    if (state.offlineBook != null) {
+      final provider = _offlineProvider(state, index, thumbnail: true);
+      return provider == null
+          ? Center(
+              child: Text('${index + 1}',
+                  style: const TextStyle(color: Colors.white54)))
+          : Image(
+              image: provider,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.broken_image, color: Colors.white54));
+    }
     if (thumb.thumbUrl.isEmpty) {
       return Container(
         color: Colors.grey[800],

@@ -10,11 +10,16 @@ import '../../core/network/api_exception.dart';
 import '../../core/network/reader_index_session.dart';
 import '../../core/network/reader_request_controller.dart';
 import '../../models/gallery_image.dart';
+import '../../models/offline_book.dart';
+import '../../repositories/offline_repository.dart';
+import '../../core/parser/gallery_detail_parser.dart';
 import 'reader_event.dart';
 import 'reader_state.dart';
 import '../../core/parser/gallery_content_warning.dart';
 
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
+  final OfflineRepository? offlineRepository;
+  StreamSubscription<void>? _offlineChanges;
   final GalleryRepository _galleryRepo;
   final HistoryRepository _historyRepo;
   final SettingsRepository _settingsRepo;
@@ -66,13 +71,45 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc(this._galleryRepo, this._historyRepo, this._settingsRepo,
       {ReaderRequestController? requestController,
       ReaderReentryCache? reentryCache,
+      OfflineBook? offlineBook,
+      this.offlineRepository,
       LoadReaderImages? initialRequest})
       : _requests = requestController ?? ReaderRequestController(),
         _reentry = reentryCache ?? ReaderReentryCache.shared,
-        super(_initial(_settingsRepo, reentryCache ?? ReaderReentryCache.shared,
-            initialRequest)) {
+        super(offlineBook == null
+            ? _initial(_settingsRepo, reentryCache ?? ReaderReentryCache.shared,
+                initialRequest)
+            : ReaderState(
+                status: ReaderStatus.ready,
+                offlineBook: offlineBook,
+                gid: offlineBook.record.gid,
+                token: offlineBook.record.token,
+                totalPages: offlineBook.record.totalPages,
+                currentPage: (initialRequest?.initialPage ??
+                        offlineBook.record.lastReadPage)
+                    .clamp(0, offlineBook.record.totalPages - 1),
+                readingMode: _settingsRepo.getReadingMode(),
+                thumbnails: {
+                    for (var i = 0; i < offlineBook.record.totalPages; i++)
+                      i: ThumbnailInfo(
+                          pageToken: '', pageIndex: i, thumbUrl: '')
+                  })) {
+    if (offlineBook != null && offlineRepository != null) {
+      _offlineChanges = offlineRepository!.changes
+          .asyncMap((_) => offlineRepository!.get(offlineBook.id))
+          .listen((book) {
+        if (!isClosed) add(OfflineReaderChanged(book));
+      });
+    }
+    on<OfflineReaderChanged>((event, emit) {
+      if (event.book == null || event.book!.status == OfflineStatus.deleting) {
+        emit(state.copyWith(status: ReaderStatus.deleted));
+      } else {
+        emit(state.copyWith(offlineBook: event.book));
+      }
+    });
     _cacheGeneration = _reentry.generation;
-    if (state.status == ReaderStatus.ready) {
+    if (state.status == ReaderStatus.ready && offlineBook == null) {
       final snapshot = _reentry.get(galleryKey)!;
       _index =
           ReaderIndexSession(_galleryRepo, _requests, state.gid, state.token)
@@ -117,7 +154,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ReaderImageReady>((event, emit) {
       if (_active &&
           (state.imageAttempts[event.index] ?? 0) == event.attempt &&
-          state.loadedImages.containsKey(event.index) &&
+          (state.loadedImages.containsKey(event.index) ||
+              state.offlineBook != null) &&
           !state.loadingIndices.contains(event.index)) {
         emit(state.copyWith(readyResources: {
           ...state.readyResources,
@@ -148,6 +186,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   Future<void> _onLoadImages(
       LoadReaderImages event, Emitter<ReaderState> emit) async {
     if (!_active || _starting) return;
+    if (state.offlineBook != null) {
+      _saveProgress(state.currentPage);
+      return;
+    }
     if (_restored && event.gid == state.gid && event.token == state.token) {
       _restored = false;
       _reentry.focus(galleryKey, state.currentPage);
@@ -209,14 +251,24 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   Future<void> _onLoadImageAtIndex(
       LoadImageAtIndex event, Emitter<ReaderState> emit) async {
+    if (state.offlineBook != null) return;
     if (state.loadedImages.containsKey(event.index) ||
         state.failedIndices.contains(event.index)) return;
     await _loadImage(event.index, emit);
   }
 
   Future<void> _onRetryImageAtIndex(
-          RetryImageAtIndex event, Emitter<ReaderState> emit) =>
-      _loadImage(event.index, emit, retry: true);
+      RetryImageAtIndex event, Emitter<ReaderState> emit) async {
+    if (state.offlineBook != null) {
+      state.readyResources[event.index]?.releaseMemory();
+      emit(state.copyWith(imageAttempts: {
+        ...state.imageAttempts,
+        event.index: (state.imageAttempts[event.index] ?? 0) + 1
+      }, readyResources: {...state.readyResources}..remove(event.index)));
+      return;
+    }
+    await _loadImage(event.index, emit, retry: true);
+  }
 
   void _publishIndex(Emitter<ReaderState> emit) {
     final index = _index!;
@@ -351,6 +403,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   void _preloadAdjacent(int page) {
+    if (state.offlineBook != null) return;
     if (!_active) return;
     for (var distance = 1;
         distance <= AppConstants.preloadPageCount;
@@ -382,6 +435,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   void _saveProgress(int page) {
+    if (state.offlineBook != null) {
+      unawaited(offlineRepository
+          ?.saveProgress(state.offlineBook!.id, page)
+          .catchError((Object _) {}));
+    }
     unawaited(_historyRepo
         .updateProgress(state.gid, page, state.totalPages)
         .catchError((Object _) {}));
@@ -389,6 +447,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   @override
   Future<void> close() {
+    _offlineChanges?.cancel();
     _requests.cancel();
     return super.close();
   }

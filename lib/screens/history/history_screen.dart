@@ -1,3 +1,6 @@
+import 'package:get_it/get_it.dart';
+import '../../models/gallery_source.dart';
+import '../../repositories/offline_repository.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -182,14 +185,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ],
             ),
-            onTap: () => Navigator.pushNamed(
-              context,
-              '/gallery',
-              arguments: {
-                'gid': entry.gid,
-                'token': entry.token,
-              },
-            ),
+            onTap: () async {
+              var route = '/gallery';
+              final source = GallerySource.parse(entry.source);
+              if (GetIt.I.isRegistered<OfflineRepository>()) {
+                final repository = GetIt.I<OfflineRepository>();
+                await repository.initialize();
+                if ((await repository.matching(entry.gid, entry.token,
+                        source: source))
+                    .isNotEmpty) route = '/reader';
+              }
+              if (context.mounted)
+                Navigator.pushNamed(context, route, arguments: {
+                  'gid': entry.gid,
+                  'token': entry.token,
+                  'source': source,
+                });
+            },
           ),
         );
       },

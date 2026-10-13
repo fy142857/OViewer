@@ -62,6 +62,7 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
 
     // Optimistic UI update
     final updatedDetail = GalleryDetail(
+      source: detail.source,
       gid: detail.gid,
       token: detail.token,
       title: detail.title,
@@ -125,6 +126,7 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
       // Update the detail with new rating
       if (state.detail != null) {
         final updated = GalleryDetail(
+          source: state.detail!.source,
           gid: state.detail!.gid,
           token: state.detail!.token,
           title: state.detail!.title,

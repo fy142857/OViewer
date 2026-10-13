@@ -14,6 +14,7 @@ class CookieManager {
   static const sessionRequestKey = 'oviewer.cookieSession';
   int _sessionRevision = 0;
   int? get sessionRevision => _sessionRevision;
+  void Function()? onSessionChanged;
   static final _log = Logger();
   late final PersistCookieJar _cookieJar;
   bool _initialized = false;
@@ -163,6 +164,7 @@ class CookieManager {
   }) {
     if (_logoutPending) return Future.error(const LogoutCleanupException());
     final revision = ++_sessionRevision;
+    onSessionChanged?.call();
     ReaderIndexCache.shared.clear();
     return _serial(() async {
       _requireCurrent(revision);
@@ -288,6 +290,7 @@ class CookieManager {
     final running = _logoutTask;
     if (running != null) return running;
     _sessionRevision++;
+    onSessionChanged?.call();
     _logoutPending = true;
     _acceptAuthentication = false;
     ReaderIndexCache.shared.clear();

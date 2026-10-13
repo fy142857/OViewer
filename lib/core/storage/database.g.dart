@@ -75,6 +75,11 @@ class $HistoryEntriesTable extends HistoryEntries
   late final GeneratedColumn<DateTime> lastReadAt = GeneratedColumn<DateTime>(
       'last_read_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+      'source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         gid,
@@ -86,7 +91,8 @@ class $HistoryEntriesTable extends HistoryEntries
         fileCount,
         lastReadPage,
         totalPages,
-        lastReadAt
+        lastReadAt,
+        source
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -152,6 +158,10 @@ class $HistoryEntriesTable extends HistoryEntries
     } else if (isInserting) {
       context.missing(_lastReadAtMeta);
     }
+    if (data.containsKey('source')) {
+      context.handle(_sourceMeta,
+          source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+    }
     return context;
   }
 
@@ -181,6 +191,8 @@ class $HistoryEntriesTable extends HistoryEntries
           .read(DriftSqlType.int, data['${effectivePrefix}total_pages'])!,
       lastReadAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}last_read_at'])!,
+      source: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source']),
     );
   }
 
@@ -201,6 +213,7 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
   final int lastReadPage;
   final int totalPages;
   final DateTime lastReadAt;
+  final String? source;
   const HistoryEntry(
       {required this.gid,
       required this.token,
@@ -211,7 +224,8 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
       required this.fileCount,
       required this.lastReadPage,
       required this.totalPages,
-      required this.lastReadAt});
+      required this.lastReadAt,
+      this.source});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -225,6 +239,9 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
     map['last_read_page'] = Variable<int>(lastReadPage);
     map['total_pages'] = Variable<int>(totalPages);
     map['last_read_at'] = Variable<DateTime>(lastReadAt);
+    if (!nullToAbsent || source != null) {
+      map['source'] = Variable<String>(source);
+    }
     return map;
   }
 
@@ -240,6 +257,8 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
       lastReadPage: Value(lastReadPage),
       totalPages: Value(totalPages),
       lastReadAt: Value(lastReadAt),
+      source:
+          source == null && nullToAbsent ? const Value.absent() : Value(source),
     );
   }
 
@@ -257,6 +276,7 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
       lastReadPage: serializer.fromJson<int>(json['lastReadPage']),
       totalPages: serializer.fromJson<int>(json['totalPages']),
       lastReadAt: serializer.fromJson<DateTime>(json['lastReadAt']),
+      source: serializer.fromJson<String?>(json['source']),
     );
   }
   @override
@@ -273,6 +293,7 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
       'lastReadPage': serializer.toJson<int>(lastReadPage),
       'totalPages': serializer.toJson<int>(totalPages),
       'lastReadAt': serializer.toJson<DateTime>(lastReadAt),
+      'source': serializer.toJson<String?>(source),
     };
   }
 
@@ -286,7 +307,8 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
           int? fileCount,
           int? lastReadPage,
           int? totalPages,
-          DateTime? lastReadAt}) =>
+          DateTime? lastReadAt,
+          Value<String?> source = const Value.absent()}) =>
       HistoryEntry(
         gid: gid ?? this.gid,
         token: token ?? this.token,
@@ -298,6 +320,7 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
         lastReadPage: lastReadPage ?? this.lastReadPage,
         totalPages: totalPages ?? this.totalPages,
         lastReadAt: lastReadAt ?? this.lastReadAt,
+        source: source.present ? source.value : this.source,
       );
   @override
   String toString() {
@@ -311,14 +334,15 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
           ..write('fileCount: $fileCount, ')
           ..write('lastReadPage: $lastReadPage, ')
           ..write('totalPages: $totalPages, ')
-          ..write('lastReadAt: $lastReadAt')
+          ..write('lastReadAt: $lastReadAt, ')
+          ..write('source: $source')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(gid, token, title, thumbUrl, category, rating,
-      fileCount, lastReadPage, totalPages, lastReadAt);
+      fileCount, lastReadPage, totalPages, lastReadAt, source);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -332,7 +356,8 @@ class HistoryEntry extends DataClass implements Insertable<HistoryEntry> {
           other.fileCount == this.fileCount &&
           other.lastReadPage == this.lastReadPage &&
           other.totalPages == this.totalPages &&
-          other.lastReadAt == this.lastReadAt);
+          other.lastReadAt == this.lastReadAt &&
+          other.source == this.source);
 }
 
 class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
@@ -346,6 +371,7 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
   final Value<int> lastReadPage;
   final Value<int> totalPages;
   final Value<DateTime> lastReadAt;
+  final Value<String?> source;
   const HistoryEntriesCompanion({
     this.gid = const Value.absent(),
     this.token = const Value.absent(),
@@ -357,6 +383,7 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
     this.lastReadPage = const Value.absent(),
     this.totalPages = const Value.absent(),
     this.lastReadAt = const Value.absent(),
+    this.source = const Value.absent(),
   });
   HistoryEntriesCompanion.insert({
     this.gid = const Value.absent(),
@@ -369,6 +396,7 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
     this.lastReadPage = const Value.absent(),
     this.totalPages = const Value.absent(),
     required DateTime lastReadAt,
+    this.source = const Value.absent(),
   })  : token = Value(token),
         title = Value(title),
         thumbUrl = Value(thumbUrl),
@@ -384,6 +412,7 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
     Expression<int>? lastReadPage,
     Expression<int>? totalPages,
     Expression<DateTime>? lastReadAt,
+    Expression<String>? source,
   }) {
     return RawValuesInsertable({
       if (gid != null) 'gid': gid,
@@ -396,6 +425,7 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
       if (lastReadPage != null) 'last_read_page': lastReadPage,
       if (totalPages != null) 'total_pages': totalPages,
       if (lastReadAt != null) 'last_read_at': lastReadAt,
+      if (source != null) 'source': source,
     });
   }
 
@@ -409,7 +439,8 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
       Value<int>? fileCount,
       Value<int>? lastReadPage,
       Value<int>? totalPages,
-      Value<DateTime>? lastReadAt}) {
+      Value<DateTime>? lastReadAt,
+      Value<String?>? source}) {
     return HistoryEntriesCompanion(
       gid: gid ?? this.gid,
       token: token ?? this.token,
@@ -421,6 +452,7 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
       lastReadPage: lastReadPage ?? this.lastReadPage,
       totalPages: totalPages ?? this.totalPages,
       lastReadAt: lastReadAt ?? this.lastReadAt,
+      source: source ?? this.source,
     );
   }
 
@@ -457,6 +489,9 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
     if (lastReadAt.present) {
       map['last_read_at'] = Variable<DateTime>(lastReadAt.value);
     }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
     return map;
   }
 
@@ -472,7 +507,8 @@ class HistoryEntriesCompanion extends UpdateCompanion<HistoryEntry> {
           ..write('fileCount: $fileCount, ')
           ..write('lastReadPage: $lastReadPage, ')
           ..write('totalPages: $totalPages, ')
-          ..write('lastReadAt: $lastReadAt')
+          ..write('lastReadAt: $lastReadAt, ')
+          ..write('source: $source')
           ..write(')'))
         .toString();
   }
@@ -1478,6 +1514,1076 @@ class GalleryWarningAcceptancesCompanion
   }
 }
 
+class $OfflineGalleriesTable extends OfflineGalleries
+    with TableInfo<$OfflineGalleriesTable, OfflineGallery> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OfflineGalleriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+      'source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _gidMeta = const VerificationMeta('gid');
+  @override
+  late final GeneratedColumn<int> gid = GeneratedColumn<int>(
+      'gid', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _tokenMeta = const VerificationMeta('token');
+  @override
+  late final GeneratedColumn<String> token = GeneratedColumn<String>(
+      'token', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _totalPagesMeta =
+      const VerificationMeta('totalPages');
+  @override
+  late final GeneratedColumn<int> totalPages = GeneratedColumn<int>(
+      'total_pages', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('paused'));
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+      'reason', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _lastReadPageMeta =
+      const VerificationMeta('lastReadPage');
+  @override
+  late final GeneratedColumn<int> lastReadPage = GeneratedColumn<int>(
+      'last_read_page', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _indexReadyMeta =
+      const VerificationMeta('indexReady');
+  @override
+  late final GeneratedColumn<bool> indexReady = GeneratedColumn<bool>(
+      'index_ready', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("index_ready" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _everCompletedMeta =
+      const VerificationMeta('everCompleted');
+  @override
+  late final GeneratedColumn<bool> everCompleted = GeneratedColumn<bool>(
+      'ever_completed', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("ever_completed" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _legacyGidMeta =
+      const VerificationMeta('legacyGid');
+  @override
+  late final GeneratedColumn<int> legacyGid = GeneratedColumn<int>(
+      'legacy_gid', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        source,
+        gid,
+        token,
+        title,
+        totalPages,
+        status,
+        reason,
+        createdAt,
+        lastReadPage,
+        indexReady,
+        everCompleted,
+        legacyGid
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'offline_galleries';
+  @override
+  VerificationContext validateIntegrity(Insertable<OfflineGallery> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(_sourceMeta,
+          source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+    }
+    if (data.containsKey('gid')) {
+      context.handle(
+          _gidMeta, gid.isAcceptableOrUnknown(data['gid']!, _gidMeta));
+    } else if (isInserting) {
+      context.missing(_gidMeta);
+    }
+    if (data.containsKey('token')) {
+      context.handle(
+          _tokenMeta, token.isAcceptableOrUnknown(data['token']!, _tokenMeta));
+    } else if (isInserting) {
+      context.missing(_tokenMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('total_pages')) {
+      context.handle(
+          _totalPagesMeta,
+          totalPages.isAcceptableOrUnknown(
+              data['total_pages']!, _totalPagesMeta));
+    } else if (isInserting) {
+      context.missing(_totalPagesMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('reason')) {
+      context.handle(_reasonMeta,
+          reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('last_read_page')) {
+      context.handle(
+          _lastReadPageMeta,
+          lastReadPage.isAcceptableOrUnknown(
+              data['last_read_page']!, _lastReadPageMeta));
+    }
+    if (data.containsKey('index_ready')) {
+      context.handle(
+          _indexReadyMeta,
+          indexReady.isAcceptableOrUnknown(
+              data['index_ready']!, _indexReadyMeta));
+    }
+    if (data.containsKey('ever_completed')) {
+      context.handle(
+          _everCompletedMeta,
+          everCompleted.isAcceptableOrUnknown(
+              data['ever_completed']!, _everCompletedMeta));
+    }
+    if (data.containsKey('legacy_gid')) {
+      context.handle(_legacyGidMeta,
+          legacyGid.isAcceptableOrUnknown(data['legacy_gid']!, _legacyGidMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  OfflineGallery map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OfflineGallery(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      source: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source']),
+      gid: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}gid'])!,
+      token: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}token'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      totalPages: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}total_pages'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      reason: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}reason']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      lastReadPage: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_read_page'])!,
+      indexReady: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}index_ready'])!,
+      everCompleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}ever_completed'])!,
+      legacyGid: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}legacy_gid']),
+    );
+  }
+
+  @override
+  $OfflineGalleriesTable createAlias(String alias) {
+    return $OfflineGalleriesTable(attachedDatabase, alias);
+  }
+}
+
+class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
+  final String id;
+  final String? source;
+  final int gid;
+  final String token;
+  final String title;
+  final int totalPages;
+  final String status;
+  final String? reason;
+  final DateTime createdAt;
+  final int lastReadPage;
+  final bool indexReady;
+  final bool everCompleted;
+  final int? legacyGid;
+  const OfflineGallery(
+      {required this.id,
+      this.source,
+      required this.gid,
+      required this.token,
+      required this.title,
+      required this.totalPages,
+      required this.status,
+      this.reason,
+      required this.createdAt,
+      required this.lastReadPage,
+      required this.indexReady,
+      required this.everCompleted,
+      this.legacyGid});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || source != null) {
+      map['source'] = Variable<String>(source);
+    }
+    map['gid'] = Variable<int>(gid);
+    map['token'] = Variable<String>(token);
+    map['title'] = Variable<String>(title);
+    map['total_pages'] = Variable<int>(totalPages);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || reason != null) {
+      map['reason'] = Variable<String>(reason);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['last_read_page'] = Variable<int>(lastReadPage);
+    map['index_ready'] = Variable<bool>(indexReady);
+    map['ever_completed'] = Variable<bool>(everCompleted);
+    if (!nullToAbsent || legacyGid != null) {
+      map['legacy_gid'] = Variable<int>(legacyGid);
+    }
+    return map;
+  }
+
+  OfflineGalleriesCompanion toCompanion(bool nullToAbsent) {
+    return OfflineGalleriesCompanion(
+      id: Value(id),
+      source:
+          source == null && nullToAbsent ? const Value.absent() : Value(source),
+      gid: Value(gid),
+      token: Value(token),
+      title: Value(title),
+      totalPages: Value(totalPages),
+      status: Value(status),
+      reason:
+          reason == null && nullToAbsent ? const Value.absent() : Value(reason),
+      createdAt: Value(createdAt),
+      lastReadPage: Value(lastReadPage),
+      indexReady: Value(indexReady),
+      everCompleted: Value(everCompleted),
+      legacyGid: legacyGid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(legacyGid),
+    );
+  }
+
+  factory OfflineGallery.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OfflineGallery(
+      id: serializer.fromJson<String>(json['id']),
+      source: serializer.fromJson<String?>(json['source']),
+      gid: serializer.fromJson<int>(json['gid']),
+      token: serializer.fromJson<String>(json['token']),
+      title: serializer.fromJson<String>(json['title']),
+      totalPages: serializer.fromJson<int>(json['totalPages']),
+      status: serializer.fromJson<String>(json['status']),
+      reason: serializer.fromJson<String?>(json['reason']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      lastReadPage: serializer.fromJson<int>(json['lastReadPage']),
+      indexReady: serializer.fromJson<bool>(json['indexReady']),
+      everCompleted: serializer.fromJson<bool>(json['everCompleted']),
+      legacyGid: serializer.fromJson<int?>(json['legacyGid']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'source': serializer.toJson<String?>(source),
+      'gid': serializer.toJson<int>(gid),
+      'token': serializer.toJson<String>(token),
+      'title': serializer.toJson<String>(title),
+      'totalPages': serializer.toJson<int>(totalPages),
+      'status': serializer.toJson<String>(status),
+      'reason': serializer.toJson<String?>(reason),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'lastReadPage': serializer.toJson<int>(lastReadPage),
+      'indexReady': serializer.toJson<bool>(indexReady),
+      'everCompleted': serializer.toJson<bool>(everCompleted),
+      'legacyGid': serializer.toJson<int?>(legacyGid),
+    };
+  }
+
+  OfflineGallery copyWith(
+          {String? id,
+          Value<String?> source = const Value.absent(),
+          int? gid,
+          String? token,
+          String? title,
+          int? totalPages,
+          String? status,
+          Value<String?> reason = const Value.absent(),
+          DateTime? createdAt,
+          int? lastReadPage,
+          bool? indexReady,
+          bool? everCompleted,
+          Value<int?> legacyGid = const Value.absent()}) =>
+      OfflineGallery(
+        id: id ?? this.id,
+        source: source.present ? source.value : this.source,
+        gid: gid ?? this.gid,
+        token: token ?? this.token,
+        title: title ?? this.title,
+        totalPages: totalPages ?? this.totalPages,
+        status: status ?? this.status,
+        reason: reason.present ? reason.value : this.reason,
+        createdAt: createdAt ?? this.createdAt,
+        lastReadPage: lastReadPage ?? this.lastReadPage,
+        indexReady: indexReady ?? this.indexReady,
+        everCompleted: everCompleted ?? this.everCompleted,
+        legacyGid: legacyGid.present ? legacyGid.value : this.legacyGid,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('OfflineGallery(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('gid: $gid, ')
+          ..write('token: $token, ')
+          ..write('title: $title, ')
+          ..write('totalPages: $totalPages, ')
+          ..write('status: $status, ')
+          ..write('reason: $reason, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastReadPage: $lastReadPage, ')
+          ..write('indexReady: $indexReady, ')
+          ..write('everCompleted: $everCompleted, ')
+          ..write('legacyGid: $legacyGid')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      source,
+      gid,
+      token,
+      title,
+      totalPages,
+      status,
+      reason,
+      createdAt,
+      lastReadPage,
+      indexReady,
+      everCompleted,
+      legacyGid);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OfflineGallery &&
+          other.id == this.id &&
+          other.source == this.source &&
+          other.gid == this.gid &&
+          other.token == this.token &&
+          other.title == this.title &&
+          other.totalPages == this.totalPages &&
+          other.status == this.status &&
+          other.reason == this.reason &&
+          other.createdAt == this.createdAt &&
+          other.lastReadPage == this.lastReadPage &&
+          other.indexReady == this.indexReady &&
+          other.everCompleted == this.everCompleted &&
+          other.legacyGid == this.legacyGid);
+}
+
+class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
+  final Value<String> id;
+  final Value<String?> source;
+  final Value<int> gid;
+  final Value<String> token;
+  final Value<String> title;
+  final Value<int> totalPages;
+  final Value<String> status;
+  final Value<String?> reason;
+  final Value<DateTime> createdAt;
+  final Value<int> lastReadPage;
+  final Value<bool> indexReady;
+  final Value<bool> everCompleted;
+  final Value<int?> legacyGid;
+  final Value<int> rowid;
+  const OfflineGalleriesCompanion({
+    this.id = const Value.absent(),
+    this.source = const Value.absent(),
+    this.gid = const Value.absent(),
+    this.token = const Value.absent(),
+    this.title = const Value.absent(),
+    this.totalPages = const Value.absent(),
+    this.status = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastReadPage = const Value.absent(),
+    this.indexReady = const Value.absent(),
+    this.everCompleted = const Value.absent(),
+    this.legacyGid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OfflineGalleriesCompanion.insert({
+    required String id,
+    this.source = const Value.absent(),
+    required int gid,
+    required String token,
+    required String title,
+    required int totalPages,
+    this.status = const Value.absent(),
+    this.reason = const Value.absent(),
+    required DateTime createdAt,
+    this.lastReadPage = const Value.absent(),
+    this.indexReady = const Value.absent(),
+    this.everCompleted = const Value.absent(),
+    this.legacyGid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        gid = Value(gid),
+        token = Value(token),
+        title = Value(title),
+        totalPages = Value(totalPages),
+        createdAt = Value(createdAt);
+  static Insertable<OfflineGallery> custom({
+    Expression<String>? id,
+    Expression<String>? source,
+    Expression<int>? gid,
+    Expression<String>? token,
+    Expression<String>? title,
+    Expression<int>? totalPages,
+    Expression<String>? status,
+    Expression<String>? reason,
+    Expression<DateTime>? createdAt,
+    Expression<int>? lastReadPage,
+    Expression<bool>? indexReady,
+    Expression<bool>? everCompleted,
+    Expression<int>? legacyGid,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (source != null) 'source': source,
+      if (gid != null) 'gid': gid,
+      if (token != null) 'token': token,
+      if (title != null) 'title': title,
+      if (totalPages != null) 'total_pages': totalPages,
+      if (status != null) 'status': status,
+      if (reason != null) 'reason': reason,
+      if (createdAt != null) 'created_at': createdAt,
+      if (lastReadPage != null) 'last_read_page': lastReadPage,
+      if (indexReady != null) 'index_ready': indexReady,
+      if (everCompleted != null) 'ever_completed': everCompleted,
+      if (legacyGid != null) 'legacy_gid': legacyGid,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OfflineGalleriesCompanion copyWith(
+      {Value<String>? id,
+      Value<String?>? source,
+      Value<int>? gid,
+      Value<String>? token,
+      Value<String>? title,
+      Value<int>? totalPages,
+      Value<String>? status,
+      Value<String?>? reason,
+      Value<DateTime>? createdAt,
+      Value<int>? lastReadPage,
+      Value<bool>? indexReady,
+      Value<bool>? everCompleted,
+      Value<int?>? legacyGid,
+      Value<int>? rowid}) {
+    return OfflineGalleriesCompanion(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      gid: gid ?? this.gid,
+      token: token ?? this.token,
+      title: title ?? this.title,
+      totalPages: totalPages ?? this.totalPages,
+      status: status ?? this.status,
+      reason: reason ?? this.reason,
+      createdAt: createdAt ?? this.createdAt,
+      lastReadPage: lastReadPage ?? this.lastReadPage,
+      indexReady: indexReady ?? this.indexReady,
+      everCompleted: everCompleted ?? this.everCompleted,
+      legacyGid: legacyGid ?? this.legacyGid,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (gid.present) {
+      map['gid'] = Variable<int>(gid.value);
+    }
+    if (token.present) {
+      map['token'] = Variable<String>(token.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (totalPages.present) {
+      map['total_pages'] = Variable<int>(totalPages.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (lastReadPage.present) {
+      map['last_read_page'] = Variable<int>(lastReadPage.value);
+    }
+    if (indexReady.present) {
+      map['index_ready'] = Variable<bool>(indexReady.value);
+    }
+    if (everCompleted.present) {
+      map['ever_completed'] = Variable<bool>(everCompleted.value);
+    }
+    if (legacyGid.present) {
+      map['legacy_gid'] = Variable<int>(legacyGid.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OfflineGalleriesCompanion(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('gid: $gid, ')
+          ..write('token: $token, ')
+          ..write('title: $title, ')
+          ..write('totalPages: $totalPages, ')
+          ..write('status: $status, ')
+          ..write('reason: $reason, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastReadPage: $lastReadPage, ')
+          ..write('indexReady: $indexReady, ')
+          ..write('everCompleted: $everCompleted, ')
+          ..write('legacyGid: $legacyGid, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $OfflinePagesTable extends OfflinePages
+    with TableInfo<$OfflinePagesTable, OfflinePage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OfflinePagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+      'book_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES offline_galleries (id)'));
+  static const VerificationMeta _pageIndexMeta =
+      const VerificationMeta('pageIndex');
+  @override
+  late final GeneratedColumn<int> pageIndex = GeneratedColumn<int>(
+      'page_index', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _pageTokenMeta =
+      const VerificationMeta('pageToken');
+  @override
+  late final GeneratedColumn<String> pageToken = GeneratedColumn<String>(
+      'page_token', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _relativePathMeta =
+      const VerificationMeta('relativePath');
+  @override
+  late final GeneratedColumn<String> relativePath = GeneratedColumn<String>(
+      'relative_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _formatMeta = const VerificationMeta('format');
+  @override
+  late final GeneratedColumn<String> format = GeneratedColumn<String>(
+      'format', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _bytesMeta = const VerificationMeta('bytes');
+  @override
+  late final GeneratedColumn<int> bytes = GeneratedColumn<int>(
+      'bytes', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+      'sha256', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _errorMeta = const VerificationMeta('error');
+  @override
+  late final GeneratedColumn<String> error = GeneratedColumn<String>(
+      'error', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        bookId,
+        pageIndex,
+        pageToken,
+        relativePath,
+        format,
+        bytes,
+        sha256,
+        status,
+        error
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'offline_pages';
+  @override
+  VerificationContext validateIntegrity(Insertable<OfflinePage> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('book_id')) {
+      context.handle(_bookIdMeta,
+          bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta));
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('page_index')) {
+      context.handle(_pageIndexMeta,
+          pageIndex.isAcceptableOrUnknown(data['page_index']!, _pageIndexMeta));
+    } else if (isInserting) {
+      context.missing(_pageIndexMeta);
+    }
+    if (data.containsKey('page_token')) {
+      context.handle(_pageTokenMeta,
+          pageToken.isAcceptableOrUnknown(data['page_token']!, _pageTokenMeta));
+    } else if (isInserting) {
+      context.missing(_pageTokenMeta);
+    }
+    if (data.containsKey('relative_path')) {
+      context.handle(
+          _relativePathMeta,
+          relativePath.isAcceptableOrUnknown(
+              data['relative_path']!, _relativePathMeta));
+    }
+    if (data.containsKey('format')) {
+      context.handle(_formatMeta,
+          format.isAcceptableOrUnknown(data['format']!, _formatMeta));
+    }
+    if (data.containsKey('bytes')) {
+      context.handle(
+          _bytesMeta, bytes.isAcceptableOrUnknown(data['bytes']!, _bytesMeta));
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(_sha256Meta,
+          sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('error')) {
+      context.handle(
+          _errorMeta, error.isAcceptableOrUnknown(data['error']!, _errorMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {bookId, pageIndex};
+  @override
+  OfflinePage map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OfflinePage(
+      bookId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}book_id'])!,
+      pageIndex: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}page_index'])!,
+      pageToken: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}page_token'])!,
+      relativePath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}relative_path']),
+      format: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}format']),
+      bytes: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}bytes'])!,
+      sha256: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sha256']),
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      error: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}error']),
+    );
+  }
+
+  @override
+  $OfflinePagesTable createAlias(String alias) {
+    return $OfflinePagesTable(attachedDatabase, alias);
+  }
+}
+
+class OfflinePage extends DataClass implements Insertable<OfflinePage> {
+  final String bookId;
+  final int pageIndex;
+  final String pageToken;
+  final String? relativePath;
+  final String? format;
+  final int bytes;
+  final String? sha256;
+  final String status;
+  final String? error;
+  const OfflinePage(
+      {required this.bookId,
+      required this.pageIndex,
+      required this.pageToken,
+      this.relativePath,
+      this.format,
+      required this.bytes,
+      this.sha256,
+      required this.status,
+      this.error});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['book_id'] = Variable<String>(bookId);
+    map['page_index'] = Variable<int>(pageIndex);
+    map['page_token'] = Variable<String>(pageToken);
+    if (!nullToAbsent || relativePath != null) {
+      map['relative_path'] = Variable<String>(relativePath);
+    }
+    if (!nullToAbsent || format != null) {
+      map['format'] = Variable<String>(format);
+    }
+    map['bytes'] = Variable<int>(bytes);
+    if (!nullToAbsent || sha256 != null) {
+      map['sha256'] = Variable<String>(sha256);
+    }
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || error != null) {
+      map['error'] = Variable<String>(error);
+    }
+    return map;
+  }
+
+  OfflinePagesCompanion toCompanion(bool nullToAbsent) {
+    return OfflinePagesCompanion(
+      bookId: Value(bookId),
+      pageIndex: Value(pageIndex),
+      pageToken: Value(pageToken),
+      relativePath: relativePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(relativePath),
+      format:
+          format == null && nullToAbsent ? const Value.absent() : Value(format),
+      bytes: Value(bytes),
+      sha256:
+          sha256 == null && nullToAbsent ? const Value.absent() : Value(sha256),
+      status: Value(status),
+      error:
+          error == null && nullToAbsent ? const Value.absent() : Value(error),
+    );
+  }
+
+  factory OfflinePage.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OfflinePage(
+      bookId: serializer.fromJson<String>(json['bookId']),
+      pageIndex: serializer.fromJson<int>(json['pageIndex']),
+      pageToken: serializer.fromJson<String>(json['pageToken']),
+      relativePath: serializer.fromJson<String?>(json['relativePath']),
+      format: serializer.fromJson<String?>(json['format']),
+      bytes: serializer.fromJson<int>(json['bytes']),
+      sha256: serializer.fromJson<String?>(json['sha256']),
+      status: serializer.fromJson<String>(json['status']),
+      error: serializer.fromJson<String?>(json['error']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'bookId': serializer.toJson<String>(bookId),
+      'pageIndex': serializer.toJson<int>(pageIndex),
+      'pageToken': serializer.toJson<String>(pageToken),
+      'relativePath': serializer.toJson<String?>(relativePath),
+      'format': serializer.toJson<String?>(format),
+      'bytes': serializer.toJson<int>(bytes),
+      'sha256': serializer.toJson<String?>(sha256),
+      'status': serializer.toJson<String>(status),
+      'error': serializer.toJson<String?>(error),
+    };
+  }
+
+  OfflinePage copyWith(
+          {String? bookId,
+          int? pageIndex,
+          String? pageToken,
+          Value<String?> relativePath = const Value.absent(),
+          Value<String?> format = const Value.absent(),
+          int? bytes,
+          Value<String?> sha256 = const Value.absent(),
+          String? status,
+          Value<String?> error = const Value.absent()}) =>
+      OfflinePage(
+        bookId: bookId ?? this.bookId,
+        pageIndex: pageIndex ?? this.pageIndex,
+        pageToken: pageToken ?? this.pageToken,
+        relativePath:
+            relativePath.present ? relativePath.value : this.relativePath,
+        format: format.present ? format.value : this.format,
+        bytes: bytes ?? this.bytes,
+        sha256: sha256.present ? sha256.value : this.sha256,
+        status: status ?? this.status,
+        error: error.present ? error.value : this.error,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('OfflinePage(')
+          ..write('bookId: $bookId, ')
+          ..write('pageIndex: $pageIndex, ')
+          ..write('pageToken: $pageToken, ')
+          ..write('relativePath: $relativePath, ')
+          ..write('format: $format, ')
+          ..write('bytes: $bytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('status: $status, ')
+          ..write('error: $error')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(bookId, pageIndex, pageToken, relativePath,
+      format, bytes, sha256, status, error);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OfflinePage &&
+          other.bookId == this.bookId &&
+          other.pageIndex == this.pageIndex &&
+          other.pageToken == this.pageToken &&
+          other.relativePath == this.relativePath &&
+          other.format == this.format &&
+          other.bytes == this.bytes &&
+          other.sha256 == this.sha256 &&
+          other.status == this.status &&
+          other.error == this.error);
+}
+
+class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
+  final Value<String> bookId;
+  final Value<int> pageIndex;
+  final Value<String> pageToken;
+  final Value<String?> relativePath;
+  final Value<String?> format;
+  final Value<int> bytes;
+  final Value<String?> sha256;
+  final Value<String> status;
+  final Value<String?> error;
+  final Value<int> rowid;
+  const OfflinePagesCompanion({
+    this.bookId = const Value.absent(),
+    this.pageIndex = const Value.absent(),
+    this.pageToken = const Value.absent(),
+    this.relativePath = const Value.absent(),
+    this.format = const Value.absent(),
+    this.bytes = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.status = const Value.absent(),
+    this.error = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OfflinePagesCompanion.insert({
+    required String bookId,
+    required int pageIndex,
+    required String pageToken,
+    this.relativePath = const Value.absent(),
+    this.format = const Value.absent(),
+    this.bytes = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.status = const Value.absent(),
+    this.error = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : bookId = Value(bookId),
+        pageIndex = Value(pageIndex),
+        pageToken = Value(pageToken);
+  static Insertable<OfflinePage> custom({
+    Expression<String>? bookId,
+    Expression<int>? pageIndex,
+    Expression<String>? pageToken,
+    Expression<String>? relativePath,
+    Expression<String>? format,
+    Expression<int>? bytes,
+    Expression<String>? sha256,
+    Expression<String>? status,
+    Expression<String>? error,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (bookId != null) 'book_id': bookId,
+      if (pageIndex != null) 'page_index': pageIndex,
+      if (pageToken != null) 'page_token': pageToken,
+      if (relativePath != null) 'relative_path': relativePath,
+      if (format != null) 'format': format,
+      if (bytes != null) 'bytes': bytes,
+      if (sha256 != null) 'sha256': sha256,
+      if (status != null) 'status': status,
+      if (error != null) 'error': error,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OfflinePagesCompanion copyWith(
+      {Value<String>? bookId,
+      Value<int>? pageIndex,
+      Value<String>? pageToken,
+      Value<String?>? relativePath,
+      Value<String?>? format,
+      Value<int>? bytes,
+      Value<String?>? sha256,
+      Value<String>? status,
+      Value<String?>? error,
+      Value<int>? rowid}) {
+    return OfflinePagesCompanion(
+      bookId: bookId ?? this.bookId,
+      pageIndex: pageIndex ?? this.pageIndex,
+      pageToken: pageToken ?? this.pageToken,
+      relativePath: relativePath ?? this.relativePath,
+      format: format ?? this.format,
+      bytes: bytes ?? this.bytes,
+      sha256: sha256 ?? this.sha256,
+      status: status ?? this.status,
+      error: error ?? this.error,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
+    }
+    if (pageIndex.present) {
+      map['page_index'] = Variable<int>(pageIndex.value);
+    }
+    if (pageToken.present) {
+      map['page_token'] = Variable<String>(pageToken.value);
+    }
+    if (relativePath.present) {
+      map['relative_path'] = Variable<String>(relativePath.value);
+    }
+    if (format.present) {
+      map['format'] = Variable<String>(format.value);
+    }
+    if (bytes.present) {
+      map['bytes'] = Variable<int>(bytes.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (error.present) {
+      map['error'] = Variable<String>(error.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OfflinePagesCompanion(')
+          ..write('bookId: $bookId, ')
+          ..write('pageIndex: $pageIndex, ')
+          ..write('pageToken: $pageToken, ')
+          ..write('relativePath: $relativePath, ')
+          ..write('format: $format, ')
+          ..write('bytes: $bytes, ')
+          ..write('sha256: $sha256, ')
+          ..write('status: $status, ')
+          ..write('error: $error, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   late final $HistoryEntriesTable historyEntries = $HistoryEntriesTable(this);
@@ -1485,6 +2591,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DownloadTasksTable downloadTasks = $DownloadTasksTable(this);
   late final $GalleryWarningAcceptancesTable galleryWarningAcceptances =
       $GalleryWarningAcceptancesTable(this);
+  late final $OfflineGalleriesTable offlineGalleries =
+      $OfflineGalleriesTable(this);
+  late final $OfflinePagesTable offlinePages = $OfflinePagesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1493,6 +2602,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         historyEntries,
         localFavorites,
         downloadTasks,
-        galleryWarningAcceptances
+        galleryWarningAcceptances,
+        offlineGalleries,
+        offlinePages
       ];
 }

@@ -1,9 +1,11 @@
 import 'package:equatable/equatable.dart';
 import 'gallery_tag.dart';
 import 'gallery_comment.dart';
+import 'gallery_source.dart';
 import '../core/parser/gallery_detail_parser.dart';
 
 class GalleryDetail extends Equatable {
+  final GallerySource? source;
   final int gid;
   final String token;
   final String title;
@@ -20,6 +22,7 @@ class GalleryDetail extends Equatable {
   final double rating;
   final int ratingCount;
   final int favoriteCount;
+
   /// null: not favorited; -1: favorited but the server slot is unknown.
   final int? favoritedSlot;
   final List<GalleryTag> tags;
@@ -30,6 +33,7 @@ class GalleryDetail extends Equatable {
   final String? archiveUrl;
 
   const GalleryDetail({
+    this.source,
     required this.gid,
     required this.token,
     required this.title,
@@ -57,8 +61,9 @@ class GalleryDetail extends Equatable {
   bool get isFavorited => favoritedSlot != null;
 
   GalleryDetail withComments(List<GalleryComment> updated,
-          {bool all = false, int? totalCount}) =>
+          {bool all = false, int? totalCount, GallerySource? source}) =>
       GalleryDetail(
+        source: source ?? this.source,
         gid: gid,
         token: token,
         title: title,
@@ -86,6 +91,7 @@ class GalleryDetail extends Equatable {
 
   @override
   List<Object?> get props => [
+        source,
         gid,
         token,
         title,
