@@ -59,7 +59,7 @@
 | 检查 | 结果与可追溯记录 |
 | --- | --- |
 | 候选准备 | [Prepare candidate 38400090237](https://github.com/fy142857/OViewer/actions/runs/38400090237) 成功；自动版本提交已快进同步回本地 dev |
-| Android 正式签名候选构建 | [38400137671](https://github.com/fy142857/OViewer/actions/runs/38400137671) 成功，尚未发布 |
+| Android 正式签名候选构建 | [38400137671](https://github.com/fy142857/OViewer/actions/runs/38400137671) 成功，后经单独授权发布为 v1.9.0 |
 | Android 模拟器验收构建 | [38400299890](https://github.com/fy142857/OViewer/actions/runs/38400299890) 成功；包含 736 项 Flutter 测试、52 项版本/发布脚本测试、静态分析基线检查及 Android 原生测试 |
 | iOS 候选构建 | [38400147174](https://github.com/fy142857/OViewer/actions/runs/38400147174) 成功 |
 | 本地来源保护回归 | 协调器 15 项通过；静态检查无新增错误或警告 |
@@ -69,5 +69,20 @@
 
 ## 范围说明
 
-Android 按用户要求在模拟器验收，不将这些结果表述为手机或厂商电池管理测试。iOS 使用构建检查与生命周期自动化测试；未进行 iOS 设备运行验收。此次为开发候选，正式发布需另行授权。
+Android 按用户要求在模拟器验收，不将这些结果表述为手机或厂商电池管理测试。iOS 使用构建检查与生命周期自动化测试；未进行 iOS 设备运行验收。实施验收阶段保留为开发候选，后续正式发布由用户单独授权，记录如下。
+
+## 正式发布：v1.9.0 (82)
+
+2026-10-13（北京时间 22:09），按用户“正式发布”指令公开 [v1.9.0](https://github.com/fy142857/OViewer/releases/tag/v1.9.0)。
+
+- `dev` 完整历史快进晋升 `main`；[候选准备 38409818567](https://github.com/fy142857/OViewer/actions/runs/38409818567) 成功，复用 `1.9.0+82` 及原构建，无新编号。
+- [发布只校验 38410024998](https://github.com/fy142857/OViewer/actions/runs/38410024998) 与[正式发布 38410819559](https://github.com/fy142857/OViewer/actions/runs/38410819559) 均成功。工作流验证安装包版本、正式签名、候选登记及上传后重新下载的文件摘要。
+- 在同一个专用 Android 模拟器补验正式签名原包 `1.9.0+81 → 1.9.0+82` 的 `adb install -r`。两个 APK 均为 Actions 原始产物，证书相同；升级成功，appId 与首次安装时间不变，正常界面设置的英文及卡片视图保留。未替换离线测试包，也未操作手机。
+- 正式 APK SHA-256：`a86aef23b9382e53c4457e9f009a302f5c196b73e33344ea3d7dd981ccb7d268`，30,202,937 字节。
+- IPA SHA-256：`cc4a3d6b70f91747bbfd6ecb38b0e6d8fbc7dafa9b73c199abddecc8dfea8d65`，26,752,544 字节。
+- Android 正式证书 SHA-256：`a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4`，沿用已有固定签名。
+- 公开附件为 `OViewer.apk`、`OViewer.ipa`、`release-manifest.json`、`SHA256SUMS.txt`；Release 为最新稳定版，标签固定在已验证构建提交 `edf2e7d5a50eee3ecb58dfd0a3884e34556bd034`。
+- 仓库没有 `v1.9.0` / `1.9.0` Milestone，无对应待关闭项。发布后的文档归档不移动标签或改变安装包。
+
+本地补充证据：`build/release-v190-upgrade.json`、`build/release-upgrade-settings-before.png`、`build/release-upgrade-settings-after.png`、`build/release-v190-manifest.json` 和 `build/release-v190-SHA256SUMS.txt`。测试后已恢复模拟器网络，保留正式包 82；此次覆盖升级新增验证范围为包身份与上述设置，离线内容的完整验收见前文。
 
