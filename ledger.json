@@ -3449,8 +3449,63 @@
         }
       ],
       "version": "1.9.0"
+    },
+    {
+      "base_tag": "v1.8.3",
+      "branch": "dev",
+      "build_number": 81,
+      "build_sha": "b2a735c24f86e036db3aeb147d31c5fafdaeb746",
+      "candidate_id": "1.9.0+81",
+      "fingerprint": "501e9eb4710d6dac9762f4657f8bfcdc3aaa3e2ab21b29011b2deb63e40634af",
+      "notes": "### 新增\n\n- 支持整本漫画离线缓存，下载前确认 EH/EX 来源；已缓存漫画优先本地阅读，提供暂停、继续、失败补下和独立文件管理。\n- 设置中新增同时下载漫画数与全局图片并行数，默认 2 本、4 张；Android 支持带进度通知的后台下载，进程重启后手动继续。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "fe2acbae4d284a5443cfbb374a687b2cccc980ce",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "Introduce durable offline gallery reading with explicit EH/EX source identity, configurable global download concurrency, recoverable validated files, and Android foreground-service execution.",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "0bb92d2802fb8cbab6e3bfec5d2a3bbb01d2e085",
+          "subject": "feat(offline): add persistent gallery downloads and local reading",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Route both history surfaces through local book resolution, keep local covers offline, prevent storage-failure reload loops, and validate access failures and settings persistence.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "90e3f2b8be168dfc8473722261df26eb3c0bb0dd",
+          "subject": "fix(offline): resolve local history entries and stabilize recovery",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Prevent site or account changes from leaving later parallel clients alive while an earlier task pause awaits storage, and serialize resume with pending pause persistence.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "ad4e3dbd52c3cefa2aa523f8956284a34b848a7e",
+          "subject": "fix(offline): cancel all parallel requests before persisting pauses",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Preserve pause reasons and explicit offline page selection, invalidate superseded page resources, remove only the deleted reader route, and reclaim files when metadata registration fails.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "fe2acbae4d284a5443cfbb374a687b2cccc980ce",
+          "subject": "fix(offline): stabilize reader updates and storage recovery",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.9.0"
     }
   ],
-  "last_build_number": 80,
+  "last_build_number": 81,
   "schema": 1
 }
