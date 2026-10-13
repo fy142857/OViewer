@@ -19,6 +19,7 @@ class OfflineDownloadCoordinator {
   final Future<void> Function(Duration) delay;
   final _jobs = <String, _OfflineJob>{};
   final _pendingStarts = <String, Future<void>>{};
+  final _pendingPauses = <String, Future<void>>{};
   final _revisions = <String, int>{};
   final _changes = StreamController<void>.broadcast();
   StreamSubscription<void>? _subscription;
@@ -90,6 +91,7 @@ class OfflineDownloadCoordinator {
     final revision = _revisions[id] ?? 0;
     bool current() =>
         !_closed && epoch == _epoch && revision == (_revisions[id] ?? 0);
+    await _pendingPauses[id];
     await initialize();
     if (!current()) return;
     final previous = _jobs[id];
@@ -376,10 +378,12 @@ class OfflineDownloadCoordinator {
       'session_changed',
       'source_changed'
     ].contains(reason)) {
-      for (final other in List<_OfflineJob>.of(_jobs.values)) {
-        if (other.wanted && other.book.source == job.book.source)
-          await pause(other.book.id, reason: reason);
-      }
+      final ids = _jobs.values
+          .where(
+              (other) => other.wanted && other.book.source == job.book.source)
+          .map((other) => other.book.id)
+          .toList();
+      await Future.wait(ids.map((id) => pause(id, reason: reason)));
       return;
     }
     job.wanted = false;
@@ -391,7 +395,17 @@ class OfflineDownloadCoordinator {
     _notify(immediate: true);
   }
 
-  Future<void> pause(String id, {String reason = 'user'}) async {
+  Future<void> pause(String id, {String reason = 'user'}) {
+    late final Future<void> operation;
+    operation = _pause(id, reason).whenComplete(() {
+      if (identical(_pendingPauses[id], operation)) _pendingPauses.remove(id);
+      _pump();
+    });
+    _pendingPauses[id] = operation;
+    return operation;
+  }
+
+  Future<void> _pause(String id, String reason) async {
     _revisions[id] = (_revisions[id] ?? 0) + 1;
     final job = _jobs[id];
     if (job != null) {
@@ -418,9 +432,11 @@ class OfflineDownloadCoordinator {
 
   Future<void> pauseAll({String reason = 'user'}) async {
     _epoch++;
-    for (final id in _jobs.keys.toList()) {
-      if (_jobs[id]!.wanted) await pause(id, reason: reason);
-    }
+    final ids =
+        _jobs.values.where((j) => j.wanted).map((j) => j.book.id).toList();
+    // Cancel every HTTP client before the first database await, particularly
+    // when site/account changes could otherwise replace credentials mid-request.
+    await Future.wait(ids.map((id) => pause(id, reason: reason)));
     await _stopIfIdle();
   }
 
@@ -464,7 +480,10 @@ class OfflineDownloadCoordinator {
   }
 
   Future<void> _stopIfIdle() async {
-    if (running || !_background || _pendingStarts.isNotEmpty) return;
+    if (running ||
+        !_background ||
+        _pendingStarts.isNotEmpty ||
+        _pendingPauses.isNotEmpty) return;
     _background = false;
     await (_stoppingBackground ??=
         stopBackground().whenComplete(() => _stoppingBackground = null));

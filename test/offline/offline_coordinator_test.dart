@@ -34,7 +34,15 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   final Map<String, int> statuses = {};
   final gates = <Completer<void>>[];
   final indexed = <int>[];
+  final controllers = <ReaderRequestController>[];
   ControlledOfflineNetwork(this.png);
+  @override
+  ReaderRequestController requests() {
+    final value = ReaderRequestController();
+    controllers.add(value);
+    return value;
+  }
+
   @override
   Future<ReaderIndexPage> index(
       OfflineKey key, int page, ReaderRequestController requests) async {
@@ -237,6 +245,19 @@ void main() {
     expect(await repo.get(id), isNull);
     expect(await repo.files.size(), 0);
     expect(coordinator.activePages, 0);
+  });
+  test(
+      'global pause cancels every client synchronously before persistence awaits',
+      () async {
+    network.hold = true;
+    await coordinator.enqueue(key, 'First', 3);
+    await coordinator.enqueue(
+        const OfflineKey(GallerySource.eh, 43, 'abc'), 'Second', 3);
+    await until(() => network.active == 4);
+    final stopping = coordinator.pauseAll(reason: 'session_changed');
+    expect(network.controllers.every((c) => c.isCancelled), isTrue);
+    await stopping;
+    await until(() => coordinator.activePages == 0);
   });
   test('source and session changes prevent stale writes', () async {
     network.hold = true;
