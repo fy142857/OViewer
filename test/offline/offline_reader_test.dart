@@ -7,7 +7,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:oviewer/blocs/settings/settings_bloc.dart';
+import 'package:oviewer/blocs/reader/reader_bloc.dart';
+import 'package:oviewer/blocs/reader/reader_event.dart';
+import 'package:oviewer/models/reader_page_resource.dart';
 import 'package:oviewer/blocs/settings/settings_state.dart';
 import 'package:oviewer/core/network/cookie_manager.dart';
 import 'package:oviewer/core/network/offline_image_provider.dart';
@@ -22,6 +26,7 @@ import 'package:oviewer/repositories/offline_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/screens/reader/reader_screen.dart';
 import 'offline_storage_test.dart' show sqliteForTests;
+import 'offline_coordinator_test.dart' show until;
 
 class Gallery extends Mock implements GalleryRepository {}
 
@@ -91,6 +96,43 @@ void main() {
     expect(directory.parent.absolute.path, Directory.systemTemp.absolute.path);
     await directory.delete(recursive: true);
   });
+  testWidgets(
+      'vertical resume keeps the requested last page until the user scrolls',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    when(() => settings.getReadingMode()).thenReturn(2);
+    await tester.runAsync(() async {
+      await repository.putIndex(
+          book.id,
+          5,
+          [
+            for (var i = 0; i < 5; i++)
+              ThumbnailInfo(pageToken: 'p$i', pageIndex: i, thumbUrl: '')
+          ],
+          current: () => true);
+      book = (await repository.get(book.id))!;
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settingsBloc,
+          child: MaterialApp(
+              home: ReaderScreen(
+                  gid: 42, token: 'abc', initialPage: 4, offlineBook: book))));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    final bloc = tester
+        .element(find.byType(ScrollablePositionedList))
+        .read<ReaderBloc>();
+    expect(bloc.state.currentPage, 4);
+    await tester.drag(
+        find.byType(ScrollablePositionedList), const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(bloc.state.currentPage, lessThan(4));
+    verifyZeroInteractions(gallery);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+  });
   for (final mode in [0, 1, 2]) {
     testWidgets(
         'offline mode $mode decodes local pages without any gallery requests',
@@ -119,6 +161,72 @@ void main() {
       expect(decoded, isTrue);
     });
   }
+  test(
+      'repair invalidates stale page resources and updates local directory size',
+      () async {
+    final bloc = ReaderBloc(gallery, GetIt.I<HistoryRepository>(), settings,
+        offlineBook: book, offlineRepository: repository);
+    final page = book.pages.first;
+    final bytes = await repository.files
+        .read(page.relativePath!, page.bytes, page.sha256!);
+    final initial = ReaderPageResource(() async => null, fallback: bytes);
+    bloc.add(ReaderImageReady(0, 0, initial));
+    await until(() => bloc.state.readyResources.containsKey(0));
+    await repository.failPage(book.id, 0, 'repair');
+    await until(() => bloc.state.imageAttempts[0] == 1);
+    expect(bloc.state.readyResources.containsKey(0), isFalse);
+    final stale = ReaderPageResource(() async => null, fallback: bytes);
+    bloc.add(ReaderImageReady(0, 0, stale));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(bloc.state.readyResources.containsKey(0), isFalse);
+    await expectLater(stale.snapshot(), throwsStateError);
+    await repository.putIndex(
+        book.id,
+        3,
+        const [
+          ThumbnailInfo(pageToken: 'p0', pageIndex: 0, thumbUrl: ''),
+          ThumbnailInfo(pageToken: 'p1', pageIndex: 1, thumbUrl: ''),
+          ThumbnailInfo(pageToken: 'p2', pageIndex: 2, thumbUrl: ''),
+        ],
+        current: () => true);
+    await until(() => bloc.state.totalPages == 3);
+    expect(bloc.state.thumbnails.length, 3);
+    verifyZeroInteractions(gallery);
+    await bloc.close();
+  });
+  testWidgets(
+      'deleting a covered reader removes its route without closing the manager',
+      (tester) async {
+    final navigator = GlobalKey<NavigatorState>();
+    await tester.runAsync(() async {
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settingsBloc,
+          child: MaterialApp(
+              navigatorKey: navigator,
+              home: const Scaffold(body: Text('Home')))));
+      navigator.currentState!.push(MaterialPageRoute(
+          builder: (_) =>
+              ReaderScreen(gid: 42, token: 'abc', offlineBook: book)));
+      await tester.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    navigator.currentState!.push(MaterialPageRoute(
+        builder: (_) => const Scaffold(body: Text('Download manager'))));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => repository.delete(book.id));
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)));
+      await tester.pump();
+    }
+    expect(find.text('Download manager'), findsOneWidget);
+    expect(find.byType(ReaderScreen, skipOffstage: false), findsNothing);
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   test('local provider decodes a durable page independently of the network',
       () async {
     final done = Completer<ImageInfo>();

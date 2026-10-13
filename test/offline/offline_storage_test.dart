@@ -226,6 +226,36 @@ void main() {
     await subscription.cancel();
     await failing.dispose();
   });
+  test('restart preserves the reason for an explicitly paused task', () async {
+    final book = await repository.create(key, 'Book', 2);
+    await repository.setStatus(book.id, OfflineStatus.paused,
+        reason: 'authentication');
+    await repository.dispose();
+    repository = OfflineRepository(db, files,
+        legacyRoot: () async => Directory('${directory.path}/downloads'));
+    await repository.initialize();
+    expect((await repository.get(book.id))!.status, OfflineStatus.paused);
+    expect((await repository.get(book.id))!.record.reason, 'authentication');
+  });
+  test('failed metadata registration reclaims the unregistered image',
+      () async {
+    final closedDb = AppDatabase.forTesting(NativeDatabase.memory());
+    final closedRepo = OfflineRepository(closedDb, files);
+    final record = await closedRepo.create(key, 'Book', 1);
+    await closedRepo.putIndex(record.id, 1,
+        const [ThumbnailInfo(pageToken: 'p0', pageIndex: 0, thumbUrl: '')],
+        current: () => true);
+    final saved = await files.write(
+        record.id, 0, Stream.value(base64Decode(fixtures['png'])),
+        current: () => true);
+    await closedDb.close();
+    await expectLater(
+        closedRepo.savePage(record.id, 0, saved, current: () => true),
+        throwsA(
+            isA<OfflineFailure>().having((e) => e.code, 'code', 'storage')));
+    expect(await files.size(), 0);
+    await closedRepo.dispose();
+  });
   test('offline file paths cannot escape the owned directory', () async {
     await expectLater(files.file('../outside'), throwsA(isA<OfflineFailure>()));
     await expectLater(

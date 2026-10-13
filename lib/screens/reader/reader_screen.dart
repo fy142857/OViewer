@@ -163,10 +163,13 @@ class _ReaderViewState extends State<_ReaderView> {
   final Map<int, (ReaderRequestController, FileService)> _pageFiles = {};
   final _savingPages = ValueNotifier<Set<int>>({});
   bool _pageMenuOpen = false;
+  ModalRoute<Object?>? _pageMenuRoute;
+  final _offlineProviders = <OfflineImageProvider>{};
   bool _positionInitialized = false;
   bool _firstImageLogged = false;
   int? _lastReadingMode;
   int? _sliderPage;
+  int? _explicitOfflinePage;
   PageStorageBucket _scrollStorage = PageStorageBucket();
 
   @override
@@ -176,6 +179,7 @@ class _ReaderViewState extends State<_ReaderView> {
     _pageController =
         PageController(initialPage: initial.currentPage, keepPage: false);
     if (initial.offlineBook != null) {
+      _explicitOfflinePage = initial.currentPage;
       _positionInitialized = true;
       _lastReadingMode = initial.readingMode;
     }
@@ -199,6 +203,16 @@ class _ReaderViewState extends State<_ReaderView> {
   void _onVerticalScroll() {
     final positions = _verticalPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
+    final offlineState = context.read<ReaderBloc>().state;
+    if (offlineState.offlineBook != null && _explicitOfflinePage != null) {
+      final target =
+          _explicitOfflinePage!.clamp(0, offlineState.totalPages - 1);
+      _explicitOfflinePage = target;
+      _releaseOffscreenResources();
+      if (offlineState.currentPage != target)
+        context.read<ReaderBloc>().add(PageChanged(target));
+      return;
+    }
     // Find the item whose leading edge is closest to (but <= ) the top of the
     // viewport. This avoids jitter caused by two items having nearly equal
     // visible area — the page only advances once the next item's top edge
@@ -266,11 +280,21 @@ class _ReaderViewState extends State<_ReaderView> {
       listener: (context, state) {
         if (widget.requests.isCancelled) return;
         if (state.status == ReaderStatus.deleted) {
-          Navigator.of(context).pop();
+          final navigator = Navigator.of(context);
+          final readerRoute = ModalRoute.of(context);
+          final menu = _pageMenuRoute;
+          _pageMenuRoute = null;
+          if (menu?.isActive == true) navigator.removeRoute(menu!);
+          if (readerRoute?.isCurrent == true)
+            navigator.pop();
+          else if (readerRoute?.isActive == true)
+            navigator.removeRoute(readerRoute!);
           return;
         }
         if (state.status == ReaderStatus.ready &&
             (!_positionInitialized || _lastReadingMode != state.readingMode)) {
+          if (state.offlineBook != null)
+            _explicitOfflinePage = state.currentPage;
           _pageController.dispose();
           _pageController =
               PageController(initialPage: state.currentPage, keepPage: false);
@@ -398,8 +422,10 @@ class _ReaderViewState extends State<_ReaderView> {
                     context.read<ReaderBloc>().add(ReaderImageReady(
                         index, state.imageAttempts[index] ?? 0, resource));
                   });
-    widget.requests
-        .onCancel(() => PaintingBinding.instance.imageCache.evict(provider));
+    if (_offlineProviders.add(provider)) {
+      widget.requests
+          .onCancel(() => PaintingBinding.instance.imageCache.evict(provider));
+    }
     return provider;
   }
 
@@ -512,10 +538,14 @@ class _ReaderViewState extends State<_ReaderView> {
     final s = S.of(context);
     final result = await showDialog<Object>(
         context: context,
-        builder: (_) => BlocProvider.value(
-            value: bloc,
-            child: ReaderPageMenu(page: page, savingPages: _savingPages)));
+        builder: (dialogContext) {
+          _pageMenuRoute = ModalRoute.of(dialogContext);
+          return BlocProvider.value(
+              value: bloc,
+              child: ReaderPageMenu(page: page, savingPages: _savingPages));
+        });
     _pageMenuOpen = false;
+    _pageMenuRoute = null;
     if (!mounted || widget.requests.isCancelled) return;
     if (result == 'reload') {
       bloc.add(RetryImageAtIndex(page));
@@ -652,68 +682,75 @@ class _ReaderViewState extends State<_ReaderView> {
 
   // ---- Vertical Continuous Scroll Reader ----
   Widget _buildVerticalReader(ReaderState state) {
-    return PageStorage(
-      bucket: _scrollStorage,
-      child: InteractiveViewer(
-        transformationController: _zoomController,
-        minScale: 1.0,
-        maxScale: 3.0,
-        panEnabled: _isZoomed,
-        scaleEnabled: true,
-        child: ScrollablePositionedList.builder(
-          itemCount: state.totalPages,
-          itemScrollController: _verticalScrollController,
-          itemPositionsListener: _verticalPositionsListener,
-          initialScrollIndex: state.currentPage,
-          itemBuilder: (context, index) {
-            if (state.offlineBook != null) {
-              final provider = _offlineProvider(state, index);
-              return _pageSurface(
-                  index,
-                  provider == null
-                      ? SizedBox(height: 300, child: _offlineMissing(index))
-                      : ReaderPageImage(
-                          image: provider,
-                          errorBuilder: (_, __, ___) => SizedBox(
-                              height: 300,
-                              child: _offlineMissing(index, damaged: true))));
-            }
-            final image = state.loadedImages[index];
-            if (image == null ||
-                state.loadingIndices.contains(index) ||
-                state.failedIndices.contains(index)) {
+    return NotificationListener<ScrollStartNotification>(
+      onNotification: (notification) {
+        if (notification.dragDetails != null) _explicitOfflinePage = null;
+        return false;
+      },
+      child: PageStorage(
+        bucket: _scrollStorage,
+        child: InteractiveViewer(
+          transformationController: _zoomController,
+          minScale: 1.0,
+          maxScale: 3.0,
+          panEnabled: _isZoomed,
+          scaleEnabled: true,
+          child: ScrollablePositionedList.builder(
+            itemCount: state.totalPages,
+            itemScrollController: _verticalScrollController,
+            itemPositionsListener: _verticalPositionsListener,
+            initialScrollIndex: state.currentPage,
+            itemBuilder: (context, index) {
+              if (state.offlineBook != null) {
+                final provider = _offlineProvider(state, index);
+                return _pageSurface(
+                    index,
+                    provider == null
+                        ? SizedBox(height: 300, child: _offlineMissing(index))
+                        : ReaderPageImage(
+                            image: provider,
+                            errorBuilder: (_, __, ___) => SizedBox(
+                                height: 300,
+                                child: _offlineMissing(index, damaged: true))));
+              }
+              final image = state.loadedImages[index];
+              if (image == null ||
+                  state.loadingIndices.contains(index) ||
+                  state.failedIndices.contains(index)) {
+                return _pageSurface(
+                    index,
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.8,
+                      child: _pendingImage(state, index),
+                    ));
+              }
+
+              // Calculate aspect ratio for proper height
+              double aspectRatio = image.width > 0 && image.height > 0
+                  ? image.width / image.height
+                  : 0.7; // default portrait ratio
+              final screenWidth = MediaQuery.of(context).size.width;
+              final imageHeight = screenWidth / aspectRatio;
+
               return _pageSurface(
                   index,
                   SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.8,
-                    child: _pendingImage(state, index),
+                    width: screenWidth,
+                    height: imageHeight.clamp(200.0, screenWidth * 3),
+                    child: ReaderPageImage(
+                      image: _imageProvider(image.imageUrl,
+                          page: index,
+                          attempt: state.imageAttempts[index] ?? 0),
+                      errorBuilder: (_, error, ___) =>
+                          error is ReaderLocalCacheMiss
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white))
+                              : _decodedImageError(state, index),
+                    ),
                   ));
-            }
-
-            // Calculate aspect ratio for proper height
-            double aspectRatio = image.width > 0 && image.height > 0
-                ? image.width / image.height
-                : 0.7; // default portrait ratio
-            final screenWidth = MediaQuery.of(context).size.width;
-            final imageHeight = screenWidth / aspectRatio;
-
-            return _pageSurface(
-                index,
-                SizedBox(
-                  width: screenWidth,
-                  height: imageHeight.clamp(200.0, screenWidth * 3),
-                  child: ReaderPageImage(
-                    image: _imageProvider(image.imageUrl,
-                        page: index, attempt: state.imageAttempts[index] ?? 0),
-                    errorBuilder: (_, error, ___) => error
-                            is ReaderLocalCacheMiss
-                        ? const Center(
-                            child:
-                                CircularProgressIndicator(color: Colors.white))
-                        : _decodedImageError(state, index),
-                  ),
-                ));
-          },
+            },
+          ),
         ),
       ),
     );
@@ -833,6 +870,10 @@ class _ReaderViewState extends State<_ReaderView> {
                     final isCurrent = index == state.currentPage;
                     return GestureDetector(
                       onTap: () {
+                        if (state.offlineBook != null) {
+                          _explicitOfflinePage = index;
+                          context.read<ReaderBloc>().add(PageChanged(index));
+                        }
                         if (state.readingMode == 2) {
                           _verticalScrollController.jumpTo(index: index);
                         } else {
@@ -883,6 +924,10 @@ class _ReaderViewState extends State<_ReaderView> {
                       },
                       onChangeEnd: (value) {
                         final page = value.round();
+                        if (state.offlineBook != null) {
+                          _explicitOfflinePage = page;
+                          context.read<ReaderBloc>().add(PageChanged(page));
+                        }
                         setState(() => _sliderPage = null);
                         if (state.readingMode == 2) {
                           _verticalScrollController.jumpTo(index: page);

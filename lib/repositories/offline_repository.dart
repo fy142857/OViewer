@@ -68,8 +68,15 @@ class OfflineRepository {
                       .length ==
                   record.totalPages;
           if (!complete) {
-            await _status(record.id, OfflineStatus.paused,
-                damaged ? 'missing_file' : 'interrupted');
+            await _status(
+                record.id,
+                OfflineStatus.paused,
+                damaged
+                    ? 'missing_file'
+                    : const ['queued', 'preparing', 'downloading']
+                            .contains(record.status)
+                        ? 'interrupted'
+                        : record.reason ?? 'interrupted');
           }
         }
         // Only this version writes the offline tree. Preserve referenced files,
@@ -218,28 +225,45 @@ class OfflineRepository {
   Future<void> savePage(String id, int index, OfflineFileInfo file,
           {required bool Function() current}) =>
       _serial(() async {
-        if (!current()) {
-          await files.remove(file.relativePath);
-          throw const OfflineFailure('cancelled');
+        var registered = false;
+        try {
+          if (!current()) {
+            await files.remove(file.relativePath);
+            throw const OfflineFailure('cancelled');
+          }
+          final page = await (db.select(db.offlinePages)
+                ..where((t) => t.bookId.equals(id) & t.pageIndex.equals(index)))
+              .getSingleOrNull();
+          if (page == null) {
+            await files.remove(file.relativePath);
+            throw const OfflineFailure('cancelled');
+          }
+          await (db.update(db.offlinePages)
+                ..where((t) => t.bookId.equals(id) & t.pageIndex.equals(index)))
+              .write(OfflinePagesCompanion(
+                  relativePath: Value(file.relativePath),
+                  format: Value(file.format),
+                  bytes: Value(file.bytes),
+                  sha256: Value(file.digest),
+                  status: const Value('completed'),
+                  error: const Value(null)));
+          registered = true;
+          if (page.relativePath != null &&
+              page.relativePath != file.relativePath) {
+            await files.remove(page.relativePath!);
+          }
+        } on OfflineFailure {
+          rethrow;
+        } catch (_) {
+          if (!registered) {
+            // Reclaim this writer's complete file if metadata could not commit.
+            // A successfully registered replacement must never be removed.
+            try {
+              await files.remove(file.relativePath);
+            } catch (_) {/* Startup retries orphan cleanup. */}
+          }
+          throw const OfflineFailure('storage');
         }
-        final page = await (db.select(db.offlinePages)
-              ..where((t) => t.bookId.equals(id) & t.pageIndex.equals(index)))
-            .getSingleOrNull();
-        if (page == null) {
-          await files.remove(file.relativePath);
-          throw const OfflineFailure('cancelled');
-        }
-        await (db.update(db.offlinePages)
-              ..where((t) => t.bookId.equals(id) & t.pageIndex.equals(index)))
-            .write(OfflinePagesCompanion(
-                relativePath: Value(file.relativePath),
-                format: Value(file.format),
-                bytes: Value(file.bytes),
-                sha256: Value(file.digest),
-                status: const Value('completed'),
-                error: const Value(null)));
-        if (page.relativePath != null && page.relativePath != file.relativePath)
-          await files.remove(page.relativePath!);
       });
 
   Future<void> _invalidate(String id, int index, String reason) =>

@@ -99,13 +99,42 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
           .asyncMap((_) => offlineRepository!.get(offlineBook.id))
           .listen((book) {
         if (!isClosed) add(OfflineReaderChanged(book));
+      }, onError: (Object _, StackTrace __) {
+        // A failed metadata refresh must not interrupt an already open local
+        // book. File reads still verify their bytes; a later change can retry.
       });
     }
     on<OfflineReaderChanged>((event, emit) {
+      if (state.offlineBook == null) return;
       if (event.book == null || event.book!.status == OfflineStatus.deleting) {
         emit(state.copyWith(status: ReaderStatus.deleted));
       } else {
-        emit(state.copyWith(offlineBook: event.book));
+        final book = event.book!;
+        final oldPages = {
+          for (final page in state.offlineBook!.pages) page.pageIndex: page
+        };
+        final newPages = {for (final page in book.pages) page.pageIndex: page};
+        final changed = {...oldPages.keys, ...newPages.keys}
+            .where((page) => oldPages[page] != newPages[page])
+            .toSet();
+        for (final page in changed) {
+          state.readyResources[page]?.releaseMemory();
+        }
+        emit(state.copyWith(
+            offlineBook: book,
+            totalPages: book.record.totalPages,
+            currentPage: state.currentPage.clamp(0, book.record.totalPages - 1),
+            thumbnails: {
+              for (var i = 0; i < book.record.totalPages; i++)
+                i: ThumbnailInfo(pageToken: '', pageIndex: i, thumbUrl: '')
+            },
+            readyResources: {...state.readyResources}
+              ..removeWhere((page, _) => changed.contains(page)),
+            imageAttempts: {
+              ...state.imageAttempts,
+              for (final page in changed)
+                page: (state.imageAttempts[page] ?? 0) + 1
+            }));
       }
     });
     _cacheGeneration = _reentry.generation;
@@ -425,6 +454,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final page = event.page.clamp(0, state.totalPages - 1);
     _index?.prioritize(page);
     emit(state.copyWith(currentPage: page));
+    if (state.offlineBook != null) {
+      _saveProgress(page);
+      return;
+    }
     _reentry.focus(galleryKey, page);
     _saveProgress(page);
     if (state.loadedImages.containsKey(page)) {
@@ -446,9 +479,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   @override
-  Future<void> close() {
-    _offlineChanges?.cancel();
+  Future<void> close() async {
     _requests.cancel();
-    return super.close();
+    await _offlineChanges?.cancel();
+    await super.close();
   }
 }
