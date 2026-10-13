@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.8.3",
   "branch": "dev",
-  "build_number": 81,
-  "candidate_id": "1.9.0+81",
-  "fingerprint": "501e9eb4710d6dac9762f4657f8bfcdc3aaa3e2ab21b29011b2deb63e40634af",
+  "build_number": 82,
+  "candidate_id": "1.9.0+82",
+  "fingerprint": "85dffb7328221674cb65f38e4aea1ab738746ca1a78a68cda7104b1dd7c54ede",
   "notes": "### 新增\n\n- 支持整本漫画离线缓存，下载前确认 EH/EX 来源；已缓存漫画优先本地阅读，提供暂停、继续、失败补下和独立文件管理。\n- 设置中新增同时下载漫画数与全局图片并行数，默认 2 本、4 张；Android 支持带进度通知的后台下载，进程重启后手动继续。\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "fe2acbae4d284a5443cfbb374a687b2cccc980ce",
+  "source_sha": "2b1955d8e08e0d3b624a48e710c2df99ece43855",
   "summary": [
     {
       "change_kind": "feature",
@@ -45,6 +45,16 @@
       "original_type": "fix",
       "sha": "fe2acbae4d284a5443cfbb374a687b2cccc980ce",
       "subject": "fix(offline): stabilize reader updates and storage recovery",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Check the original site and session before invalidating a cached page for repair.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "2b1955d8e08e0d3b624a48e710c2df99ece43855",
+      "subject": "fix(offline): preserve cached pages when repair source differs",
       "type": "fix",
       "version_impact": "patch"
     }
