@@ -205,6 +205,27 @@ void main() {
     expect((await repository.get(book.id))!.completedPages, 0);
     expect(await files.size(), 0);
   });
+  test(
+      'storage initialization failure does not emit an infinite reload trigger',
+      () async {
+    var attempts = 0;
+    var events = 0;
+    final failing = OfflineRepository(db, OfflineFiles(root: () async {
+      attempts++;
+      throw const FileSystemException('storage unavailable');
+    }));
+    final subscription = failing.changes.listen((_) => events++);
+    await expectLater(
+        failing.initialize(), throwsA(isA<FileSystemException>()));
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    expect(events, 0);
+    expect(attempts, 1);
+    await expectLater(
+        failing.initialize(), throwsA(isA<FileSystemException>()));
+    expect(attempts, 2);
+    await subscription.cancel();
+    await failing.dispose();
+  });
   test('offline file paths cannot escape the owned directory', () async {
     await expectLater(files.file('../outside'), throwsA(isA<OfflineFailure>()));
     await expectLater(

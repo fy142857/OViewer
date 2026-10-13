@@ -36,7 +36,7 @@ android/gradlew :app:testDebugUnitTest
 
 Windows 本机 Gradle 如遇 `Unable to establish loopback connection`，使用候选 Android 工作流的 `offline_emulator_apk=true` 构建隔离测试包；该包的应用 ID 为 `com.oviewer.oviewer.offline_test`，不覆盖原应用，不能作为正式发布产物。
 
-本机运行 `python -m scripts.offline_fixture_server`，模拟器通过 `10.0.2.2:8765` 获取样例目录和 PNG/JPEG/GIF/WebP。测试入口 `test_driver/offline_validation.dart` 使用生产 UI、存储、调度和原生服务，仅把 EH/EX 的 HTML/API 请求映射到此服务器。普通发布入口不接受该映射。
+本机运行 `python -m scripts.offline_fixture_server`，再对测试模拟器执行 `adb -s <模拟器序列号> reverse tcp:8765 tcp:8765`。测试应用通过 `127.0.0.1:8765` 代理及 ADB 转发访问 `10.0.2.2:8765` 样例地址，获取目录和 PNG/JPEG/GIF/WebP，避免依赖宿主机 NAT 回环访问。测试入口 `test_driver/offline_validation.dart` 使用生产 UI、存储、调度和原生服务，仅把 EH/EX 的 HTML/API 请求映射到此服务器。普通发布入口不接受该映射，也不会设置测试代理。
 
 `/control?delay=2` 设置单页响应延迟；`/control?enabled=0` 让后续请求失败；`/control?reset=1` 清除请求统计；`/stats` 返回请求路径与图片请求峰值。验收需要记录后台/锁屏下载、暂停及恢复、退出进程、断网后本地阅读、来源隔离、设置变化和清缓存保留下载等证据。
 

@@ -32,9 +32,9 @@ def index(site: str, gid: int, part: int) -> str:
     return f'''<html><head><link rel="canonical" href="{origin}/g/{gid}/abc123/"></head><body>
       <h1 id="gn">Offline Fixture {site.upper()} {gid}</h1><h1 id="gj">Offline Fixture</h1>
       <div id="gd1"><img src="http://10.0.2.2:8765/cover/{gid}"></div><div id="gdc"><div>Misc</div></div>
-      <div id="gdd"><table><tr><td>Length:</td><td>{total} pages</td></tr>
-      <tr><td>Posted:</td><td>2026-10-13 12:00</td></tr><tr><td>Language:</td><td>English</td></tr></table></div>
-      <table class="ptt"><tr>{links}</tr></table><div id="gdt">{thumbs}</div></body></html>'''
+      <div id="gdd"><table><tr><td class="gdt1">Length:</td><td class="gdt2">{total} pages</td></tr>
+      <tr><td class="gdt1">Posted:</td><td class="gdt2">2026-10-13 12:00</td></tr><tr><td class="gdt1">Language:</td><td class="gdt2">English</td></tr></table></div>
+      <table class="ptt"><tr><td>&lt;</td>{links}<td>&gt;</td></tr></table><div id="gdt">{thumbs}</div></body></html>'''
 
 
 class Handler(BaseHTTPRequestHandler):

@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../../core/router/open_history_entry.dart';
+import '../../widgets/history_thumbnail.dart';
 import '../../widgets/favorites_content.dart';
 import '../../widgets/favorites_filter_button.dart';
 
@@ -19,14 +21,12 @@ import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/settings/settings_event.dart';
 import '../../blocs/settings/settings_state.dart';
 import '../../core/l10n/s.dart';
-import '../../core/network/eh_image_cache_manager.dart';
 import '../../repositories/gallery_repository.dart';
 import '../../widgets/gallery_card.dart';
 import '../../widgets/gallery_grid_item.dart';
 import '../../widgets/adaptive_gallery_grid.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/error_widget.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -446,15 +446,11 @@ class _HomeScreenState extends State<HomeScreen>
             child: SizedBox(
               width: 50,
               height: 68,
-              child: CachedNetworkImage(
-                imageUrl: entry.thumbUrl,
-                fit: BoxFit.cover,
-                cacheManager: EhImageCacheManager.instance,
-                errorWidget: (_, __, ___) => Container(
-                  color: theme.colorScheme.surfaceVariant,
-                  child: const Icon(Icons.broken_image, size: 20),
-                ),
-              ),
+              child: HistoryThumbnail(
+                  gid: entry.gid,
+                  token: entry.token,
+                  source: entry.source,
+                  thumbUrl: entry.thumbUrl),
             ),
           ),
           title: Text(
@@ -497,7 +493,10 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ],
           ),
-          onTap: () => _navigateToGallery(entry.gid, entry.token),
+          onTap: () async {
+            await openHistoryEntry(context, entry);
+            if (mounted) context.read<HistoryBloc>().add(LoadHistory());
+          },
         );
       },
     );

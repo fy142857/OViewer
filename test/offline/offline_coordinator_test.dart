@@ -31,6 +31,7 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   int active = 0;
   int peak = 0;
   final Map<String, int> calls = {};
+  final Map<String, int> statuses = {};
   final gates = <Completer<void>>[];
   final indexed = <int>[];
   ControlledOfflineNetwork(this.png);
@@ -77,8 +78,9 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
       }
     }
 
-    return HttpGetResponse(
-        http.StreamedResponse(content(), 200, contentLength: data.length));
+    return HttpGetResponse(http.StreamedResponse(
+        content(), statuses[url] ?? 200,
+        contentLength: data.length));
   }
 
   void release() {
@@ -95,6 +97,20 @@ Future<void> until(FutureOr<bool> Function() predicate) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
   }
   fail('Condition not reached');
+}
+
+class FullDiskFiles extends OfflineFiles {
+  FullDiskFiles(Future<Directory> Function() root) : super(root: root);
+  @override
+  Future<OfflineFileInfo> write(
+      String bookId, int page, Stream<List<int>> source,
+      {required bool Function() current, int? expectedBytes}) {
+    if (page == 1)
+      return Future.error(const FileSystemException(
+          'No space left', '', OSError('No space left', 28)));
+    return super.write(bookId, page, source,
+        current: current, expectedBytes: expectedBytes);
+  }
 }
 
 void main() {
@@ -268,5 +284,37 @@ void main() {
     expect((await repo.get(id))!.status, OfflineStatus.paused);
     expect(network.calls, previousCalls);
     expect(coordinator.running, isFalse);
+  });
+  for (final status in [401, 509]) {
+    test('access failure $status pauses the task and keeps completed pages',
+        () async {
+      coordinator.configure(galleries: 1, pages: 1);
+      network.statuses['42/1'] = status;
+      final id = await coordinator.enqueue(key, 'Book', 3);
+      await until(
+          () async => (await repo.get(id))!.status == OfflineStatus.paused);
+      expect((await repo.get(id))!.completedPages, 1);
+      expect((await repo.get(id))!.record.reason,
+          status == 401 ? 'authentication' : 'quota');
+      expect(network.calls['42/1'], 1);
+      expect(network.calls.containsKey('42/2'), isFalse);
+      expect(await repo.valid((await repo.pages(id)).first), isTrue);
+    });
+  }
+  test('disk full pauses without losing the previously committed page',
+      () async {
+    await coordinator.dispose();
+    await repo.dispose();
+    repo = OfflineRepository(
+        db, FullDiskFiles(() async => Directory('${directory.path}/offline')),
+        legacyRoot: () async => Directory('${directory.path}/legacy'));
+    coordinator = OfflineDownloadCoordinator(repo, network,
+        galleryLimit: 1, pageLimit: 1);
+    final id = await coordinator.enqueue(key, 'Book', 3);
+    await until(
+        () async => (await repo.get(id))!.status == OfflineStatus.paused);
+    expect((await repo.get(id))!.record.reason, 'storage');
+    expect((await repo.get(id))!.completedPages, 1);
+    expect(await repo.valid((await repo.pages(id)).first), isTrue);
   });
 }

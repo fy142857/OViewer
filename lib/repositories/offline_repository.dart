@@ -29,9 +29,7 @@ class OfflineRepository {
     final future = _tail.then((_) => operation());
     _tail = future.then<void>((_) {
       if (!_changes.isClosed) _changes.add(null);
-    }, onError: (Object _, StackTrace __) {
-      if (!_changes.isClosed) _changes.add(null);
-    });
+    }, onError: (Object _, StackTrace __) {});
     return future;
   }
 
@@ -118,16 +116,18 @@ class OfflineRepository {
   }
 
   Future<List<OfflineBook>> matching(int gid, String token,
-          {GallerySource? source}) async =>
-      (await all())
-          .where((b) =>
-              b.record.gid == gid &&
-              b.record.token == token &&
-              (source == null || b.source == source) &&
-              b.record.everCompleted &&
-              b.record.indexReady &&
-              b.status != OfflineStatus.deleting)
-          .toList();
+      {GallerySource? source}) async {
+    final query = db.select(db.offlineGalleries)
+      ..where((t) =>
+          t.gid.equals(gid) &
+          t.token.equals(token) &
+          t.everCompleted.equals(true) &
+          t.indexReady.equals(true) &
+          t.status.equals('deleting').not());
+    if (source != null) query.where((t) => t.source.equals(source.name));
+    return Future.wait((await query.get())
+        .map((r) async => OfflineBook(r, await pages(r.id))));
+  }
 
   Future<OfflineBook> create(OfflineKey key, String title, int totalPages) =>
       _serial(() async {
@@ -280,6 +280,7 @@ class OfflineRepository {
           });
         } catch (_) {
           await _status(id, OfflineStatus.deleting, 'delete_failed');
+          if (!_changes.isClosed) _changes.add(null);
           rethrow;
         }
       });

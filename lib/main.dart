@@ -150,7 +150,9 @@ Future<void> startOfflineValidation(
   await _initDependencies(dioFactory: dioFactory);
   await sl<LocalStorage>().setLocale('en');
   await sl<LocalStorage>().setAutoProxy(false);
-  await sl<NetworkPreparation>().configure(manualProxy: null, autoProxy: false);
+  await sl<LocalStorage>().setProxy('http://127.0.0.1:8765');
+  await sl<NetworkPreparation>()
+      .configure(manualProxy: 'http://127.0.0.1:8765', autoProxy: false);
   await sl<OfflineDownloadCoordinator>().initialize();
   runApp(OViewerApp(
       initialSettings: SettingsBloc.readSaved(sl<SettingsRepository>()),

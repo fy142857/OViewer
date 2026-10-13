@@ -1,17 +1,14 @@
-import 'package:get_it/get_it.dart';
-import '../../models/gallery_source.dart';
-import '../../repositories/offline_repository.dart';
+import '../../core/router/open_history_entry.dart';
+import '../../widgets/history_thumbnail.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../blocs/history/history_bloc.dart';
 import '../../blocs/history/history_event.dart';
 import '../../blocs/history/history_state.dart';
 import '../../core/l10n/s.dart';
-import '../../core/network/eh_image_cache_manager.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -134,15 +131,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: SizedBox(
                 width: 50,
                 height: 68,
-                child: CachedNetworkImage(
-                  imageUrl: entry.thumbUrl,
-                  fit: BoxFit.cover,
-                  cacheManager: EhImageCacheManager.instance,
-                  errorWidget: (_, __, ___) => Container(
-                    color: theme.colorScheme.surfaceVariant,
-                    child: const Icon(Icons.broken_image, size: 20),
-                  ),
-                ),
+                child: HistoryThumbnail(
+                    gid: entry.gid,
+                    token: entry.token,
+                    source: entry.source,
+                    thumbUrl: entry.thumbUrl),
               ),
             ),
             title: Text(
@@ -186,21 +179,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ],
             ),
             onTap: () async {
-              var route = '/gallery';
-              final source = GallerySource.parse(entry.source);
-              if (GetIt.I.isRegistered<OfflineRepository>()) {
-                final repository = GetIt.I<OfflineRepository>();
-                await repository.initialize();
-                if ((await repository.matching(entry.gid, entry.token,
-                        source: source))
-                    .isNotEmpty) route = '/reader';
-              }
+              await openHistoryEntry(context, entry);
               if (context.mounted)
-                Navigator.pushNamed(context, route, arguments: {
-                  'gid': entry.gid,
-                  'token': entry.token,
-                  'source': source,
-                });
+                context.read<HistoryBloc>().add(LoadHistory());
             },
           ),
         );
