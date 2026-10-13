@@ -1,33 +1,23 @@
 {
-  "base_tag": "v1.8.2",
+  "base_tag": "v1.8.3",
   "branch": "dev",
-  "build_number": 77,
-  "candidate_id": "1.8.3+77",
-  "fingerprint": "fa8d23999e082e21bd66120e6ba2d07aef6e9cbbb4cbaf506e75e9676f4fc520",
-  "notes": "### 新增\n\n### 修复\n\n- 修复部分华为 Android 10 设备读取更新 APK 签名为空、将相同正式签名误报为不一致的问题，继续严格校验更新包、当前应用与发布清单的证书。\n\n### 变更\n\n- Android 更新窗口加入最新发布说明中的“修复”部分，与“新增”“变更”一样加粗章节标题。\n\n### 已知限制",
+  "build_number": 78,
+  "candidate_id": "1.9.0+78",
+  "fingerprint": "f72daae6f798b86c26fcd5f4dbc8d1a685d628b7e8e56b113eaa61822c4ffab6",
+  "notes": "### 新增\n\n- 支持整本漫画离线缓存，下载前确认 EH/EX 来源；已缓存漫画优先本地阅读，提供暂停、继续、失败补下和独立文件管理。\n- 设置中新增同时下载漫画数与全局图片并行数，默认 2 本、4 张；Android 支持带进度通知的后台下载，进程重启后手动继续。\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "a92fef1a313100a5060328d2a1aa1497e33ca455",
+  "source_sha": "0bb92d2802fb8cbab6e3bfec5d2a3bbb01d2e085",
   "summary": [
     {
-      "change_kind": "fix",
-      "classification_reason": "Extend existing update notes filtering and heading styling to include the current release Fixed section in Chinese and English.",
+      "change_kind": "feature",
+      "classification_reason": "Introduce durable offline gallery reading with explicit EH/EX source identity, configurable global download concurrency, recoverable validated files, and Android foreground-service execution.",
       "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "d78a4d3a002d0be32896d8bb7de54373782ed6e6",
-      "subject": "fix(updater): include fixes in release notes dialog",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Request both signing flags so affected Android 10 archive parsers populate current signer certificates, avoiding false mismatches without weakening signature validation.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "a92fef1a313100a5060328d2a1aa1497e33ca455",
-      "subject": "fix(updater): collect APK signing certificates on Huawei Android 10",
-      "type": "fix",
-      "version_impact": "patch"
+      "original_type": "feat",
+      "sha": "0bb92d2802fb8cbab6e3bfec5d2a3bbb01d2e085",
+      "subject": "feat(offline): add persistent gallery downloads and local reading",
+      "type": "feat",
+      "version_impact": "minor"
     }
   ],
-  "version": "1.8.3"
+  "version": "1.9.0"
 }
