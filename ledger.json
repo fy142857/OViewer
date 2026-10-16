@@ -3580,7 +3580,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "fix",
