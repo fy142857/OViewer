@@ -157,12 +157,14 @@ class _DownloadScreenState extends State<DownloadScreen> {
                                                 '${book.completedPages}/${book.record.totalPages} · ${(book.bytes / 1048576).toStringAsFixed(1)} MB'),
                                           ])),
                                     ]),
-                                const SizedBox(height: 8),
-                                LinearProgressIndicator(
-                                    value: book.record.totalPages <= 0
-                                        ? 0
-                                        : book.completedPages /
-                                            book.record.totalPages),
+                                if (book.status != OfflineStatus.completed) ...[
+                                  const SizedBox(height: 8),
+                                  LinearProgressIndicator(
+                                      value: book.record.totalPages <= 0
+                                          ? 0
+                                          : book.completedPages /
+                                              book.record.totalPages),
+                                ],
                                 if (book.record.reason != null)
                                   Padding(
                                       padding: const EdgeInsets.only(top: 6),
