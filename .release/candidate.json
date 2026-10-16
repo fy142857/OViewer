@@ -1,63 +1,23 @@
 {
-  "base_tag": "v1.8.3",
+  "base_tag": "v1.9.0",
   "branch": "dev",
-  "build_number": 82,
-  "candidate_id": "1.9.0+82",
-  "fingerprint": "85dffb7328221674cb65f38e4aea1ab738746ca1a78a68cda7104b1dd7c54ede",
-  "notes": "### 新增\n\n- 支持整本漫画离线缓存，下载前确认 EH/EX 来源；已缓存漫画优先本地阅读，提供暂停、继续、失败补下和独立文件管理。\n- 设置中新增同时下载漫画数与全局图片并行数，默认 2 本、4 张；Android 支持带进度通知的后台下载，进程重启后手动继续。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+  "build_number": 83,
+  "candidate_id": "1.9.1+83",
+  "fingerprint": "2cbb29b42679f0af79fe33fc9e54107865519752f277716b934cf85a5632acfb",
+  "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "2b1955d8e08e0d3b624a48e710c2df99ece43855",
+  "source_sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
   "summary": [
     {
-      "change_kind": "feature",
-      "classification_reason": "Introduce durable offline gallery reading with explicit EH/EX source identity, configurable global download concurrency, recoverable validated files, and Android foreground-service execution.",
-      "classification_source": "commit-trailers",
-      "original_type": "feat",
-      "sha": "0bb92d2802fb8cbab6e3bfec5d2a3bbb01d2e085",
-      "subject": "feat(offline): add persistent gallery downloads and local reading",
-      "type": "feat",
-      "version_impact": "minor"
-    },
-    {
       "change_kind": "fix",
-      "classification_reason": "Route both history surfaces through local book resolution, keep local covers offline, prevent storage-failure reload loops, and validate access failures and settings persistence.",
+      "classification_reason": "Hide the download progress bar and its spacing once an offline task has completed.",
       "classification_source": "commit-trailers",
       "original_type": "fix",
-      "sha": "90e3f2b8be168dfc8473722261df26eb3c0bb0dd",
-      "subject": "fix(offline): resolve local history entries and stabilize recovery",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Prevent site or account changes from leaving later parallel clients alive while an earlier task pause awaits storage, and serialize resume with pending pause persistence.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "ad4e3dbd52c3cefa2aa523f8956284a34b848a7e",
-      "subject": "fix(offline): cancel all parallel requests before persisting pauses",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Preserve pause reasons and explicit offline page selection, invalidate superseded page resources, remove only the deleted reader route, and reclaim files when metadata registration fails.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "fe2acbae4d284a5443cfbb374a687b2cccc980ce",
-      "subject": "fix(offline): stabilize reader updates and storage recovery",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Check the original site and session before invalidating a cached page for repair.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "2b1955d8e08e0d3b624a48e710c2df99ece43855",
-      "subject": "fix(offline): preserve cached pages when repair source differs",
+      "sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
+      "subject": "fix(download): hide progress for completed offline books",
       "type": "fix",
       "version_impact": "patch"
     }
   ],
-  "version": "1.9.0"
+  "version": "1.9.1"
 }
