@@ -28,6 +28,7 @@ import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/screens/home/home_screen.dart';
+import 'package:oviewer/widgets/fast_drawer_controller.dart';
 import 'package:oviewer/screens/history/history_screen.dart';
 
 class MockGallery extends Mock implements GalleryRepository {}
@@ -236,9 +237,14 @@ void main() {
       expect(find.text('Latest 0'), findsOneWidget);
       await swipe(tester, right: true);
       expect(selected(tester), 0);
-      final scaffold = tester.state<ScaffoldState>(find.byType(Scaffold).first);
-      expect(scaffold.isDrawerOpen, isTrue);
-      scaffold.closeDrawer();
+      expect(
+          tester
+              .widget<FastDrawerController>(find.byType(FastDrawerController))
+              .isDrawerOpen,
+          isTrue);
+      tester
+          .state<DrawerControllerState>(find.byType(FastDrawerController))
+          .close();
       await frames(tester);
       await swipe(tester);
       expect(selected(tester), 1);
@@ -259,7 +265,11 @@ void main() {
       expect(selected(tester), 1);
       await swipe(tester, right: true);
       expect(selected(tester), 0);
-      expect(scaffold.isDrawerOpen, isFalse);
+      expect(
+          tester
+              .widget<FastDrawerController>(find.byType(FastDrawerController))
+              .isDrawerOpen,
+          isFalse);
       await tester.tap(find.widgetWithText(Tab, 'Favorites'));
       await frames(tester);
       expect(selected(tester), 3);
@@ -276,18 +286,44 @@ void main() {
     });
   }
 
+  testWidgets('home menu button opens the accelerated drawer', (tester) async {
+    await boot(tester);
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.menu));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<FastDrawerController>(find.byType(FastDrawerController))
+            .isDrawerOpen,
+        isTrue);
+    await tester.state<NavigatorState>(find.byType(Navigator)).maybePop();
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<FastDrawerController>(find.byType(FastDrawerController))
+            .isDrawerOpen,
+        isFalse);
+    expect(selected(tester), 0);
+  });
+
   testWidgets('latest vertical scroll and short right drag do not open drawer',
       (tester) async {
     await boot(tester);
-    final scaffold = tester.state<ScaffoldState>(find.byType(Scaffold).first);
     await tester.drag(
         find.byKey(const ValueKey('home-tab-pages')), const Offset(0, -180));
     await frames(tester);
-    expect(scaffold.isDrawerOpen, isFalse);
+    expect(
+        tester
+            .widget<FastDrawerController>(find.byType(FastDrawerController))
+            .isDrawerOpen,
+        isFalse);
     await tester.drag(
         find.byKey(const ValueKey('home-tab-pages')), const Offset(28, 0));
     await frames(tester);
-    expect(scaffold.isDrawerOpen, isFalse);
+    expect(
+        tester
+            .widget<FastDrawerController>(find.byType(FastDrawerController))
+            .isDrawerOpen,
+        isFalse);
     expect(selected(tester), 0);
   });
 

@@ -3,6 +3,7 @@ import '../../core/router/open_history_entry.dart';
 import '../../widgets/history_thumbnail.dart';
 import '../../widgets/favorites_content.dart';
 import '../../widgets/favorites_filter_button.dart';
+import '../../widgets/fast_drawer_controller.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -41,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen>
   late TabController _tabController;
   late Map<GalleryTab, GalleryListBloc> _galleryBlocs;
   int _currentIndex = 0;
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _drawerKey = GlobalKey<DrawerControllerState>();
+  bool _drawerOpen = false;
   bool _drawerSwipeEligible = false;
   double _drawerOverscroll = 0;
   PageStorageBucket _scrollStorage = PageStorageBucket();
@@ -142,9 +144,13 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    return Scaffold(
-      key: _scaffoldKey,
+    final scaffold = Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+          icon: const Icon(Icons.menu),
+          onPressed: () => _drawerKey.currentState?.open(),
+        ),
         title: BlocBuilder<SettingsBloc, SettingsState>(
           buildWhen: (p, c) => p.useExHentai != c.useExHentai,
           builder: (_, settings) {
@@ -277,8 +283,18 @@ class _HomeScreenState extends State<HomeScreen>
               heroTag: 'home-favorites-filter',
               bottomInset: MediaQuery.of(context).viewPadding.bottom)
           : null,
-      drawer: _buildDrawer(),
     );
+    return Stack(children: [
+      scaffold,
+      FastDrawerController(
+        key: _drawerKey,
+        isDrawerOpen: _drawerOpen,
+        drawerCallback: (open) {
+          if (_drawerOpen != open) setState(() => _drawerOpen = open);
+        },
+        child: _buildDrawer(),
+      ),
+    ]);
   }
 
   bool _handleTabSwipe(ScrollNotification notification) {
@@ -300,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen>
       _drawerOverscroll -= notification.overscroll;
       if (_drawerOverscroll >= 48) {
         _drawerSwipeEligible = false;
-        _scaffoldKey.currentState?.openDrawer();
+        _drawerKey.currentState?.open();
       }
     } else if (notification is ScrollUpdateNotification &&
         notification.metrics.pixels > notification.metrics.minScrollExtent) {
