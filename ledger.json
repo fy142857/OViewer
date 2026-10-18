@@ -3869,8 +3869,93 @@
         }
       ],
       "version": "1.9.1"
+    },
+    {
+      "base_tag": "v1.9.0",
+      "branch": "dev",
+      "build_number": 89,
+      "build_sha": "aea4bc673621fc20d31f88a30214eca6f1939ed1",
+      "candidate_id": "1.9.1+89",
+      "fingerprint": "bb22a76866711acca3c0c55116b053e50afd583f8e165a013afaa2dc2621279b",
+      "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- 详情页“下载已开始”提示右侧增加“跳转下载页”入口（#66）。\n- 侧栏弹出与收起动画调整为 2 倍速，保留手指拖动跟随、遮罩及返回键行为。\n- 下载页面点击可阅读资源的卡片即可进入离线阅读，移除独立阅读按钮，删除按钮置于卡片右下角；列表和卡片视图在收藏红心左侧显示当前 EH/EX 来源的已缓存图标（#64）。\n- “最新”页面支持从内容区向右滑动打开侧边栏，保留标签切换及纵向滚动手势（#65）。\n- Android 正式版应用显示名称由 oviewer 调整为 OViewer。\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "79c07972bf0d2bc12b8c409ba15bb8a4f69dd8fc",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Hide the download progress bar and its spacing once an offline task has completed.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
+          "subject": "fix(download): hide progress for completed offline books",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Give ordinary debug builds a separate application ID and label so they can coexist with release installations, and optionally export the debug APK for device validation.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "e4675bcd07ec01f8c10413a48b0cf7df6263eae4",
+          "subject": "fix(android): isolate ordinary debug app from release",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Remove the additional ordinary Debug APK workflow input and artifact while retaining the independent local debug application ID.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "b3de64ed643840259a8c499c954e00b3a242b550",
+          "subject": "fix(ci): restore original Android build artifacts",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Display OViewer as the Android release application name while preserving package identity, signing, debug labels and build artifacts.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "5e2437525fabfbc75ed4139649eda9797685be3d",
+          "subject": "fix(android): capitalize release app display name",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Make offline cards directly readable with compact delete controls, show live source-aware cache indicators in gallery tiles, and open the drawer on a right swipe from Latest without interfering with tab navigation.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "545e97b372fba75c331a667bcfcbee2d0c4c3d66",
+          "subject": "fix(ui): improve offline cards and latest drawer swipe",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Run the drawer settling animation at twice the normal speed using a local Material drawer controller while preserving drag tracking, focus, navigation and other animations.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "32a6ef8d6e02b4498a3e4baf7b724420941a86d5",
+          "subject": "fix(ui): double drawer transition speed",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Add a localized downloads-page action to the successful gallery download snackbar.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "79c07972bf0d2bc12b8c409ba15bb8a4f69dd8fc",
+          "subject": "fix(download): link start confirmation to downloads page",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.9.1"
     }
   ],
-  "last_build_number": 88,
+  "last_build_number": 89,
   "schema": 1
 }
