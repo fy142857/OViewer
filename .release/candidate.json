@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.9.0",
   "branch": "dev",
-  "build_number": 87,
-  "candidate_id": "1.9.1+87",
-  "fingerprint": "d2f3ac67c7e42183643c4108b2f031dcf280f459f36cac23ad4d901ed785657d",
-  "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- 下载页面点击可阅读资源的卡片即可进入离线阅读，移除独立阅读按钮，删除按钮置于卡片右下角；列表和卡片视图在收藏红心左侧显示当前 EH/EX 来源的已缓存图标（#64）。\n- “最新”页面支持从内容区向右滑动打开侧边栏，保留标签切换及纵向滚动手势（#65）。\n- Android 正式版应用显示名称由 oviewer 调整为 OViewer。\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
+  "build_number": 88,
+  "candidate_id": "1.9.1+88",
+  "fingerprint": "85a711e3403e3d6fc73dec43f5f5b080f7c049264316ce532706bad23b57c011",
+  "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- 侧栏弹出与收起动画调整为 2 倍速，保留手指拖动跟随、遮罩及返回键行为。\n- 下载页面点击可阅读资源的卡片即可进入离线阅读，移除独立阅读按钮，删除按钮置于卡片右下角；列表和卡片视图在收藏红心左侧显示当前 EH/EX 来源的已缓存图标（#64）。\n- “最新”页面支持从内容区向右滑动打开侧边栏，保留标签切换及纵向滚动手势（#65）。\n- Android 正式版应用显示名称由 oviewer 调整为 OViewer。\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "545e97b372fba75c331a667bcfcbee2d0c4c3d66",
+  "source_sha": "32a6ef8d6e02b4498a3e4baf7b724420941a86d5",
   "summary": [
     {
       "change_kind": "fix",
@@ -55,6 +55,16 @@
       "original_type": "fix",
       "sha": "545e97b372fba75c331a667bcfcbee2d0c4c3d66",
       "subject": "fix(ui): improve offline cards and latest drawer swipe",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Run the drawer settling animation at twice the normal speed using a local Material drawer controller while preserving drag tracking, focus, navigation and other animations.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "32a6ef8d6e02b4498a3e4baf7b724420941a86d5",
+      "subject": "fix(ui): double drawer transition speed",
       "type": "fix",
       "version_impact": "patch"
     }
