@@ -1,10 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../services/reader_entry_diagnostics.dart';
+import '../../widgets/reader_presentation.dart';
 
 /// Android returns immediately, before restored system bars can resize the
 /// outgoing reader. Keep the native-style transition and back swipe on iOS.
 class ReaderRoute<T> extends MaterialPageRoute<T> {
-  ReaderRoute({required super.builder, super.settings});
+  final ReaderEntryDiagnostics diagnostics;
+  ReaderRoute(
+      {required WidgetBuilder builder,
+      super.settings,
+      ReaderEntryDiagnostics? diagnostics})
+      : diagnostics = diagnostics ?? ReaderEntryDiagnostics(),
+        super(
+          allowSnapshotting: defaultTargetPlatform != TargetPlatform.android,
+          builder: (context) => ReaderPresentation(
+              diagnostics:
+                  (ModalRoute.of(context) as ReaderRoute?)?.diagnostics,
+              child: Builder(builder: builder)),
+        );
+
+  @override
+  void dispose() {
+    diagnostics.dispose();
+    super.dispose();
+  }
 
   @override
   Duration get reverseTransitionDuration =>

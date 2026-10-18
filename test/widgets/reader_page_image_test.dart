@@ -24,6 +24,29 @@ class PendingImage extends ImageProvider<PendingImage> {
 }
 
 void main() {
+  testWidgets('offline loading height prevents eagerly building a whole book',
+      (tester) async {
+    var built = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: ListView.builder(
+      itemCount: 100,
+      itemBuilder: (context, index) {
+        built++;
+        return ReaderPageImage(
+            image: PendingImage(),
+            loadingHeight: 600,
+            errorBuilder: (_, __, ___) => const SizedBox());
+      },
+    ))));
+    await tester.pump();
+    expect(tester.getSize(find.byType(ReaderPageImage).first).height, 600);
+    expect(built, lessThan(5));
+    await tester.pumpWidget(const SizedBox());
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+  });
+
   testWidgets(
       'no byte progress or completed download stays loading until first frame; failures can retry',
       (tester) async {

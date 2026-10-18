@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'reader_route.dart';
+import '../services/reader_entry_diagnostics.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/gallery_detail/gallery_detail_screen.dart';
 import '../../screens/reader/reader_entry_screen.dart';
@@ -43,6 +44,7 @@ class AppRouter {
       case reader:
         final args = routeSettings.arguments as Map<String, dynamic>;
         return ReaderRoute(
+          diagnostics: args['entryDiagnostics'] as ReaderEntryDiagnostics?,
           settings: routeSettings,
           builder: (_) => ReaderEntryScreen(
             gid: args['gid'] as int,

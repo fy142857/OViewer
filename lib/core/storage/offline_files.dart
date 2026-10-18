@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
@@ -145,8 +146,14 @@ class OfflineFiles {
 
   Future<Uint8List> read(String relative, int size, String digest) async {
     final target = await file(relative);
+    final path = target.path;
+    return Isolate.run(() => _readVerified(path, size, digest));
+  }
+
+  static Future<Uint8List> _readVerified(
+      String path, int size, String digest) async {
     try {
-      final bytes = await target.readAsBytes();
+      final bytes = await File(path).readAsBytes();
       if (bytes.length != size || sha256.convert(bytes).toString() != digest) {
         throw const OfflineFailure('damaged_file');
       }

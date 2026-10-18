@@ -31,6 +31,10 @@ import '../../widgets/gallery_warning_view.dart';
 import '../../core/network/offline_image_provider.dart';
 import '../../core/services/offline_download_coordinator.dart';
 import '../../models/offline_book.dart';
+import '../../core/services/reader_entry_diagnostics.dart';
+import '../../core/storage/offline_entry_read.dart';
+import '../../widgets/reader_presentation.dart';
+import 'dart:async';
 import '../../repositories/offline_repository.dart';
 
 class ReaderScreen extends StatefulWidget {
@@ -38,6 +42,8 @@ class ReaderScreen extends StatefulWidget {
   final String token;
   final int? initialPage;
   final OfflineBook? offlineBook;
+  final OfflineEntryRead? initialRead;
+  final ReaderEntryDiagnostics? diagnostics;
 
   const ReaderScreen({
     super.key,
@@ -45,6 +51,8 @@ class ReaderScreen extends StatefulWidget {
     required this.token,
     this.initialPage,
     this.offlineBook,
+    this.initialRead,
+    this.diagnostics,
   });
 
   @override
@@ -59,8 +67,8 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
   void initState() {
     super.initState();
     _requests = ReaderRequestController();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _startup.start();
+    widget.diagnostics?.mark('reader_created');
     if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
       debugPrint('[reader-metric] enter');
     }
@@ -79,7 +87,6 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
       _startup
         ..reset()
         ..start();
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
   }
 
@@ -95,22 +102,27 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
     // Route disposal waits for the exit animation. Stop network work as soon
     // as the pop is accepted, including the system back and iOS swipe gesture.
     _requests.cancel();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
   @override
   void dispose() {
     appRouteObserver.unsubscribe(this);
-    final wasActive = !_requests.isCancelled;
     _requests.cancel();
-    if (wasActive) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final presentation = ReaderPresentation.maybeOf(context);
+    if (presentation == null) {
+      return ReaderPresentation(
+          diagnostics: widget.diagnostics,
+          child: Builder(builder: (context) => _buildReader(context)));
+    }
+    return _buildReader(context);
+  }
+
+  Widget _buildReader(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: BlocProvider(
@@ -132,18 +144,26 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
             token: widget.token,
             initialPage: widget.initialPage,
           )),
-        child: _ReaderView(startup: _startup, requests: _requests),
+        child: _ReaderView(
+            startup: _startup,
+            requests: _requests,
+            diagnostics: widget.diagnostics,
+            initialRead: widget.initialRead),
       ),
     );
   }
 }
 
 class _ReaderView extends StatefulWidget {
+  final OfflineEntryRead? initialRead;
+  final ReaderEntryDiagnostics? diagnostics;
   final Stopwatch startup;
   final ReaderRequestController requests;
   const _ReaderView({
     required this.startup,
     required this.requests,
+    this.diagnostics,
+    this.initialRead,
   });
 
   @override
@@ -165,6 +185,12 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _pageMenuOpen = false;
   ModalRoute<Object?>? _pageMenuRoute;
   final _offlineProviders = <OfflineImageProvider>{};
+  final _entryImageReady = Completer<void>();
+  late int _entryPage;
+  void _releaseEntryPriority() {
+    if (!_entryImageReady.isCompleted) _entryImageReady.complete();
+  }
+
   bool _positionInitialized = false;
   bool _firstImageLogged = false;
   int? _lastReadingMode;
@@ -176,6 +202,8 @@ class _ReaderViewState extends State<_ReaderView> {
   void initState() {
     super.initState();
     final initial = context.read<ReaderBloc>().state;
+    _entryPage = initial.currentPage;
+    widget.requests.onCancel(_releaseEntryPriority);
     _pageController =
         PageController(initialPage: initial.currentPage, keepPage: false);
     if (initial.offlineBook != null) {
@@ -242,6 +270,7 @@ class _ReaderViewState extends State<_ReaderView> {
     _pageController.dispose();
     _thumbnailScrollController.dispose();
     _savingPages.dispose();
+    _releaseEntryPriority();
     super.dispose();
   }
 
@@ -304,13 +333,9 @@ class _ReaderViewState extends State<_ReaderView> {
           _positionInitialized = true;
         }
         _lastReadingMode = state.readingMode;
-        SystemChrome.setEnabledSystemUIMode(
-          state.showUI ||
-                  state.status == ReaderStatus.error ||
-                  state.status == ReaderStatus.contentWarning
-              ? SystemUiMode.edgeToEdge
-              : SystemUiMode.immersiveSticky,
-        );
+        ReaderPresentation.maybeOf(context)?.showControls(state.showUI ||
+            state.status == ReaderStatus.error ||
+            state.status == ReaderStatus.contentWarning);
         if (state.showUI) {
           // When UI is re-shown, wait for layout then scroll to current page
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -322,6 +347,13 @@ class _ReaderViewState extends State<_ReaderView> {
         }
       },
       builder: (context, state) {
+        if (state.offlineBook != null &&
+            ReaderPresentation.maybeOf(context)?.ready != true) {
+          return const Scaffold(
+              backgroundColor: Colors.black,
+              body: Center(
+                  child: CircularProgressIndicator(color: Colors.white)));
+        }
         if (state.status == ReaderStatus.deleted)
           return const SizedBox.shrink();
         if (state.status == ReaderStatus.initial ||
@@ -406,22 +438,47 @@ class _ReaderViewState extends State<_ReaderView> {
         p.status == 'completed' &&
         p.relativePath != null &&
         p.sha256 != null);
-    if (matching.isEmpty) return null;
-    final provider =
-        OfflineImageProvider(GetIt.I<OfflineRepository>().files, matching.first,
-            session: widget.requests,
-            attempt: state.imageAttempts[index] ?? 0,
-            onResource: thumbnail
-                ? null
-                : (resource) {
-                    if (!mounted || widget.requests.isCancelled) {
-                      resource.releaseMemory();
-                      return;
-                    }
-                    if (!_isResourceVisible(index)) resource.releaseMemory();
-                    context.read<ReaderBloc>().add(ReaderImageReady(
-                        index, state.imageAttempts[index] ?? 0, resource));
-                  });
+    if (matching.isEmpty) {
+      if (index == _entryPage) _releaseEntryPriority();
+      return null;
+    }
+    final provider = OfflineImageProvider(
+        GetIt.I<OfflineRepository>().files, matching.first,
+        session: widget.requests,
+        prepared:
+            !thumbnail && widget.initialRead?.matches(matching.first) == true
+                ? widget.initialRead
+                : null,
+        isCurrent: () => mounted && !widget.requests.isCancelled,
+        beforeLoad: (index == _entryPage && !thumbnail)
+            ? null
+            : () => _entryImageReady.future,
+        onLoadError: index == _entryPage ? _releaseEntryPriority : null,
+        onPhase: thumbnail ? null : (phase) => widget.diagnostics?.mark(phase),
+        onImageReady: thumbnail
+            ? null
+            : () {
+                if (index == _entryPage) {
+                  WidgetsBinding.instance
+                      .addPostFrameCallback((_) => _releaseEntryPriority());
+                }
+                if (mounted &&
+                    !widget.requests.isCancelled &&
+                    index == context.read<ReaderBloc>().state.currentPage)
+                  widget.diagnostics?.visible();
+              },
+        attempt: state.imageAttempts[index] ?? 0,
+        onResource: thumbnail
+            ? null
+            : (resource) {
+                if (!mounted || widget.requests.isCancelled) {
+                  resource.releaseMemory();
+                  return;
+                }
+                if (!_isResourceVisible(index)) resource.releaseMemory();
+                context.read<ReaderBloc>().add(ReaderImageReady(
+                    index, state.imageAttempts[index] ?? 0, resource));
+              });
     if (_offlineProviders.add(provider)) {
       widget.requests
           .onCancel(() => PaintingBinding.instance.imageCache.evict(provider));
@@ -493,6 +550,7 @@ class _ReaderViewState extends State<_ReaderView> {
                     mounted &&
                     page == context.read<ReaderBloc>().state.currentPage) {
                   _firstImageLogged = true;
+                  widget.diagnostics?.visible();
                   if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && !scope.isCancelled) {
@@ -709,6 +767,7 @@ class _ReaderViewState extends State<_ReaderView> {
                         ? SizedBox(height: 300, child: _offlineMissing(index))
                         : ReaderPageImage(
                             image: provider,
+                            loadingHeight: MediaQuery.sizeOf(context).height,
                             errorBuilder: (_, __, ___) => SizedBox(
                                 height: 300,
                                 child: _offlineMissing(index, damaged: true))));

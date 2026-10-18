@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 class ReaderPageImage extends StatelessWidget {
   final ImageProvider image;
   final ImageErrorWidgetBuilder errorBuilder;
+  final double? loadingHeight;
 
   const ReaderPageImage(
-      {super.key, required this.image, required this.errorBuilder});
+      {super.key,
+      required this.image,
+      required this.errorBuilder,
+      this.loadingHeight});
 
   @override
   Widget build(BuildContext context) => Image(
@@ -17,8 +21,10 @@ class ReaderPageImage extends StatelessWidget {
         frameBuilder: (context, child, frame, synchronouslyLoaded) =>
             synchronouslyLoaded || frame != null
                 ? child
-                : const Center(
-                    child: CircularProgressIndicator(color: Colors.white)),
+                : SizedBox(
+                    height: loadingHeight,
+                    child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white))),
         errorBuilder: errorBuilder,
       );
 }
