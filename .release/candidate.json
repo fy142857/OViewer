@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.9.0",
   "branch": "dev",
-  "build_number": 83,
-  "candidate_id": "1.9.1+83",
-  "fingerprint": "2cbb29b42679f0af79fe33fc9e54107865519752f277716b934cf85a5632acfb",
-  "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n### 已知限制",
+  "build_number": 84,
+  "candidate_id": "1.9.1+84",
+  "fingerprint": "3a5c8001ab8bc6380372422705b2e5b78d9c10d81ff404bac3b15486a5f08d32",
+  "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
+  "source_sha": "e4675bcd07ec01f8c10413a48b0cf7df6263eae4",
   "summary": [
     {
       "change_kind": "fix",
@@ -15,6 +15,16 @@
       "original_type": "fix",
       "sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
       "subject": "fix(download): hide progress for completed offline books",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Give ordinary debug builds a separate application ID and label so they can coexist with release installations, and optionally export the debug APK for device validation.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "e4675bcd07ec01f8c10413a48b0cf7df6263eae4",
+      "subject": "fix(android): isolate ordinary debug app from release",
       "type": "fix",
       "version_impact": "patch"
     }
