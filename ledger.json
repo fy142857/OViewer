@@ -3674,8 +3674,63 @@
         }
       ],
       "version": "1.9.1"
+    },
+    {
+      "base_tag": "v1.9.0",
+      "branch": "dev",
+      "build_number": 86,
+      "build_sha": "d15d62f74cf74754dc732fbf7d162efe2ff7a92e",
+      "candidate_id": "1.9.1+86",
+      "fingerprint": "6c299e936bf935c38e214aff4d7b7652157a5b7b88305171b2b44cf9f2d8dea1",
+      "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- Android 正式版应用显示名称由 oviewer 调整为 OViewer。\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "5e2437525fabfbc75ed4139649eda9797685be3d",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Hide the download progress bar and its spacing once an offline task has completed.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
+          "subject": "fix(download): hide progress for completed offline books",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Give ordinary debug builds a separate application ID and label so they can coexist with release installations, and optionally export the debug APK for device validation.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "e4675bcd07ec01f8c10413a48b0cf7df6263eae4",
+          "subject": "fix(android): isolate ordinary debug app from release",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Remove the additional ordinary Debug APK workflow input and artifact while retaining the independent local debug application ID.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "b3de64ed643840259a8c499c954e00b3a242b550",
+          "subject": "fix(ci): restore original Android build artifacts",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Display OViewer as the Android release application name while preserving package identity, signing, debug labels and build artifacts.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "5e2437525fabfbc75ed4139649eda9797685be3d",
+          "subject": "fix(android): capitalize release app display name",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.9.1"
     }
   ],
-  "last_build_number": 85,
+  "last_build_number": 86,
   "schema": 1
 }
