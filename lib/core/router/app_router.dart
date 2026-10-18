@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'reader_route.dart';
+import 'app_page_route.dart';
 import '../services/reader_entry_diagnostics.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/gallery_detail/gallery_detail_screen.dart';
@@ -30,11 +31,11 @@ class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings routeSettings) {
     switch (routeSettings.name) {
       case home:
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
+        return AppPageRoute(builder: (_) => const HomeScreen());
 
       case gallery:
         final args = routeSettings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
+        return AppPageRoute(
           builder: (_) => GalleryDetailScreen(
             gid: args['gid'] as int,
             token: args['token'] as String,
@@ -65,7 +66,7 @@ class AppRouter {
           keyword = args['keyword'] as String?;
           saveHistory = args['saveHistory'] as bool? ?? true;
         }
-        return MaterialPageRoute(
+        return AppPageRoute(
           builder: (_) => SearchScreen(
             initialKeyword: keyword,
             saveHistory: saveHistory,
@@ -73,26 +74,26 @@ class AppRouter {
         );
 
       case favorites:
-        return MaterialPageRoute(builder: (_) => const FavoritesScreen());
+        return AppPageRoute(builder: (_) => const FavoritesScreen());
 
       case history:
-        return MaterialPageRoute(builder: (_) => const HistoryScreen());
+        return AppPageRoute(builder: (_) => const HistoryScreen());
 
       case login:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return AppPageRoute(builder: (_) => const LoginScreen());
 
       case downloads:
-        return MaterialPageRoute(builder: (_) => const DownloadScreen());
+        return AppPageRoute(builder: (_) => const DownloadScreen());
 
       case settings:
-        return MaterialPageRoute(builder: (_) => const SettingsScreen());
+        return AppPageRoute(builder: (_) => const SettingsScreen());
 
       case myTags:
-        return MaterialPageRoute(builder: (_) => const MyTagsScreen());
+        return AppPageRoute(builder: (_) => const MyTagsScreen());
 
       case thumbnailPreview:
         final args = routeSettings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
+        return AppPageRoute(
           builder: (_) => ThumbnailPreviewScreen(
             gid: args['gid'] as int,
             token: args['token'] as String,
@@ -102,7 +103,7 @@ class AppRouter {
         );
 
       default:
-        return MaterialPageRoute(
+        return AppPageRoute(
           builder: (_) => Scaffold(
             body: Center(
               child: Text('No route defined for ${routeSettings.name}'),

@@ -27,6 +27,12 @@ class ReaderRoute<T> extends MaterialPageRoute<T> {
   }
 
   @override
+  // Keep the reader's own zoom, but do not zoom the Android page behind it.
+  bool canTransitionFrom(TransitionRoute<dynamic> previousRoute) =>
+      defaultTargetPlatform != TargetPlatform.android &&
+      super.canTransitionFrom(previousRoute);
+
+  @override
   Duration get reverseTransitionDuration =>
       defaultTargetPlatform == TargetPlatform.android
           ? Duration.zero

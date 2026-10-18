@@ -63,3 +63,18 @@ allprojects { p ->
 在已有 Android/Flutter SDK 本地配置和依赖的工作区执行 `android/gradlew -p android :app:assembleProfile -I <脚本绝对路径> -Ptarget=<reader_entry_benchmark.dart绝对路径> -Ptarget-platform=android-arm64 -Pdart-defines=<READER_DIAGNOSTICS=true的Base64>`。安装前用 `aapt dump badging` 确认包名为 `com.oviewer.oviewer.offline_test`。Windows 若遇到 Java Unix socket 临时路径错误，可为当前命令设置 `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=<已存在的短路径>`。
 
 默认执行完整 180 次；短轮次可使用 Dart defines `BENCH_MODES=0,2`、`BENCH_ENTRIES=download`、`BENCH_SAMPLES=3`。日志须持续采集并在完成标记后保留两秒，不能只依赖 Android 的环形日志缓存。验收结束清理本次创建的测试包、端口转发和 fixture 服务，保留原有正式版及 Debug 版。
+
+
+## 上一级页面位移的补充修复（2026-10-19）
+
+后续反馈明确了另一个问题：进入、退出在线或离线阅读器时，移动的是上一级下载页或详情页。前面的首图耗时、阅读器内图片坐标验证不能证明父页面稳定。
+
+回归用例复现了两个独立原因：Android 阅读器的默认转场会驱动上一页的 secondary animation（进入 50ms 时为 0.1667）；即使关闭这一联动，隐藏状态栏仍会使上一页标题从 y=42 移到 y=18，向上移动 24px。
+
+补充修复仅取消 Android 上一级页面参与阅读器缩放，保留阅读器自身的 300ms 缩放和 iOS 原生转场。普通页面使用 `AppPageRoute`，在被阅读器覆盖时保留原有系统栏安全区，退出后等实际安全区恢复再接回实时数据。保护层始终保留相同组件结构，因此不会重建详情 Bloc、下载页状态或丢失滚动位置。只保留系统栏 padding/viewPadding，键盘、字体设置和实际旋转仍按实时配置布局，普通页面之间的转场也保持不变。
+
+新增组件回归同时覆盖普通 AppBar 与详情页 SliverAppBar、非零滚动位置、延迟系统栏恢复、快速再次进入、页面状态身份、阅读器接收实时全屏数据，以及普通导航、键盘与旋转兼容性。完整 Flutter 回归 **761 项通过**，静态分析无新增错误或警告。
+
+Android 真机使用独立 Profile 包，在下载页、已缓存漫画详情页、未缓存漫画详情页执行三种阅读模式、工具栏隐藏/显示两种退出状态，每组 3 次，共 **54 次进退、2712 帧**。所有标题和内容位置/尺寸偏差均为 **0.0 逻辑像素**，上一页 secondary animation 为 0，页面状态未重建。再用 **18 次进退、904 帧** 补查原生窗口尺寸与安全区恢复，尺寸没有变化，返回后父页面安全区均与系统实时数据一致。合计 **72 次进退、3616 帧**。
+
+本轮直接测量上一级页面，未以“阅读器内部没有变化”替代父页面验收。证据位于 `build/reader-background-phone.log`、`build/reader-background-window.log`、`build/reader-background-validation.json`、`build/reader-background-tests.log` 和 `build/reader-background-full-tests.log`；复测入口为 `test_driver/reader_background_benchmark.dart`，沿用前述独立包名初始化脚本，可用 `BACKGROUND_REPEATS=1` 执行 18 次短轮次。Actions 产物、正式版包名及签名未改动。
