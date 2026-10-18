@@ -3629,8 +3629,53 @@
         }
       ],
       "version": "1.9.1"
+    },
+    {
+      "base_tag": "v1.9.0",
+      "branch": "dev",
+      "build_number": 85,
+      "build_sha": "5b224cc885d39520104263f10352fbc3a9b95ba0",
+      "candidate_id": "1.9.1+85",
+      "fingerprint": "802bdc230fdea4e1cf5e0383bee3e62f294a081bb1775280b2b7d83be5a48b26",
+      "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "b3de64ed643840259a8c499c954e00b3a242b550",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Hide the download progress bar and its spacing once an offline task has completed.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "85a3e336f0236f42f3dc0c3ff9489ca33cffb5e6",
+          "subject": "fix(download): hide progress for completed offline books",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Give ordinary debug builds a separate application ID and label so they can coexist with release installations, and optionally export the debug APK for device validation.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "e4675bcd07ec01f8c10413a48b0cf7df6263eae4",
+          "subject": "fix(android): isolate ordinary debug app from release",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Remove the additional ordinary Debug APK workflow input and artifact while retaining the independent local debug application ID.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "b3de64ed643840259a8c499c954e00b3a242b550",
+          "subject": "fix(ci): restore original Android build artifacts",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.9.1"
     }
   ],
-  "last_build_number": 84,
+  "last_build_number": 85,
   "schema": 1
 }
