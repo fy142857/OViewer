@@ -20,6 +20,7 @@ class S {
   String offlineDownloadFrom(String source, int pages) => _zh
       ? '下载来源：$source\n共 $pages 页'
       : 'Download source: $source\n$pages pages';
+  String get offlineCached => _zh ? '已缓存' : 'Cached offline';
   String get offlineNotCached => _zh ? '尚未缓存' : 'Not cached yet';
   String get offlineReload => _zh ? '重新读取' : 'Read again';
   String get offlineRepair => _zh ? '修复缓存（联网）' : 'Repair cache (online)';

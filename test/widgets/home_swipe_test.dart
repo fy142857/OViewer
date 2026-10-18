@@ -236,6 +236,10 @@ void main() {
       expect(find.text('Latest 0'), findsOneWidget);
       await swipe(tester, right: true);
       expect(selected(tester), 0);
+      final scaffold = tester.state<ScaffoldState>(find.byType(Scaffold).first);
+      expect(scaffold.isDrawerOpen, isTrue);
+      scaffold.closeDrawer();
+      await frames(tester);
       await swipe(tester);
       expect(selected(tester), 1);
       expect(find.text('Popular 0'), findsOneWidget);
@@ -255,6 +259,7 @@ void main() {
       expect(selected(tester), 1);
       await swipe(tester, right: true);
       expect(selected(tester), 0);
+      expect(scaffold.isDrawerOpen, isFalse);
       await tester.tap(find.widgetWithText(Tab, 'Favorites'));
       await frames(tester);
       expect(selected(tester), 3);
@@ -270,6 +275,21 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('latest vertical scroll and short right drag do not open drawer',
+      (tester) async {
+    await boot(tester);
+    final scaffold = tester.state<ScaffoldState>(find.byType(Scaffold).first);
+    await tester.drag(
+        find.byKey(const ValueKey('home-tab-pages')), const Offset(0, -180));
+    await frames(tester);
+    expect(scaffold.isDrawerOpen, isFalse);
+    await tester.drag(
+        find.byKey(const ValueKey('home-tab-pages')), const Offset(28, 0));
+    await frames(tester);
+    expect(scaffold.isDrawerOpen, isFalse);
+    expect(selected(tester), 0);
+  });
 
   testWidgets('small menu buttons keep independent home and drawer selections',
       (tester) async {

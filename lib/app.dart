@@ -17,6 +17,7 @@ import 'blocs/settings/settings_bloc.dart';
 import 'blocs/settings/settings_event.dart';
 import 'blocs/settings/settings_state.dart';
 import 'blocs/download/download_bloc.dart';
+import 'blocs/download/download_event.dart';
 import 'core/services/offline_platform.dart';
 import 'repositories/search_repository.dart';
 import 'repositories/favorites_repository.dart';
@@ -56,7 +57,8 @@ class OViewerApp extends StatelessWidget {
             ..add(LoadSettings()),
         ),
         BlocProvider(
-          create: (_) => DownloadBloc(sl<OfflineDownloadCoordinator>()),
+          create: (_) => DownloadBloc(sl<OfflineDownloadCoordinator>())
+            ..add(LoadDownloads()),
         ),
       ],
       child: FavoritesSessionHost(

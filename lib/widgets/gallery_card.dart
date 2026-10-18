@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../core/constants/app_constants.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../models/gallery_preview.dart';
+import 'gallery_status_icons.dart';
 
 class GalleryCard extends StatelessWidget {
   final GalleryPreview gallery;
@@ -14,8 +15,7 @@ class GalleryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = gallery.language;
-    final date =
-        '${gallery.postedAt.year}-'
+    final date = '${gallery.postedAt.year}-'
         '${gallery.postedAt.month.toString().padLeft(2, '0')}-'
         '${gallery.postedAt.day.toString().padLeft(2, '0')}';
     return Card(
@@ -96,8 +96,8 @@ class GalleryCard extends StatelessWidget {
                             style: theme.textTheme.bodySmall,
                           ),
                           const SizedBox(width: 12),
-                          Icon(Icons.photo, size: 14,
-                              color: theme.colorScheme.outline),
+                          Icon(Icons.photo,
+                              size: 14, color: theme.colorScheme.outline),
                           const SizedBox(width: 2),
                           Text(
                             '${gallery.fileCount}P',
@@ -118,19 +118,17 @@ class GalleryCard extends StatelessWidget {
                               children: [
                                 if (lang != null)
                                   Padding(
-                                    padding: EdgeInsets.only(
-                                        right: gallery.isFavorited ? 4 : 0),
+                                    padding: EdgeInsets.only(right: 4),
                                     child: Text(
                                       lang,
-                                      style: theme.textTheme.labelSmall?.copyWith(
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
                                         color: theme.colorScheme.outline,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                                if (gallery.isFavorited)
-                                  Icon(Icons.favorite,
-                                      size: 14, color: Colors.red),
+                                GalleryStatusIcons(gallery: gallery),
                               ],
                             ),
                             Text(

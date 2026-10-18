@@ -115,99 +115,115 @@ class _DownloadScreenState extends State<DownloadScreen> {
                     OfflineStatus.downloading
                   ].contains(book.status);
                   return Card(
-                      child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                          width: 52,
-                                          height: 72,
-                                          child: completed.isEmpty
-                                              ? const Icon(Icons.menu_book)
-                                              : Image(
-                                                  image: OfflineImageProvider(
-                                                      context
-                                                          .read<DownloadBloc>()
-                                                          .coordinator
-                                                          .repository
-                                                          .files,
-                                                      completed.first),
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) =>
-                                                      const Icon(
-                                                          Icons.broken_image))),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                          child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                            Text(book.record.title,
-                                                maxLines: 2,
-                                                overflow:
-                                                    TextOverflow.ellipsis),
-                                            Text(
-                                                '${book.source?.shortName ?? s.offlineSourceRequired} · ${s.offlineStatus(book.record.status)}'),
-                                            Text(
-                                                '${book.completedPages}/${book.record.totalPages} · ${(book.bytes / 1048576).toStringAsFixed(1)} MB'),
-                                          ])),
-                                    ]),
-                                if (book.status != OfflineStatus.completed) ...[
-                                  const SizedBox(height: 8),
-                                  LinearProgressIndicator(
-                                      value: book.record.totalPages <= 0
-                                          ? 0
-                                          : book.completedPages /
-                                              book.record.totalPages),
-                                ],
-                                if (book.record.reason != null)
-                                  Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Text(
-                                          s.offlineError(book.record.reason!))),
-                                Wrap(
-                                    alignment: WrapAlignment.end,
-                                    spacing: 8,
-                                    children: [
-                                      if (book.source != null &&
-                                          book.completedPages > 0 &&
-                                          book.status != OfflineStatus.deleting)
-                                        TextButton(
-                                            onPressed: () => _read(book),
-                                            child: Text(s.offlineRead)),
-                                      if (book.source == null)
-                                        TextButton(
-                                            onPressed: () => _source(book),
-                                            child: Text(s.offlineChooseSource)),
-                                      if (active)
-                                        TextButton(
-                                            onPressed: () => context
-                                                .read<DownloadBloc>()
-                                                .add(PauseDownload(book.id)),
-                                            child: Text(s.offlinePause)),
-                                      if (book.source != null &&
-                                          !active &&
-                                          !const [
-                                            OfflineStatus.completed,
-                                            OfflineStatus.deleting
-                                          ].contains(book.status))
-                                        TextButton(
-                                            onPressed: () => context
-                                                .read<DownloadBloc>()
-                                                .add(ResumeDownload(book.id)),
-                                            child: Text(s.offlineResume)),
-                                      IconButton(
-                                          tooltip: s.delete,
-                                          onPressed: () => _delete(book),
-                                          icon:
-                                              const Icon(Icons.delete_outline)),
-                                    ]),
-                              ])));
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: book.source != null &&
+                                book.completedPages > 0 &&
+                                book.status != OfflineStatus.deleting
+                            ? () => _read(book)
+                            : null,
+                        child: Stack(children: [
+                          Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(12, 12, 60, 12),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          SizedBox(
+                                              width: 52,
+                                              height: 72,
+                                              child: completed.isEmpty
+                                                  ? const Icon(Icons.menu_book)
+                                                  : Image(
+                                                      image: OfflineImageProvider(
+                                                          context
+                                                              .read<
+                                                                  DownloadBloc>()
+                                                              .coordinator
+                                                              .repository
+                                                              .files,
+                                                          completed.first),
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (_, __,
+                                                              ___) =>
+                                                          const Icon(Icons
+                                                              .broken_image))),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                              child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                Text(book.record.title,
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis),
+                                                Text(
+                                                    '${book.source?.shortName ?? s.offlineSourceRequired} · ${s.offlineStatus(book.record.status)}'),
+                                                Text(
+                                                    '${book.completedPages}/${book.record.totalPages} · ${(book.bytes / 1048576).toStringAsFixed(1)} MB'),
+                                              ])),
+                                        ]),
+                                    if (book.status !=
+                                        OfflineStatus.completed) ...[
+                                      const SizedBox(height: 8),
+                                      LinearProgressIndicator(
+                                          value: book.record.totalPages <= 0
+                                              ? 0
+                                              : book.completedPages /
+                                                  book.record.totalPages),
+                                    ],
+                                    if (book.record.reason != null)
+                                      Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 6),
+                                          child: Text(s.offlineError(
+                                              book.record.reason!))),
+                                    Wrap(
+                                        alignment: WrapAlignment.end,
+                                        spacing: 8,
+                                        children: [
+                                          if (book.source == null)
+                                            TextButton(
+                                                onPressed: () => _source(book),
+                                                child: Text(
+                                                    s.offlineChooseSource)),
+                                          if (active)
+                                            TextButton(
+                                                onPressed: () => context
+                                                    .read<DownloadBloc>()
+                                                    .add(
+                                                        PauseDownload(book.id)),
+                                                child: Text(s.offlinePause)),
+                                          if (book.source != null &&
+                                              !active &&
+                                              !const [
+                                                OfflineStatus.completed,
+                                                OfflineStatus.deleting
+                                              ].contains(book.status))
+                                            TextButton(
+                                                onPressed: () => context
+                                                    .read<DownloadBloc>()
+                                                    .add(ResumeDownload(
+                                                        book.id)),
+                                                child: Text(s.offlineResume)),
+                                        ]),
+                                  ])),
+                          Positioned(
+                            right: 4,
+                            bottom: 4,
+                            child: IconButton(
+                              tooltip: s.delete,
+                              onPressed: () => _delete(book),
+                              icon: const Icon(Icons.delete_outline),
+                            ),
+                          ),
+                        ]),
+                      ));
                 });
           },
         ));

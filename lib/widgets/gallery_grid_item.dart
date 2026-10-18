@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../core/constants/app_constants.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../models/gallery_preview.dart';
+import 'gallery_status_icons.dart';
 
 class GalleryGridItem extends StatelessWidget {
   final GalleryPreview gallery;
@@ -67,21 +68,12 @@ class GalleryGridItem extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Favorite badge
-                  if (gallery.isFavorited)
-                    const Positioned(
-                      top: 4,
-                      right: 4,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                            color: Colors.white, shape: BoxShape.circle),
-                        child: Padding(
-                          padding: EdgeInsets.all(3),
-                          child:
-                              Icon(Icons.favorite, size: 16, color: Colors.red),
-                        ),
-                      ),
-                    ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child:
+                        GalleryStatusIcons(gallery: gallery, decorated: true),
+                  ),
                   Positioned(
                     bottom: 4,
                     right: 4,

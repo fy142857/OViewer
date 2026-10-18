@@ -41,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen>
   late TabController _tabController;
   late Map<GalleryTab, GalleryListBloc> _galleryBlocs;
   int _currentIndex = 0;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _drawerSwipeEligible = false;
+  double _drawerOverscroll = 0;
   PageStorageBucket _scrollStorage = PageStorageBucket();
 
   final _tabs = const [
@@ -140,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final s = S.of(context);
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: BlocBuilder<SettingsBloc, SettingsState>(
           buildWhen: (p, c) => p.useExHentai != c.useExHentai,
@@ -257,11 +261,14 @@ class _HomeScreenState extends State<HomeScreen>
         ],
         child: PageStorage(
           bucket: _scrollStorage,
-          child: TabBarView(
-            key: const ValueKey('home-tab-pages'),
-            controller: _tabController,
-            physics: const _FastTabScrollPhysics(),
-            children: [for (final tab in _tabs) _buildTabPage(tab)],
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleTabSwipe,
+            child: TabBarView(
+              key: const ValueKey('home-tab-pages'),
+              controller: _tabController,
+              physics: const _FastTabScrollPhysics(),
+              children: [for (final tab in _tabs) _buildTabPage(tab)],
+            ),
           ),
         ),
       ),
@@ -272,6 +279,37 @@ class _HomeScreenState extends State<HomeScreen>
           : null,
       drawer: _buildDrawer(),
     );
+  }
+
+  bool _handleTabSwipe(ScrollNotification notification) {
+    if (notification.depth != 0 ||
+        notification.metrics.axis != Axis.horizontal) {
+      return false;
+    }
+    if (notification is ScrollStartNotification) {
+      _drawerOverscroll = 0;
+      _drawerSwipeEligible = notification.dragDetails != null &&
+          _currentIndex == 0 &&
+          !_tabController.indexIsChanging &&
+          (_tabController.animation?.value ?? 0).abs() < 0.001;
+    } else if (notification is OverscrollNotification &&
+        notification.dragDetails != null &&
+        _drawerSwipeEligible) {
+      // Reuse the page view's horizontal gesture: vertical scrolling and
+      // leftward tab switching keep their existing gesture recognizers.
+      _drawerOverscroll -= notification.overscroll;
+      if (_drawerOverscroll >= 48) {
+        _drawerSwipeEligible = false;
+        _scaffoldKey.currentState?.openDrawer();
+      }
+    } else if (notification is ScrollUpdateNotification &&
+        notification.metrics.pixels > notification.metrics.minScrollExtent) {
+      _drawerSwipeEligible = false;
+    } else if (notification is ScrollEndNotification) {
+      _drawerSwipeEligible = false;
+      _drawerOverscroll = 0;
+    }
+    return false;
   }
 
   Widget _buildTabPage(GalleryTab tab) {
