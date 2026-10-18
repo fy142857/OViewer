@@ -12,6 +12,7 @@
 
 ### 变更
 
+- Android 正式版应用显示名称由 oviewer 调整为 OViewer。
 - Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。
 
 ### 已知限制

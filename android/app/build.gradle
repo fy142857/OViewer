@@ -73,7 +73,7 @@ android {
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
-        manifestPlaceholders.appLabel = 'oviewer'
+        manifestPlaceholders.appLabel = 'OViewer'
     }
 
     signingConfigs {

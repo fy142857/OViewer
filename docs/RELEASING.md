@@ -72,7 +72,7 @@ python -m scripts.setup_android_signing --directory <仓库外的私密目录> -
 
 普通 `flutter run` 和 `flutter build apk --debug` 使用 debug 签名，包名为 `com.oviewer.oviewer.debug`，显示名称为 **OViewer Debug**，可与正式版同时安装。两者的登录、设置、历史与离线缓存各自独立，不会自动迁移。设置 `OVIEWER_OFFLINE_TEST=1` 时仍使用独立的 `com.oviewer.oviewer.offline_test` 和 **OViewer Offline Test**；日常调试不要设置此变量。
 
-Debug APK 输出路径仍为 `build/app/outputs/flutter-apk/app-debug.apk`。Actions 的普通 Debug 验证构建同样使用新包名；正式版包名 `com.oviewer.oviewer`、名称 `oviewer`、签名及发布产物名称保持不变。当前应用内更新提供正式版安装包，不能用于覆盖独立包名的 Debug 版；Debug 版应通过 `flutter run` 或重新安装相同 debug 签名的 APK 更新。
+Debug APK 输出路径仍为 `build/app/outputs/flutter-apk/app-debug.apk`。Actions 的普通 Debug 验证构建同样使用新包名；正式版显示名称为 `OViewer`，包名 `com.oviewer.oviewer`、签名及发布产物名称保持不变。当前应用内更新提供正式版安装包，不能用于覆盖独立包名的 Debug 版；Debug 版应通过 `flutter run` 或重新安装相同 debug 签名的 APK 更新。
 
 本地 `flutter run --release` 或 `flutter build apk --release` 可使用 `android/key.properties` 配置已有的正式签名：
 
