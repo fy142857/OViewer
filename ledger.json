@@ -3740,7 +3740,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- 下载页面点击可阅读资源的卡片即可进入离线阅读，移除独立阅读按钮，删除按钮置于卡片右下角；列表和卡片视图在收藏红心左侧显示当前 EH/EX 来源的已缓存图标（#64）。\n- “最新”页面支持从内容区向右滑动打开侧边栏，保留标签切换及纵向滚动手势（#65）。\n- Android 正式版应用显示名称由 oviewer 调整为 OViewer。\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
       "schema": 1,
       "source_sha": "545e97b372fba75c331a667bcfcbee2d0c4c3d66",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "fix",
