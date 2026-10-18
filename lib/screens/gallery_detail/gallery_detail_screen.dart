@@ -388,9 +388,20 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
                       ));
                   try {
                     await completion.future;
-                    if (context.mounted)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(s.downloadStarted)));
+                    if (context.mounted) {
+                      final navigator = Navigator.of(context);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(s.downloadStarted),
+                        action: SnackBarAction(
+                          label: s.goToDownloads,
+                          onPressed: () {
+                            if (navigator.mounted) {
+                              navigator.pushNamed('/downloads');
+                            }
+                          },
+                        ),
+                      ));
+                    }
                   } catch (error) {
                     if (context.mounted)
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

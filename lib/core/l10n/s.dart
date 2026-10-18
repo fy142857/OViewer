@@ -414,6 +414,7 @@ class S {
   String get uploaderBadge => _zh ? '上传者' : 'Uploader';
   String get startDownloadConfirm => _zh ? '开始下载？' : 'Start to Download?';
   String get downloadStarted => _zh ? '下载已开始' : 'Download started';
+  String get goToDownloads => _zh ? '跳转下载页' : 'Go to downloads';
   String get rateGallery => _zh ? '为画廊评分' : 'Rate Gallery';
   String rated(String rating) => _zh ? '已评分 $rating' : 'Rated $rating';
 
