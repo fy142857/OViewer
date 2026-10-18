@@ -391,7 +391,9 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
                     if (context.mounted) {
                       final navigator = Navigator.of(context);
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(s.downloadStarted),
+                        actionOverflowThreshold: 1,
+                        content: Text(s.downloadStarted,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
                         action: SnackBarAction(
                           label: s.goToDownloads,
                           onPressed: () {
