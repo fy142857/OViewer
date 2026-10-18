@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.9.0",
   "branch": "dev",
-  "build_number": 85,
-  "candidate_id": "1.9.1+85",
-  "fingerprint": "802bdc230fdea4e1cf5e0383bee3e62f294a081bb1775280b2b7d83be5a48b26",
-  "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
+  "build_number": 86,
+  "candidate_id": "1.9.1+86",
+  "fingerprint": "6c299e936bf935c38e214aff4d7b7652157a5b7b88305171b2b44cf9f2d8dea1",
+  "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- Android 正式版应用显示名称由 oviewer 调整为 OViewer。\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "b3de64ed643840259a8c499c954e00b3a242b550",
+  "source_sha": "5e2437525fabfbc75ed4139649eda9797685be3d",
   "summary": [
     {
       "change_kind": "fix",
@@ -35,6 +35,16 @@
       "original_type": "fix",
       "sha": "b3de64ed643840259a8c499c954e00b3a242b550",
       "subject": "fix(ci): restore original Android build artifacts",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Display OViewer as the Android release application name while preserving package identity, signing, debug labels and build artifacts.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "5e2437525fabfbc75ed4139649eda9797685be3d",
+      "subject": "fix(android): capitalize release app display name",
       "type": "fix",
       "version_impact": "patch"
     }
