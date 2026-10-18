@@ -73,7 +73,7 @@ android {
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
-        manifestPlaceholders.appLabel = System.getenv('OVIEWER_OFFLINE_TEST') == '1' ? 'OViewer Offline Test' : 'oviewer'
+        manifestPlaceholders.appLabel = 'oviewer'
     }
 
     signingConfigs {
@@ -91,6 +91,10 @@ android {
         debug {
             if (System.getenv('OVIEWER_OFFLINE_TEST') == '1') {
                 applicationIdSuffix '.offline_test'
+                manifestPlaceholders.appLabel = 'OViewer Offline Test'
+            } else {
+                applicationIdSuffix '.debug'
+                manifestPlaceholders.appLabel = 'OViewer Debug'
             }
         }
         release {

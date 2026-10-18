@@ -19,6 +19,10 @@ on:
         description: 'Also build isolated offline fixture APK for local emulator acceptance'
         default: false
         type: boolean
+      debug_apk:
+        description: 'Also build OViewer Debug APK for physical-device debugging'
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -158,6 +162,19 @@ jobs:
       - name: Remove temporary signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/oviewer-release.jks"
+
+      - name: Build ordinary debug APK
+        if: github.event_name == 'workflow_dispatch' && inputs.debug_apk
+        run: flutter build apk --debug --no-pub --target lib/main.dart
+
+      - name: Upload ordinary debug APK
+        if: github.event_name == 'workflow_dispatch' && inputs.debug_apk
+        uses: actions/upload-artifact@v7
+        with:
+          name: debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Build isolated offline emulator APK
         if: github.event_name == 'workflow_dispatch' && inputs.offline_emulator_apk
