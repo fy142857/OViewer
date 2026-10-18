@@ -91,6 +91,8 @@ iOS 仍提供未签名 IPA，部署目标为 iOS 12；需自行签名安装。�
 
 ## 验证命令
 
+提交前使用与 Android/iOS Actions 一致的 Flutter **3.16.0** 验证。切换本地 SDK 后，先用目标 SDK 执行 `flutter pub get`，再执行下列检查；仅更换 `flutter test --no-pub` 的可执行文件可能仍通过 `.dart_tool/package_config.json` 引用旧 SDK，造成与 CI 不一致的测试结果。临时切换 SDK 产生的锁文件变化应单独核对，不要作为无关依赖升级提交。
+
 ```text
 python -m unittest discover -s scripts/tests -v
 python -m scripts.versioning.analyze

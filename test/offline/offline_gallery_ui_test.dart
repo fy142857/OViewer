@@ -9,6 +9,7 @@ import 'package:oviewer/blocs/download/download_state.dart';
 import 'package:oviewer/blocs/settings/settings_bloc.dart';
 import 'package:oviewer/blocs/settings/settings_state.dart';
 import 'package:oviewer/core/storage/database.dart';
+import 'package:oviewer/core/theme/app_theme.dart';
 import 'package:oviewer/models/gallery_preview.dart';
 import 'package:oviewer/models/offline_book.dart';
 import 'package:oviewer/screens/download/download_screen.dart';
@@ -70,11 +71,19 @@ void main() {
     await settingsChanges.close();
   });
   Future<void> boot(WidgetTester tester, Widget home,
-      {RouteFactory? route}) async {
-    await tester.pumpWidget(MultiBlocProvider(providers: [
-      BlocProvider<DownloadBloc>.value(value: downloads),
-      BlocProvider<SettingsBloc>.value(value: settings),
-    ], child: MaterialApp(home: home, onGenerateRoute: route)));
+      {RouteFactory? route, ThemeMode themeMode = ThemeMode.light}) async {
+    await tester.pumpWidget(MultiBlocProvider(
+        providers: [
+          BlocProvider<DownloadBloc>.value(value: downloads),
+          BlocProvider<SettingsBloc>.value(value: settings),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: themeMode,
+          home: home,
+          onGenerateRoute: route,
+        )));
     await tester.pumpAndSettle();
   }
 
@@ -131,38 +140,46 @@ void main() {
     });
   }
 
-  testWidgets(
-      'whole download card opens local reader, delete stays inside card and does not navigate',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(360, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    RouteSettings? opened;
-    await boot(tester, const DownloadScreen(), route: (route) {
-      opened = route;
-      return MaterialPageRoute(
-          builder: (_) => const Scaffold(body: Text('Reader')));
+  for (final themeMode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets(
+        'whole download card opens local reader, delete stays inside card and does not navigate ($themeMode)',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      RouteSettings? opened;
+      await boot(tester, const DownloadScreen(), themeMode: themeMode,
+          route: (route) {
+        opened = route;
+        return MaterialPageRoute(
+            builder: (_) => const Scaffold(body: Text('Reader')));
+      });
+      expect(find.text('Read offline'), findsNothing);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+      final card = tester.getRect(find
+          .descendant(of: find.byType(Card), matching: find.byType(InkWell))
+          .first);
+      // Material 3 places Tooltip around the icon, inside the button padding.
+      // Check the whole button's bounds, which are positioned by the card.
+      final deleteButton = find.ancestor(
+          of: find.byTooltip('Delete'), matching: find.byType(IconButton));
+      expect(deleteButton, findsOneWidget);
+      final delete = tester.getRect(deleteButton);
+      expect(card.bottom - delete.bottom, closeTo(4, 0.1));
+      expect(card.right - delete.right, closeTo(4, 0.1));
+      expect(card.height, lessThan(120));
+      await tester.tap(find.byTooltip('Delete'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(opened, isNull);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(Offset(card.right - 8, card.top + 12));
+      await tester.pumpAndSettle();
+      expect(opened!.name, '/reader');
+      expect((opened!.arguments as Map)['offlineId'], 'book-eh');
+      expect(tester.takeException(), isNull);
     });
-    expect(find.text('Read offline'), findsNothing);
-    expect(find.byType(LinearProgressIndicator), findsNothing);
-    final card = tester.getRect(find
-        .descendant(of: find.byType(Card), matching: find.byType(InkWell))
-        .first);
-    final delete = tester.getRect(find.byTooltip('Delete'));
-    expect(card.bottom - delete.bottom, closeTo(4, 0.1));
-    expect(card.right - delete.right, closeTo(4, 0.1));
-    expect(card.height, lessThan(120));
-    await tester.tap(find.byTooltip('Delete'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(opened, isNull);
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    await tester.tapAt(Offset(card.right - 8, card.top + 12));
-    await tester.pumpAndSettle();
-    expect(opened!.name, '/reader');
-    expect((opened!.arguments as Map)['offlineId'], 'book-eh');
-    expect(tester.takeException(), isNull);
-  });
+  }
 
   testWidgets(
       'partial download remains readable and pause action does not open reader',
