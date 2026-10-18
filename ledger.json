@@ -3685,7 +3685,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 已完成的离线缓存条目隐藏下载进度条，未完成任务继续显示进度（#62）。\n\n### 变更\n\n- Android 正式版应用显示名称由 oviewer 调整为 OViewer。\n- Android 普通 Debug 版使用独立包名和名称 OViewer Debug，可与正式版同时安装，应用数据各自独立。\n\n### 已知限制",
       "schema": 1,
       "source_sha": "5e2437525fabfbc75ed4139649eda9797685be3d",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "fix",
