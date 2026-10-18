@@ -74,8 +74,6 @@ python -m scripts.setup_android_signing --directory <仓库外的私密目录> -
 
 Debug APK 输出路径仍为 `build/app/outputs/flutter-apk/app-debug.apk`。Actions 的普通 Debug 验证构建同样使用新包名；正式版包名 `com.oviewer.oviewer`、名称 `oviewer`、签名及发布产物名称保持不变。当前应用内更新提供正式版安装包，不能用于覆盖独立包名的 Debug 版；Debug 版应通过 `flutter run` 或重新安装相同 debug 签名的 APK 更新。
 
-需要从 Actions 获取普通 Debug 包时，手动运行 **Build Android APK**，填写候选 ID 并勾选 `debug_apk`，将额外上传 `debug-apk` artifact（包含 `app-debug.apk`，使用正常应用入口并支持手机架构）。默认不勾选，不影响现有正式版构建产物。CI 的临时 debug 签名不保证与本机或其他运行一致，因此不同来源的 Debug APK 不保证可以覆盖安装；正式版始终使用固定正式签名。
-
 本地 `flutter run --release` 或 `flutter build apk --release` 可使用 `android/key.properties` 配置已有的正式签名：
 
 ```properties
