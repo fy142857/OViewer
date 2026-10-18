@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'package:drift/native.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +20,8 @@ import 'package:oviewer/core/parser/gallery_detail_parser.dart';
 import 'package:oviewer/core/storage/database.dart';
 import 'package:oviewer/core/storage/offline_files.dart';
 import 'package:oviewer/core/storage/offline_entry_read.dart';
+import 'package:oviewer/core/router/app_router.dart';
+import 'package:oviewer/core/router/route_observer.dart';
 import 'package:oviewer/models/gallery_source.dart';
 import 'package:oviewer/models/offline_book.dart';
 import 'package:oviewer/repositories/gallery_repository.dart';
@@ -33,6 +36,8 @@ import 'offline_coordinator_test.dart' show until;
 class Gallery extends Mock implements GalleryRepository {}
 
 class FileSource extends Mock implements OfflineFiles {}
+
+class EntryRepository extends Mock implements OfflineRepository {}
 
 class History extends Mock implements HistoryRepository {}
 
@@ -240,6 +245,54 @@ void main() {
     await settleOffline(tester);
     expect(find.text('Home'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+      'two offline sources stay selectable and return cancels pending history',
+      (tester) async {
+    final recording = Completer<void>();
+    final nav = GlobalKey<NavigatorState>();
+    final resolver = EntryRepository();
+    final other = OfflineBook(
+        book.record.copyWith(id: 'ex-entry', source: const Value('ex')), []);
+    when(() => resolver.initialize()).thenAnswer((_) async {});
+    when(() => resolver.matching(42, 'abc', source: null))
+        .thenAnswer((_) async => [book, other]);
+    when(() => resolver.files).thenReturn(repository.files);
+    when(() => resolver.changes).thenAnswer((_) => const Stream.empty());
+    await GetIt.I.unregister<OfflineRepository>();
+    GetIt.I.registerSingleton<OfflineRepository>(resolver);
+    registerFallbackValue(book);
+    final history = GetIt.I<HistoryRepository>();
+    when(() => history.recordOfflineVisit(any()))
+        .thenAnswer((_) => recording.future);
+    await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+        value: settingsBloc,
+        child: MaterialApp(
+            navigatorKey: nav,
+            navigatorObservers: [appRouteObserver],
+            onGenerateRoute: AppRouter.generateRoute,
+            home: const Scaffold(body: Text('Home')))));
+    nav.currentState!
+        .pushNamed('/reader', arguments: {'gid': 42, 'token': 'abc'});
+    await tester.pumpAndSettle();
+    expect(find.text('E-Hentai (EH)'), findsOneWidget);
+    expect(find.text('ExHentai (EX)'), findsOneWidget);
+    await tester.tap(find.text('ExHentai (EX)'));
+    await tester.pump();
+    final chosen = verify(() => history.recordOfflineVisit(captureAny()))
+        .captured
+        .single as OfflineBook;
+    expect(chosen.source, GallerySource.ex);
+    nav.currentState!.pop();
+    await tester.pumpAndSettle();
+    recording.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(ReaderScreen), findsNothing);
+    expect(find.text('Home'), findsOneWidget);
+    verifyZeroInteractions(gallery);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets(

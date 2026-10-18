@@ -54,6 +54,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets(
+      'metrics changes delay initial readiness without restarting an established reader',
+      (tester) async {
+    ReaderPresentationState? owner;
+    await tester.pumpWidget(
+        MaterialApp(home: ReaderPresentation(child: Builder(builder: (context) {
+      owner = ReaderPresentation.maybeOf(context);
+      return Text(owner!.ready ? 'ready' : 'waiting');
+    }))));
+    await tester.pump(const Duration(milliseconds: 16));
+    owner!.didChangeMetrics();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.text('waiting'), findsOneWidget);
+    await frames(tester);
+    expect(find.text('ready'), findsOneWidget);
+    final original = owner;
+    owner!.didChangeMetrics();
+    await frames(tester);
+    expect(owner, same(original));
+    expect(find.text('ready'), findsOneWidget);
+    expect(modes, ['SystemUiMode.immersiveSticky']);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
       'return before fullscreen completes cannot reopen or show late reader',
       (tester) async {
     final pending = Completer<void>();
