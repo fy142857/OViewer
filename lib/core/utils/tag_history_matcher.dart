@@ -36,7 +36,9 @@ class TagHistoryMatcher {
             '${namespace.key}:${normalizeHistoryText(canonicalTagKey(entry.key))}',
             names,
             [
-              ...entry.value.split(RegExp(r'[|/／、,，;；\n（）()]')),
+              // Matching may index name fragments, but display must retain the
+              // dictionary's complete name, including all punctuation.
+              entry.value,
               ...entry.key.split('|'),
             ]
                 .map((name) => name.trim())
@@ -90,10 +92,9 @@ class TagHistoryMatcher {
     final normalized = normalizeHistoryText(query);
     final terms = _documents[normalized] ?? _terms(normalized);
     final seen = <String>{
+      for (final term in terms) term.value,
       for (final term in terms)
-        ...term.value
-            .split(RegExp(r'[|/／、,，;；\n（）()]'))
-            .map(normalizeHistoryText),
+        ...term.value.split('|').map(normalizeHistoryText),
     };
     return [
       for (final term in terms)

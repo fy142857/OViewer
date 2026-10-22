@@ -70,8 +70,11 @@ void main() {
       GetIt.I.registerSingleton<FavoritesRepository>(favorites);
       await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
           value: settings,
-          child:
-              MaterialApp(theme: AppTheme.light, home: const SearchScreen())));
+          child: MaterialApp(
+              theme: AppTheme.light,
+              darkTheme: AppTheme.dark,
+              themeMode: language == 'zh' ? ThemeMode.dark : ThemeMode.light,
+              home: const SearchScreen())));
       await tester.pumpAndSettle();
       for (final input in ['NANAO YUKI', '七尾雪', '七尾ゆき', 'pen name']) {
         await tester.enterText(find.byType(TextField), input);
@@ -92,6 +95,10 @@ void main() {
                 (tile.leading as Icon).icon == Icons.history)
             .toList();
         final firstAliases = (recentRows.first.subtitle! as Text).data!;
+        expect((recentRows.first.subtitle! as Text).style, isNull,
+            reason:
+                'Keep the original ListTile subtitle theme, not outline gray');
+        expect(firstAliases, contains('七尾雪路（七尾ゆきじ）'));
         expect(firstAliases, contains('七尾雪路'));
         expect(firstAliases, contains('七尾ゆきじ'));
         expect(firstAliases, contains('pen name'));
@@ -99,7 +106,7 @@ void main() {
         final secondAliases = (recentRows[1].subtitle! as Text).data!;
         expect(secondAliases, contains('七尾雪路'));
         expect(secondAliases, contains('nanao yukiji'));
-        expect(secondAliases, isNot(contains('七尾ゆきじ')));
+        expect(secondAliases, contains('七尾雪路（七尾ゆきじ）'));
       }
       await tester.tap(find.text(newest));
       await tester.pump();

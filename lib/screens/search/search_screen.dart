@@ -707,10 +707,6 @@ class _SearchViewState extends State<_SearchView> {
               title: Text(query),
               subtitle: Text(
                 [S.of(context).recentSearches, ...aliases].join(' · '),
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Theme.of(context).colorScheme.outline),
               ),
               onTap: () => _applyHistorySuggestion(query),
             );

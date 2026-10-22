@@ -83,12 +83,28 @@ void main() {
   test('name-field parenthesized aliases work in either direction', () {
     expect(aliases.match('かに', [r'artist:"peko$"']), [r'artist:"peko$"']);
     expect(aliases.match('peko', ['かにビーム']), ['かにビーム']);
-    expect(aliases.aliasesForHistory(r'artist:"peko$"'), ['ぺこ', 'かにビーム']);
-    expect(aliases.aliasesForHistory('かにビーム'), ['ぺこ', 'peko']);
+    expect(aliases.aliasesForHistory(r'artist:"peko$"'), ['ぺこ（かにビーム）']);
+    expect(aliases.aliasesForHistory('かにビーム'), ['ぺこ（かにビーム）', 'peko']);
     expect(aliases.aliasesForHistory(r'artist:"peko$" artist:peko'),
-        ['ぺこ', 'かにビーム']);
+        ['ぺこ（かにビーム）']);
     expect(aliases.aliasesForHistory('uploader:peko'), isEmpty);
     expect(aliases.aliasesForHistory('unknown'), isEmpty);
+  });
+
+  test(
+      'display aliases preserve punctuation instead of treating it as separators',
+      () {
+    for (final name in [
+      '就算是哥哥，有爱就没问题了，对吧',
+      '名称（别称）/Name、名前;别名；另名|Alias, subtitle:尾部！',
+    ]) {
+      final matcher = TagHistoryMatcher({
+        'parody': {'oniai': name}
+      });
+      expect(matcher.aliasesForHistory(r'parody:"oniai$"'), [name]);
+      expect(matcher.aliasesForHistory(name), ['oniai']);
+      expect(matcher.match(name, [r'parody:"oniai$"']), [r'parody:"oniai$"']);
+    }
   });
 
   test('generic and weak tag queries retain their qualifier semantics', () {
