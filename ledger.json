@@ -4600,7 +4600,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 修复 EH/EX 切站时开关响应迟缓：即时显示切换状态，图片缓存按站点和登录会话隔离保留，准备失败时恢复原站点（#54）。\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "154deba2bebb603f22497e7c7dde1d50d9f79d8a",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "fix",
