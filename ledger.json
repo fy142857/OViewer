@@ -4694,8 +4694,63 @@
         }
       ],
       "version": "1.9.3"
+    },
+    {
+      "base_tag": "v1.9.2",
+      "branch": "dev",
+      "build_number": 100,
+      "build_sha": "776fedcab26582f469fefe96fa41fff191892c44",
+      "candidate_id": "1.9.3+100",
+      "fingerprint": "f8cd098c4fa3ebc934dabebc4a9e21604cbfc4e8b174c2625a58cc2e549535c0",
+      "notes": "### 新增\n\n### 修复\n\n- 最近搜索弹出建议在名称下方显示词典中的译名和其他别称，省略已显示的名称并去重。\n- 最近搜索支持使用标签词典中的英文名、中文/日文译名及别名召回对应历史，保留原始搜索内容与最近优先顺序。\n- 修复 EH/EX 切站时开关响应迟缓：即时显示切换状态，图片缓存按站点和登录会话隔离保留，准备失败时恢复原站点（#54）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "0edf6031136f1eee96ed3add14fea0475b37918c",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Show pending site selection before asynchronous preparation, preserve disk images in site and login-session namespaces, and reject stale image work instead of clearing every cache file during a switch. Resolves #54.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "154deba2bebb603f22497e7c7dde1d50d9f79d8a",
+          "subject": "fix(settings): make site switching responsive with scoped image caches",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Match recent search queries bidirectionally against dictionary English names and Chinese/Japanese names and aliases, preserving recency, original query text, qualifiers and composition state.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "2b7e803906cdf39a318969046e11102d184e6f3c",
+          "subject": "fix(search): recall history through translated tag names and aliases",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Preserve names such as Re:CREATORS, C:drive. and names ending in dollar signs when matching recent searches; verified bidirectional recall for every valid entry in the local full dictionary.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "ca09537e19be3918efbdc16f242cbb89cc03dad3",
+          "subject": "fix(search): recognize punctuation in dictionary display names",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Display dictionary translations and alternate names beneath recent search entries, omitting names already visible and preserving original query selection.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "0edf6031136f1eee96ed3add14fea0475b37918c",
+          "subject": "fix(search): show tag aliases below recent search suggestions",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.9.3"
     }
   ],
-  "last_build_number": 99,
+  "last_build_number": 100,
   "schema": 1
 }
