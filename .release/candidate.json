@@ -1,33 +1,23 @@
 {
-  "base_tag": "v1.9.1",
+  "base_tag": "v1.9.2",
   "branch": "dev",
-  "build_number": 96,
-  "candidate_id": "1.9.2+96",
-  "fingerprint": "60bf6a641b88e2f828c9b3859f553bcff42aa71011d40eb00a9bbca7cc81fe68",
-  "notes": "### 新增\n\n### 修复\n\n- 调整检查更新弹窗：“重新检查版本”与“立即更新”同排靠右，发布页链接移至正文首行（#67）。\n- 移除搜索历史最多保存 20 条的限制，记录持续保留至手动删除或清空；历史列表按需加载条目（#68）。\n\n### 变更\n\n### 已知限制",
+  "build_number": 97,
+  "candidate_id": "1.9.3+97",
+  "fingerprint": "73e812e1e31a85c18188a79ae841c47a83f47863b27af8b266e3f7f937a2a4d2",
+  "notes": "### 新增\n\n### 修复\n\n- 修复 EH/EX 切站时开关响应迟缓：即时显示切换状态，图片缓存按站点和登录会话隔离保留，准备失败时恢复原站点（#54）。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "e76bc5ae3126473f95474819ea4d0a37a6f9fe02",
+  "source_sha": "154deba2bebb603f22497e7c7dde1d50d9f79d8a",
   "summary": [
     {
       "change_kind": "fix",
-      "classification_reason": "Remove automatic search history truncation and build long history lists lazily while preserving explicit deletion and recency ordering. Resolves #68.",
+      "classification_reason": "Show pending site selection before asynchronous preparation, preserve disk images in site and login-session namespaces, and reject stale image work instead of clearing every cache file during a switch. Resolves #54.",
       "classification_source": "commit-trailers",
       "original_type": "fix",
-      "sha": "e3b0b074091620ae2eccb661baa52391f01088ce",
-      "subject": "fix(search): retain history without a count limit",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Place recheck immediately left of update in a right-aligned action row and move the release-page link to the first content row, including narrow screens and larger text. Resolves #67.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "e76bc5ae3126473f95474819ea4d0a37a6f9fe02",
-      "subject": "fix(update): keep dialog actions inline and move release link first",
+      "sha": "154deba2bebb603f22497e7c7dde1d50d9f79d8a",
+      "subject": "fix(settings): make site switching responsive with scoped image caches",
       "type": "fix",
       "version_impact": "patch"
     }
   ],
-  "version": "1.9.2"
+  "version": "1.9.3"
 }
