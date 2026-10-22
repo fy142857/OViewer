@@ -65,6 +65,23 @@ class AndroidUpdateDialog extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                    if (url != null)
+                      TextButton(
+                          key: const ValueKey('update-release-link'),
+                          onPressed: () async {
+                            var opened = false;
+                            try {
+                              opened = await openRelease(url);
+                            } catch (_) {}
+                            if (!opened && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(s.releaseOpenFailed)));
+                            }
+                          },
+                          child: Text(s.updateReleaseLink,
+                              style: const TextStyle(
+                                  decoration: TextDecoration.underline))),
+                    if (url != null) const SizedBox(height: 8),
                     if (checking) ...[
                       const LinearProgressIndicator(),
                       const SizedBox(height: 12),
@@ -101,47 +118,61 @@ class AndroidUpdateDialog extends StatelessWidget {
                       else
                         _releaseNotes(notes),
                     ],
-                    if (url != null)
-                      TextButton(
-                          key: const ValueKey('update-release-link'),
-                          onPressed: () async {
-                            var opened = false;
-                            try {
-                              opened = await openRelease(url);
-                            } catch (_) {}
-                            if (!opened && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(s.releaseOpenFailed)));
-                            }
-                          },
-                          child: Text(s.updateReleaseLink,
-                              style: const TextStyle(
-                                  decoration: TextDecoration.underline))),
                   ]))),
+          actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
           actions: [
-            if (downloading || verifying)
-              TextButton(
-                  onPressed: cubit.cancel, child: Text(s.updateDownloadCancel)),
-            if (!state.working &&
-                state.phase != ApkUpdatePhase.waitingPermission)
-              TextButton(
-                  onPressed: () => unawaited(cubit.check(fresh: true)),
-                  child: Text(s.updateCheckAgain)),
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child:
-                    Text(downloading || verifying ? s.updateHide : s.cancel)),
-            if (update != null &&
-                !state.working &&
-                state.phase != ApkUpdatePhase.waitingPermission)
-              FilledButton(
-                  onPressed: () => unawaited(
-                      ready || retryInstall ? cubit.install() : cubit.start()),
-                  child: Text(ready || retryInstall
-                      ? s.installNow
-                      : error != null
-                          ? s.retry
-                          : s.updateNow)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (downloading || verifying)
+                  Flexible(
+                    flex: 4,
+                    child: TextButton(
+                        onPressed: cubit.cancel,
+                        child: Text(s.updateDownloadCancel)),
+                  ),
+                Flexible(
+                  flex: 2,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(48, 48)),
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                        downloading || verifying ? s.updateHide : s.cancel),
+                  ),
+                ),
+                if (!state.working &&
+                    state.phase != ApkUpdatePhase.waitingPermission)
+                  Flexible(
+                    flex: 4,
+                    child: TextButton(
+                        style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(48, 48)),
+                        onPressed: () => unawaited(cubit.check(fresh: true)),
+                        child: Text(s.updateCheckAgain)),
+                  ),
+                if (update != null &&
+                    !state.working &&
+                    state.phase != ApkUpdatePhase.waitingPermission)
+                  Flexible(
+                    flex: 3,
+                    child: FilledButton(
+                        style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(48, 48)),
+                        onPressed: () => unawaited(ready || retryInstall
+                            ? cubit.install()
+                            : cubit.start()),
+                        child: Text(ready || retryInstall
+                            ? s.installNow
+                            : error != null
+                                ? s.retry
+                                : s.updateNow)),
+                  ),
+              ],
+            ),
           ],
         );
       });
