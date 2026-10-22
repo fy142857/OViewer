@@ -9,6 +9,7 @@ import '../network/offline_download_network.dart';
 import '../network/reader_request_controller.dart';
 import '../parser/gallery_detail_parser.dart';
 import '../storage/database.dart';
+import '../storage/offline_files.dart';
 
 /// All UI and platform actions share this single queue and permit owner.
 class OfflineDownloadCoordinator {
@@ -21,6 +22,8 @@ class OfflineDownloadCoordinator {
   final _pendingStarts = <String, Future<void>>{};
   final _pendingPauses = <String, Future<void>>{};
   final _revisions = <String, int>{};
+  final _resumeContexts = <String, _ResumeContext>{};
+  final _deleting = <String>{};
   final _changes = StreamController<void>.broadcast();
   StreamSubscription<void>? _subscription;
   Timer? _notification;
@@ -49,6 +52,7 @@ class OfflineDownloadCoordinator {
     _subscription = repository.changes.listen((_) => _notify());
   }
   Stream<void> get changes => _changes.stream;
+  Set<String> get resumingIds => Set.unmodifiable(_pendingStarts.keys);
   bool get running => _jobs.values.any((j) => j.wanted || j.inFlight > 0);
   int get activePages => _pages;
   int get activeGalleries =>
@@ -81,22 +85,36 @@ class OfflineDownloadCoordinator {
         .whenComplete(() => _startingBackground = null));
   }
 
-  Future<void> resume(String id) =>
-      _pendingStarts[id] ??= _resume(id).whenComplete(() {
-        _pendingStarts.remove(id);
-        _pump();
-      });
+  Future<void> resume(String id) {
+    if (_closed || _deleting.contains(id)) return Future.value();
+    final pending = _pendingStarts[id];
+    if (pending != null) return pending;
+    late final Future<void> operation;
+    operation = _resume(id).whenComplete(() {
+      if (identical(_pendingStarts[id], operation)) _pendingStarts.remove(id);
+      _notify(immediate: true);
+      _pump();
+    });
+    _pendingStarts[id] = operation;
+    _notify(immediate: true);
+    return operation;
+  }
+
   Future<void> _resume(String id) async {
     final epoch = _epoch;
     final revision = _revisions[id] ?? 0;
     bool current() =>
-        !_closed && epoch == _epoch && revision == (_revisions[id] ?? 0);
+        !_closed &&
+        !_deleting.contains(id) &&
+        epoch == _epoch &&
+        revision == (_revisions[id] ?? 0);
     await _pendingPauses[id];
     await initialize();
     if (!current()) return;
     final previous = _jobs[id];
     if (previous?.wanted == true) return;
     if (previous != null) await previous.drained.future;
+    if (!current()) return;
     final book = await repository.get(id);
     if (!current()) return;
     if (book == null || book.status == OfflineStatus.deleting) return;
@@ -107,6 +125,7 @@ class OfflineDownloadCoordinator {
     try {
       await _ensureBackground();
     } catch (_) {
+      if (!current()) return;
       await repository.setStatus(id, OfflineStatus.paused,
           reason: 'background_unavailable');
       throw const OfflineFailure('background_unavailable');
@@ -227,7 +246,10 @@ class OfflineDownloadCoordinator {
       }));
     }
     for (final job in ready) {
-      if (_current(job) && job.pending.isEmpty && job.inFlight == 0) {
+      if (_current(job) &&
+          !job.preparing &&
+          job.pending.isEmpty &&
+          job.inFlight == 0) {
         final latest = await repository.get(job.book.id);
         if (!_current(job)) continue;
         final complete = latest != null &&
@@ -237,6 +259,7 @@ class OfflineDownloadCoordinator {
         await repository.setStatus(job.book.id,
             complete ? OfflineStatus.completed : OfflineStatus.failed,
             reason: complete ? null : 'pages_failed');
+        _resumeContexts.remove(job.book.id);
         job.wanted = false;
         _drain(job);
         _notify(immediate: true);
@@ -251,48 +274,137 @@ class OfflineDownloadCoordinator {
     job.requests.add(request);
     try {
       await repository.setStatus(job.book.id, OfflineStatus.preparing);
-      final first = await network.index(job.book.key!, 0, request);
       if (!_current(job)) return;
-      final thumbs = List<ThumbnailInfo>.of(first.thumbnails.values);
-      for (var page = 1; page < first.indexPageCount; page++) {
-        final next = await network.index(job.book.key!, page, request);
+      var context = _resumeContexts[job.book.id];
+      final warm = context != null && context.matches(job.book, job.session);
+      if (!warm) {
+        _resumeContexts.remove(job.book.id);
+        await _prepareIndex(job, request);
         if (!_current(job)) return;
-        if (next.totalPages != first.totalPages ||
-            next.pageSize != first.pageSize) {
-          throw const OfflineFailure('invalid_index');
+        final indexed = await repository.get(job.book.id);
+        if (!_current(job) || indexed == null) return;
+        context = _ResumeContext(indexed, job.session);
+      }
+      final preparedContext = context;
+      final pages = warm ? job.book.pages : await repository.pages(job.book.id);
+      if (!_current(job)) return;
+      job.resumeContext = preparedContext;
+      if (warm) {
+        // Known missing pages can start while existing files are checked.
+        // Completion still waits for preparing to finish, including repairs.
+        job.pending.addAll(pages.where((page) => page.status != 'completed'));
+        job.prepared = true;
+        await repository.setStatus(job.book.id, OfflineStatus.downloading);
+        _pump();
+      }
+      // Bound filesystem concurrency without serially hashing an entire book.
+      for (var offset = 0; offset < pages.length; offset += 8) {
+        if (!_current(job)) return;
+        final batch = pages.skip(offset).take(8).toList();
+        final valid = await Future.wait(batch.map((page) async {
+          if (page.status != 'completed' ||
+              page.relativePath == null ||
+              page.sha256 == null ||
+              page.bytes <= 0) return false;
+          final stamp = await repository.files.verifyForResume(
+              page.relativePath!, page.bytes, page.sha256!,
+              previous: preparedContext.verified[page.pageIndex]);
+          if (stamp == null) {
+            preparedContext.verified.remove(page.pageIndex);
+            return false;
+          }
+          preparedContext.verified[page.pageIndex] = stamp;
+          return true;
+        }));
+        if (!_current(job)) return;
+        for (var i = 0; i < batch.length; i++) {
+          final page = batch[i];
+          if (valid[i] || (warm && page.status != 'completed')) continue;
+          preparedContext.verified.remove(page.pageIndex);
+          if (page.status == 'completed') {
+            await repository.failPage(
+                job.book.id, page.pageIndex, 'missing_file');
+            if (!_current(job)) return;
+          }
+          if (!warm || page.status == 'completed') job.pending.add(page);
         }
-        thumbs.addAll(next.thumbnails.values);
-      }
-      await repository.putIndex(job.book.id, first.totalPages, thumbs,
-          current: () => _current(job));
-      if (job.book.record.legacyGid != null) {
-        final old = (await repository.all()).where((b) =>
-            b.source == null &&
-            b.record.gid == job.book.record.legacyGid &&
-            b.record.token == job.book.record.token);
-        if (old.isNotEmpty)
-          await repository.importLegacy(
-              old.first, job.book.key!, first.totalPages, thumbs,
-              current: () => _current(job));
-      }
-      for (final page in await repository.pages(job.book.id)) {
-        if (!_current(job)) return;
-        if (page.status == 'completed' && await repository.valid(page))
-          continue;
-        if (page.status == 'completed')
-          await repository.failPage(
-              job.book.id, page.pageIndex, 'missing_file');
-        job.pending.add(page);
       }
       if (!_current(job)) return;
-      job.prepared = true;
-      await repository.setStatus(job.book.id, OfflineStatus.downloading);
+      if (!warm) {
+        _resumeContexts[job.book.id] = preparedContext;
+        job.prepared = true;
+        await repository.setStatus(job.book.id, OfflineStatus.downloading);
+      }
     } catch (error) {
       if (_current(job)) await _failed(job, error);
     } finally {
       request.cancel();
       job.requests.remove(request);
     }
+  }
+
+  Future<void> _prepareIndex(
+      _OfflineJob job, ReaderRequestController request) async {
+    final first = await network.index(job.book.key!, 0, request);
+    if (!_current(job)) return;
+    final thumbs = List<ThumbnailInfo>.of(first.thumbnails.values);
+    for (var page = 1; page < first.indexPageCount; page++) {
+      final next = await network.index(job.book.key!, page, request);
+      if (!_current(job)) return;
+      if (next.totalPages != first.totalPages ||
+          next.pageSize != first.pageSize) {
+        throw const OfflineFailure('invalid_index');
+      }
+      thumbs.addAll(next.thumbnails.values);
+    }
+    await repository.putIndex(job.book.id, first.totalPages, thumbs,
+        current: () => _current(job));
+    if (job.book.record.legacyGid != null) {
+      final old = (await repository.all()).where((b) =>
+          b.source == null &&
+          b.record.gid == job.book.record.legacyGid &&
+          b.record.token == job.book.record.token);
+      if (old.isNotEmpty)
+        await repository.importLegacy(
+            old.first, job.book.key!, first.totalPages, thumbs,
+            current: () => _current(job));
+    }
+  }
+
+  Stream<List<int>> _content(
+      Stream<List<int>> source, ReaderRequestController request) {
+    late final StreamController<List<int>> output;
+    StreamSubscription<List<int>>? input;
+    Future<void>? cancellation;
+    Future<void> cancelInput() =>
+        cancellation ??= (input?.cancel() ?? Future<void>.value())
+            .catchError((Object error, StackTrace stack) {
+          if (!request.isCancelled) Error.throwWithStackTrace(error, stack);
+        });
+    void cancelled() {
+      if (!output.isClosed) {
+        output.addError(const OfflineFailure('cancelled'));
+        unawaited(output.close());
+      }
+    }
+
+    output = StreamController<List<int>>(
+      sync: true,
+      onListen: () {
+        input = source.listen(output.add, onError: output.addError, onDone: () {
+          unawaited(output.close());
+        });
+        request.onCancel(() {
+          // Await transport cleanup before the writer releases its permit.
+          unawaited(cancelInput().then((_) => cancelled(),
+              onError: (Object _, StackTrace __) => cancelled()));
+        });
+      },
+      onPause: () => input?.pause(),
+      onResume: () => input?.resume(),
+      onCancel: cancelInput,
+    );
+    return output.stream;
   }
 
   Future<void> _download(_OfflineJob job, OfflinePage page,
@@ -307,19 +419,22 @@ class OfflineDownloadCoordinator {
         if (!_current(job)) return;
         final response = await network.bytes(image.imageUrl, request);
         if (!_current(job)) {
-          await response.content.drain<void>();
+          await response.content.listen((_) {}).cancel();
           return;
         }
         if (response.statusCode != 200) {
-          await response.content.drain<void>();
+          await response.content.listen((_) {}).cancel();
           throw ApiException.server(response.statusCode);
         }
         final saved = await repository.files.write(
-            job.book.id, page.pageIndex, response.content,
+            job.book.id, page.pageIndex, _content(response.content, request),
             expectedBytes: response.contentLength,
             current: () => _current(job));
         await repository.savePage(job.book.id, page.pageIndex, saved,
             current: () => _current(job));
+        if (_current(job) && saved.verification != null) {
+          job.resumeContext?.verified[page.pageIndex] = saved.verification!;
+        }
         return;
       } catch (error) {
         if (!_current(job)) return;
@@ -338,8 +453,11 @@ class OfflineDownloadCoordinator {
         if (attempt == 2) {
           if (reason == 'network')
             await pauseAll(reason: reason);
-          else
+          else {
+            // A later retry must be able to refresh an obsolete page token.
+            _resumeContexts.remove(job.book.id);
             await repository.failPage(job.book.id, page.pageIndex, reason);
+          }
           return;
         }
         await Future.any([
@@ -407,6 +525,10 @@ class OfflineDownloadCoordinator {
 
   Future<void> _pause(String id, String reason) async {
     _revisions[id] = (_revisions[id] ?? 0) + 1;
+    _pendingStarts.remove(id);
+    if (reason == 'session_changed' || reason == 'source_changed') {
+      _resumeContexts.remove(id);
+    }
     final job = _jobs[id];
     if (job != null) {
       job.wanted = false;
@@ -432,8 +554,13 @@ class OfflineDownloadCoordinator {
 
   Future<void> pauseAll({String reason = 'user'}) async {
     _epoch++;
-    final ids =
-        _jobs.values.where((j) => j.wanted).map((j) => j.book.id).toList();
+    if (reason == 'session_changed' || reason == 'source_changed') {
+      _resumeContexts.clear();
+    }
+    final ids = {
+      ..._pendingStarts.keys,
+      ..._jobs.values.where((j) => j.wanted).map((j) => j.book.id),
+    };
     // Cancel every HTTP client before the first database await, particularly
     // when site/account changes could otherwise replace credentials mid-request.
     await Future.wait(ids.map((id) => pause(id, reason: reason)));
@@ -455,12 +582,18 @@ class OfflineDownloadCoordinator {
   }
 
   Future<void> delete(String id) async {
-    await pause(id);
-    final job = _jobs[id];
-    if (job != null) await job.drained.future;
-    await repository.setStatus(id, OfflineStatus.deleting);
-    await repository.delete(id);
-    _notify(immediate: true);
+    if (!_deleting.add(id)) return;
+    try {
+      _resumeContexts.remove(id);
+      await pause(id);
+      final job = _jobs[id];
+      if (job != null) await job.drained.future;
+      await repository.setStatus(id, OfflineStatus.deleting);
+      await repository.delete(id);
+      _notify(immediate: true);
+    } finally {
+      _deleting.remove(id);
+    }
   }
 
   Future<void> repair(String id, int page) async {
@@ -479,6 +612,7 @@ class OfflineDownloadCoordinator {
         book.source != network.source) {
       throw const OfflineFailure('session_changed');
     }
+    _resumeContexts[id]?.verified.remove(page);
     await repository.failPage(id, page, 'repair');
     await repository.setStatus(id, OfflineStatus.paused);
     await resume(id);
@@ -518,6 +652,7 @@ class OfflineDownloadCoordinator {
   Future<void> dispose() async {
     await pauseAll(reason: 'interrupted');
     _closed = true;
+    _resumeContexts.clear();
     await Future.wait(_jobs.values.map((j) => j.drained.future));
     _notification?.cancel();
     await _subscription?.cancel();
@@ -537,5 +672,26 @@ class _OfflineJob {
   bool preparing = false;
   bool prepared = false;
   int inFlight = 0;
+  _ResumeContext? resumeContext;
   _OfflineJob(this.book, this.session);
+}
+
+class _ResumeContext {
+  final GallerySource? source;
+  final Object? session;
+  final Map<int, String> tokens;
+  final verified = <int, OfflineFileStamp>{};
+  _ResumeContext(OfflineBook book, this.session)
+      : source = book.source,
+        tokens = {
+          for (final page in book.pages) page.pageIndex: page.pageToken
+        };
+
+  bool matches(OfflineBook book, Object? session) =>
+      source == book.source &&
+      this.session == session &&
+      book.record.indexReady &&
+      book.record.totalPages == tokens.length &&
+      book.pages.length == tokens.length &&
+      book.pages.every((page) => tokens[page.pageIndex] == page.pageToken);
 }

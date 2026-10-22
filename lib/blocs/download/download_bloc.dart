@@ -10,9 +10,15 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
   final OfflineDownloadCoordinator coordinator;
   late final StreamSubscription<void> _changes;
   int _loadGeneration = 0;
+  Timer? _reloadTimer;
   DownloadBloc(this.coordinator) : super(const DownloadState()) {
     _changes = coordinator.changes.listen((_) {
-      if (!isClosed) add(LoadDownloads());
+      // A transition emits several repository/coordinator notifications. Load
+      // one snapshot instead of decoding every page repeatedly in one frame.
+      _reloadTimer ??= Timer(const Duration(milliseconds: 50), () {
+        _reloadTimer = null;
+        if (!isClosed) add(LoadDownloads());
+      });
     });
     on<LoadDownloads>((event, emit) async {
       final generation = ++_loadGeneration;
@@ -20,7 +26,10 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
         await coordinator.initialize();
         final tasks = await coordinator.repository.all();
         if (generation == _loadGeneration && !emit.isDone) {
-          emit(DownloadState(status: DownloadListStatus.loaded, tasks: tasks));
+          emit(DownloadState(
+              status: DownloadListStatus.loaded,
+              tasks: tasks,
+              resumingIds: coordinator.resumingIds));
         }
       } catch (_) {
         if (generation == _loadGeneration && !emit.isDone) {
@@ -46,8 +55,15 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
     });
     on<PauseDownload>(
         (event, emit) => _run(() => coordinator.pause(event.id), emit));
-    on<ResumeDownload>(
-        (event, emit) => _run(() => coordinator.resume(event.id), emit));
+    on<ResumeDownload>((event, emit) async {
+      emit(state.copyWith(resumingIds: {...state.resumingIds, event.id}));
+      await _run(() => coordinator.resume(event.id), emit);
+      if (!emit.isDone) {
+        emit(state.copyWith(
+            resumingIds: coordinator.resumingIds,
+            errorMessage: state.errorMessage));
+      }
+    });
     on<DeleteDownload>(
         (event, emit) => _run(() => coordinator.delete(event.id), emit));
   }
@@ -66,6 +82,7 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
   @override
   Future<void> close() async {
     await _changes.cancel();
+    _reloadTimer?.cancel();
     await super.close();
   }
 }

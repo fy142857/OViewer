@@ -27,6 +27,10 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   final Uint8List png;
   bool hold = false;
   bool invalid = false;
+  bool stallStream = false;
+  Completer<void>? indexGate;
+  Completer<void>? cancelGate;
+  int imageCalls = 0;
   int total = 3;
   int active = 0;
   int peak = 0;
@@ -47,6 +51,14 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   Future<ReaderIndexPage> index(
       OfflineKey key, int page, ReaderRequestController requests) async {
     indexed.add(key.gid);
+    final gate = indexGate;
+    if (gate != null) {
+      requests.onCancel(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await gate.future;
+      if (requests.isCancelled) throw const OfflineFailure('cancelled');
+    }
     return ReaderIndexPage(
         totalPages: total,
         indexPage: 0,
@@ -59,14 +71,28 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   }
 
   @override
-  Future<GalleryImage> image(OfflineKey key, String token, int page,
-          ReaderRequestController requests,
-          {String? alternate}) async =>
-      GalleryImage(index: page, pageUrl: '', imageUrl: '${key.gid}/$page');
+  Future<GalleryImage> image(
+      OfflineKey key, String token, int page, ReaderRequestController requests,
+      {String? alternate}) async {
+    imageCalls++;
+    return GalleryImage(index: page, pageUrl: '', imageUrl: '${key.gid}/$page');
+  }
+
   @override
   Future<FileServiceResponse> bytes(
       String url, ReaderRequestController requests) async {
     calls[url] = (calls[url] ?? 0) + 1;
+    if (stallStream) {
+      final stream = StreamController<List<int>>(onListen: () {
+        active++;
+        if (active > peak) peak = active;
+      }, onCancel: () async {
+        await cancelGate?.future;
+        active--;
+      });
+      return HttpGetResponse(
+          http.StreamedResponse(stream.stream, statuses[url] ?? 200));
+    }
     final gate = Completer<void>();
     gates.add(gate);
     if (!hold) gate.complete();
@@ -107,6 +133,38 @@ Future<void> until(FutureOr<bool> Function() predicate) async {
   fail('Condition not reached');
 }
 
+class CountingFiles extends OfflineFiles {
+  int hashes = 0;
+  bool shortTimeout = false;
+  Completer<void>? verificationGate;
+  @override
+  Future<OfflineFileStamp?> verifyForResume(
+      String relative, int size, String digest,
+      {OfflineFileStamp? previous}) async {
+    await verificationGate?.future;
+    return super.verifyForResume(relative, size, digest, previous: previous);
+  }
+
+  @override
+  Future<OfflineFileInfo> write(
+          String bookId, int page, Stream<List<int>> source,
+          {required bool Function() current, int? expectedBytes}) =>
+      super.write(
+          bookId,
+          page,
+          shortTimeout
+              ? source.timeout(const Duration(milliseconds: 15))
+              : source,
+          current: current,
+          expectedBytes: expectedBytes);
+  CountingFiles(Future<Directory> Function() root) : super(root: root);
+  @override
+  Future<String> digestOf(File file) {
+    hashes++;
+    return super.digestOf(file);
+  }
+}
+
 class FullDiskFiles extends OfflineFiles {
   FullDiskFiles(Future<Directory> Function() root) : super(root: root);
   @override
@@ -127,6 +185,7 @@ void main() {
   late Directory directory;
   late AppDatabase db;
   late OfflineRepository repo;
+  late CountingFiles files;
   late ControlledOfflineNetwork network;
   late OfflineDownloadCoordinator coordinator;
   var starts = 0;
@@ -136,8 +195,8 @@ void main() {
     stops = 0;
     directory = await Directory.systemTemp.createTemp('oviewer-queue-');
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    repo = OfflineRepository(db,
-        OfflineFiles(root: () async => Directory('${directory.path}/offline')),
+    files = CountingFiles(() async => Directory('${directory.path}/offline'));
+    repo = OfflineRepository(db, files,
         legacyRoot: () async => Directory('${directory.path}/legacy'));
     final fixtures = jsonDecode(
         await File('test/fixtures/page_image_formats.json').readAsString());
@@ -236,6 +295,253 @@ void main() {
     await until(() async => (await repo.get(id))!.complete);
     expect(network.calls['42/0'], 1);
   });
+  Future<String> pauseAfterOne() async {
+    coordinator.configure(galleries: 1, pages: 1);
+    network.hold = true;
+    final id = await coordinator.enqueue(key, 'Book', network.total);
+    await until(() => network.active == 1);
+    network.gates.first.complete();
+    await until(() => network.calls.containsKey('42/1'));
+    await coordinator.pause(id);
+    await until(() => coordinator.activePages == 0);
+    return id;
+  }
+
+  test('warm resume reuses full index and verified files without hashing',
+      () async {
+    final id = await pauseAfterOne();
+    final hashes = files.hashes;
+    await coordinator.resume(id);
+    await until(() => network.calls['42/1'] == 2);
+    expect(network.indexed, [42]);
+    expect(files.hashes, hashes);
+    expect(network.calls['42/0'], 1);
+    network.release();
+    await until(() async => (await repo.get(id))!.complete);
+  });
+
+  test('warm downloads start before checks finish but cannot complete early',
+      () async {
+    final id = await pauseAfterOne();
+    files.verificationGate = Completer<void>();
+    network.release();
+    await coordinator.resume(id);
+    await until(() async => (await repo.get(id))!.completedPages == 3);
+    expect((await repo.get(id))!.status, OfflineStatus.downloading);
+    final page = (await repo.pages(id)).first;
+    await (await files.file(page.relativePath!)).delete();
+    files.verificationGate!.complete();
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.calls['42/0'], 2);
+    expect(network.calls['42/2'], 1);
+  });
+
+  for (final damage in ['missing', 'length', 'same_length', 'mtime_only']) {
+    test('warm resume rechecks a $damage completed file', () async {
+      final id = await pauseAfterOne();
+      final page = (await repo.pages(id)).first;
+      final file = await files.file(page.relativePath!);
+      if (damage == 'missing') {
+        await file.delete();
+      } else if (damage != 'mtime_only') {
+        await file
+            .writeAsBytes(List.filled(damage == 'length' ? 1 : page.bytes, 0));
+      }
+      if (damage != 'missing') await file.setLastModified(DateTime(2020));
+      final hashes = files.hashes;
+      network.release();
+      await coordinator.resume(id);
+      await until(() async => (await repo.get(id))!.complete);
+      expect(network.calls['42/0'], damage == 'mtime_only' ? 1 : 2);
+      expect(files.hashes - hashes,
+          ['mtime_only', 'same_length'].contains(damage) ? 1 : 0);
+    });
+  }
+
+  test('pause during index fetch never creates a reusable partial index',
+      () async {
+    network.indexGate = Completer<void>();
+    final id = await coordinator.enqueue(key, 'Book', 3);
+    await until(() => network.indexed.isNotEmpty);
+    await coordinator.pause(id);
+    network.indexGate = null;
+    await coordinator.resume(id);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexed, [42, 42]);
+  });
+
+  for (final reason in ['source_changed', 'session_changed']) {
+    test('$reason invalidates even an already paused warm task', () async {
+      final id = await pauseAfterOne();
+      await coordinator.pauseAll(reason: reason);
+      final hashes = files.hashes;
+      network.release();
+      await coordinator.resume(id);
+      await until(() async => (await repo.get(id))!.complete);
+      expect(network.indexed, [42, 42]);
+      expect(files.hashes, hashes + 1);
+    });
+  }
+
+  test('cold resume refetches the directory and fully checks completed files',
+      () async {
+    final id = await pauseAfterOne();
+    await coordinator.dispose();
+    await repo.dispose();
+    repo = OfflineRepository(db, files,
+        legacyRoot: () async => Directory('${directory.path}/legacy'));
+    coordinator = OfflineDownloadCoordinator(repo, network);
+    final hashes = files.hashes;
+    network.release();
+    await coordinator.resume(id);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexed, [42, 42]);
+    expect(files.hashes,
+        hashes + 2); // Startup integrity check, then full preparation.
+  });
+
+  test('a failed page refreshes the directory on the next retry', () async {
+    final id = await pauseAfterOne();
+    network.statuses['42/1'] = 404;
+    network.release();
+    await coordinator.resume(id);
+    await until(
+        () async => (await repo.get(id))!.status == OfflineStatus.failed);
+    network.statuses.clear();
+    await coordinator.resume(id);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexed, [42, 42]);
+    expect(network.calls['42/0'], 1);
+  });
+
+  test('stalled stream cancels immediately without waiting for read timeout',
+      () async {
+    network.stallStream = true;
+    final id = await coordinator.enqueue(key, 'Book', 3);
+    await until(() => network.active == 3);
+    await coordinator.pause(id);
+    await until(() => coordinator.activePages == 0);
+    expect(network.active, 0);
+    expect(await files.size(), 0);
+    network.stallStream = false;
+    await coordinator.resume(id);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexed, [42]);
+  });
+
+  test('read timeout cancels stalled streams and retries stay bounded',
+      () async {
+    network.total = 1;
+    network.stallStream = true;
+    files.shortTimeout = true;
+    final id = await coordinator.enqueue(key, 'Book', 1);
+    await until(() async => (await repo.get(id))!.record.reason == 'network');
+    await until(() => coordinator.activePages == 0);
+    expect(network.calls['42/0'], 3);
+    expect(network.active, 0);
+    expect(await files.size(), 0);
+  });
+
+  test('error response discards its stalled body without draining it',
+      () async {
+    network.total = 1;
+    network.stallStream = true;
+    network.statuses['42/0'] = 403;
+    final id = await coordinator.enqueue(key, 'Book', 1);
+    await until(
+        () async => (await repo.get(id))!.record.reason == 'authentication');
+    await until(() => coordinator.activePages == 0);
+    expect(network.calls['42/0'], 1);
+    expect(network.active, 0);
+  });
+
+  test('failed background startup clears resume state and permits retry',
+      () async {
+    await coordinator.dispose();
+    var fail = true;
+    coordinator =
+        OfflineDownloadCoordinator(repo, network, startBackground: () async {
+      if (fail) throw StateError('service unavailable');
+    });
+    await repo.create(key, 'Book', 3);
+    await expectLater(
+        coordinator.resume(key.id),
+        throwsA(isA<OfflineFailure>()
+            .having((e) => e.code, 'code', 'background_unavailable')));
+    expect(coordinator.resumingIds, isEmpty);
+    expect((await repo.get(key.id))!.status, OfflineStatus.paused);
+    fail = false;
+    await coordinator.resume(key.id);
+    await until(() async => (await repo.get(key.id))!.complete);
+  });
+
+  test('pause all also cancels resumes waiting for background service startup',
+      () async {
+    await coordinator.dispose();
+    final gate = Completer<void>();
+    coordinator = OfflineDownloadCoordinator(repo, network,
+        startBackground: () => gate.future);
+    await repo.create(key, 'Book', 3);
+    final starting = coordinator.resume(key.id);
+    await until(() => coordinator.resumingIds.contains(key.id));
+    await coordinator.pauseAll(reason: 'source_changed');
+    gate.complete();
+    await starting;
+    expect(coordinator.resumingIds, isEmpty);
+    expect(network.indexed, isEmpty);
+    expect((await repo.get(key.id))!.status, OfflineStatus.paused);
+  });
+
+  test('latest resume wins while cancelled writers are still cleaning up',
+      () async {
+    network.stallStream = true;
+    network.cancelGate = Completer<void>();
+    final id = await coordinator.enqueue(key, 'Book', 3);
+    await until(() => network.active == 3);
+    await coordinator.pause(id);
+    final first = coordinator.resume(id);
+    expect(coordinator.resumingIds, contains(id));
+    await coordinator.pause(id);
+    final latest = coordinator.resume(id);
+    expect(identical(first, latest), isFalse);
+    expect(identical(latest, coordinator.resume(id)), isTrue);
+    expect(network.imageCalls, 3);
+    network.stallStream = false;
+    network.cancelGate!.complete();
+    await Future.wait([first, latest]);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.calls.values, everyElement(2));
+    expect(network.peak, lessThanOrEqualTo(coordinator.pageLimit));
+    expect(coordinator.resumingIds, isEmpty);
+  });
+
+  test('delete cancels a pending resume without resurrecting the book',
+      () async {
+    network.stallStream = true;
+    network.cancelGate = Completer<void>();
+    final id = await coordinator.enqueue(key, 'Book', 3);
+    await until(() => network.active == 3);
+    await coordinator.pause(id);
+    final resuming = coordinator.resume(id);
+    final deleting = coordinator.delete(id);
+    await coordinator.resume(id);
+    network.cancelGate!.complete();
+    await Future.wait([resuming, deleting]);
+    expect(await repo.get(id), isNull);
+    expect(await files.size(), 0);
+    expect(network.imageCalls, 3);
+  });
+
+  test('repair invalidates a warm completed page without refetching the index',
+      () async {
+    final id = await pauseAfterOne();
+    network.release();
+    await coordinator.repair(id, 0);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexed, [42]);
+    expect(network.calls['42/0'], 2);
+  });
+
   test('delete waits for cancelled work and cannot resurrect files or records',
       () async {
     network.hold = true;

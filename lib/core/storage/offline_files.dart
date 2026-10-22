@@ -15,8 +15,30 @@ class OfflineFileInfo {
   final String format;
   final int bytes;
   final String digest;
-  const OfflineFileInfo(
-      this.relativePath, this.format, this.bytes, this.digest);
+  final OfflineFileStamp? verification;
+  const OfflineFileInfo(this.relativePath, this.format, this.bytes, this.digest,
+      {this.verification});
+}
+
+/// Process-local evidence only. Reads still verify the actual file digest.
+class OfflineFileStamp {
+  final String path;
+  final int bytes;
+  final String digest;
+  final DateTime modified;
+  final DateTime changed;
+  OfflineFileStamp(this.path, this.bytes, this.digest, FileStat stat)
+      : modified = stat.modified,
+        changed = stat.changed;
+
+  bool matches(String path, int bytes, String digest, FileStat stat) =>
+      this.path == path &&
+      this.bytes == bytes &&
+      this.digest == digest &&
+      stat.type == FileSystemEntityType.file &&
+      stat.size == bytes &&
+      modified == stat.modified &&
+      changed == stat.changed;
 }
 
 /// Only complete, decoded and flushed files are exposed to the repository.
@@ -122,8 +144,10 @@ class OfflineFiles {
       final relative = '$stem.$format';
       completed = await partial.rename((await file(relative)).path);
       check();
-      return OfflineFileInfo(
-          relative, format, length, sha256.convert(bytes).toString());
+      final digest = sha256.convert(bytes).toString();
+      return OfflineFileInfo(relative, format, length, digest,
+          verification: OfflineFileStamp(
+              relative, length, digest, await completed.stat()));
     } catch (_) {
       if (completed != null && await completed.exists())
         await completed.delete();
@@ -134,15 +158,33 @@ class OfflineFiles {
   }
 
   Future<bool> verify(String relative, int size, String digest) async {
+    return await verifyForResume(relative, size, digest) != null;
+  }
+
+  Future<OfflineFileStamp?> verifyForResume(
+      String relative, int size, String digest,
+      {OfflineFileStamp? previous}) async {
     try {
       final target = await file(relative);
-      return await target.exists() &&
-          await target.length() == size &&
-          (await sha256.bind(target.openRead()).first).toString() == digest;
+      final before = await target.stat();
+      if (before.type != FileSystemEntityType.file || before.size != size) {
+        return null;
+      }
+      if (previous?.matches(relative, size, digest, before) == true) {
+        return previous;
+      }
+      if (await digestOf(target) != digest) return null;
+      final stamp = OfflineFileStamp(relative, size, digest, before);
+      return stamp.matches(relative, size, digest, await target.stat())
+          ? stamp
+          : null;
     } on FileSystemException {
-      return false;
+      return null;
     }
   }
+
+  Future<String> digestOf(File target) async =>
+      (await sha256.bind(target.openRead()).first).toString();
 
   Future<Uint8List> read(String relative, int size, String digest) async {
     final target = await file(relative);

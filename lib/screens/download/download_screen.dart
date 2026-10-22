@@ -107,6 +107,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
                 itemCount: state.tasks.length,
                 itemBuilder: (context, index) {
                   final book = state.tasks[index];
+                  final resuming = state.resumingIds.contains(book.id);
                   final completed = book.pages.where(
                       (p) => p.status == 'completed' && p.relativePath != null);
                   final active = const [
@@ -163,7 +164,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
                                                     overflow:
                                                         TextOverflow.ellipsis),
                                                 Text(
-                                                    '${book.source?.shortName ?? s.offlineSourceRequired} · ${s.offlineStatus(book.record.status)}'),
+                                                    '${book.source?.shortName ?? s.offlineSourceRequired} · ${resuming ? s.offlineResuming : s.offlineStatus(book.record.status)}'),
                                                 Text(
                                                     '${book.completedPages}/${book.record.totalPages} · ${(book.bytes / 1048576).toStringAsFixed(1)} MB'),
                                               ])),
@@ -192,14 +193,19 @@ class _DownloadScreenState extends State<DownloadScreen> {
                                                 onPressed: () => _source(book),
                                                 child: Text(
                                                     s.offlineChooseSource)),
-                                          if (active)
+                                          if (active || resuming)
                                             TextButton(
                                                 onPressed: () => context
                                                     .read<DownloadBloc>()
                                                     .add(
                                                         PauseDownload(book.id)),
                                                 child: Text(s.offlinePause)),
+                                          if (resuming)
+                                            TextButton(
+                                                onPressed: null,
+                                                child: Text(s.offlineResuming)),
                                           if (book.source != null &&
+                                              !resuming &&
                                               !active &&
                                               !const [
                                                 OfflineStatus.completed,

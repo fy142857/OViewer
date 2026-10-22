@@ -34,6 +34,7 @@ class S {
   String get offlineSettingsFailed =>
       _zh ? '并行设置保存失败，请重试' : 'Could not save download settings. Please retry.';
   String get offlineResume => _zh ? '继续下载' : 'Resume download';
+  String get offlineResuming => _zh ? '正在恢复…' : 'Resuming…';
   String get offlinePause => _zh ? '暂停' : 'Pause';
   String get offlineRead => _zh ? '离线阅读' : 'Read offline';
   String get offlineManage => _zh ? '管理下载' : 'Manage downloads';
