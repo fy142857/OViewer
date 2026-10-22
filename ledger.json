@@ -4974,8 +4974,33 @@
         }
       ],
       "version": "1.9.3"
+    },
+    {
+      "base_tag": "v1.9.3",
+      "branch": "dev",
+      "build_number": 104,
+      "build_sha": "1547cf74e7df252a5bfdb487bdda42fe8c0a076b",
+      "candidate_id": "1.10.0+104",
+      "fingerprint": "b2a76f93cc53046f3b1338941f07b9d33e9a797a0d418fb9f59eef3e3516a029",
+      "notes": "### 新增\n\n- 登录页新增账号密码登录，保留 WebView 与手动 Cookie；遇到安全验证可点击提示转入 WebView，注册入口使用系统浏览器打开官方注册页（#61）。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "0d7460592d4589209d31db88eea7a05c7a845b21",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "Add a native username/password authentication method and official browser registration entry, with isolated credential validation and cancellable session persistence.",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "0d7460592d4589209d31db88eea7a05c7a845b21",
+          "subject": "feat(auth): add native account login and registration entry",
+          "type": "feat",
+          "version_impact": "minor"
+        }
+      ],
+      "version": "1.10.0"
     }
   ],
-  "last_build_number": 103,
+  "last_build_number": 104,
   "schema": 1
 }
