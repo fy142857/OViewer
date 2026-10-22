@@ -4589,8 +4589,33 @@
         }
       ],
       "version": "1.9.2"
+    },
+    {
+      "base_tag": "v1.9.2",
+      "branch": "dev",
+      "build_number": 97,
+      "build_sha": "47db6ae7748f820aedf366041d0aba066d52098c",
+      "candidate_id": "1.9.3+97",
+      "fingerprint": "73e812e1e31a85c18188a79ae841c47a83f47863b27af8b266e3f7f937a2a4d2",
+      "notes": "### 新增\n\n### 修复\n\n- 修复 EH/EX 切站时开关响应迟缓：即时显示切换状态，图片缓存按站点和登录会话隔离保留，准备失败时恢复原站点（#54）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "154deba2bebb603f22497e7c7dde1d50d9f79d8a",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Show pending site selection before asynchronous preparation, preserve disk images in site and login-session namespaces, and reject stale image work instead of clearing every cache file during a switch. Resolves #54.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "154deba2bebb603f22497e7c7dde1d50d9f79d8a",
+          "subject": "fix(settings): make site switching responsive with scoped image caches",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.9.3"
     }
   ],
-  "last_build_number": 96,
+  "last_build_number": 97,
   "schema": 1
 }
