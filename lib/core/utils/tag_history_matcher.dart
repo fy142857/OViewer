@@ -85,6 +85,18 @@ class TagHistoryMatcher {
       .toList();
 
   List<_HistoryTerm> _terms(String text) {
+    final prefix = RegExp(r'^[-~]?(?:weak:)?([a-z]+):').firstMatch(text)?[1];
+    if (prefix == null || !_literalQualifiers.contains(prefix)) {
+      // Real display names can themselves look like syntax (C:drive., P:P,
+      // or a trailing $). Resolve a complete known name before stripping it.
+      var fullName = text;
+      var tags = _lookup(fullName, null);
+      if (tags.isEmpty) {
+        fullName = _unquote(text);
+        tags = _lookup(fullName, null);
+      }
+      if (tags.isNotEmpty) return [_HistoryTerm(fullName, tags)];
+    }
     final tokens = RegExp(r'(?:[^\s"]+|"[^"]*"?)+')
         .allMatches(text)
         .map((m) => m.group(0)!)
@@ -97,8 +109,10 @@ class TagHistoryMatcher {
       if (qualified != null) {
         final namespace = _namespaces[qualified[3]];
         if (namespace == null) {
-          // Titles and uploader accounts have literal semantics, not tag aliases.
-          result.add(_HistoryTerm(token, const [], literal: true));
+          // Known search fields remain literal. Other colons can be part of a
+          // dictionary name, for example Re:CREATORS or MO:OKU.
+          result.add(_HistoryTerm(token, _lookup(token, null),
+              literal: _literalQualifiers.contains(qualified[3])));
           continue;
         }
         final value = _unquote(qualified[4]!);
@@ -110,7 +124,7 @@ class TagHistoryMatcher {
         continue;
       }
       if (token.contains(':')) {
-        result.add(_HistoryTerm(token, const [], literal: true));
+        result.add(_HistoryTerm(token, _lookup(token, null)));
         continue;
       }
       // Resolve the longest dictionary phrase, so "nanao yukiji" is not
@@ -172,6 +186,15 @@ class TagHistoryMatcher {
     'misc': 'other',
     'tag': '*',
     'weak': '*',
+  };
+
+  static const _literalQualifiers = {
+    'title',
+    'uploader',
+    'gid',
+    'gdid',
+    'comment',
+    'favnote',
   };
 }
 

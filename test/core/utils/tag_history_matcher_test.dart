@@ -64,6 +64,22 @@ void main() {
         ['uploader:nanao']);
   });
 
+  test('complete display names that resemble tag syntax still recall history',
+      () {
+    const dictionary = {
+      'group': {'c drive': 'C:drive.', 'p.p': 'P:P'},
+      'artist': {'doru': r'$', '3000 krw': r'かけだし3$'},
+    };
+    final matcher = TagHistoryMatcher(dictionary);
+    for (final namespace in dictionary.entries) {
+      for (final entry in namespace.value.entries) {
+        final saved = '${namespace.key}:"${entry.key}\$"';
+        expect(matcher.match(entry.value, [saved]), [saved]);
+        expect(matcher.match(entry.key, [entry.value]), [entry.value]);
+      }
+    }
+  });
+
   test('name-field parenthesized aliases work in either direction', () {
     expect(aliases.match('かに', [r'artist:"peko$"']), [r'artist:"peko$"']);
     expect(aliases.match('peko', ['かにビーム']), ['かにビーム']);
@@ -80,6 +96,23 @@ void main() {
     expect(aliases.match('weak:artist:七尾', [r'weak:"nanao yukiji$"']),
         [r'weak:"nanao yukiji$"']);
     expect(aliases.match('weak:七尾', [saved]), isEmpty);
+  });
+
+  test(
+      'dictionary names containing colons remain names, including partial input',
+      () {
+    final matcher = TagHistoryMatcher({
+      'parody': {'nier': '尼尔:人工生命', 're creators': 'Re:CREATORS'},
+      'artist': {'mo oku': 'MO:OKU'},
+    });
+    expect(matcher.match('尼尔:', [r'parody:"nier$"']), [r'parody:"nier$"']);
+    expect(matcher.match('nier', ['尼尔:人工生命']), ['尼尔:人工生命']);
+    expect(matcher.match('Re:CREA', [r'parody:"re creators$"']),
+        [r'parody:"re creators$"']);
+    expect(matcher.match('re creators', ['Re:CREATORS']), ['Re:CREATORS']);
+    expect(matcher.match('mo oku', ['MO:OKU']), ['MO:OKU']);
+    expect(matcher.match('MO:O', [r'artist:"mo oku$"']), [r'artist:"mo oku$"']);
+    expect(matcher.match('MO:O', ['uploader:"mo oku"']), isEmpty);
   });
 
   test(
