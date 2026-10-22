@@ -2,12 +2,40 @@ import '../core/network/dio_client.dart';
 import '../core/network/cookie_manager.dart';
 import '../core/constants/api_endpoints.dart';
 import '../models/user_profile.dart';
+import 'package:dio/dio.dart';
+import '../core/network/account_login_client.dart';
 
 class AuthRepository {
   final DioClient _dio;
   final CookieManager _cookieManager;
 
-  AuthRepository(this._dio, this._cookieManager);
+  AuthRepository(this._dio, this._cookieManager,
+      {AccountLoginClient? accountClient})
+      : _accountClient = accountClient ?? AccountLoginClient();
+
+  final AccountLoginClient _accountClient;
+
+  Future<AccountLoginResult> loginWithAccount({
+    required String username,
+    required String password,
+    required bool checkEx,
+    required CancelToken cancelToken,
+  }) =>
+      _accountClient.login(
+          username: username,
+          password: password,
+          checkEx: checkEx,
+          cancelToken: cancelToken);
+
+  Future<void> saveAccountLogin(AccountLoginResult result,
+          {required bool Function() isCurrent,
+          required void Function() onCommitted}) =>
+      _cookieManager.saveLoginCookies(
+          memberId: result.memberId,
+          passHash: result.passHash,
+          igneous: result.igneous,
+          isCurrent: isCurrent,
+          onCommitted: onCommitted);
 
   /// Check if user is logged in
   Future<bool> isLoggedIn() => _cookieManager.hasLoginCookies();

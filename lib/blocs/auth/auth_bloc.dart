@@ -1,4 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:dio/dio.dart';
+import '../../core/network/account_login_client.dart';
+import '../../models/user_profile.dart';
 import '../../repositories/auth_repository.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/network/native_auth_cookies.dart';
@@ -9,12 +12,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _repository;
   int _operation = 0;
   int _session = 0;
+  CancelToken? _accountToken;
 
   AuthBloc(this._repository) : super(const AuthState()) {
     on<CheckLoginStatus>(_onCheckStatus);
     on<LoginWithCookies>(_onLoginWithCookies);
     on<LoginFromWebView>(_onLoginFromWebView);
     on<LogoutRequested>(_onLogout);
+    on<LoginWithAccount>(_onAccount);
+    on<CancelAccountLogin>((event, emit) {
+      if (event.operation == _operation && state.status == AuthStatus.loading) {
+        emit(AuthState(
+            status: AuthStatus.unauthenticated, sessionGeneration: _session));
+      }
+    });
   }
 
   bool _current(int operation, Emitter<AuthState> emit) =>
@@ -23,7 +34,70 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       state.status == AuthStatus.loggingOut ||
       state.status == AuthStatus.logoutFailed;
   bool _acceptLogin(int? generation) =>
-      !_logoutBlocked && (generation == null || generation == _session);
+      !_logoutBlocked &&
+      state.status != AuthStatus.loading &&
+      (generation == null || generation == _session);
+
+  /// Cancel synchronously before navigation can let a network result commit.
+  void cancelAccountLogin() {
+    final token = _accountToken;
+    if (token == null) return;
+    token.cancel();
+    _accountToken = null;
+    final operation = ++_operation;
+    if (!isClosed) add(CancelAccountLogin(operation));
+  }
+
+  Future<void> _onAccount(
+      LoginWithAccount event, Emitter<AuthState> emit) async {
+    if (!_acceptLogin(event.sessionGeneration) ||
+        state.isLoggedIn ||
+        event.cancelToken?.isCancelled == true) return;
+    final operation = ++_operation;
+    final token = event.cancelToken ?? CancelToken();
+    _accountToken = token;
+    bool current() => _current(operation, emit) && !token.isCancelled;
+    emit(AuthState(status: AuthStatus.loading, sessionGeneration: _session));
+    try {
+      final result = await _repository.loginWithAccount(
+          username: event.username.trim(),
+          password: event.password,
+          checkEx: AppConstants.useExHentai,
+          cancelToken: token);
+      if (!current()) return;
+      await _repository.saveAccountLogin(result, isCurrent: current,
+          onCommitted: () {
+        if (!current()) return;
+        _accountToken = null;
+        emit(AuthState(
+            status: AuthStatus.authenticated,
+            profile: UserProfile(memberId: result.memberId, isLoggedIn: true),
+            sessionGeneration: _session,
+            exUnavailable: result.exUnavailable));
+      });
+    } on AccountLoginException catch (error) {
+      if (current())
+        emit(AuthState(
+            status: AuthStatus.error,
+            sessionGeneration: _session,
+            accountFailure: error.reason));
+    } catch (_) {
+      if (current())
+        emit(AuthState(
+            status: AuthStatus.error,
+            sessionGeneration: _session,
+            accountFailure: AccountLoginFailure.site));
+    } finally {
+      if (identical(_accountToken, token)) _accountToken = null;
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _accountToken?.cancel();
+    _operation++;
+    return super.close();
+  }
 
   Future<void> _onCheckStatus(
       CheckLoginStatus event, Emitter<AuthState> emit) async {
@@ -129,6 +203,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onLogout(LogoutRequested event, Emitter<AuthState> emit) async {
     if (state.status == AuthStatus.loggingOut) return;
+    _accountToken?.cancel();
+    _accountToken = null;
     final operation = ++_operation;
     _session++;
     // Immediately disables account actions and cancels daily check-in work.

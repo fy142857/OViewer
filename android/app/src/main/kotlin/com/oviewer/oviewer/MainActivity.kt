@@ -38,6 +38,20 @@ class MainActivity: FlutterActivity() {
             .setMethodCallHandler(updater)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/release_link")
             .setMethodCallHandler(ReleaseLinkOpener(this))
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/account_registration")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "open") { result.notImplemented() }
+                else {
+                    try {
+                        val uri = android.net.Uri.parse("https://forums.e-hentai.org/index.php?act=Reg&CODE=00")
+                        val intent = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+                        intent.selector = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER)
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (_: android.content.ActivityNotFoundException) { result.success(false) }
+                      catch (_: SecurityException) { result.success(false) }
+                }
+            }
         sponsor = SponsorBridge(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/sponsor")
             .setMethodCallHandler(sponsor)
@@ -58,7 +72,7 @@ class MainActivity: FlutterActivity() {
     override fun onDestroy() {
         updater?.dispose(); sponsor?.dispose(); exporter?.dispose()
         flutterEngine?.let { engine ->
-            for (name in listOf("oviewer/apk_update", "oviewer/release_link", "oviewer/sponsor", "oviewer/page_image_export")) {
+            for (name in listOf("oviewer/apk_update", "oviewer/release_link", "oviewer/account_registration", "oviewer/sponsor", "oviewer/page_image_export")) {
                 MethodChannel(engine.dartExecutor.binaryMessenger, name).setMethodCallHandler(null)
             }
         }

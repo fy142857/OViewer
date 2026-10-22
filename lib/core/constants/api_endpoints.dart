@@ -35,7 +35,7 @@ class ApiEndpoints {
 
   // Login
   static String get loginPage =>
-      'https://forums.e-hentai.org/index.php?act=Login';
+      'https://forums.e-hentai.org/index.php?act=Login&CODE=00';
   static String get userConfig => '$_base/uconfig.php';
 
   // Favorites operations

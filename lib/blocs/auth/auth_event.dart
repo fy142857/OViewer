@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:dio/dio.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
@@ -32,3 +33,25 @@ class LoginFromWebView extends AuthEvent {
 }
 
 class LogoutRequested extends AuthEvent {}
+
+class LoginWithAccount extends AuthEvent {
+  const LoginWithAccount(
+      {required this.username,
+      required this.password,
+      required this.sessionGeneration,
+      this.cancelToken});
+  final String username;
+  final String password;
+  final int sessionGeneration;
+  final CancelToken? cancelToken;
+  // Equatable/event observers must not stringify credentials.
+  @override
+  String toString() => 'LoginWithAccount';
+}
+
+class CancelAccountLogin extends AuthEvent {
+  const CancelAccountLogin(this.operation);
+  final int operation;
+  @override
+  List<Object?> get props => [operation];
+}

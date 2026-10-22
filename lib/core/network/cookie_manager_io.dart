@@ -195,24 +195,51 @@ class CookieManager {
     required String memberId,
     required String passHash,
     String? igneous,
+    bool Function()? isCurrent,
+    void Function()? onCommitted,
   }) {
+    if (isCurrent?.call() == false) {
+      return Future.error(StateError('Authentication operation cancelled'));
+    }
     if (_logoutPending) return Future.error(const LogoutCleanupException());
     final revision = ++_sessionRevision;
     final imageSession = _beginImageSession();
     onSessionChanged?.call();
     ReaderIndexCache.shared.clear();
     return _serial(() async {
-      _requireCurrent(revision);
-      await _persistImageSession(imageSession);
-      _requireCurrent(revision);
-      await _saveLoginCookies(
-          memberId: memberId,
-          passHash: passHash,
-          igneous: igneous,
-          revision: revision);
-      _requireCurrent(revision);
-      _acceptAuthentication = true;
-      ImageCacheScope.setSession(imageSession);
+      void check() {
+        _requireCurrent(revision);
+        if (isCurrent?.call() == false) {
+          throw StateError('Authentication operation cancelled');
+        }
+      }
+
+      try {
+        check();
+        _requireCurrent(revision);
+        await _persistImageSession(imageSession);
+        _requireCurrent(revision);
+        await _saveLoginCookies(
+            memberId: memberId,
+            passHash: passHash,
+            igneous: igneous,
+            revision: revision,
+            check: check);
+        check();
+        _requireCurrent(revision);
+        _acceptAuthentication = true;
+        ImageCacheScope.setSession(imageSession);
+        onCommitted?.call();
+      } catch (_) {
+        // Roll back only this account attempt. A later login/logout owns its
+        // own revision and must never be cleared by an old completion.
+        if (isCurrent != null && _current(revision)) {
+          _acceptAuthentication = false;
+          await _removeJarAuthentication();
+          ImageCacheScope.setSession(imageSession);
+        }
+        rethrow;
+      }
     });
   }
 
@@ -220,7 +247,8 @@ class CookieManager {
       {required String memberId,
       required String passHash,
       String? igneous,
-      required int revision}) async {
+      required int revision,
+      void Function()? check}) async {
     final ehUri = Uri.parse(AppConstants.ehBaseUrl);
     final exUri = Uri.parse(AppConstants.exBaseUrl);
 
@@ -241,11 +269,13 @@ class CookieManager {
       return list;
     }
 
+    check?.call();
     await _cookieJar.saveFromResponse(
       ehUri,
       makeCookies('.e-hentai.org', includeIgneous: false),
     );
     _requireCurrent(revision);
+    check?.call();
     await _cookieJar.saveFromResponse(
       exUri,
       makeCookies('.exhentai.org', includeIgneous: true),

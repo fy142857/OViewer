@@ -7,6 +7,9 @@ import '../../widgets/login_webview.dart';
 import '../../core/l10n/s.dart';
 import '../../repositories/auth_repository.dart';
 import 'package:get_it/get_it.dart';
+import 'package:dio/dio.dart';
+import '../../core/network/account_login_client.dart';
+import '../../core/services/account_registration.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,20 +24,58 @@ class _LoginScreenState extends State<LoginScreen>
   final _memberIdController = TextEditingController();
   final _passHashController = TextEditingController();
   final _igneousController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  AuthBloc? _auth;
+  CancelToken? _accountRequest;
+  int _selectedTab = 0;
+  bool _webViewOpened = false;
+  bool _showPassword = false;
+  bool _openingRegistration = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this)
+      ..addListener(_tabChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _auth = context.read<AuthBloc>();
+  }
+
+  void _tabChanged() {
+    if (_selectedTab == _tabController.index) return;
+    if (_selectedTab == 0) {
+      _passwordController.clear();
+      _cancelAccount();
+    }
+    setState(() {
+      _selectedTab = _tabController.index;
+      if (_selectedTab == 1) _webViewOpened = true;
+      _showPassword = false;
+    });
   }
 
   @override
   void dispose() {
+    _cancelAccount();
+    _tabController.removeListener(_tabChanged);
     _tabController.dispose();
     _memberIdController.dispose();
     _passHashController.dispose();
     _igneousController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  void _cancelAccount() {
+    _accountRequest?.cancel();
+    _accountRequest = null;
+    _auth?.cancelAccountLogin();
   }
 
   @override
@@ -42,16 +83,20 @@ class _LoginScreenState extends State<LoginScreen>
     final s = S.of(context);
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (state.status != AuthStatus.loading) _accountRequest = null;
         if (state.status == AuthStatus.authenticated) {
+          _passwordController.clear();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(s.loginSuccessful),
+              content: Text(state.exUnavailable
+                  ? s.exLoginUnavailable
+                  : s.loginSuccessful),
               backgroundColor: Colors.green,
             ),
           );
           Navigator.pop(context);
         }
-        if (state.status == AuthStatus.error) {
+        if (state.status == AuthStatus.error && state.accountFailure == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage ?? s.loginFailed),
@@ -95,6 +140,7 @@ class _LoginScreenState extends State<LoginScreen>
             bottom: TabBar(
               controller: _tabController,
               tabs: [
+                Tab(text: s.accountLogin),
                 Tab(text: s.webViewLogin),
                 Tab(text: s.manualCookie),
               ],
@@ -103,7 +149,10 @@ class _LoginScreenState extends State<LoginScreen>
           body: TabBarView(
             controller: _tabController,
             children: [
-              _buildWebViewLogin(context, state),
+              _buildAccountLogin(context, state),
+              _webViewOpened
+                  ? _buildWebViewLogin(context, state)
+                  : const SizedBox.shrink(),
               _buildManualLogin(context, state),
             ],
           ),
@@ -186,10 +235,12 @@ class _LoginScreenState extends State<LoginScreen>
         LoginWebView(
           key: ValueKey(state.sessionGeneration),
           url: Uri.parse(loginUrl),
-          enabled: state.status != AuthStatus.loading,
-          onLogin: (cookies) => context.read<AuthBloc>().add(LoginFromWebView(
-              cookies,
-              sessionGeneration: state.sessionGeneration)),
+          enabled: _selectedTab == 1 && state.status != AuthStatus.loading,
+          onLogin: (cookies) {
+            if (_selectedTab != 1) return;
+            context.read<AuthBloc>().add(LoginFromWebView(cookies,
+                sessionGeneration: state.sessionGeneration));
+          },
         ),
         if (state.status == AuthStatus.loading)
           const Positioned.fill(
@@ -202,6 +253,101 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ---- Manual Cookie Login ----
+  Widget _buildAccountLogin(BuildContext context, AuthState state) {
+    final s = S.of(context);
+    final loading = state.status == AuthStatus.loading;
+    void submit() {
+      if (loading || _accountRequest != null) return;
+      if (_usernameController.text.trim().isEmpty ||
+          _passwordController.text.isEmpty) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(s.accountRequired)));
+        return;
+      }
+      FocusScope.of(context).unfocus();
+      _accountRequest = CancelToken();
+      context.read<AuthBloc>().add(LoginWithAccount(
+          username: _usernameController.text.trim(),
+          password: _passwordController.text,
+          sessionGeneration: state.sessionGeneration,
+          cancelToken: _accountRequest));
+    }
+
+    final error = switch (state.accountFailure) {
+      AccountLoginFailure.credentials => s.accountInvalid,
+      AccountLoginFailure.challenge => s.accountChallenge,
+      AccountLoginFailure.network => s.accountNetworkError,
+      AccountLoginFailure.site => s.accountSiteError,
+      null => null,
+    };
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TextField(
+            controller: _usernameController,
+            enabled: !loading,
+            autocorrect: false,
+            enableSuggestions: false,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+                labelText: s.username,
+                prefixIcon: const Icon(Icons.person_outline))),
+        const SizedBox(height: 16),
+        TextField(
+            controller: _passwordController,
+            enabled: !loading,
+            obscureText: !_showPassword,
+            autocorrect: false,
+            enableSuggestions: false,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => submit(),
+            decoration: InputDecoration(
+                labelText: s.password,
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                    tooltip: _showPassword ? s.hidePassword : s.showPassword,
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
+                    icon: Icon(_showPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility)))),
+        if (error != null) ...[
+          const SizedBox(height: 16),
+          if (state.accountFailure == AccountLoginFailure.challenge)
+            TextButton(
+                onPressed: () => _tabController.animateTo(1),
+                child: Text(error))
+          else
+            Text(error,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ],
+        const SizedBox(height: 24),
+        FilledButton(
+            onPressed: loading ? null : submit,
+            child: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(s.login)),
+        const SizedBox(height: 8),
+        TextButton(
+            onPressed: loading || _openingRegistration
+                ? null
+                : () async {
+                    setState(() => _openingRegistration = true);
+                    final opened = await AccountRegistration.open();
+                    if (!mounted) return;
+                    setState(() => _openingRegistration = false);
+                    if (!opened)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(s.registrationOpenFailed)));
+                  },
+            child: Text(s.registerAccount)),
+      ]),
+    );
+  }
+
   Widget _buildManualLogin(BuildContext context, AuthState state) {
     final s = S.of(context);
     return SingleChildScrollView(

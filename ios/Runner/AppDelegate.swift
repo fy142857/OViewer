@@ -54,6 +54,15 @@ import UserNotifications
       registrar.register(LoginWebViewFactory(messenger: registrar.messenger()),
                          withId: "oviewer/login-webview")
     }
+    if let registrar = registrar(forPlugin: "OViewerAccountRegistration") {
+      FlutterMethodChannel(name: "oviewer/account_registration", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { call, result in
+          guard call.method == "open" else { result(FlutterMethodNotImplemented); return }
+          guard let url = URL(string: "https://forums.e-hentai.org/index.php?act=Reg&CODE=00")
+          else { result(false); return }
+          UIApplication.shared.open(url, options: [:]) { opened in result(opened) }
+        }
+    }
     if let registrar = registrar(forPlugin: "OViewerPageImageExporter") {
       FlutterMethodChannel(name: "oviewer/page_image_export", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { [weak self] call, result in self?.pageExporter.handle(call, result: result) }

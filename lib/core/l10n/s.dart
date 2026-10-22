@@ -372,6 +372,30 @@ class S {
   String get loginSuccessful => _zh ? '登录成功！' : 'Login successful!';
   String get loginFailed => _zh ? '登录失败' : 'Login failed';
   String get webViewLogin => _zh ? 'WebView 登录' : 'WebView Login';
+  String get accountLogin => _zh ? '账号登录' : 'Account';
+  String get username => _zh ? '用户名' : 'Username';
+  String get password => _zh ? '密码' : 'Password';
+  String get showPassword => _zh ? '显示密码' : 'Show password';
+  String get hidePassword => _zh ? '隐藏密码' : 'Hide password';
+  String get accountRequired =>
+      _zh ? '请输入用户名和密码' : 'Enter your username and password';
+  String get accountInvalid =>
+      _zh ? '用户名或密码错误' : 'Incorrect username or password';
+  String get accountChallenge => _zh
+      ? '因网络原因触发安全验证，前往webview完成验证'
+      : 'A network security check is required. Continue in WebView to complete verification.';
+  String get accountNetworkError => _zh
+      ? '连接失败，请检查网络或代理后重试'
+      : 'Connection failed. Check your network or proxy and retry.';
+  String get accountSiteError => _zh
+      ? '暂时无法完成登录，请重试或使用 WebView 登录'
+      : 'Login could not be completed. Retry or use WebView login.';
+  String get exLoginUnavailable => _zh
+      ? '账号已登录，EX 暂不可用，可手动切换至 EH'
+      : 'Logged in. EX is unavailable; you can switch to EH manually.';
+  String get registerAccount => _zh ? '没有账号？注册' : 'No account? Register';
+  String get registrationOpenFailed =>
+      _zh ? '无法打开浏览器，请重试' : 'Could not open your browser. Please retry.';
   String get manualCookie => _zh ? '手动 Cookie' : 'Manual Cookie';
   String get howToGetCookies => _zh ? '如何获取Cookies' : 'How to get cookies';
   String get cookieInstructions => _zh

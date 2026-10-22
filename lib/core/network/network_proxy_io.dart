@@ -34,6 +34,11 @@ class NetworkProxy {
     ..findProxy = ((uri) => _proxyDirective())
     ..connectionTimeout = const Duration(seconds: 30);
 
+  /// Password-bearing requests follow the selected route without bypassing TLS.
+  static HttpClient createAuthenticatedHttpClient() => HttpClient()
+    ..findProxy = ((uri) => _proxyDirective())
+    ..connectionTimeout = const Duration(seconds: 15);
+
   static String _proxyDirective() {
     final proxyUrl = _proxyUrl;
     if (proxyUrl == null || proxyUrl.isEmpty) return 'DIRECT';

@@ -16,6 +16,7 @@ import 'package:oviewer/blocs/settings/settings_state.dart';
 import 'package:oviewer/repositories/auth_repository.dart';
 import 'package:oviewer/screens/login/login_screen.dart';
 import 'package:oviewer/widgets/login_webview.dart';
+import 'package:oviewer/core/network/account_login_client.dart';
 
 class MockSettingsBloc extends Mock implements SettingsBloc {}
 
@@ -25,6 +26,7 @@ class MockAuthRepository extends Mock implements AuthRepository {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() => registerFallbackValue(CheckLoginStatus()));
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   const codec = StandardMethodCodec();
@@ -97,6 +99,159 @@ void main() {
         enabled: enabled,
         onLogin: submissions.add,
       ));
+
+  Future<MockAuthBloc> accountScreen(WidgetTester tester,
+      {AuthState state =
+          const AuthState(status: AuthStatus.unauthenticated)}) async {
+    final auth = MockAuthBloc();
+    final repository = MockAuthRepository();
+    when(() => auth.state).thenReturn(state);
+    when(() => auth.stream).thenAnswer((_) => const Stream.empty());
+    when(() => repository.loginPageUrl).thenReturn(loginUrl.toString());
+    GetIt.I.registerSingleton<AuthRepository>(repository);
+    await tester.pumpWidget(app(
+        BlocProvider<AuthBloc>.value(value: auth, child: const LoginScreen())));
+    await tester.pumpAndSettle();
+    return auth;
+  }
+
+  testWidgets(
+      'account is first, validates fields, submits once and clears password on switch',
+      (tester) async {
+    final auth = await accountScreen(tester);
+    expect(tester.widget<Tab>(find.byType(Tab).first).text, 'Account');
+    expect(find.byType(LoginWebView), findsNothing);
+    await tester.tap(find.widgetWithText(FilledButton, 'Login'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter your username and password'), findsOneWidget);
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Username'), ' test ');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Password'), ' pass ');
+    expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Password'))
+            .obscureText,
+        isTrue);
+    await tester.tap(find.byTooltip('Show password'));
+    await tester.pump();
+    expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Password'))
+            .obscureText,
+        isFalse);
+    await tester.tap(find.widgetWithText(FilledButton, 'Login'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Login'));
+    final request = verify(() => auth.add(captureAny())).captured.single
+        as LoginWithAccount;
+    expect(request.username, 'test');
+    expect(request.password, ' pass ');
+    await tester.tap(find.text('Manual Cookie'));
+    await tester.pumpAndSettle();
+    expect(request.cancelToken!.isCancelled, isTrue);
+    await tester.tap(find.text('Account'));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Password'))
+            .controller!
+            .text,
+        isEmpty);
+    expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Username'))
+            .controller!
+            .text,
+        ' test ');
+  });
+
+  testWidgets(
+      'challenge uses requested Chinese text and opens WebView only on tap',
+      (tester) async {
+    when(() => settings.state).thenReturn(const SettingsState(locale: 'zh'));
+    await accountScreen(tester,
+        state: const AuthState(
+            status: AuthStatus.error,
+            accountFailure: AccountLoginFailure.challenge));
+    const message = '因网络原因触发安全验证，前往webview完成验证';
+    expect(find.text(message), findsOneWidget);
+    expect(find.byType(LoginWebView), findsNothing);
+    await tester.tap(find.text(message));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginWebView), findsOneWidget);
+    expect(
+        tester.widget<LoginWebView>(find.byType(LoginWebView)).enabled, isTrue);
+    await tester.tap(find.text('账号登录'));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<LoginWebView>(
+                find.byType(LoginWebView, skipOffstage: false))
+            .enabled,
+        isFalse);
+  });
+
+  testWidgets(
+      'registration uses fixed native entrypoint and reports launch failure',
+      (tester) async {
+    const channel = MethodChannel('oviewer/account_registration');
+    var calls = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      expect(call.method, 'open');
+      expect(call.arguments, isNull);
+      calls++;
+      return false;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    await accountScreen(tester);
+    await tester.tap(find.text('No account? Register'));
+    await tester.pumpAndSettle();
+    expect(calls, 1);
+    expect(find.text('Could not open your browser. Please retry.'),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      'leaving account screen cancels queued credentials before network starts',
+      (tester) async {
+    final auth = await accountScreen(tester);
+    await tester.enterText(find.widgetWithText(TextField, 'Username'), 'test');
+    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'pass');
+    await tester.tap(find.widgetWithText(FilledButton, 'Login'));
+    final request = verify(() => auth.add(captureAny())).captured.single
+        as LoginWithAccount;
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(request.cancelToken!.isCancelled, isTrue);
+  });
+
+  for (final dark in [false, true]) {
+    testWidgets(
+        'account form scrolls on small screen with keyboard, dark=$dark',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 480));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final auth = MockAuthBloc();
+      when(() => auth.state).thenReturn(const AuthState(
+          status: AuthStatus.error,
+          accountFailure: AccountLoginFailure.network));
+      when(() => auth.stream).thenAnswer((_) => const Stream.empty());
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settings,
+          child: MaterialApp(
+              theme: dark ? ThemeData.dark() : ThemeData.light(),
+              builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(viewInsets: const EdgeInsets.only(bottom: 220)),
+                  child: child!),
+              home: BlocProvider<AuthBloc>.value(
+                  value: auth, child: const LoginScreen()))));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('No account? Register'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('No account? Register').hitTestable(), findsOneWidget);
+    });
+  }
 
   Future<void> event(String name, {Uri? url}) {
     final done = Completer<void>();
@@ -259,6 +414,9 @@ void main() {
     await tester.pumpWidget(app(
         BlocProvider<AuthBloc>.value(value: auth, child: const LoginScreen())));
     await tester.pumpAndSettle();
+    expect(views, isEmpty);
+    await tester.tap(find.text('WebView Login'));
+    await tester.pumpAndSettle();
     expect(views, hasLength(1));
     state = const AuthState(status: AuthStatus.loading);
     states.add(state);
@@ -271,7 +429,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(Tab).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(Tab).first);
+    await tester.tap(find.text('WebView Login'));
     await tester.pumpAndSettle();
     expect(views, hasLength(1));
     expect(tester.takeException(), isNull);
@@ -308,6 +466,9 @@ void main() {
       state = const AuthState(
           status: AuthStatus.unauthenticated, sessionGeneration: 1);
       states.add(state);
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginWebView), findsNothing);
+      await tester.tap(find.text('WebView Login'));
       await tester.pumpAndSettle();
       expect(find.byType(LoginWebView), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
