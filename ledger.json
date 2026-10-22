@@ -4529,8 +4529,33 @@
         }
       ],
       "version": "1.9.1"
+    },
+    {
+      "base_tag": "v1.9.1",
+      "branch": "dev",
+      "build_number": 95,
+      "build_sha": "36c388554db3065ee023f5c15248460078376408",
+      "candidate_id": "1.9.2+95",
+      "fingerprint": "89dfa4a3aa66c654520a21f6337ea141a172a07f377a41d571ddd8bf8f0c3583",
+      "notes": "### 新增\n\n### 修复\n\n- 移除搜索历史最多保存 20 条的限制，记录持续保留至手动删除或清空；历史列表按需加载条目（#68）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "e3b0b074091620ae2eccb661baa52391f01088ce",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Remove automatic search history truncation and build long history lists lazily while preserving explicit deletion and recency ordering. Resolves #68.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "e3b0b074091620ae2eccb661baa52391f01088ce",
+          "subject": "fix(search): retain history without a count limit",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.9.2"
     }
   ],
-  "last_build_number": 94,
+  "last_build_number": 95,
   "schema": 1
 }
