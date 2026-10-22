@@ -1,0 +1,219 @@
+import 'tag_search_query.dart';
+
+String normalizeHistoryText(String text) =>
+    text.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+List<String> literalHistoryMatches(String query, List<String> history) {
+  final needle = normalizeHistoryText(query);
+  if (needle.isEmpty) return [];
+  final seen = <String>{};
+  return history.where((entry) {
+    final value = normalizeHistoryText(entry);
+    return value.contains(needle) && seen.add(value);
+  }).toList();
+}
+
+/// Built once with the dictionary, never by searching the entire dictionary
+/// for each saved query. History documents are reused until their text changes.
+class TagHistoryMatcher {
+  final _names = <String, List<_TagNames>>{};
+  int _maxWords = 1;
+  Map<String, List<_HistoryTerm>> _documents = {};
+
+  TagHistoryMatcher(Map<String, Map<String, String>> translations) {
+    for (final namespace in translations.entries) {
+      for (final entry in namespace.value.entries) {
+        final names = {
+          normalizeHistoryText(entry.key),
+          ...entry.key.split('|').map(normalizeHistoryText),
+          normalizeHistoryText(entry.value),
+          ...entry.value
+              .split(RegExp(r'[|/／、,，;；\n（）()]'))
+              .map(normalizeHistoryText),
+        }..remove('');
+        final tag = _TagNames(
+            namespace.key,
+            '${namespace.key}:${normalizeHistoryText(canonicalTagKey(entry.key))}',
+            names);
+        for (final name in names) {
+          (_names[name] ??= []).add(tag);
+          final words = name.split(' ').length;
+          if (words > _maxWords) _maxWords = words;
+        }
+      }
+    }
+  }
+
+  List<String> match(String query, List<String> history) {
+    final needle = normalizeHistoryText(query);
+    if (needle.isEmpty) return [];
+    final queryTerms = _terms(needle);
+    // Rebuild only changed entries and drop removed history; preserve ordering
+    // and spelling from the caller, including a repeated search moved to top.
+    final documents = <String, List<_HistoryTerm>>{};
+    final result = <String>[];
+    final seen = <String>{};
+    for (final original in history) {
+      final normalized = normalizeHistoryText(original);
+      final terms =
+          documents[normalized] ?? _documents[normalized] ?? _terms(normalized);
+      documents[normalized] = terms;
+      var semantic = false;
+      final matches = normalized.contains(needle) ||
+          (queryTerms.isNotEmpty &&
+              queryTerms.every((queryTerm) {
+                var matched = false;
+                for (final term in terms) {
+                  if (!queryTerm.matches(term)) continue;
+                  matched = true;
+                  if (term.tags.isNotEmpty || queryTerm.tags.isNotEmpty)
+                    semantic = true;
+                }
+                return matched;
+              }) &&
+              semantic);
+      if (matches && seen.add(normalized)) result.add(original);
+    }
+    _documents = documents;
+    return result;
+  }
+
+  List<_TagNames> _lookup(String name, String? namespace) => (_names[name] ??
+          const <_TagNames>[])
+      .where((tag) =>
+          namespace == null || namespace == '*' || tag.namespace == namespace)
+      .toList();
+
+  List<_HistoryTerm> _terms(String text) {
+    final tokens = RegExp(r'(?:[^\s"]+|"[^"]*"?)+')
+        .allMatches(text)
+        .map((m) => m.group(0)!)
+        .toList();
+    final result = <_HistoryTerm>[];
+    for (var i = 0; i < tokens.length; i++) {
+      final token = tokens[i];
+      final qualified =
+          RegExp(r'^([-~]?)(weak:)?([a-z]+):(.*)$').firstMatch(token);
+      if (qualified != null) {
+        final namespace = _namespaces[qualified[3]];
+        if (namespace == null) {
+          // Titles and uploader accounts have literal semantics, not tag aliases.
+          result.add(_HistoryTerm(token, const [], literal: true));
+          continue;
+        }
+        final value = _unquote(qualified[4]!);
+        result.add(_HistoryTerm(value, _lookup(value, namespace),
+            exact: qualified[4]!.replaceAll('"', '').endsWith(r'$'),
+            namespace: namespace,
+            modifier:
+                '${qualified[1]}${qualified[2] ?? ''}${qualified[3] == 'weak' ? 'weak:' : ''}'));
+        continue;
+      }
+      if (token.contains(':')) {
+        result.add(_HistoryTerm(token, const [], literal: true));
+        continue;
+      }
+      // Resolve the longest dictionary phrase, so "nanao yukiji" is not
+      // confused with an unrelated single-word tag named "nanao".
+      var end = i;
+      var value = _unquote(token);
+      var tags = _lookup(value, null);
+      final limit =
+          i + _maxWords < tokens.length ? i + _maxWords : tokens.length;
+      for (var j = i + 1; j < limit; j++) {
+        if (tokens[j].contains(RegExp(r'[:"]')) || token.contains('"')) break;
+        final phrase = tokens.sublist(i, j + 1).join(' ');
+        final found = _lookup(phrase, null);
+        if (found.isNotEmpty) {
+          end = j;
+          value = phrase;
+          tags = found;
+        }
+      }
+      result.add(_HistoryTerm(value, tags));
+      i = end;
+    }
+    return result;
+  }
+
+  String _unquote(String value) =>
+      value.replaceAll('"', '').replaceFirst(RegExp(r'\$$'), '').trim();
+
+  static const _namespaces = {
+    'artist': 'artist',
+    'a': 'artist',
+    'character': 'character',
+    'c': 'character',
+    'char': 'character',
+    'cosplayer': 'cosplayer',
+    'cos': 'cosplayer',
+    'female': 'female',
+    'f': 'female',
+    'male': 'male',
+    'm': 'male',
+    'group': 'group',
+    'g': 'group',
+    'circle': 'group',
+    'language': 'language',
+    'l': 'language',
+    'lang': 'language',
+    'location': 'location',
+    'loc': 'location',
+    'mixed': 'mixed',
+    'x': 'mixed',
+    'other': 'other',
+    'o': 'other',
+    'parody': 'parody',
+    'p': 'parody',
+    'series': 'parody',
+    'reclass': 'reclass',
+    'r': 'reclass',
+    'temp': 'temp',
+    'misc': 'other',
+    'tag': '*',
+    'weak': '*',
+  };
+}
+
+class _TagNames {
+  final String namespace;
+  final String identity;
+  final Set<String> names;
+  _TagNames(this.namespace, this.identity, this.names);
+}
+
+class _HistoryTerm {
+  final String value;
+  final List<_TagNames> tags;
+  final String? namespace;
+  final String modifier;
+  final bool literal;
+  final bool exact;
+  _HistoryTerm(this.value, this.tags,
+      {this.namespace,
+      this.modifier = '',
+      this.literal = false,
+      this.exact = false});
+
+  bool matches(_HistoryTerm history) {
+    if (literal || history.literal)
+      return namespace == null && history.value.contains(value);
+    if (value.isEmpty) return false;
+    if (namespace != null &&
+        (modifier != history.modifier ||
+            history.namespace != null &&
+                namespace != '*' &&
+                history.namespace != '*' &&
+                namespace != history.namespace)) return false;
+    final historical = history.tags.where((t) =>
+        namespace == null || namespace == '*' || t.namespace == namespace);
+    for (final tag in historical) {
+      if (tag.names
+              .any((name) => exact ? name == value : name.contains(value)) ||
+          tags.any((other) => other.identity == tag.identity)) return true;
+    }
+    if (namespace != null && history.namespace == null && historical.isEmpty)
+      return false;
+    return exact ? history.value == value : history.value.contains(value);
+  }
+}

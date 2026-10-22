@@ -202,8 +202,7 @@ class _SearchViewState extends State<_SearchView> {
 
   void _updateSuggestions(TextEditingValue value) {
     final history = _controller.value.composing.isCollapsed
-        ? matchingSearchHistory(
-            _controller.text, GetIt.I<SearchRepository>().getSearchHistory())
+        ? _matchingHistory(_controller.text)
         : <String>[];
     var suggestions = <TagSuggestion>[];
     try {
@@ -228,6 +227,13 @@ class _SearchViewState extends State<_SearchView> {
     _suggestions = filtered;
     _suggestionRevision.value++;
   }
+
+  List<String> _matchingHistory(String query) =>
+      _controller.value.composing.isCollapsed
+          ? matchingSearchHistory(
+              query, GetIt.I<SearchRepository>().getSearchHistory(),
+              aliases: _tagRepository?.historyMatcher)
+          : const [];
 
   void _applySuggestion(TagSuggestion suggestion) {
     if (_controller.value != _suggestedValue ||
@@ -381,10 +387,7 @@ class _SearchViewState extends State<_SearchView> {
                             return _buildSearchHistory(
                                 _controller.text.trim().isEmpty
                                     ? state.searchHistory
-                                    : matchingSearchHistory(
-                                        _controller.text,
-                                        GetIt.I<SearchRepository>()
-                                            .getSearchHistory()));
+                                    : _matchingHistory(_controller.text));
                           }
                           Widget resultsView() {
                             if (state.status == SearchStatus.loading &&

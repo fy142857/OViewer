@@ -6,6 +6,7 @@ import 'package:logger/logger.dart';
 import '../core/network/dio_client.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/storage/local_storage.dart';
+import '../core/utils/tag_history_matcher.dart';
 
 class TagTranslationRepository extends ChangeNotifier {
   static final _log = Logger();
@@ -16,6 +17,8 @@ class TagTranslationRepository extends ChangeNotifier {
   Map<String, Map<String, String>> _translations = {};
   bool _loaded = false;
   List<_SearchEntry> _searchEntries = [];
+  TagHistoryMatcher? _historyMatcher;
+  TagHistoryMatcher? get historyMatcher => _historyMatcher;
 
   final TagTranslationCache _cache;
   Future<void>? _loading;
@@ -92,6 +95,7 @@ class TagTranslationRepository extends ChangeNotifier {
     if (_disposed) return;
     _translations = index.translations;
     _searchEntries = index.searchEntries;
+    _historyMatcher = index.historyMatcher;
     _loaded = true;
     notifyListeners();
   }
@@ -195,7 +199,9 @@ class _SearchEntry {
 class _TranslationIndex {
   final Map<String, Map<String, String>> translations;
   final List<_SearchEntry> searchEntries;
-  _TranslationIndex(this.translations, this.searchEntries);
+  final TagHistoryMatcher historyMatcher;
+  _TranslationIndex(this.translations, this.searchEntries)
+      : historyMatcher = TagHistoryMatcher(translations);
 }
 
 _TranslationIndex _parseTranslations(String jsonStr) {
