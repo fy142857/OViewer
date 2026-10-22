@@ -698,11 +698,20 @@ class _SearchViewState extends State<_SearchView> {
         itemBuilder: (context, index) {
           if (index < _historySuggestions.length) {
             final query = _historySuggestions[index];
+            final aliases =
+                _tagRepository?.historyMatcher?.aliasesForHistory(query) ??
+                    const <String>[];
             return ListTile(
               dense: true,
               leading: const Icon(Icons.history, size: 20),
               title: Text(query),
-              subtitle: Text(S.of(context).recentSearches),
+              subtitle: Text(
+                [S.of(context).recentSearches, ...aliases].join(' · '),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Theme.of(context).colorScheme.outline),
+              ),
               onTap: () => _applyHistorySuggestion(query),
             );
           }

@@ -34,7 +34,14 @@ class TagHistoryMatcher {
         final tag = _TagNames(
             namespace.key,
             '${namespace.key}:${normalizeHistoryText(canonicalTagKey(entry.key))}',
-            names);
+            names,
+            [
+              ...entry.value.split(RegExp(r'[|/／、,，;；\n（）()]')),
+              ...entry.key.split('|'),
+            ]
+                .map((name) => name.trim())
+                .where((name) => name.isNotEmpty)
+                .toList());
         for (final name in names) {
           (_names[name] ??= []).add(tag);
           final words = name.split(' ').length;
@@ -76,6 +83,25 @@ class TagHistoryMatcher {
     }
     _documents = documents;
     return result;
+  }
+
+  /// Display dictionary spelling, excluding names already shown in the query.
+  List<String> aliasesForHistory(String query) {
+    final normalized = normalizeHistoryText(query);
+    final terms = _documents[normalized] ?? _terms(normalized);
+    final seen = <String>{
+      for (final term in terms)
+        ...term.value
+            .split(RegExp(r'[|/／、,，;；\n（）()]'))
+            .map(normalizeHistoryText),
+    };
+    return [
+      for (final term in terms)
+        if (!term.literal)
+          for (final tag in term.tags)
+            for (final name in tag.displayNames)
+              if (seen.add(normalizeHistoryText(name))) name,
+    ];
   }
 
   List<_TagNames> _lookup(String name, String? namespace) => (_names[name] ??
@@ -202,7 +228,8 @@ class _TagNames {
   final String namespace;
   final String identity;
   final Set<String> names;
-  _TagNames(this.namespace, this.identity, this.names);
+  final List<String> displayNames;
+  _TagNames(this.namespace, this.identity, this.names, this.displayNames);
 }
 
 class _HistoryTerm {

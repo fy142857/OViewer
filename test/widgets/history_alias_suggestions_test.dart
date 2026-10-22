@@ -41,6 +41,8 @@ void main() {
     testWidgets(
         'English, Chinese and Japanese recall and submit original history ($language)',
         (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       SharedPreferences.setMockInitialValues({});
       final storage = LocalStorage();
       await storage.init();
@@ -83,6 +85,21 @@ void main() {
             .map((tile) => (tile.title! as Text).data)
             .toList();
         expect(rows, history, reason: input);
+        final recentRows = tester
+            .widgetList<ListTile>(find.byType(ListTile))
+            .where((tile) =>
+                tile.leading is Icon &&
+                (tile.leading as Icon).icon == Icons.history)
+            .toList();
+        final firstAliases = (recentRows.first.subtitle! as Text).data!;
+        expect(firstAliases, contains('七尾雪路'));
+        expect(firstAliases, contains('七尾ゆきじ'));
+        expect(firstAliases, contains('pen name'));
+        expect(firstAliases, isNot(contains('nanao yukiji')));
+        final secondAliases = (recentRows[1].subtitle! as Text).data!;
+        expect(secondAliases, contains('七尾雪路'));
+        expect(secondAliases, contains('nanao yukiji'));
+        expect(secondAliases, isNot(contains('七尾ゆきじ')));
       }
       await tester.tap(find.text(newest));
       await tester.pump();

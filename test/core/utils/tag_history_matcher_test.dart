@@ -83,6 +83,12 @@ void main() {
   test('name-field parenthesized aliases work in either direction', () {
     expect(aliases.match('かに', [r'artist:"peko$"']), [r'artist:"peko$"']);
     expect(aliases.match('peko', ['かにビーム']), ['かにビーム']);
+    expect(aliases.aliasesForHistory(r'artist:"peko$"'), ['ぺこ', 'かにビーム']);
+    expect(aliases.aliasesForHistory('かにビーム'), ['ぺこ', 'peko']);
+    expect(aliases.aliasesForHistory(r'artist:"peko$" artist:peko'),
+        ['ぺこ', 'かにビーム']);
+    expect(aliases.aliasesForHistory('uploader:peko'), isEmpty);
+    expect(aliases.aliasesForHistory('unknown'), isEmpty);
   });
 
   test('generic and weak tag queries retain their qualifier semantics', () {
