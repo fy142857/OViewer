@@ -34,6 +34,38 @@ void main() {
   setUpAll(() => registerFallbackValue(const SearchFilter()));
   tearDown(() => GetIt.I.reset());
 
+  testWidgets('long search history builds on demand and recalls older entries',
+      (tester) async {
+    final search = MockSearch();
+    final settings = MockSettings();
+    final favorites = MockFavorites();
+    final history = List.generate(1000, (i) => 'saved query $i');
+    when(() => search.getSearchHistory()).thenReturn(history);
+    when(() => search.addSearchHistory(any())).thenAnswer((_) async {});
+    when(() => search.search(any())).thenAnswer((_) async =>
+        const SearchResult(galleries: [], totalPages: 0, totalResults: 0));
+    when(() => favorites.getLocalFavoriteGids()).thenAnswer((_) async => {});
+    when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
+    when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+    GetIt.I.registerSingleton<SearchRepository>(search);
+    GetIt.I.registerSingleton<FavoritesRepository>(favorites);
+    await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+        value: settings, child: const MaterialApp(home: SearchScreen())));
+    await tester.pumpAndSettle();
+    final list = tester.widget<ListView>(find.byType(ListView));
+    expect(list.childrenDelegate, isA<SliverChildBuilderDelegate>());
+    expect(find.byType(ListTile).evaluate().length, lessThan(30));
+    await tester.scrollUntilVisible(find.text('saved query 40'), 400,
+        scrollable: find.descendant(
+            of: find.byType(ListView), matching: find.byType(Scrollable)));
+    await tester.tap(find.text('saved query 40'));
+    await tester.pumpAndSettle();
+    verify(() => search.addSearchHistory('saved query 40')).called(1);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('caret/selection bursts debounce; submit and dispose cancel work',
       (tester) async {
     final search = MockSearch();

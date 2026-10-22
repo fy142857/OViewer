@@ -34,9 +34,6 @@ class AppConstants {
   static const int preloadPageCount = 3;
   static const int maxZoomScale = 5;
 
-  // Search history
-  static const int maxSearchHistory = 20;
-
   // Network
   static const int connectTimeout = 15000; // ms
   static const int receiveTimeout = 30000; // ms

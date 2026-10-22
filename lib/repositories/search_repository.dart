@@ -126,14 +126,11 @@ class SearchRepository {
   /// Get search history
   List<String> getSearchHistory() => _storage.getSearchHistory();
 
-  /// Add to search history
+  /// Keep searches until explicitly removed; revisiting moves a term to the top.
   Future<void> addSearchHistory(String keyword) async {
     final history = _storage.getSearchHistory();
     history.remove(keyword);
     history.insert(0, keyword);
-    if (history.length > AppConstants.maxSearchHistory) {
-      history.removeRange(AppConstants.maxSearchHistory, history.length);
-    }
     await _storage.setSearchHistory(history);
   }
 

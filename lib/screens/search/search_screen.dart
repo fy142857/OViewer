@@ -741,40 +741,41 @@ class _SearchViewState extends State<_SearchView> {
         ),
       );
     }
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                  child: Text(s.recentSearches,
-                      style: Theme.of(context).textTheme.titleMedium)),
-              TextButton(
-                onPressed: () =>
-                    context.read<SearchBloc>().add(ClearSearchHistory()),
-                child: Text(s.clear),
-              ),
-            ],
-          ),
-        ),
-        ...history.map((keyword) => ListTile(
-              leading: const Icon(Icons.history, size: 20),
-              title: Text(keyword),
-              trailing: const Icon(Icons.north_west, size: 16),
-              onTap: () {
-                _controller.text = keyword;
-                setState(() {});
-                _performSearch();
-              },
-              onLongPress: () {
-                context
-                    .read<SearchBloc>()
-                    .add(RemoveSearchHistoryItem(keyword));
-              },
-            )),
-      ],
+    return ListView.builder(
+      itemCount: history.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0)
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                    child: Text(s.recentSearches,
+                        style: Theme.of(context).textTheme.titleMedium)),
+                TextButton(
+                  onPressed: () =>
+                      context.read<SearchBloc>().add(ClearSearchHistory()),
+                  child: Text(s.clear),
+                ),
+              ],
+            ),
+          );
+        final keyword = history[index - 1];
+        return ListTile(
+          leading: const Icon(Icons.history, size: 20),
+          title: Text(keyword),
+          trailing: const Icon(Icons.north_west, size: 16),
+          onTap: () {
+            _controller.text = keyword;
+            setState(() {});
+            _performSearch();
+          },
+          onLongPress: () {
+            context.read<SearchBloc>().add(RemoveSearchHistoryItem(keyword));
+          },
+        );
+      },
     );
   }
 }
