@@ -1,3 +1,4 @@
+import '../../widgets/site_mode_tile.dart';
 import '../../widgets/offline_settings_panel.dart';
 import '../../repositories/settings_repository.dart';
 import '../../core/services/offline_download_coordinator.dart';
@@ -80,22 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _sectionHeader(s.site),
               if (GetIt.I.isRegistered<DailyCheckInCubit>())
                 DailyCheckInTile(cubit: GetIt.I<DailyCheckInCubit>()),
-              ListTile(
-                leading: Icon(
-                  state.useExHentai ? Icons.lock : Icons.public,
-                  color: state.useExHentai ? Colors.deepPurple : null,
-                ),
-                title: Text(state.useExHentai ? 'ExHentai' : 'E-Hentai'),
-                subtitle: Text(state.useExHentai
-                    ? s.exhentaiRequiresIgneous
-                    : 'e-hentai.org'),
-                trailing: Switch(
-                  value: state.useExHentai,
-                  onChanged: (val) {
-                    context.read<SettingsBloc>().add(ToggleSiteMode(val));
-                  },
-                ),
-              ),
+              const SiteModeTile(),
               BlocBuilder<AuthBloc, AuthState>(
                 builder: (context, authState) {
                   return ListTile(

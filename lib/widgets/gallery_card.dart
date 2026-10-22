@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'scoped_network_image.dart';
 import '../core/constants/app_constants.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../models/gallery_preview.dart';
@@ -33,7 +33,7 @@ class GalleryCard extends StatelessWidget {
                 height: 140,
                 child: Hero(
                   tag: 'gallery_thumb_${gallery.gid}',
-                  child: CachedNetworkImage(
+                  child: scopedNetworkImage(
                     imageUrl: gallery.thumbUrl,
                     fit: BoxFit.cover,
                     cacheManager: EhImageCacheManager.instance,

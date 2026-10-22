@@ -1,5 +1,9 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:io' show File;
+import 'package:flutter/painting.dart';
+import 'image_cache_scope.dart';
+import '../storage/reader_reentry_cache.dart';
 import 'native_auth_cookies.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
@@ -21,6 +25,8 @@ class CookieManager {
   bool _logoutPending = false;
   bool _acceptAuthentication = true;
   late File _logoutMarker;
+  late File _imageSessionFile;
+  String _imageSession = '';
   Future<void>? _writes;
   Future<void>? _logoutTask;
   final Future<void> Function() _clearBrowserAuthentication;
@@ -50,16 +56,44 @@ class CookieManager {
       storage: FileStorage(cookiePath),
     );
     _logoutMarker = File('${cookiePath}logout-pending');
+    _imageSessionFile = File('${cookiePath}image-session');
     _logoutPending = await _logoutMarker.exists();
     final cookies =
         await _cookieJar.loadForRequest(Uri.parse(AppConstants.ehBaseUrl));
     _acceptAuthentication = !_logoutPending && _hasPair(cookies);
+    if (await _imageSessionFile.exists()) {
+      _imageSession = (await _imageSessionFile.readAsString()).trim();
+    }
+    if (!RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(_imageSession)) {
+      _imageSession = _newImageSession();
+      await _persistImageSession(_imageSession);
+    }
+    ImageCacheScope.setSession(_imageSession, ready: !_logoutPending);
     _initialized = true;
     _log.i('CookieManager initialized at $cookiePath');
   }
 
   void configureDio(Dio dio) {
     dio.interceptors.add(_SessionCookieInterceptor(this));
+  }
+
+  String _newImageSession() =>
+      base64UrlEncode(List.generate(32, (_) => Random.secure().nextInt(256)))
+          .replaceAll('=', '');
+
+  String _beginImageSession() {
+    _imageSession = _newImageSession();
+    ImageCacheScope.setSession(_imageSession, ready: false);
+    ReaderReentryCache.shared.clear();
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
+    return _imageSession;
+  }
+
+  Future<void> _persistImageSession(String value) async {
+    await _imageSessionFile.parent.create(recursive: true);
+    await _imageSessionFile.writeAsString(value, flush: true);
   }
 
   /// Install the app's login session before a settings WebView navigates.
@@ -164,9 +198,12 @@ class CookieManager {
   }) {
     if (_logoutPending) return Future.error(const LogoutCleanupException());
     final revision = ++_sessionRevision;
+    final imageSession = _beginImageSession();
     onSessionChanged?.call();
     ReaderIndexCache.shared.clear();
     return _serial(() async {
+      _requireCurrent(revision);
+      await _persistImageSession(imageSession);
       _requireCurrent(revision);
       await _saveLoginCookies(
           memberId: memberId,
@@ -175,6 +212,7 @@ class CookieManager {
           revision: revision);
       _requireCurrent(revision);
       _acceptAuthentication = true;
+      ImageCacheScope.setSession(imageSession);
     });
   }
 
@@ -290,6 +328,7 @@ class CookieManager {
     final running = _logoutTask;
     if (running != null) return running;
     _sessionRevision++;
+    final imageSession = _beginImageSession();
     onSessionChanged?.call();
     _logoutPending = true;
     _acceptAuthentication = false;
@@ -297,12 +336,14 @@ class CookieManager {
     late Future<void> task;
     task = _serial(() async {
       try {
+        await _persistImageSession(imageSession);
         await _logoutMarker.parent.create(recursive: true);
         await _logoutMarker.writeAsString('pending', flush: true);
         await _removeJarAuthentication();
         await _clearBrowserAuthentication();
         await _logoutMarker.delete();
         _logoutPending = false;
+        ImageCacheScope.setSession(imageSession);
         _log.i('Authentication cookies cleared');
       } catch (error, stack) {
         _log.w('Authentication cleanup failed (${error.runtimeType})',

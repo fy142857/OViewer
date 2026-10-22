@@ -214,6 +214,7 @@ class _ReaderViewState extends State<_ReaderView> {
     _imageFiles = EhImageCacheManager.readerFileService(
       GetIt.I<app.CookieManager>(),
       widget.requests,
+      imageScope: context.read<ReaderBloc>().imageScope,
     );
     // Listen for vertical scroll position changes
     _verticalPositionsListener.itemPositions.addListener(_onVerticalScroll);
@@ -503,19 +504,21 @@ class _ReaderViewState extends State<_ReaderView> {
   ReaderImageProvider _imageProvider(String url, {int attempt = 0, int? page}) {
     final scope =
         page == null ? widget.requests : widget.requests.forPage(page);
+    final bloc = context.read<ReaderBloc>();
     var files = _imageFiles;
     if (page != null) {
       if (!identical(_pageFiles[page]?.$1, scope)) {
         _pageFiles[page] = (
           scope,
           EhImageCacheManager.readerFileService(
-              GetIt.I<app.CookieManager>(), scope)
+              GetIt.I<app.CookieManager>(), scope,
+              imageScope: bloc.imageScope)
         );
       }
       files = _pageFiles[page]!.$2;
     }
-    final bloc = context.read<ReaderBloc>();
     return ReaderImageProvider(url,
+        imageScope: bloc.imageScope,
         reentry: ReaderReentryCache.shared,
         ticket: page == null ? null : bloc.cacheTicket(page),
         galleryImage: page == null ? null : bloc.state.loadedImages[page],
@@ -542,7 +545,7 @@ class _ReaderViewState extends State<_ReaderView> {
                 }
               },
         cache: ReaderImageCache(EhImageCacheManager.instance,
-            legacyKeys: EhImageCacheManager.instance.legacyReaderKeys),
+            scope: bloc.imageScope),
         onImageReady: page == null
             ? null
             : () {

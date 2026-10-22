@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'scoped_network_image.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../core/parser/gallery_detail_parser.dart';
 import 'sprite_thumbnail.dart';
@@ -34,7 +34,7 @@ class ThumbnailGrid extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: thumb.isSprite
                 ? _buildSpriteThumbnail(context, thumb)
-                : CachedNetworkImage(
+                : scopedNetworkImage(
                     imageUrl: thumb.thumbUrl,
                     fit: BoxFit.cover,
                     cacheManager: EhImageCacheManager.instance,
@@ -55,7 +55,7 @@ class ThumbnailGrid extends StatelessWidget {
   Widget _buildSpriteThumbnail(BuildContext context, ThumbnailInfo thumb) {
     return SpriteThumbnail(
       thumbnail: thumb,
-      image: CachedNetworkImageProvider(thumb.thumbUrl,
+      image: scopedNetworkImageProvider(thumb.thumbUrl,
           cacheManager: EhImageCacheManager.instance),
       placeholder: (_) =>
           ColoredBox(color: Theme.of(context).colorScheme.surfaceVariant),

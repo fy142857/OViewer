@@ -1,3 +1,4 @@
+import 'image_cache_scope.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -17,71 +18,48 @@ import '../../models/reader_page_resource.dart';
 /// The shared disk cache contains completed images, never in-flight requests.
 class ReaderImageCache {
   final BaseCacheManager _cache;
-  final Future<Iterable<String>> Function(String)? legacyKeys;
+  final ImageCacheScope scope;
 
   DateTime? lastReadExpiry;
-  ReaderImageCache(this._cache, {this.legacyKeys});
+  ReaderImageCache(this._cache, {ImageCacheScope? scope})
+      : scope = scope ?? ImageCacheScope.capture();
+
+  String key(String url) => scope.key(readerImageCacheKey(url));
 
   Future<Uint8List?> read(String url) async {
+    scope.ensureCurrent();
     lastReadExpiry = null;
-    final key = readerImageCacheKey(url);
-    Future<Uint8List?> readKey(String candidate) async {
-      if (_cache is EhImageCacheManager) {
-        final manager = _cache as EhImageCacheManager;
-        final bytes = await manager.readBytes(candidate);
-        if (bytes != null) {
-          lastReadExpiry =
-              (await manager.getFileFromCache(candidate))?.validTill;
-        }
-        return bytes;
-      }
-      final entry = await _cache.getFileFromCache(candidate);
-      if (entry == null || !entry.validTill.isAfter(DateTime.now())) {
-        return null;
-      }
-      lastReadExpiry = entry.validTill;
-      return entry.file.readAsBytes();
-    }
-
-    final cached = await readKey(key);
-    if (cached != null || key == url) {
-      if (cached != null && kDebugMode) {
-        debugPrint('[reader-cache] hit=content');
-      }
-      return cached;
-    }
-    final original = await readKey(url);
-    if (original != null) {
-      if (kDebugMode) debugPrint('[reader-cache] hit=original-url');
-      return original;
-    }
-    // Old installations stored completed files under the full source URL.
-    // Reuse those files across /h -> /om failover without deleting the cache.
-    for (final candidate in await legacyKeys?.call(key) ?? <String>[]) {
-      if (candidate == url || candidate == key) continue;
-      final bytes = await readKey(candidate);
+    final cacheKey = key(url);
+    if (_cache is EhImageCacheManager) {
+      final manager = _cache as EhImageCacheManager;
+      final bytes = await manager.readBytes(cacheKey);
+      scope.ensureCurrent();
       if (bytes != null) {
-        if (kDebugMode) debugPrint('[reader-cache] hit=legacy-alternate');
-        return bytes;
+        lastReadExpiry = (await manager.getFileFromCache(cacheKey))?.validTill;
       }
+      scope.ensureCurrent();
+      return bytes;
     }
-    return null;
+    final entry = await _cache.getFileFromCache(cacheKey);
+    scope.ensureCurrent();
+    if (entry == null || !entry.validTill.isAfter(DateTime.now())) return null;
+    lastReadExpiry = entry.validTill;
+    final bytes = await entry.file.readAsBytes();
+    scope.ensureCurrent();
+    return bytes;
   }
 
   Future<void> write(String url, Uint8List bytes) async {
+    scope.ensureCurrent();
     await _cache.putFile(url, bytes,
-        key: readerImageCacheKey(url),
+        key: key(url),
         maxAge: const Duration(days: AppConstants.maxCacheAgeDays));
+    // The key was captured before the await; a late write never enters the
+    // newly selected site's/session's namespace.
+    scope.ensureCurrent();
   }
 
-  Future<void> remove(String url) async {
-    final key = readerImageCacheKey(url);
-    final keys = <String>{key, url};
-    if (key != url) keys.addAll(await legacyKeys?.call(key) ?? <String>[]);
-    for (final candidate in keys) {
-      await _cache.removeFile(candidate);
-    }
-  }
+  Future<void> remove(String url) => _cache.removeFile(key(url));
 }
 
 /// Successful bytes are shared across visits. Active image streams stay scoped
@@ -99,6 +77,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   final ReaderCacheTicket? ticket;
   final GalleryImage? galleryImage;
   final bool cacheOnly;
+  final ImageCacheScope? imageScope;
   final VoidCallback? onCacheMiss;
 
   const ReaderImageProvider(
@@ -114,6 +93,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
     this.ticket,
     this.galleryImage,
     this.cacheOnly = false,
+    this.imageScope,
     this.onCacheMiss,
   });
 
@@ -125,7 +105,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   ImageStreamCompleter loadImage(
       ReaderImageProvider key, ImageDecoderCallback decode) {
     final retained = ticket == null ? null : reentry?.frame(ticket!);
-    if (cacheOnly && retained != null && !requests.isCancelled) {
+    if (cacheOnly && retained != null && !_obsolete) {
       ReaderPageResource? resource;
       final completed = OneFrameImageStreamCompleter(
           SynchronousFuture(ImageInfo(image: retained.image.clone())));
@@ -163,9 +143,12 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   }
 
   bool get _obsolete =>
-      requests.isCancelled || ticket != null && !reentry!.accepts(ticket!);
+      requests.isCancelled ||
+      imageScope?.isCurrent == false ||
+      ticket != null && !reentry!.accepts(ticket!);
 
   void _ensureActive() {
+    imageScope?.ensureCurrent();
     if (requests.isCancelled) {
       throw StateError('Reader image request cancelled');
     }
@@ -289,8 +272,13 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
         ? codec._firstFrame?.image
         : null;
     reentry?.complete(
-        ticket!, galleryImage!, readerImageCacheKey(url), frame, bytes,
-        durable: durable, expires: expires);
+        ticket!,
+        galleryImage!,
+        imageScope?.key(readerImageCacheKey(url)) ?? readerImageCacheKey(url),
+        frame,
+        bytes,
+        durable: durable,
+        expires: expires);
   }
 
   Future<ui.Codec> _decode(Uint8List bytes, ImageDecoderCallback decode) async {
@@ -323,6 +311,7 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
   bool operator ==(Object other) =>
       other is ReaderImageProvider &&
       other.url == url &&
+      other.imageScope?.requestTag == imageScope?.requestTag &&
       identical(other.requests, requests) &&
       other.attempt == attempt &&
       other.cacheOnly == cacheOnly &&
@@ -332,8 +321,16 @@ class ReaderImageProvider extends ImageProvider<ReaderImageProvider> {
       other.idleTimeout == idleTimeout;
 
   @override
-  int get hashCode => Object.hash(url, requests, attempt, idleTimeout,
-      cacheOnly, ticket?.generation, ticket?.revision, ticket?.serial);
+  int get hashCode => Object.hash(
+      url,
+      requests,
+      attempt,
+      idleTimeout,
+      cacheOnly,
+      ticket?.generation,
+      ticket?.revision,
+      ticket?.serial,
+      imageScope?.requestTag);
 }
 
 /// Hand the validated first frame to Flutter without decoding it twice or

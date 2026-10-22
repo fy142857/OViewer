@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'scoped_network_image.dart';
 import '../core/constants/app_constants.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../models/gallery_preview.dart';
@@ -29,7 +29,7 @@ class GalleryGridItem extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  CachedNetworkImage(
+                  scopedNetworkImage(
                     imageUrl: gallery.thumbUrl,
                     fit: BoxFit.cover,
                     cacheManager: EhImageCacheManager.instance,

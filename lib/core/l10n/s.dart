@@ -135,6 +135,9 @@ class S {
 
   bool get _zh => _l == 'zh';
 
+  String get siteSwitching => _zh ? '正在切换站点…' : 'Switching site…';
+  String get siteSwitchFailed => _zh ? '切换失败，已保持原站点，请重试' : 'Could not switch. Previous site retained; please retry.';
+
   String get updateNow => _zh ? '立即更新' : 'Update now';
   String get installNow => _zh ? '立即安装' : 'Install now';
   String get updateReleaseLink => _zh ? '跳转发布页（下载更稳）' : 'Open release page (more reliable download)';

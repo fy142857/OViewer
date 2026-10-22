@@ -12,7 +12,7 @@ import 'cookie_manager.dart';
 import 'image_http_client.dart';
 import 'network_proxy_io.dart';
 import 'reader_request_controller.dart';
-import 'reader_image_cache_key.dart';
+import 'image_cache_scope.dart';
 import 'image_cache_quota.dart';
 import '../storage/reader_reentry_cache.dart';
 
@@ -24,7 +24,6 @@ class EhImageCacheManager extends CacheManager {
   static EhImageCacheManager? _instance;
   final Config _readerConfig;
   final ImageCacheQuota _quota;
-  Future<Map<String, List<String>>>? _legacyReaderKeys;
   Future<void>? _clearing;
   int _fileSequence = 0;
   int _clearGeneration = 0;
@@ -62,9 +61,12 @@ class EhImageCacheManager extends CacheManager {
     CookieManager cookies,
     ReaderRequestController requests, {
     int maxAttempts = 3,
+    ImageCacheScope? imageScope,
   }) =>
       _CookieHttpFileService(cookies,
-          readerRequest: requests, maxAttempts: maxAttempts);
+          readerRequest: requests,
+          maxAttempts: maxAttempts,
+          imageScope: imageScope ?? ImageCacheScope.capture());
 
   EhImageCacheManager._(CookieManager cookieManager, int limitMB)
       : this._configured(
@@ -130,12 +132,30 @@ class EhImageCacheManager extends CacheManager {
       Map<String, String>? headers,
       bool withProgress = false}) async* {
     final cacheKey = key ?? url;
+    final tag = headers?[ImageCacheScope.header];
+    final scope = tag == null ? null : ImageCacheScope.fromTag(tag);
     _quota.pin(cacheKey);
     try {
       await _quota.drain();
       // async* backpressure keeps the pin through the consumer's byte read/decode.
-      yield* super.getFileStream(url,
-          key: key, headers: headers, withProgress: withProgress);
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          scope?.ensureCurrent();
+          await for (final response in super.getFileStream(url,
+              key: key, headers: headers, withProgress: withProgress)) {
+            scope?.ensureCurrent();
+            yield response;
+          }
+          break;
+        } on ImageScopeExpired {
+          scope?.ensureCurrent();
+          if (scope == null || attempt != 0) rethrow;
+          // A rapid EH -> EX -> EH can subscribe to the cache library's old
+          // in-flight request for the same durable key. Let it close/remove
+          // that request, then retry once with the current scope's headers.
+          await Future<void>.delayed(Duration.zero);
+        }
+      }
     } finally {
       await _quota.unpin(cacheKey, check: true);
     }
@@ -199,23 +219,6 @@ class EhImageCacheManager extends CacheManager {
     }
   }
 
-  Future<Iterable<String>> legacyReaderKeys(String key) async {
-    // Ensure the shared cache repository has finished opening.
-    await getFileFromCache(key);
-    final index = await (_legacyReaderKeys ??=
-        _readerConfig.repo.getAllObjects().then((entries) {
-      final result = <String, List<String>>{};
-      for (final entry in entries) {
-        final stable = readerImageCacheKey(entry.url);
-        if (stable != entry.url && entry.key == entry.url) {
-          (result[stable] ??= []).add(entry.key);
-        }
-      }
-      return result;
-    }));
-    return index[key] ?? const [];
-  }
-
   @override
   Future<void> emptyCache() =>
       _clearing ??= _clearImages().whenComplete(() => _clearing = null);
@@ -244,7 +247,6 @@ class EhImageCacheManager extends CacheManager {
     _clearGeneration++;
     ReaderReentryCache.shared.clear();
     _quota.pause();
-    _legacyReaderKeys = null;
     final memory = PaintingBinding.instance.imageCache;
     memory.clear();
     memory.clearLiveImages();
@@ -267,7 +269,6 @@ class EhImageCacheManager extends CacheManager {
       }
       if (failure != null) Error.throwWithStackTrace(failure, failureStack!);
     } finally {
-      _legacyReaderKeys = null;
       store.emptyMemoryCache();
       memory.clear();
       memory.clearLiveImages();
@@ -282,18 +283,28 @@ class _CookieHttpFileService extends FileService {
   http.Client? _defaultHttpClient;
   final ReaderRequestController? readerRequest;
   final int maxAttempts;
+  final ImageCacheScope? imageScope;
 
   _CookieHttpFileService(
     this._cookieManager, {
     http.Client? httpClient,
     this.readerRequest,
     this.maxAttempts = 3,
+    this.imageScope,
   }) : _defaultHttpClient = httpClient;
 
   @override
   Future<FileServiceResponse> get(String url,
       {Map<String, String>? headers}) async {
+    final cleanHeaders = Map<String, String>.from(headers ?? {});
+    final tag = cleanHeaders.remove(ImageCacheScope.header);
+    final scope = imageScope ??
+        (tag == null
+            ? ImageCacheScope.capture()
+            : ImageCacheScope.fromTag(tag));
+    scope.ensureCurrent();
     await NetworkProxy.waitUntilReady();
+    scope.ensureCurrent();
     _ensureReaderRequestActive(readerRequest);
     final requestUri = Uri.tryParse(url);
     if (requestUri != null &&
@@ -310,7 +321,8 @@ class _CookieHttpFileService extends FileService {
       return _getWithRetries(
         url,
         maxAttempts: maxAttempts,
-        headers: headers,
+        headers: cleanHeaders,
+        scope: scope,
         readerRequest: readerRequest,
       );
     }
@@ -320,7 +332,8 @@ class _CookieHttpFileService extends FileService {
       // networks s.exhentai.org completes CONNECT but drops its TLS handshake.
       final response = await _getWithRetries(
         preferredUrl,
-        headers: headers,
+        headers: cleanHeaders,
+        scope: scope,
         maxAttempts: 1,
         readerRequest: readerRequest,
       );
@@ -342,20 +355,24 @@ class _CookieHttpFileService extends FileService {
     return _getWithRetries(
       url,
       maxAttempts: maxAttempts,
-      headers: headers,
+      headers: cleanHeaders,
+      scope: scope,
       readerRequest: readerRequest,
     );
   }
 
   Future<FileServiceResponse> _getWithRetries(
     String url, {
+    required ImageCacheScope scope,
     Map<String, String>? headers,
     int maxAttempts = 3,
     ReaderRequestController? readerRequest,
   }) async {
     final uri = Uri.parse(url);
     final merged = Map<String, String>.from(headers ?? {});
+    scope.ensureCurrent();
     await _cookieManager.applyRequestHeaders(uri, merged);
+    scope.ensureCurrent();
     // Match the User-Agent used by DioClient so servers see consistent requests.
     merged['User-Agent'] =
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
@@ -364,11 +381,13 @@ class _CookieHttpFileService extends FileService {
 
     var attempt = 0;
     while (true) {
+      scope.ensureCurrent();
       _ensureReaderRequestActive(readerRequest);
       try {
         final response = await _send(
           url,
           headers: merged,
+          scope: scope,
           readerRequest: readerRequest,
         );
         _log.d(
@@ -395,10 +414,12 @@ class _CookieHttpFileService extends FileService {
 
   Future<FileServiceResponse> _send(
     String url, {
+    required ImageCacheScope scope,
     required Map<String, String> headers,
     ReaderRequestController? readerRequest,
   }) async {
     _ensureReaderRequestActive(readerRequest);
+    scope.ensureCurrent();
     if (const bool.fromEnvironment('READER_DIAGNOSTICS')) {
       debugPrint('[reader-metric] image_request');
     }
@@ -407,7 +428,20 @@ class _CookieHttpFileService extends FileService {
     final client = readerRequest?.imageClient ??
         (_defaultHttpClient ??= createImageHttpClient());
     final response = await client.send(request);
-    return HttpGetResponse(response);
+    if (!scope.isCurrent) {
+      await response.stream.listen((_) {}).cancel();
+      scope.ensureCurrent();
+    }
+    return HttpGetResponse(http.StreamedResponse(response.stream.map((bytes) {
+      scope.ensureCurrent();
+      return bytes;
+    }), response.statusCode,
+        headers: response.headers,
+        contentLength: response.contentLength,
+        request: response.request,
+        isRedirect: response.isRedirect,
+        persistentConnection: response.persistentConnection,
+        reasonPhrase: response.reasonPhrase));
   }
 
   void _ensureReaderRequestActive(ReaderRequestController? readerRequest) {

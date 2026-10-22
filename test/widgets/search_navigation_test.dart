@@ -1,3 +1,4 @@
+import 'package:oviewer/core/network/image_cache_scope.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -152,7 +153,8 @@ void main() {
         final pixels = await tester.runAsync(() => picture.toImage(1, 1));
         picture.dispose();
         PaintingBinding.instance.imageCache.putIfAbsent(
-          const CachedNetworkImageProvider(thumbUrl),
+          CachedNetworkImageProvider(thumbUrl,
+              cacheKey: ImageCacheScope.capture().key(thumbUrl)),
           () => OneFrameImageStreamCompleter(
               Future.value(ImageInfo(image: pixels!))),
         );

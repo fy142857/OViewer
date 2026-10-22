@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'scoped_network_image.dart';
 import 'package:get_it/get_it.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../core/network/offline_image_provider.dart';
@@ -23,7 +23,7 @@ class HistoryThumbnail extends StatelessWidget {
       child: const Icon(Icons.menu_book, size: 20));
   Widget _online(BuildContext context) => thumbUrl.isEmpty
       ? _placeholder(context)
-      : CachedNetworkImage(
+      : scopedNetworkImage(
           imageUrl: thumbUrl,
           fit: BoxFit.cover,
           cacheManager: EhImageCacheManager.instance,

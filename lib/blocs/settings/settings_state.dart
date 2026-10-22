@@ -3,15 +3,19 @@ import 'package:equatable/equatable.dart';
 const _sentinel = Object();
 
 class SettingsState extends Equatable {
-  final int themeMode;     // 0=system, 1=light, 2=dark
-  final int readingMode;   // 0=LR, 1=RL, 2=vertical
-  final int displayMode;   // 0=list, 1=grid
+  final int themeMode; // 0=system, 1=light, 2=dark
+  final int readingMode; // 0=LR, 1=RL, 2=vertical
+  final int displayMode; // 0=list, 1=grid
   final int cacheLimitMB;
   final String? proxyUrl;
   final bool autoProxy;
   final String? detectedProxy; // system proxy detected at startup
-  final bool vpnActive;        // VPN interface detected (Clash VPN mode etc.)
+  final bool vpnActive; // VPN interface detected (Clash VPN mode etc.)
   final bool useExHentai;
+  final bool? pendingSite;
+  final String? siteSwitchError;
+  bool get switchingSite => pendingSite != null;
+  bool get displayedSite => pendingSite ?? useExHentai;
   final List<String> hiddenTags;
   final String locale;
 
@@ -25,6 +29,8 @@ class SettingsState extends Equatable {
     this.detectedProxy,
     this.vpnActive = false,
     this.useExHentai = false,
+    this.pendingSite,
+    this.siteSwitchError,
     this.hiddenTags = const [],
     this.locale = 'zh',
   });
@@ -39,6 +45,8 @@ class SettingsState extends Equatable {
     Object? detectedProxy = _sentinel,
     bool? vpnActive,
     bool? useExHentai,
+    Object? pendingSite = _sentinel,
+    Object? siteSwitchError = _sentinel,
     List<String>? hiddenTags,
     String? locale,
   }) {
@@ -49,9 +57,16 @@ class SettingsState extends Equatable {
       cacheLimitMB: cacheLimitMB ?? this.cacheLimitMB,
       proxyUrl: proxyUrl == _sentinel ? this.proxyUrl : proxyUrl as String?,
       autoProxy: autoProxy ?? this.autoProxy,
-      detectedProxy: detectedProxy == _sentinel ? this.detectedProxy : detectedProxy as String?,
+      detectedProxy: detectedProxy == _sentinel
+          ? this.detectedProxy
+          : detectedProxy as String?,
       vpnActive: vpnActive ?? this.vpnActive,
       useExHentai: useExHentai ?? this.useExHentai,
+      pendingSite:
+          pendingSite == _sentinel ? this.pendingSite : pendingSite as bool?,
+      siteSwitchError: siteSwitchError == _sentinel
+          ? this.siteSwitchError
+          : siteSwitchError as String?,
       hiddenTags: hiddenTags ?? this.hiddenTags,
       locale: locale ?? this.locale,
     );
@@ -62,6 +77,19 @@ class SettingsState extends Equatable {
   String? get effectiveProxy => proxyUrl ?? (autoProxy ? detectedProxy : null);
 
   @override
-  List<Object?> get props =>
-      [themeMode, readingMode, displayMode, cacheLimitMB, proxyUrl, autoProxy, detectedProxy, vpnActive, useExHentai, hiddenTags, locale];
+  List<Object?> get props => [
+        themeMode,
+        readingMode,
+        displayMode,
+        cacheLimitMB,
+        proxyUrl,
+        autoProxy,
+        detectedProxy,
+        vpnActive,
+        useExHentai,
+        pendingSite,
+        siteSwitchError,
+        hiddenTags,
+        locale
+      ];
 }

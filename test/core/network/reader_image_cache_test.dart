@@ -221,8 +221,7 @@ void main() {
       () async {
     final png = await makePng();
     final files = MockFiles();
-    final cache =
-        ReaderImageCache(manager, legacyKeys: manager.legacyReaderKeys);
+    final cache = ReaderImageCache(manager);
     when(() => files.get(alternate)).thenAnswer((_) async => HttpGetResponse(
         http.StreamedResponse(Stream.value(png), 200,
             contentLength: png.length)));
@@ -251,33 +250,24 @@ void main() {
     retry.cancel();
   });
 
-  test('old URL-only successful cache is reusable without another download',
-      () async {
+  test('unscoped legacy images are not reused by a scoped reader', () async {
     final png = await makePng();
     await manager.putFile(alternate, png, maxAge: const Duration(days: 7));
-    await Future<void>.delayed(Duration.zero);
-    final cache =
-        ReaderImageCache(manager, legacyKeys: manager.legacyReaderKeys);
-    final files = MockFiles();
-    final requests = ReaderRequestController();
-    (await loadImage(ReaderImageProvider(normal,
-            requests: requests, fileService: files, cache: cache)))
-        .dispose();
-    verifyNever(() => files.get(any()));
-    expect(await cache.read(normal), png);
+    final cache = ReaderImageCache(manager);
+    expect(await cache.read(normal), isNull);
     expect(await manager.getFileFromCache(alternate), isNotNull);
-    requests.cancel();
+    await cache.write(normal, png);
+    expect(await cache.read(alternate), png);
     await manager.emptyCache();
-    expect(await cache.read(normal), isNull,
-        reason: 'Clearing cache must not resurrect legacy aliases');
+    expect(await cache.read(normal), isNull);
+    expect(await manager.getFileFromCache(alternate), isNull);
   });
 
   test('expired old entries are not reused across hosts', () async {
     await manager.putFile(alternate, await makePng(),
         maxAge: const Duration(days: -1));
     await Future<void>.delayed(Duration.zero);
-    final cache =
-        ReaderImageCache(manager, legacyKeys: manager.legacyReaderKeys);
+    final cache = ReaderImageCache(manager);
     expect(await cache.read(normal), isNull);
   });
 }

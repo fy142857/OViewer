@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/storage/reader_index_cache.dart';
+import '../../core/storage/reader_reentry_cache.dart';
 import '../../core/network/cookie_manager.dart' as app;
 import '../../core/network/dio_client.dart';
 import '../../core/network/eh_image_cache_manager.dart';
@@ -19,12 +20,21 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final NetworkPreparation? _network;
   final bool _hasInitialSettings;
   int _proxyRevision = 0;
+  bool _changingSite = false;
+  final Future<void> Function() _syncSiteCookies;
+  final int? Function() _sessionRevision;
 
   SettingsBloc(this._repository,
       {Future<void> Function(int)? applyCacheLimit,
+      Future<void> Function()? syncSiteCookies,
+      int? Function()? sessionRevision,
       SettingsState? initialState,
       NetworkPreparation? network})
       : _network = network,
+        _syncSiteCookies = syncSiteCookies ??
+            (() => GetIt.I<app.CookieManager>().syncCookiesToExHentai()),
+        _sessionRevision = sessionRevision ??
+            (() => GetIt.I<app.CookieManager>().sessionRevision),
         _hasInitialSettings = initialState != null,
         _applyCacheLimit = applyCacheLimit ??
             ((mb) => EhImageCacheManager.instance.applyLimitMB(mb)),
@@ -176,16 +186,45 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     ToggleSiteMode event,
     Emitter<SettingsState> emit,
   ) async {
-    ReaderIndexCache.shared.clear();
-    AppConstants.useExHentai = event.useExHentai;
-    await _repository.setUseExHentai(event.useExHentai);
-    // Site-specific image URLs must not survive a mode switch.
-    await EhImageCacheManager.instance.emptyCache();
-    // Sync login cookies to ExHentai domain when switching to EX
-    if (event.useExHentai) {
-      await GetIt.I<app.CookieManager>().syncCookiesToExHentai();
+    if (_changingSite || event.useExHentai == state.useExHentai) return;
+    _changingSite = true;
+    final previous = state.useExHentai;
+    final revision = _sessionRevision();
+    emit(state.copyWith(pendingSite: event.useExHentai, siteSwitchError: null));
+    var saved = false;
+    try {
+      if (event.useExHentai) await _syncSiteCookies();
+      if (revision != _sessionRevision() || emit.isDone) {
+        throw StateError('Site preparation expired');
+      }
+      await _repository.setUseExHentai(event.useExHentai);
+      saved = true;
+      if (revision != _sessionRevision() || emit.isDone) {
+        throw StateError('Site preparation expired');
+      }
+      // Only memory/index invalidation belongs on the switching path. Scoped
+      // disk entries remain available when returning to this site.
+      ReaderIndexCache.shared.clear();
+      ReaderReentryCache.shared.clear();
+      AppConstants.useExHentai = event.useExHentai;
+      emit(state.copyWith(
+          useExHentai: event.useExHentai,
+          pendingSite: null,
+          siteSwitchError: null));
+    } catch (_) {
+      if (saved) {
+        try {
+          await _repository.setUseExHentai(previous);
+        } catch (_) {
+          // Keep the running app on its last valid site; allow an explicit retry.
+        }
+      }
+      if (!emit.isDone) {
+        emit(state.copyWith(pendingSite: null, siteSwitchError: 'failed'));
+      }
+    } finally {
+      _changingSite = false;
     }
-    emit(state.copyWith(useExHentai: event.useExHentai));
   }
 
   Future<void> _onSyncMyTags(

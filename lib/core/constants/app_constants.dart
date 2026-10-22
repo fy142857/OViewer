@@ -10,11 +10,13 @@ class AppConstants {
 
   // Dynamic site switching
   static bool _useExHentai = false;
+  static int siteRevision = 0;
   static bool get useExHentai => _useExHentai;
   static void Function()? onSiteChanged;
   static set useExHentai(bool value) {
     if (value == _useExHentai) return;
     _useExHentai = value;
+    siteRevision++;
     onSiteChanged?.call();
   }
 

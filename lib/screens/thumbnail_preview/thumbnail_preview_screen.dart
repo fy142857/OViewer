@@ -2,7 +2,7 @@ import '../../models/gallery_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/scoped_network_image.dart';
 import '../../blocs/thumbnail_preview/thumbnail_preview_bloc.dart';
 import '../../blocs/thumbnail_preview/thumbnail_preview_event.dart';
 import '../../blocs/thumbnail_preview/thumbnail_preview_state.dart';
@@ -160,7 +160,7 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
                         borderRadius: BorderRadius.circular(4),
                         child: thumb.isSprite
                             ? _buildSpriteThumbnail(context, thumb)
-                            : CachedNetworkImage(
+                            : scopedNetworkImage(
                                 imageUrl: thumb.thumbUrl,
                                 fit: BoxFit.cover,
                                 cacheManager: EhImageCacheManager.instance,
@@ -214,7 +214,7 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
   Widget _buildSpriteThumbnail(BuildContext context, ThumbnailInfo thumb) {
     return SpriteThumbnail(
       thumbnail: thumb,
-      image: CachedNetworkImageProvider(thumb.thumbUrl,
+      image: scopedNetworkImageProvider(thumb.thumbUrl,
           cacheManager: EhImageCacheManager.instance),
       placeholder: (_) =>
           ColoredBox(color: Theme.of(context).colorScheme.surfaceVariant),

@@ -1,3 +1,4 @@
+import '../../core/network/image_cache_scope.dart';
 import 'dart:async';
 import '../../core/storage/reader_reentry_cache.dart';
 import 'package:flutter/foundation.dart';
@@ -27,6 +28,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderIndexSession? _index;
   final ReaderReentryCache _reentry;
   final String _site = AppConstants.baseUrl;
+  final ImageCacheScope imageScope = ImageCacheScope.capture();
   int? _cacheGeneration;
   bool _restored = false;
   bool _starting = false;

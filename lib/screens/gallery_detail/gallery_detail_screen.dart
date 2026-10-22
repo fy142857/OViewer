@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/scoped_network_image.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_state.dart';
 import '../../blocs/gallery_detail/gallery_detail_bloc.dart';
@@ -202,7 +202,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
           children: [
             Hero(
               tag: 'gallery_thumb_${detail.gid}',
-              child: CachedNetworkImage(
+              child: scopedNetworkImage(
                 imageUrl: detail.thumbUrl,
                 fit: BoxFit.cover,
                 cacheManager: EhImageCacheManager.instance,

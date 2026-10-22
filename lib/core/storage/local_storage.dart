@@ -188,8 +188,21 @@ class LocalStorage {
   // ExHentai mode
   static const _keyUseExHentai = 'use_exhentai';
   bool getUseExHentai() => _prefs.getBool(_keyUseExHentai) ?? false;
-  Future<void> setUseExHentai(bool value) =>
-      _prefs.setBool(_keyUseExHentai, value);
+  Future<void> setUseExHentai(bool value) async {
+    final previous = getUseExHentai();
+    try {
+      if (!await _prefs.setBool(_keyUseExHentai, value)) {
+        throw StateError('Could not save site setting');
+      }
+    } catch (_) {
+      // SharedPreferences mutates its memory cache before the platform write.
+      // Restore that cache as well as attempting to restore the stored value.
+      try {
+        await _prefs.setBool(_keyUseExHentai, previous);
+      } catch (_) {}
+      rethrow;
+    }
+  }
 
   // Hidden tags (My Tags)
   static const _keyHiddenTags = 'hidden_tags';
