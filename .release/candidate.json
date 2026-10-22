@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.9.2",
   "branch": "dev",
-  "build_number": 101,
-  "candidate_id": "1.9.3+101",
-  "fingerprint": "97476ac3d3cec43b4798ffb019ad09cc8def912e177c7d9b40126de04c991ad5",
-  "notes": "### 新增\n\n### 修复\n\n- 最近搜索及别称恢复原有主题文字颜色，别称中的逗号、括号等标点保留词典原文，不再替换为分隔点。\n- 最近搜索弹出建议在名称下方显示词典中的译名和其他别称，省略已显示的名称并去重。\n- 最近搜索支持使用标签词典中的英文名、中文/日文译名及别名召回对应历史，保留原始搜索内容与最近优先顺序。\n- 修复 EH/EX 切站时开关响应迟缓：即时显示切换状态，图片缓存按站点和登录会话隔离保留，准备失败时恢复原站点（#54）。\n\n### 变更\n\n### 已知限制",
+  "build_number": 102,
+  "candidate_id": "1.9.3+102",
+  "fingerprint": "b933f574770fbce06845d3109fb37161bac915399707bfa877bfea8556fe63dd",
+  "notes": "### 新增\n\n### 修复\n\n- 修复离线下载暂停后恢复缓慢：复用本次运行已准备的目录与未变化图片的校验结果，点击继续后即时显示恢复状态（#59）。\n- 最近搜索及别称恢复原有主题文字颜色，别称中的逗号、括号等标点保留词典原文，不再替换为分隔点。\n- 最近搜索弹出建议在名称下方显示词典中的译名和其他别称，省略已显示的名称并去重。\n- 最近搜索支持使用标签词典中的英文名、中文/日文译名及别名召回对应历史，保留原始搜索内容与最近优先顺序。\n- 修复 EH/EX 切站时开关响应迟缓：即时显示切换状态，图片缓存按站点和登录会话隔离保留，准备失败时恢复原站点（#54）。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "5f6f4789546e4c7f7df094fc3da6dccc538d33b5",
+  "source_sha": "4b8f1f6d792677da488d62912cf3d9e1c91de5b3",
   "summary": [
     {
       "change_kind": "fix",
@@ -55,6 +55,16 @@
       "original_type": "fix",
       "sha": "5f6f4789546e4c7f7df094fc3da6dccc538d33b5",
       "subject": "fix(search): preserve alias punctuation and restore subtitle colors",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Fix slow pause/resume for existing offline downloads and preserve download integrity.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "4b8f1f6d792677da488d62912cf3d9e1c91de5b3",
+      "subject": "fix(download): resume paused offline tasks without repeating preparation",
       "type": "fix",
       "version_impact": "patch"
     }
