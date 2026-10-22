@@ -55,17 +55,36 @@ class OfflineRepository {
           if (record.status == 'sourceRequired' || record.status == 'deleting')
             continue;
           var damaged = false;
-          for (final page in await pages(record.id)) {
-            if (page.status == 'completed' && !await valid(page)) {
-              await _invalidate(record.id, page.pageIndex, 'missing_file');
-              damaged = true;
+          final savedPages = await pages(record.id);
+          // Startup only hashes files without a matching durable verification.
+          // Keep filesystem work bounded, and commit upgraded evidence together.
+          final changed = <(OfflinePage, OfflineFileStamp)>[];
+          for (var offset = 0; offset < savedPages.length; offset += 8) {
+            final batch = savedPages.skip(offset).take(8).toList();
+            final results = await Future.wait(batch.map((page) async =>
+                page.status == 'completed' ? await _verify(page) : null));
+            for (var i = 0; i < batch.length; i++) {
+              final page = batch[i];
+              if (page.status != 'completed') continue;
+              final stamp = results[i];
+              if (stamp == null) {
+                await _invalidate(record.id, page.pageIndex, 'missing_file');
+                damaged = true;
+              } else if (!_stampUnchanged(page, stamp)) {
+                changed.add((page, stamp));
+              }
             }
           }
+          await db.batch((batch) {
+            for (final (page, stamp) in changed) {
+              batch.update(db.offlinePages, _verificationValues(stamp),
+                  where: (t) => _samePage(t, page));
+            }
+          });
           final complete = record.status == 'completed' &&
               !damaged &&
-              (await pages(record.id))
-                      .where((p) => p.status == 'completed')
-                      .length ==
+              OfflineBook(record, savedPages).hasCompleteIndex &&
+              savedPages.where((p) => p.status == 'completed').length ==
                   record.totalPages;
           if (!complete) {
             await _status(
@@ -209,11 +228,77 @@ class OfflineRepository {
           }
           await (db.update(db.offlineGalleries)..where((t) => t.id.equals(id)))
               .write(OfflineGalleriesCompanion(
-                  totalPages: Value(total), indexReady: const Value(true)));
+                  totalPages: Value(total),
+                  indexReady: const Value(true),
+                  indexNeedsRefresh: const Value(false)));
         });
         for (final path in obsolete) {
           await files.remove(path);
         }
+      });
+
+  static const verificationVersion = 1;
+
+  OfflineFileStamp? savedVerification(OfflinePage page) {
+    if (page.status != 'completed' ||
+        page.relativePath == null ||
+        page.sha256 == null ||
+        page.bytes <= 0 ||
+        page.verificationVersion != verificationVersion ||
+        page.verifiedModifiedMicros == null ||
+        page.verifiedChangedMicros == null) return null;
+    return OfflineFileStamp.persisted(
+        page.relativePath!, page.bytes, page.sha256!,
+        modifiedMicros: page.verifiedModifiedMicros!,
+        changedMicros: page.verifiedChangedMicros!);
+  }
+
+  bool _stampUnchanged(OfflinePage page, OfflineFileStamp stamp) =>
+      page.verificationVersion == verificationVersion &&
+      page.verifiedModifiedMicros == stamp.modified.microsecondsSinceEpoch &&
+      page.verifiedChangedMicros == stamp.changed.microsecondsSinceEpoch;
+
+  OfflinePagesCompanion _verificationValues(OfflineFileStamp? stamp) =>
+      OfflinePagesCompanion(
+          verificationVersion: Value(stamp == null ? 0 : verificationVersion),
+          verifiedModifiedMicros: Value(stamp?.modified.microsecondsSinceEpoch),
+          verifiedChangedMicros: Value(stamp?.changed.microsecondsSinceEpoch));
+
+  Expression<bool> _samePage(OfflinePages t, OfflinePage page) =>
+      t.bookId.equals(page.bookId) &
+      t.pageIndex.equals(page.pageIndex) &
+      t.pageToken.equals(page.pageToken) &
+      t.status.equals('completed') &
+      t.relativePath.equals(page.relativePath!) &
+      t.bytes.equals(page.bytes) &
+      t.sha256.equals(page.sha256!);
+
+  Future<OfflineFileStamp?> _verify(OfflinePage page,
+      {OfflineFileStamp? previous}) async {
+    if (page.relativePath == null || page.sha256 == null || page.bytes <= 0)
+      return null;
+    return files.verifyForResume(page.relativePath!, page.bytes, page.sha256!,
+        previous: previous ?? savedVerification(page));
+  }
+
+  Future<OfflineFileStamp?> verifyForResume(OfflinePage page,
+      {OfflineFileStamp? previous, required bool Function() current}) async {
+    final stamp = await _verify(page, previous: previous);
+    if (!current()) throw const OfflineFailure('cancelled');
+    if (stamp != null && !_stampUnchanged(page, stamp)) {
+      await _serial(() async {
+        if (!current()) throw const OfflineFailure('cancelled');
+        await (db.update(db.offlinePages)..where((t) => _samePage(t, page)))
+            .write(_verificationValues(stamp));
+      });
+    }
+    return stamp;
+  }
+
+  Future<void> requireFreshIndex(String id) => _serial(() async {
+        await (db.update(db.offlineGalleries)..where((t) => t.id.equals(id)))
+            .write(const OfflineGalleriesCompanion(
+                indexNeedsRefresh: Value(true)));
       });
 
   Future<bool> valid(OfflinePage page) async =>
@@ -246,7 +331,13 @@ class OfflineRepository {
                   bytes: Value(file.bytes),
                   sha256: Value(file.digest),
                   status: const Value('completed'),
-                  error: const Value(null)));
+                  error: const Value(null),
+                  verificationVersion: Value(
+                      file.verification == null ? 0 : verificationVersion),
+                  verifiedModifiedMicros:
+                      Value(file.verification?.modified.microsecondsSinceEpoch),
+                  verifiedChangedMicros: Value(
+                      file.verification?.changed.microsecondsSinceEpoch)));
           registered = true;
           if (page.relativePath != null &&
               page.relativePath != file.relativePath) {
@@ -270,7 +361,11 @@ class OfflineRepository {
       (db.update(db.offlinePages)
             ..where((t) => t.bookId.equals(id) & t.pageIndex.equals(index)))
           .write(OfflinePagesCompanion(
-              status: const Value('failed'), error: Value(reason)));
+              status: const Value('failed'),
+              error: Value(reason),
+              verificationVersion: const Value(0),
+              verifiedModifiedMicros: const Value(null),
+              verifiedChangedMicros: const Value(null)));
   Future<void> failPage(String id, int index, String reason) =>
       _serial(() => _invalidate(id, index, reason));
   Future<void> saveProgress(String id, int index) => _serial(() async {

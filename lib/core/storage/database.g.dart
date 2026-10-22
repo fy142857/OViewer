@@ -1587,6 +1587,16 @@ class $OfflineGalleriesTable extends OfflineGalleries
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("index_ready" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _indexNeedsRefreshMeta =
+      const VerificationMeta('indexNeedsRefresh');
+  @override
+  late final GeneratedColumn<bool> indexNeedsRefresh = GeneratedColumn<bool>(
+      'index_needs_refresh', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("index_needs_refresh" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _everCompletedMeta =
       const VerificationMeta('everCompleted');
   @override
@@ -1616,6 +1626,7 @@ class $OfflineGalleriesTable extends OfflineGalleries
         createdAt,
         lastReadPage,
         indexReady,
+        indexNeedsRefresh,
         everCompleted,
         legacyGid
       ];
@@ -1690,6 +1701,12 @@ class $OfflineGalleriesTable extends OfflineGalleries
           indexReady.isAcceptableOrUnknown(
               data['index_ready']!, _indexReadyMeta));
     }
+    if (data.containsKey('index_needs_refresh')) {
+      context.handle(
+          _indexNeedsRefreshMeta,
+          indexNeedsRefresh.isAcceptableOrUnknown(
+              data['index_needs_refresh']!, _indexNeedsRefreshMeta));
+    }
     if (data.containsKey('ever_completed')) {
       context.handle(
           _everCompletedMeta,
@@ -1731,6 +1748,8 @@ class $OfflineGalleriesTable extends OfflineGalleries
           .read(DriftSqlType.int, data['${effectivePrefix}last_read_page'])!,
       indexReady: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}index_ready'])!,
+      indexNeedsRefresh: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}index_needs_refresh'])!,
       everCompleted: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}ever_completed'])!,
       legacyGid: attachedDatabase.typeMapping
@@ -1756,6 +1775,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
   final DateTime createdAt;
   final int lastReadPage;
   final bool indexReady;
+  final bool indexNeedsRefresh;
   final bool everCompleted;
   final int? legacyGid;
   const OfflineGallery(
@@ -1770,6 +1790,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       required this.createdAt,
       required this.lastReadPage,
       required this.indexReady,
+      required this.indexNeedsRefresh,
       required this.everCompleted,
       this.legacyGid});
   @override
@@ -1790,6 +1811,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
     map['created_at'] = Variable<DateTime>(createdAt);
     map['last_read_page'] = Variable<int>(lastReadPage);
     map['index_ready'] = Variable<bool>(indexReady);
+    map['index_needs_refresh'] = Variable<bool>(indexNeedsRefresh);
     map['ever_completed'] = Variable<bool>(everCompleted);
     if (!nullToAbsent || legacyGid != null) {
       map['legacy_gid'] = Variable<int>(legacyGid);
@@ -1812,6 +1834,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       createdAt: Value(createdAt),
       lastReadPage: Value(lastReadPage),
       indexReady: Value(indexReady),
+      indexNeedsRefresh: Value(indexNeedsRefresh),
       everCompleted: Value(everCompleted),
       legacyGid: legacyGid == null && nullToAbsent
           ? const Value.absent()
@@ -1834,6 +1857,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastReadPage: serializer.fromJson<int>(json['lastReadPage']),
       indexReady: serializer.fromJson<bool>(json['indexReady']),
+      indexNeedsRefresh: serializer.fromJson<bool>(json['indexNeedsRefresh']),
       everCompleted: serializer.fromJson<bool>(json['everCompleted']),
       legacyGid: serializer.fromJson<int?>(json['legacyGid']),
     );
@@ -1853,6 +1877,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastReadPage': serializer.toJson<int>(lastReadPage),
       'indexReady': serializer.toJson<bool>(indexReady),
+      'indexNeedsRefresh': serializer.toJson<bool>(indexNeedsRefresh),
       'everCompleted': serializer.toJson<bool>(everCompleted),
       'legacyGid': serializer.toJson<int?>(legacyGid),
     };
@@ -1870,6 +1895,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           DateTime? createdAt,
           int? lastReadPage,
           bool? indexReady,
+          bool? indexNeedsRefresh,
           bool? everCompleted,
           Value<int?> legacyGid = const Value.absent()}) =>
       OfflineGallery(
@@ -1884,6 +1910,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
         createdAt: createdAt ?? this.createdAt,
         lastReadPage: lastReadPage ?? this.lastReadPage,
         indexReady: indexReady ?? this.indexReady,
+        indexNeedsRefresh: indexNeedsRefresh ?? this.indexNeedsRefresh,
         everCompleted: everCompleted ?? this.everCompleted,
         legacyGid: legacyGid.present ? legacyGid.value : this.legacyGid,
       );
@@ -1901,6 +1928,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           ..write('createdAt: $createdAt, ')
           ..write('lastReadPage: $lastReadPage, ')
           ..write('indexReady: $indexReady, ')
+          ..write('indexNeedsRefresh: $indexNeedsRefresh, ')
           ..write('everCompleted: $everCompleted, ')
           ..write('legacyGid: $legacyGid')
           ..write(')'))
@@ -1920,6 +1948,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       createdAt,
       lastReadPage,
       indexReady,
+      indexNeedsRefresh,
       everCompleted,
       legacyGid);
   @override
@@ -1937,6 +1966,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           other.createdAt == this.createdAt &&
           other.lastReadPage == this.lastReadPage &&
           other.indexReady == this.indexReady &&
+          other.indexNeedsRefresh == this.indexNeedsRefresh &&
           other.everCompleted == this.everCompleted &&
           other.legacyGid == this.legacyGid);
 }
@@ -1953,6 +1983,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
   final Value<DateTime> createdAt;
   final Value<int> lastReadPage;
   final Value<bool> indexReady;
+  final Value<bool> indexNeedsRefresh;
   final Value<bool> everCompleted;
   final Value<int?> legacyGid;
   final Value<int> rowid;
@@ -1968,6 +1999,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     this.createdAt = const Value.absent(),
     this.lastReadPage = const Value.absent(),
     this.indexReady = const Value.absent(),
+    this.indexNeedsRefresh = const Value.absent(),
     this.everCompleted = const Value.absent(),
     this.legacyGid = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1984,6 +2016,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     required DateTime createdAt,
     this.lastReadPage = const Value.absent(),
     this.indexReady = const Value.absent(),
+    this.indexNeedsRefresh = const Value.absent(),
     this.everCompleted = const Value.absent(),
     this.legacyGid = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2005,6 +2038,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     Expression<DateTime>? createdAt,
     Expression<int>? lastReadPage,
     Expression<bool>? indexReady,
+    Expression<bool>? indexNeedsRefresh,
     Expression<bool>? everCompleted,
     Expression<int>? legacyGid,
     Expression<int>? rowid,
@@ -2021,6 +2055,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       if (createdAt != null) 'created_at': createdAt,
       if (lastReadPage != null) 'last_read_page': lastReadPage,
       if (indexReady != null) 'index_ready': indexReady,
+      if (indexNeedsRefresh != null) 'index_needs_refresh': indexNeedsRefresh,
       if (everCompleted != null) 'ever_completed': everCompleted,
       if (legacyGid != null) 'legacy_gid': legacyGid,
       if (rowid != null) 'rowid': rowid,
@@ -2039,6 +2074,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       Value<DateTime>? createdAt,
       Value<int>? lastReadPage,
       Value<bool>? indexReady,
+      Value<bool>? indexNeedsRefresh,
       Value<bool>? everCompleted,
       Value<int?>? legacyGid,
       Value<int>? rowid}) {
@@ -2054,6 +2090,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       createdAt: createdAt ?? this.createdAt,
       lastReadPage: lastReadPage ?? this.lastReadPage,
       indexReady: indexReady ?? this.indexReady,
+      indexNeedsRefresh: indexNeedsRefresh ?? this.indexNeedsRefresh,
       everCompleted: everCompleted ?? this.everCompleted,
       legacyGid: legacyGid ?? this.legacyGid,
       rowid: rowid ?? this.rowid,
@@ -2096,6 +2133,9 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     if (indexReady.present) {
       map['index_ready'] = Variable<bool>(indexReady.value);
     }
+    if (indexNeedsRefresh.present) {
+      map['index_needs_refresh'] = Variable<bool>(indexNeedsRefresh.value);
+    }
     if (everCompleted.present) {
       map['ever_completed'] = Variable<bool>(everCompleted.value);
     }
@@ -2122,6 +2162,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
           ..write('createdAt: $createdAt, ')
           ..write('lastReadPage: $lastReadPage, ')
           ..write('indexReady: $indexReady, ')
+          ..write('indexNeedsRefresh: $indexNeedsRefresh, ')
           ..write('everCompleted: $everCompleted, ')
           ..write('legacyGid: $legacyGid, ')
           ..write('rowid: $rowid')
@@ -2191,6 +2232,26 @@ class $OfflinePagesTable extends OfflinePages
   late final GeneratedColumn<String> error = GeneratedColumn<String>(
       'error', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _verificationVersionMeta =
+      const VerificationMeta('verificationVersion');
+  @override
+  late final GeneratedColumn<int> verificationVersion = GeneratedColumn<int>(
+      'verification_version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _verifiedModifiedMicrosMeta =
+      const VerificationMeta('verifiedModifiedMicros');
+  @override
+  late final GeneratedColumn<int> verifiedModifiedMicros = GeneratedColumn<int>(
+      'verified_modified_micros', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _verifiedChangedMicrosMeta =
+      const VerificationMeta('verifiedChangedMicros');
+  @override
+  late final GeneratedColumn<int> verifiedChangedMicros = GeneratedColumn<int>(
+      'verified_changed_micros', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         bookId,
@@ -2201,7 +2262,10 @@ class $OfflinePagesTable extends OfflinePages
         bytes,
         sha256,
         status,
-        error
+        error,
+        verificationVersion,
+        verifiedModifiedMicros,
+        verifiedChangedMicros
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2257,6 +2321,24 @@ class $OfflinePagesTable extends OfflinePages
       context.handle(
           _errorMeta, error.isAcceptableOrUnknown(data['error']!, _errorMeta));
     }
+    if (data.containsKey('verification_version')) {
+      context.handle(
+          _verificationVersionMeta,
+          verificationVersion.isAcceptableOrUnknown(
+              data['verification_version']!, _verificationVersionMeta));
+    }
+    if (data.containsKey('verified_modified_micros')) {
+      context.handle(
+          _verifiedModifiedMicrosMeta,
+          verifiedModifiedMicros.isAcceptableOrUnknown(
+              data['verified_modified_micros']!, _verifiedModifiedMicrosMeta));
+    }
+    if (data.containsKey('verified_changed_micros')) {
+      context.handle(
+          _verifiedChangedMicrosMeta,
+          verifiedChangedMicros.isAcceptableOrUnknown(
+              data['verified_changed_micros']!, _verifiedChangedMicrosMeta));
+    }
     return context;
   }
 
@@ -2284,6 +2366,12 @@ class $OfflinePagesTable extends OfflinePages
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       error: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}error']),
+      verificationVersion: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}verification_version'])!,
+      verifiedModifiedMicros: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}verified_modified_micros']),
+      verifiedChangedMicros: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}verified_changed_micros']),
     );
   }
 
@@ -2303,6 +2391,9 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
   final String? sha256;
   final String status;
   final String? error;
+  final int verificationVersion;
+  final int? verifiedModifiedMicros;
+  final int? verifiedChangedMicros;
   const OfflinePage(
       {required this.bookId,
       required this.pageIndex,
@@ -2312,7 +2403,10 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       required this.bytes,
       this.sha256,
       required this.status,
-      this.error});
+      this.error,
+      required this.verificationVersion,
+      this.verifiedModifiedMicros,
+      this.verifiedChangedMicros});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2333,6 +2427,13 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
     if (!nullToAbsent || error != null) {
       map['error'] = Variable<String>(error);
     }
+    map['verification_version'] = Variable<int>(verificationVersion);
+    if (!nullToAbsent || verifiedModifiedMicros != null) {
+      map['verified_modified_micros'] = Variable<int>(verifiedModifiedMicros);
+    }
+    if (!nullToAbsent || verifiedChangedMicros != null) {
+      map['verified_changed_micros'] = Variable<int>(verifiedChangedMicros);
+    }
     return map;
   }
 
@@ -2352,6 +2453,13 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       status: Value(status),
       error:
           error == null && nullToAbsent ? const Value.absent() : Value(error),
+      verificationVersion: Value(verificationVersion),
+      verifiedModifiedMicros: verifiedModifiedMicros == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedModifiedMicros),
+      verifiedChangedMicros: verifiedChangedMicros == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedChangedMicros),
     );
   }
 
@@ -2368,6 +2476,12 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       sha256: serializer.fromJson<String?>(json['sha256']),
       status: serializer.fromJson<String>(json['status']),
       error: serializer.fromJson<String?>(json['error']),
+      verificationVersion:
+          serializer.fromJson<int>(json['verificationVersion']),
+      verifiedModifiedMicros:
+          serializer.fromJson<int?>(json['verifiedModifiedMicros']),
+      verifiedChangedMicros:
+          serializer.fromJson<int?>(json['verifiedChangedMicros']),
     );
   }
   @override
@@ -2383,6 +2497,9 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       'sha256': serializer.toJson<String?>(sha256),
       'status': serializer.toJson<String>(status),
       'error': serializer.toJson<String?>(error),
+      'verificationVersion': serializer.toJson<int>(verificationVersion),
+      'verifiedModifiedMicros': serializer.toJson<int?>(verifiedModifiedMicros),
+      'verifiedChangedMicros': serializer.toJson<int?>(verifiedChangedMicros),
     };
   }
 
@@ -2395,7 +2512,10 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
           int? bytes,
           Value<String?> sha256 = const Value.absent(),
           String? status,
-          Value<String?> error = const Value.absent()}) =>
+          Value<String?> error = const Value.absent(),
+          int? verificationVersion,
+          Value<int?> verifiedModifiedMicros = const Value.absent(),
+          Value<int?> verifiedChangedMicros = const Value.absent()}) =>
       OfflinePage(
         bookId: bookId ?? this.bookId,
         pageIndex: pageIndex ?? this.pageIndex,
@@ -2407,6 +2527,13 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
         sha256: sha256.present ? sha256.value : this.sha256,
         status: status ?? this.status,
         error: error.present ? error.value : this.error,
+        verificationVersion: verificationVersion ?? this.verificationVersion,
+        verifiedModifiedMicros: verifiedModifiedMicros.present
+            ? verifiedModifiedMicros.value
+            : this.verifiedModifiedMicros,
+        verifiedChangedMicros: verifiedChangedMicros.present
+            ? verifiedChangedMicros.value
+            : this.verifiedChangedMicros,
       );
   @override
   String toString() {
@@ -2419,14 +2546,28 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
           ..write('bytes: $bytes, ')
           ..write('sha256: $sha256, ')
           ..write('status: $status, ')
-          ..write('error: $error')
+          ..write('error: $error, ')
+          ..write('verificationVersion: $verificationVersion, ')
+          ..write('verifiedModifiedMicros: $verifiedModifiedMicros, ')
+          ..write('verifiedChangedMicros: $verifiedChangedMicros')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(bookId, pageIndex, pageToken, relativePath,
-      format, bytes, sha256, status, error);
+  int get hashCode => Object.hash(
+      bookId,
+      pageIndex,
+      pageToken,
+      relativePath,
+      format,
+      bytes,
+      sha256,
+      status,
+      error,
+      verificationVersion,
+      verifiedModifiedMicros,
+      verifiedChangedMicros);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2439,7 +2580,10 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
           other.bytes == this.bytes &&
           other.sha256 == this.sha256 &&
           other.status == this.status &&
-          other.error == this.error);
+          other.error == this.error &&
+          other.verificationVersion == this.verificationVersion &&
+          other.verifiedModifiedMicros == this.verifiedModifiedMicros &&
+          other.verifiedChangedMicros == this.verifiedChangedMicros);
 }
 
 class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
@@ -2452,6 +2596,9 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
   final Value<String?> sha256;
   final Value<String> status;
   final Value<String?> error;
+  final Value<int> verificationVersion;
+  final Value<int?> verifiedModifiedMicros;
+  final Value<int?> verifiedChangedMicros;
   final Value<int> rowid;
   const OfflinePagesCompanion({
     this.bookId = const Value.absent(),
@@ -2463,6 +2610,9 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     this.sha256 = const Value.absent(),
     this.status = const Value.absent(),
     this.error = const Value.absent(),
+    this.verificationVersion = const Value.absent(),
+    this.verifiedModifiedMicros = const Value.absent(),
+    this.verifiedChangedMicros = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OfflinePagesCompanion.insert({
@@ -2475,6 +2625,9 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     this.sha256 = const Value.absent(),
     this.status = const Value.absent(),
     this.error = const Value.absent(),
+    this.verificationVersion = const Value.absent(),
+    this.verifiedModifiedMicros = const Value.absent(),
+    this.verifiedChangedMicros = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : bookId = Value(bookId),
         pageIndex = Value(pageIndex),
@@ -2489,6 +2642,9 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     Expression<String>? sha256,
     Expression<String>? status,
     Expression<String>? error,
+    Expression<int>? verificationVersion,
+    Expression<int>? verifiedModifiedMicros,
+    Expression<int>? verifiedChangedMicros,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2501,6 +2657,12 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
       if (sha256 != null) 'sha256': sha256,
       if (status != null) 'status': status,
       if (error != null) 'error': error,
+      if (verificationVersion != null)
+        'verification_version': verificationVersion,
+      if (verifiedModifiedMicros != null)
+        'verified_modified_micros': verifiedModifiedMicros,
+      if (verifiedChangedMicros != null)
+        'verified_changed_micros': verifiedChangedMicros,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2515,6 +2677,9 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
       Value<String?>? sha256,
       Value<String>? status,
       Value<String?>? error,
+      Value<int>? verificationVersion,
+      Value<int?>? verifiedModifiedMicros,
+      Value<int?>? verifiedChangedMicros,
       Value<int>? rowid}) {
     return OfflinePagesCompanion(
       bookId: bookId ?? this.bookId,
@@ -2526,6 +2691,11 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
       sha256: sha256 ?? this.sha256,
       status: status ?? this.status,
       error: error ?? this.error,
+      verificationVersion: verificationVersion ?? this.verificationVersion,
+      verifiedModifiedMicros:
+          verifiedModifiedMicros ?? this.verifiedModifiedMicros,
+      verifiedChangedMicros:
+          verifiedChangedMicros ?? this.verifiedChangedMicros,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2560,6 +2730,17 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     if (error.present) {
       map['error'] = Variable<String>(error.value);
     }
+    if (verificationVersion.present) {
+      map['verification_version'] = Variable<int>(verificationVersion.value);
+    }
+    if (verifiedModifiedMicros.present) {
+      map['verified_modified_micros'] =
+          Variable<int>(verifiedModifiedMicros.value);
+    }
+    if (verifiedChangedMicros.present) {
+      map['verified_changed_micros'] =
+          Variable<int>(verifiedChangedMicros.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2578,6 +2759,9 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
           ..write('sha256: $sha256, ')
           ..write('status: $status, ')
           ..write('error: $error, ')
+          ..write('verificationVersion: $verificationVersion, ')
+          ..write('verifiedModifiedMicros: $verifiedModifiedMicros, ')
+          ..write('verifiedChangedMicros: $verifiedChangedMicros, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();

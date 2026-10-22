@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:oviewer/core/network/offline_download_network.dart';
+import 'package:oviewer/core/network/api_exception.dart';
 import 'package:oviewer/core/network/reader_request_controller.dart';
 import 'package:oviewer/core/parser/gallery_detail_parser.dart';
 import 'package:oviewer/core/services/offline_download_coordinator.dart';
@@ -31,6 +32,7 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   Completer<void>? indexGate;
   Completer<void>? cancelGate;
   int imageCalls = 0;
+  final invalidTokens = <String>{};
   int total = 3;
   int active = 0;
   int peak = 0;
@@ -75,6 +77,7 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
       OfflineKey key, String token, int page, ReaderRequestController requests,
       {String? alternate}) async {
     imageCalls++;
+    if (invalidTokens.contains(token)) throw ApiException.server(404);
     return GalleryImage(index: page, pageUrl: '', imageUrl: '${key.gid}/$page');
   }
 
@@ -135,14 +138,20 @@ Future<void> until(FutureOr<bool> Function() predicate) async {
 
 class CountingFiles extends OfflineFiles {
   int hashes = 0;
+  int verificationResults = 0;
   bool shortTimeout = false;
   Completer<void>? verificationGate;
+  Completer<void>? afterVerificationGate;
   @override
   Future<OfflineFileStamp?> verifyForResume(
       String relative, int size, String digest,
       {OfflineFileStamp? previous}) async {
     await verificationGate?.future;
-    return super.verifyForResume(relative, size, digest, previous: previous);
+    final result =
+        await super.verifyForResume(relative, size, digest, previous: previous);
+    verificationResults++;
+    await afterVerificationGate?.future;
+    return result;
   }
 
   @override
@@ -379,12 +388,11 @@ void main() {
       await coordinator.resume(id);
       await until(() async => (await repo.get(id))!.complete);
       expect(network.indexed, [42, 42]);
-      expect(files.hashes, hashes + 1);
+      expect(files.hashes, hashes);
     });
   }
 
-  test('cold resume refetches the directory and fully checks completed files',
-      () async {
+  test('cold resume reuses persisted directory and verification', () async {
     final id = await pauseAfterOne();
     await coordinator.dispose();
     await repo.dispose();
@@ -395,9 +403,8 @@ void main() {
     network.release();
     await coordinator.resume(id);
     await until(() async => (await repo.get(id))!.complete);
-    expect(network.indexed, [42, 42]);
-    expect(files.hashes,
-        hashes + 2); // Startup integrity check, then full preparation.
+    expect(network.indexed, [42]);
+    expect(files.hashes, hashes);
   });
 
   test('a failed page refreshes the directory on the next retry', () async {

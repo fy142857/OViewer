@@ -74,6 +74,8 @@ class OfflineGalleries extends Table {
   DateTimeColumn get createdAt => dateTime()();
   IntColumn get lastReadPage => integer().withDefault(const Constant(0))();
   BoolColumn get indexReady => boolean().withDefault(const Constant(false))();
+  BoolColumn get indexNeedsRefresh =>
+      boolean().withDefault(const Constant(false))();
   BoolColumn get everCompleted =>
       boolean().withDefault(const Constant(false))();
   IntColumn get legacyGid => integer().nullable()();
@@ -91,6 +93,10 @@ class OfflinePages extends Table {
   TextColumn get sha256 => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('pending'))();
   TextColumn get error => text().nullable()();
+  IntColumn get verificationVersion =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get verifiedModifiedMicros => integer().nullable()();
+  IntColumn get verifiedChangedMicros => integer().nullable()();
   @override
   Set<Column> get primaryKey => {bookId, pageIndex};
 }
@@ -109,7 +115,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -120,6 +126,14 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(historyEntries, historyEntries.source);
             await m.createTable(offlineGalleries);
             await m.createTable(offlinePages);
+          }
+          if (from >= 3 && from < 4) {
+            await m.addColumn(
+                offlineGalleries, offlineGalleries.indexNeedsRefresh);
+            await m.addColumn(offlinePages, offlinePages.verificationVersion);
+            await m.addColumn(
+                offlinePages, offlinePages.verifiedModifiedMicros);
+            await m.addColumn(offlinePages, offlinePages.verifiedChangedMicros);
           }
         },
       );

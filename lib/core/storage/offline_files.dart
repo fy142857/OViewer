@@ -20,7 +20,7 @@ class OfflineFileInfo {
       {this.verification});
 }
 
-/// Process-local evidence only. Reads still verify the actual file digest.
+/// Fast verification evidence; reads still verify the actual file digest.
 class OfflineFileStamp {
   final String path;
   final int bytes;
@@ -30,6 +30,10 @@ class OfflineFileStamp {
   OfflineFileStamp(this.path, this.bytes, this.digest, FileStat stat)
       : modified = stat.modified,
         changed = stat.changed;
+  OfflineFileStamp.persisted(this.path, this.bytes, this.digest,
+      {required int modifiedMicros, required int changedMicros})
+      : modified = DateTime.fromMicrosecondsSinceEpoch(modifiedMicros),
+        changed = DateTime.fromMicrosecondsSinceEpoch(changedMicros);
 
   bool matches(String path, int bytes, String digest, FileStat stat) =>
       this.path == path &&

@@ -428,6 +428,7 @@ void main() {
       final file = await repository.files
           .write(book.id, 10, Stream.value(bytes), current: () => true);
       page = OfflinePage(
+          verificationVersion: 0,
           bookId: book.id,
           pageIndex: 10,
           pageToken: 'gif',

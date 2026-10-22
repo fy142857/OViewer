@@ -26,6 +26,7 @@ OfflineBook book(
         String token = 'abc'}) =>
     OfflineBook(
         OfflineGallery(
+            indexNeedsRefresh: false,
             id: 'book-$source',
             source: source,
             gid: 42,
@@ -40,6 +41,7 @@ OfflineBook book(
         List.generate(
             pages,
             (i) => OfflinePage(
+                verificationVersion: 0,
                 bookId: 'book-$source',
                 pageIndex: i,
                 pageToken: 'page-$i',

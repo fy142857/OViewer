@@ -38,6 +38,15 @@ class OfflineBook {
   OfflineStatus get status => OfflineStatus.parse(record.status);
   int get completedPages => pages.where((p) => p.status == 'completed').length;
   int get bytes => pages.fold(0, (n, p) => n + p.bytes);
+  bool get hasCompleteIndex =>
+      key?.id == id &&
+      record.indexReady &&
+      record.totalPages > 0 &&
+      pages.length == record.totalPages &&
+      pages.asMap().entries.every((entry) =>
+          entry.value.bookId == id &&
+          entry.value.pageIndex == entry.key &&
+          entry.value.pageToken.isNotEmpty);
   bool get complete =>
       status == OfflineStatus.completed &&
       record.indexReady &&

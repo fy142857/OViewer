@@ -223,7 +223,7 @@ class OfflineDownloadCoordinator {
       _OfflineJob? chosen;
       for (var i = 0; i < ready.length; i++) {
         final job = ready[_cursor++ % ready.length];
-        if (_current(job) && job.pending.isNotEmpty) {
+        if (_current(job) && !job.refreshRequested && job.pending.isNotEmpty) {
           chosen = job;
           break;
         }
@@ -248,8 +248,17 @@ class OfflineDownloadCoordinator {
     for (final job in ready) {
       if (_current(job) &&
           !job.preparing &&
-          job.pending.isEmpty &&
+          (job.pending.isEmpty || job.refreshRequested) &&
           job.inFlight == 0) {
+        if (job.refreshRequested) {
+          job.pending.clear();
+          job.prepared = false;
+          job.forceFreshIndex = true;
+          job.refreshRequested = false;
+          _resumeContexts.remove(job.book.id);
+          _pumpAgain = true;
+          continue;
+        }
         final latest = await repository.get(job.book.id);
         if (!_current(job)) continue;
         final complete = latest != null &&
@@ -276,6 +285,15 @@ class OfflineDownloadCoordinator {
       await repository.setStatus(job.book.id, OfflineStatus.preparing);
       if (!_current(job)) return;
       var context = _resumeContexts[job.book.id];
+      if (job.book.record.indexNeedsRefresh || job.forceFreshIndex)
+        context = null;
+      if (context == null &&
+          !job.forceFreshIndex &&
+          job.book.hasCompleteIndex &&
+          !job.book.record.indexNeedsRefresh) {
+        context = _ResumeContext(job.book, job.session);
+        _resumeContexts[job.book.id] = context;
+      }
       final warm = context != null && context.matches(job.book, job.session);
       if (!warm) {
         _resumeContexts.remove(job.book.id);
@@ -285,6 +303,7 @@ class OfflineDownloadCoordinator {
         if (!_current(job) || indexed == null) return;
         context = _ResumeContext(indexed, job.session);
       }
+      job.reusedIndex = warm;
       final preparedContext = context;
       final pages = warm ? job.book.pages : await repository.pages(job.book.id);
       if (!_current(job)) return;
@@ -306,9 +325,9 @@ class OfflineDownloadCoordinator {
               page.relativePath == null ||
               page.sha256 == null ||
               page.bytes <= 0) return false;
-          final stamp = await repository.files.verifyForResume(
-              page.relativePath!, page.bytes, page.sha256!,
-              previous: preparedContext.verified[page.pageIndex]);
+          final stamp = await repository.verifyForResume(page,
+              previous: preparedContext.verified[page.pageIndex],
+              current: () => _current(job));
           if (stamp == null) {
             preparedContext.verified.remove(page.pageIndex);
             return false;
@@ -411,10 +430,12 @@ class OfflineDownloadCoordinator {
       ReaderRequestController request) async {
     String? alternate;
     for (var attempt = 0; attempt < 3 && _current(job); attempt++) {
+      var resolvedImage = false;
       try {
         final image = await network.image(
             job.book.key!, page.pageToken, page.pageIndex, request,
             alternate: alternate);
+        resolvedImage = true;
         alternate = image.nlKey;
         if (!_current(job)) return;
         final response = await network.bytes(image.imageUrl, request);
@@ -456,6 +477,12 @@ class OfflineDownloadCoordinator {
           else {
             // A later retry must be able to refresh an obsolete page token.
             _resumeContexts.remove(job.book.id);
+            await repository.requireFreshIndex(job.book.id);
+            final stalePage = !resolvedImage &&
+                ((error is ApiException &&
+                        const [404, 410].contains(error.statusCode)) ||
+                    const ['invalid_image', 'invalid_index'].contains(reason));
+            if (job.reusedIndex && stalePage) job.refreshRequested = true;
             await repository.failPage(job.book.id, page.pageIndex, reason);
           }
           return;
@@ -538,6 +565,9 @@ class OfflineDownloadCoordinator {
       }
       _drain(job);
     }
+    if (reason == 'session_changed' || reason == 'source_changed') {
+      await repository.requireFreshIndex(id);
+    }
     final record = await repository.get(id);
     if (record != null &&
         !const [
@@ -554,13 +584,13 @@ class OfflineDownloadCoordinator {
 
   Future<void> pauseAll({String reason = 'user'}) async {
     _epoch++;
-    if (reason == 'session_changed' || reason == 'source_changed') {
-      _resumeContexts.clear();
-    }
+    final refresh = reason == 'session_changed' || reason == 'source_changed';
     final ids = {
       ..._pendingStarts.keys,
       ..._jobs.values.where((j) => j.wanted).map((j) => j.book.id),
+      if (refresh) ..._resumeContexts.keys,
     };
+    if (refresh) _resumeContexts.clear();
     // Cancel every HTTP client before the first database await, particularly
     // when site/account changes could otherwise replace credentials mid-request.
     await Future.wait(ids.map((id) => pause(id, reason: reason)));
@@ -671,6 +701,9 @@ class _OfflineJob {
   bool admitted = false;
   bool preparing = false;
   bool prepared = false;
+  bool reusedIndex = false;
+  bool forceFreshIndex = false;
+  bool refreshRequested = false;
   int inFlight = 0;
   _ResumeContext? resumeContext;
   _OfflineJob(this.book, this.session);
@@ -690,7 +723,8 @@ class _ResumeContext {
   bool matches(OfflineBook book, Object? session) =>
       source == book.source &&
       this.session == session &&
-      book.record.indexReady &&
+      book.hasCompleteIndex &&
+      !book.record.indexNeedsRefresh &&
       book.record.totalPages == tokens.length &&
       book.pages.length == tokens.length &&
       book.pages.every((page) => tokens[page.pageIndex] == page.pageToken);
