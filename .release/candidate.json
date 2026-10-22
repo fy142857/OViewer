@@ -1,83 +1,23 @@
 {
-  "base_tag": "v1.9.2",
+  "base_tag": "v1.9.3",
   "branch": "dev",
-  "build_number": 103,
-  "candidate_id": "1.9.3+103",
-  "fingerprint": "f218eab5c25ea208c4d34f53768931ca30f0cd7570db98b620332d2dacaa4357",
-  "notes": "### 新增\n\n### 修复\n\n- 离线下载支持退出应用后快速恢复：持久保存文件校验信息、复用完整目录，旧记录首次校验后自动补齐，失效页面可刷新目录后继续（#59）。\n- 修复离线下载暂停后恢复缓慢：复用本次运行已准备的目录与未变化图片的校验结果，点击继续后即时显示恢复状态（#59）。\n- 最近搜索及别称恢复原有主题文字颜色，别称中的逗号、括号等标点保留词典原文，不再替换为分隔点。\n- 最近搜索弹出建议在名称下方显示词典中的译名和其他别称，省略已显示的名称并去重。\n- 最近搜索支持使用标签词典中的英文名、中文/日文译名及别名召回对应历史，保留原始搜索内容与最近优先顺序。\n- 修复 EH/EX 切站时开关响应迟缓：即时显示切换状态，图片缓存按站点和登录会话隔离保留，准备失败时恢复原站点（#54）。\n\n### 变更\n\n### 已知限制",
+  "build_number": 104,
+  "candidate_id": "1.10.0+104",
+  "fingerprint": "b2a76f93cc53046f3b1338941f07b9d33e9a797a0d418fb9f59eef3e3516a029",
+  "notes": "### 新增\n\n- 登录页新增账号密码登录，保留 WebView 与手动 Cookie；遇到安全验证可点击提示转入 WebView，注册入口使用系统浏览器打开官方注册页（#61）。\n\n### 修复\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "0737e31a211bc01d919ff417bd1945c2e233af95",
+  "source_sha": "0d7460592d4589209d31db88eea7a05c7a845b21",
   "summary": [
     {
-      "change_kind": "fix",
-      "classification_reason": "Show pending site selection before asynchronous preparation, preserve disk images in site and login-session namespaces, and reject stale image work instead of clearing every cache file during a switch. Resolves #54.",
+      "change_kind": "feature",
+      "classification_reason": "Add a native username/password authentication method and official browser registration entry, with isolated credential validation and cancellable session persistence.",
       "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "154deba2bebb603f22497e7c7dde1d50d9f79d8a",
-      "subject": "fix(settings): make site switching responsive with scoped image caches",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Match recent search queries bidirectionally against dictionary English names and Chinese/Japanese names and aliases, preserving recency, original query text, qualifiers and composition state.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "2b7e803906cdf39a318969046e11102d184e6f3c",
-      "subject": "fix(search): recall history through translated tag names and aliases",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Preserve names such as Re:CREATORS, C:drive. and names ending in dollar signs when matching recent searches; verified bidirectional recall for every valid entry in the local full dictionary.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "ca09537e19be3918efbdc16f242cbb89cc03dad3",
-      "subject": "fix(search): recognize punctuation in dictionary display names",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Display dictionary translations and alternate names beneath recent search entries, omitting names already visible and preserving original query selection.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "0edf6031136f1eee96ed3add14fea0475b37918c",
-      "subject": "fix(search): show tag aliases below recent search suggestions",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Display complete dictionary names without splitting their punctuation, deduplicate whole visible names, and restore the original theme subtitle style for recent search aliases.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "5f6f4789546e4c7f7df094fc3da6dccc538d33b5",
-      "subject": "fix(search): preserve alias punctuation and restore subtitle colors",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Fix slow pause/resume for existing offline downloads and preserve download integrity.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "4b8f1f6d792677da488d62912cf3d9e1c91de5b3",
-      "subject": "fix(download): resume paused offline tasks without repeating preparation",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Complete issue #59 restart recovery without repeatedly fetching directories or hashing unchanged downloaded files.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "0737e31a211bc01d919ff417bd1945c2e233af95",
-      "subject": "fix(download): persist offline resume verification across app restarts",
-      "type": "fix",
-      "version_impact": "patch"
+      "original_type": "feat",
+      "sha": "0d7460592d4589209d31db88eea7a05c7a845b21",
+      "subject": "feat(auth): add native account login and registration entry",
+      "type": "feat",
+      "version_impact": "minor"
     }
   ],
-  "version": "1.9.3"
+  "version": "1.10.0"
 }
