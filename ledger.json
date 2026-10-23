@@ -5105,7 +5105,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 修正详情页收藏请求的表单字段与提交格式，补齐来源信息；点击立即切换收藏状态，不显示转圈、置灰或点击动画，内部防止重复提交，失败时恢复原状态并提示重试。\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "2aa32b3ae757b6a64f7c5cb298a990a5c9d8cf18",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "fix",
