@@ -5164,8 +5164,43 @@
         }
       ],
       "version": "1.10.2"
+    },
+    {
+      "base_tag": "v1.10.1",
+      "branch": "dev",
+      "build_number": 110,
+      "build_sha": "b9267669ae44910e0e225cc1b16d1ab121e2a32d",
+      "candidate_id": "1.10.2+110",
+      "fingerprint": "cfcb59aa8d8593f1760ff52026830adc673830359f2ef9b1117fe2ab92b7aa3f",
+      "notes": "### 新增\n\n### 修复\n\n- 改善 Android 应用内更新的后台下载：新增通知栏进度、中断续传；隐藏窗口或切后台后完成下载时由用户点击安装，取消下载会清理文件（#60）。\n\n### 变更\n\n- 更新窗口的“重新检查版本”移至“立即更新”上方单独一行，并靠右对齐。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "c3b64bc2030e96429ad6d444d1e8f171c76175a6",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Protect Android update transfers with an independent foreground service, preserve validated resumable files, and require explicit installation after hiding the update window or backgrounding the app.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "921be963f743c683602bd1f1d6193096e79d202d",
+          "subject": "fix(updates): retain resumable APK downloads in the background",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Place the version recheck action on its own right-aligned row above the download or install action, including narrow screens and larger text.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "c3b64bc2030e96429ad6d444d1e8f171c76175a6",
+          "subject": "fix(updates): right-align recheck above the install action",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.10.2"
     }
   ],
-  "last_build_number": 109,
+  "last_build_number": 110,
   "schema": 1
 }
