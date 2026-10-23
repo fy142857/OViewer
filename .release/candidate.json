@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.9.3",
   "branch": "dev",
-  "build_number": 104,
-  "candidate_id": "1.10.0+104",
-  "fingerprint": "b2a76f93cc53046f3b1338941f07b9d33e9a797a0d418fb9f59eef3e3516a029",
-  "notes": "### 新增\n\n- 登录页新增账号密码登录，保留 WebView 与手动 Cookie；遇到安全验证可点击提示转入 WebView，注册入口使用系统浏览器打开官方注册页（#61）。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+  "build_number": 105,
+  "candidate_id": "1.10.0+105",
+  "fingerprint": "4467b29153374a6138a00479dff7aabc6d452c99d41b6f1f4e94180b91327966",
+  "notes": "### 新增\n\n- 登录页新增账号密码登录及页内网页验证，保留 WebView 与手动 Cookie；注册入口使用系统浏览器打开官方注册页（#61）。\n\n### 修复\n\n- 修正账号登录验证顺序：先在当前页完成网页验证，再提交账号密码，自动检查不再统一要求切换 WebView 或重复输入账号密码（#61）。\n- 调整账号输入框为普通文本输入，避免触发系统安全键盘；密码框保留安全输入。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "0d7460592d4589209d31db88eea7a05c7a845b21",
+  "source_sha": "528d074094d445e3407e797fd087915d365e66ce",
   "summary": [
     {
       "change_kind": "feature",
@@ -17,6 +17,16 @@
       "subject": "feat(auth): add native account login and registration entry",
       "type": "feat",
       "version_impact": "minor"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Prepare the verified login form before submitting credentials once, keep verification on the account tab, and use ordinary text input for the username.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "528d074094d445e3407e797fd087915d365e66ce",
+      "subject": "fix(auth): complete verification within the account login flow",
+      "type": "fix",
+      "version_impact": "patch"
     }
   ],
   "version": "1.10.0"
