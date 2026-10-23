@@ -426,7 +426,6 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
               GalleryFavoriteButtons(
                 settings: GetIt.I<SettingsRepository>(),
                 favoritedSlot: detail.favoritedSlot,
-                saving: context.read<GalleryDetailBloc>().state.savingFavorite,
                 onToggle: (slot) => _toggleFavorite(context, detail, slot),
               ),
             ]),

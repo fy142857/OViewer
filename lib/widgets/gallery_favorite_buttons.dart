@@ -7,13 +7,11 @@ class GalleryFavoriteButtons extends StatefulWidget {
   final SettingsRepository settings;
   final int? favoritedSlot;
   final ValueChanged<int> onToggle;
-  final bool saving;
 
   const GalleryFavoriteButtons(
       {super.key,
       required this.settings,
       required this.favoritedSlot,
-      this.saving = false,
       required this.onToggle});
 
   @override
@@ -68,6 +66,12 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    // The heart switches state immediately; request progress has no visual effect.
+    const toggleStyle = ButtonStyle(
+      overlayColor: MaterialStatePropertyAll(Colors.transparent),
+      splashFactory: NoSplash.splashFactory,
+      animationDuration: Duration.zero,
+    );
     final destination =
         '${s.favoriteDestination}: ${s.favoriteCategory(widget.settings.getFavoriteDestination())}';
     return Row(mainAxisSize: MainAxisSize.min, children: [
@@ -75,7 +79,7 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
           key: const ValueKey('choose-favorite-destination'),
           tooltip:
               '${s.favoriteCategoryPreference}: ${s.favoriteCategory(widget.settings.getFavoriteDestination())}',
-          onPressed: _choosing || widget.saving ? null : _choose,
+          onPressed: _choosing ? null : _choose,
           icon: const Icon(Icons.menu, size: 20)),
       const SizedBox(width: 8),
       if (widget.favoritedSlot != null &&
@@ -85,7 +89,8 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
           message: s.removeFavorite,
           child: OutlinedButton.icon(
             key: const ValueKey('toggle-gallery-favorite'),
-            onPressed: _choosing || widget.saving
+            style: toggleStyle,
+            onPressed: _choosing
                 ? null
                 : () =>
                     widget.onToggle(widget.settings.getFavoriteDestination()),
@@ -96,9 +101,10 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
       else
         IconButton.outlined(
             key: const ValueKey('toggle-gallery-favorite'),
+            style: toggleStyle,
             tooltip:
                 widget.favoritedSlot != null ? s.removeFavorite : destination,
-            onPressed: _choosing || widget.saving
+            onPressed: _choosing
                 ? null
                 : () =>
                     widget.onToggle(widget.settings.getFavoriteDestination()),
