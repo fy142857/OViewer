@@ -60,6 +60,32 @@ class GalleryDetail extends Equatable {
 
   bool get isFavorited => favoritedSlot != null;
 
+  GalleryDetail withFavoriteSlot(int? slot) => GalleryDetail(
+        source: source,
+        gid: gid,
+        token: token,
+        title: title,
+        titleJpn: titleJpn,
+        thumbUrl: thumbUrl,
+        category: category,
+        uploader: uploader,
+        postedAt: postedAt,
+        parent: parent,
+        visible: visible,
+        language: language,
+        fileCount: fileCount,
+        fileSize: fileSize,
+        rating: rating,
+        ratingCount: ratingCount,
+        favoriteCount: favoriteCount,
+        favoritedSlot: slot,
+        tags: tags,
+        comments: comments,
+        totalCommentCount: totalCommentCount,
+        thumbnails: thumbnails,
+        archiveUrl: archiveUrl,
+      );
+
   GalleryDetail withComments(List<GalleryComment> updated,
           {bool all = false, int? totalCount, GallerySource? source}) =>
       GalleryDetail(

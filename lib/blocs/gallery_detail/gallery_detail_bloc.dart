@@ -1,4 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
+import '../../core/network/api_exception.dart';
 import '../../repositories/gallery_repository.dart';
 import '../../repositories/favorites_repository.dart';
 import '../../models/gallery_detail.dart';
@@ -12,6 +14,7 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
   final GalleryRepository _repository;
   final FavoritesRepository _favoritesRepo;
   List<GalleryComment>? _remainingComments;
+  int _detailRevision = 0;
 
   GalleryDetailBloc(this._repository, this._favoritesRepo)
       : super(const GalleryDetailState()) {
@@ -27,13 +30,21 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
     FetchGalleryDetail event,
     Emitter<GalleryDetailState> emit,
   ) async {
-    emit(state.copyWith(status: GalleryDetailStatus.loading));
+    if (state.savingFavorite &&
+        state.detail?.gid == event.gid &&
+        state.detail?.token == event.token) return;
+    final revision = ++_detailRevision;
+    emit(state.copyWith(
+        status: GalleryDetailStatus.loading,
+        savingFavorite: false,
+        clearFavoriteError: true));
     try {
       if (event.acceptWarning) {
         await _repository.acceptGalleryWarning(event.gid, event.token);
       }
       final detail =
           await _repository.fetchGalleryDetail(event.gid, event.token);
+      if (revision != _detailRevision || emit.isDone) return;
       _remainingComments = null;
       emit(state.copyWith(
         status: GalleryDetailStatus.loaded,
@@ -41,10 +52,12 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
         allCommentsLoaded: detail.commentCount <= detail.comments.length,
       ));
     } on GalleryContentWarning catch (warning) {
+      if (revision != _detailRevision || emit.isDone) return;
       emit(state.copyWith(
           status: GalleryDetailStatus.contentWarning,
           errorMessage: warning.message));
     } catch (e) {
+      if (revision != _detailRevision || emit.isDone) return;
       emit(state.copyWith(
         status: GalleryDetailStatus.error,
         errorMessage: e.toString(),
@@ -56,37 +69,20 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
     ToggleFavorite event,
     Emitter<GalleryDetailState> emit,
   ) async {
-    if (state.detail == null) return;
+    if (state.savingFavorite ||
+        state.status != GalleryDetailStatus.loaded ||
+        state.detail?.gid != event.gid ||
+        state.detail?.token != event.token) return;
     final detail = state.detail!;
     final wasFavorited = detail.isFavorited;
-
-    // Optimistic UI update
-    final updatedDetail = GalleryDetail(
-      source: detail.source,
-      gid: detail.gid,
-      token: detail.token,
-      title: detail.title,
-      titleJpn: detail.titleJpn,
-      thumbUrl: detail.thumbUrl,
-      category: detail.category,
-      uploader: detail.uploader,
-      postedAt: detail.postedAt,
-      parent: detail.parent,
-      visible: detail.visible,
-      language: detail.language,
-      fileCount: detail.fileCount,
-      fileSize: detail.fileSize,
-      rating: detail.rating,
-      ratingCount: detail.ratingCount,
-      favoriteCount: detail.favoriteCount,
-      favoritedSlot: wasFavorited ? null : (event.slot ?? 0),
-      tags: detail.tags,
-      comments: detail.comments,
-      totalCommentCount: detail.totalCommentCount,
-      thumbnails: detail.thumbnails,
-      archiveUrl: detail.archiveUrl,
-    );
-    emit(state.copyWith(detail: updatedDetail));
+    final revision = _detailRevision;
+    bool current() =>
+        !emit.isDone &&
+        revision == _detailRevision &&
+        state.detail?.gid == detail.gid &&
+        state.detail?.token == detail.token;
+    // Show progress until the request succeeds, rather than flashing success.
+    emit(state.copyWith(savingFavorite: true, clearFavoriteError: true));
 
     try {
       if (wasFavorited) {
@@ -110,9 +106,21 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
           ),
         );
       }
-    } catch (_) {
-      // Revert on failure
-      emit(state.copyWith(detail: detail));
+      if (current()) {
+        emit(state.copyWith(
+            detail: state.detail!
+                .withFavoriteSlot(wasFavorited ? null : (event.slot ?? 0)),
+            savingFavorite: false));
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('OVIEWER_FAVORITE failure=${error.runtimeType}'
+            ' status=${error is ApiException ? error.statusCode : null}');
+      }
+      if (current()) {
+        emit(state.copyWith(
+            savingFavorite: false, favoriteError: 'favoriteActionFailed'));
+      }
     }
   }
 

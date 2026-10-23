@@ -79,12 +79,24 @@ void main() {
       when(() => db.addLocalFavorite(any())).thenAnswer((_) async {});
       when(() => db.getLocalFavorite(any())).thenAnswer((_) async => null);
       when(() => db.removeLocalFavorite(any())).thenAnswer((_) async {});
-      when(() => dio.post(any(), data: any(named: 'data')))
-          .thenAnswer((call) async {
+      when(() => dio.post(any(),
+          data: any(named: 'data'),
+          contentType: any(named: 'contentType'),
+          headers: any(named: 'headers'))).thenAnswer((call) async {
         expect(Uri.parse(call.positionalArguments.first as String).host,
             ex ? 'exhentai.org' : 'e-hentai.org');
-        posts.add(
-            Map.fromEntries((call.namedArguments[#data] as FormData).fields));
+        expect(call.namedArguments[#contentType],
+            Headers.formUrlEncodedContentType);
+        final url = call.positionalArguments.first as String;
+        expect(call.namedArguments[#headers],
+            {'Origin': Uri.parse(url).origin, 'Referer': url});
+        final fields =
+            Map<String, String>.from(call.namedArguments[#data] as Map);
+        expect(fields['submit'], 'Apply Changes');
+        expect(fields['update'], '1');
+        expect(fields['favnote'], '');
+        expect(fields.containsKey('apply'), isFalse);
+        posts.add(fields);
         return '';
       });
       when(() => gallery.fetchGalleryDetail(42, 'abc')).thenAnswer((_) async =>
@@ -107,6 +119,96 @@ void main() {
       addTearDown(bloc.close);
     });
   }
+
+  for (final failRequest in [false, true]) {
+    test('pending favorite ignores duplicate clicks; failure=$failRequest',
+        () async {
+      final dio = MockDio();
+      final db = MockDb();
+      final gallery = MockGallery();
+      final pending = Completer<String>();
+      when(() => db.addLocalFavorite(any())).thenAnswer((_) async {});
+      when(() => db.removeLocalFavorite(any())).thenAnswer((_) async {});
+      when(() => dio.post(any(),
+          data: any(named: 'data'),
+          contentType: any(named: 'contentType'),
+          headers: any(named: 'headers'))).thenAnswer((_) => pending.future);
+      when(() => gallery.fetchGalleryDetail(42, 'abc')).thenAnswer((_) async =>
+          GalleryDetailParser.parse('<h1 id="gn">Gallery</h1>', 42, 'abc'));
+      final bloc = GalleryDetailBloc(gallery, FavoritesRepository(dio, db));
+      addTearDown(bloc.close);
+      bloc.add(const FetchGalleryDetail(gid: 42, token: 'abc'));
+      await flush();
+      final states = <GalleryDetailState>[];
+      final subscription = bloc.stream.listen(states.add);
+      addTearDown(subscription.cancel);
+      bloc.add(const ToggleFavorite(gid: 42, token: 'abc', slot: 4));
+      await flush();
+      expect(bloc.state.savingFavorite, isTrue);
+      expect(bloc.state.detail!.isFavorited, isFalse);
+      bloc.add(const ToggleFavorite(gid: 42, token: 'abc', slot: 4));
+      bloc.add(const FetchGalleryDetail(gid: 42, token: 'abc'));
+      await flush();
+      if (failRequest) {
+        pending.completeError(StateError('network failure'));
+      } else {
+        pending.complete('');
+      }
+      await flush();
+      expect(bloc.state.savingFavorite, isFalse);
+      expect(bloc.state.detail!.favoritedSlot, failRequest ? null : 4);
+      expect(bloc.state.favoriteError,
+          failRequest ? 'favoriteActionFailed' : null);
+      if (failRequest)
+        expect(states.any((s) => s.detail!.isFavorited), isFalse);
+      verify(() => dio.post(any(),
+          data: any(named: 'data'),
+          contentType: any(named: 'contentType'),
+          headers: any(named: 'headers'))).called(1);
+      verify(() => gallery.fetchGalleryDetail(42, 'abc')).called(1);
+      if (failRequest) {
+        verify(() => db.removeLocalFavorite(42)).called(1);
+        when(() => dio.post(any(),
+            data: any(named: 'data'),
+            contentType: any(named: 'contentType'),
+            headers: any(named: 'headers'))).thenAnswer((_) async => '');
+        bloc.add(const ToggleFavorite(gid: 42, token: 'abc', slot: 4));
+        await flush();
+        expect(bloc.state.detail!.favoritedSlot, 4);
+        expect(bloc.state.favoriteError, isNull);
+      }
+    });
+  }
+
+  test('late favorite completion cannot replace another gallery', () async {
+    final dio = MockDio();
+    final db = MockDb();
+    final gallery = MockGallery();
+    final pending = Completer<String>();
+    when(() => db.addLocalFavorite(any())).thenAnswer((_) async {});
+    when(() => dio.post(any(),
+        data: any(named: 'data'),
+        contentType: any(named: 'contentType'),
+        headers: any(named: 'headers'))).thenAnswer((_) => pending.future);
+    when(() => gallery.fetchGalleryDetail(any(), any())).thenAnswer(
+        (call) async => GalleryDetailParser.parse(
+            '<h1 id="gn">Gallery</h1>',
+            call.positionalArguments[0] as int,
+            call.positionalArguments[1] as String));
+    final bloc = GalleryDetailBloc(gallery, FavoritesRepository(dio, db));
+    addTearDown(bloc.close);
+    bloc.add(const FetchGalleryDetail(gid: 42, token: 'abc'));
+    await flush();
+    bloc.add(const ToggleFavorite(gid: 42, token: 'abc', slot: 4));
+    await flush();
+    bloc.add(const FetchGalleryDetail(gid: 43, token: 'def'));
+    await flush();
+    pending.complete('');
+    await flush();
+    expect(bloc.state.detail!.gid, 43);
+    expect(bloc.state.detail!.isFavorited, isFalse);
+    expect(bloc.state.savingFavorite, isFalse);
+  });
 
   for (final locale in ['zh', 'en']) {
     testWidgets(

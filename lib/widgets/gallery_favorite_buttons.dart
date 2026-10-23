@@ -7,11 +7,13 @@ class GalleryFavoriteButtons extends StatefulWidget {
   final SettingsRepository settings;
   final int? favoritedSlot;
   final ValueChanged<int> onToggle;
+  final bool saving;
 
   const GalleryFavoriteButtons(
       {super.key,
       required this.settings,
       required this.favoritedSlot,
+      this.saving = false,
       required this.onToggle});
 
   @override
@@ -73,7 +75,7 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
           key: const ValueKey('choose-favorite-destination'),
           tooltip:
               '${s.favoriteCategoryPreference}: ${s.favoriteCategory(widget.settings.getFavoriteDestination())}',
-          onPressed: _choosing ? null : _choose,
+          onPressed: _choosing || widget.saving ? null : _choose,
           icon: const Icon(Icons.menu, size: 20)),
       const SizedBox(width: 8),
       if (widget.favoritedSlot != null &&
@@ -83,11 +85,16 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
           message: s.removeFavorite,
           child: OutlinedButton.icon(
             key: const ValueKey('toggle-gallery-favorite'),
-            onPressed: _choosing
+            onPressed: _choosing || widget.saving
                 ? null
                 : () =>
                     widget.onToggle(widget.settings.getFavoriteDestination()),
-            icon: const Icon(Icons.favorite, size: 20, color: Colors.red),
+            icon: widget.saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.favorite, size: 20, color: Colors.red),
             label: Text(s.favoriteCategory(widget.favoritedSlot!)),
           ),
         )
@@ -96,16 +103,21 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
             key: const ValueKey('toggle-gallery-favorite'),
             tooltip:
                 widget.favoritedSlot != null ? s.removeFavorite : destination,
-            onPressed: _choosing
+            onPressed: _choosing || widget.saving
                 ? null
                 : () =>
                     widget.onToggle(widget.settings.getFavoriteDestination()),
-            icon: Icon(
-                widget.favoritedSlot != null
-                    ? Icons.favorite
-                    : Icons.favorite_border,
-                size: 20,
-                color: widget.favoritedSlot != null ? Colors.red : null)),
+            icon: widget.saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(
+                    widget.favoritedSlot != null
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    size: 20,
+                    color: widget.favoritedSlot != null ? Colors.red : null)),
     ]);
   }
 }

@@ -197,14 +197,18 @@ class FavoritesRepository {
     try {
       if (!current()) throw StateError('Favorites session expired');
       final url = ApiEndpoints.addFavorite(gid, token);
-      await _dio.post(url,
-          data: FormData.fromMap({
-            'favcat': slot.toString(),
-            'favnote': '',
-            'apply': 'Add to Favorites',
-            'update': '1',
-          }));
-      if (current()) _changes.value++;
+      await _dio
+          .post(url, contentType: Headers.formUrlEncodedContentType, headers: {
+        'Origin': Uri.parse(url).origin,
+        'Referer': url
+      }, data: {
+        'favcat': slot.toString(),
+        'favnote': '',
+        'submit': 'Apply Changes',
+        'update': '1',
+      });
+      if (!current()) throw StateError('Favorites session expired');
+      _changes.value++;
     } catch (_) {
       // Revert local cache on API failure
       if (current()) await _db.removeLocalFavorite(gid);
@@ -225,13 +229,18 @@ class FavoritesRepository {
     try {
       if (!current()) throw StateError('Favorites session expired');
       final url = ApiEndpoints.addFavorite(gid, token);
-      await _dio.post(url,
-          data: FormData.fromMap({
-            'favcat': 'favdel',
-            'apply': 'Apply Changes',
-            'update': '1',
-          }));
-      if (current()) _changes.value++;
+      await _dio
+          .post(url, contentType: Headers.formUrlEncodedContentType, headers: {
+        'Origin': Uri.parse(url).origin,
+        'Referer': url
+      }, data: {
+        'favcat': 'favdel',
+        'favnote': '',
+        'submit': 'Apply Changes',
+        'update': '1',
+      });
+      if (!current()) throw StateError('Favorites session expired');
+      _changes.value++;
     } catch (_) {
       // Revert local cache on API failure
       if (existing != null && current()) {

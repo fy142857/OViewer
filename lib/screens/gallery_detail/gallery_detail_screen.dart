@@ -94,8 +94,15 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
     final s = S.of(context);
     return BlocConsumer<GalleryDetailBloc, GalleryDetailState>(
       listenWhen: (before, after) =>
-          before.status != after.status || before.voteError != after.voteError,
+          before.status != after.status ||
+          before.voteError != after.voteError ||
+          before.favoriteError != after.favoriteError,
       listener: (context, state) {
+        if (state.favoriteError != null &&
+            ModalRoute.of(context)?.isCurrent == true) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(s.favoriteActionFailed)));
+        }
         if (state.voteError != null &&
             ModalRoute.of(context)?.isCurrent == true) {
           ScaffoldMessenger.of(context)
@@ -419,6 +426,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
               GalleryFavoriteButtons(
                 settings: GetIt.I<SettingsRepository>(),
                 favoritedSlot: detail.favoritedSlot,
+                saving: context.read<GalleryDetailBloc>().state.savingFavorite,
                 onToggle: (slot) => _toggleFavorite(context, detail, slot),
               ),
             ]),

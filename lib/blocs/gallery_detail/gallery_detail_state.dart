@@ -16,6 +16,8 @@ class GalleryDetailState extends Equatable {
   final String? voteError;
   final CommentPostStatus postStatus;
   final String? postError;
+  final bool savingFavorite;
+  final String? favoriteError;
 
   const GalleryDetailState({
     this.status = GalleryDetailStatus.initial,
@@ -28,6 +30,8 @@ class GalleryDetailState extends Equatable {
     this.voteError,
     this.postStatus = CommentPostStatus.idle,
     this.postError,
+    this.savingFavorite = false,
+    this.favoriteError,
   });
 
   GalleryDetailState copyWith({
@@ -44,6 +48,9 @@ class GalleryDetailState extends Equatable {
     bool clearCommentsError = false,
     bool clearVoteError = false,
     bool clearPostError = false,
+    bool? savingFavorite,
+    String? favoriteError,
+    bool clearFavoriteError = false,
   }) {
     return GalleryDetailState(
       status: status ?? this.status,
@@ -57,6 +64,9 @@ class GalleryDetailState extends Equatable {
       voteError: clearVoteError ? null : voteError ?? this.voteError,
       postStatus: postStatus ?? this.postStatus,
       postError: clearPostError ? null : postError ?? this.postError,
+      savingFavorite: savingFavorite ?? this.savingFavorite,
+      favoriteError:
+          clearFavoriteError ? null : favoriteError ?? this.favoriteError,
     );
   }
 
@@ -71,6 +81,8 @@ class GalleryDetailState extends Equatable {
         votingComments,
         voteError,
         postStatus,
-        postError
+        postError,
+        savingFavorite,
+        favoriteError,
       ];
 }
