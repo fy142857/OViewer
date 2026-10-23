@@ -142,6 +142,7 @@ class ApkUpdateRuntime(private val app: OViewerApplication, messenger: BinaryMes
             "ready" -> if (zh) "下载完成，点击安装" else "Download complete. Tap to install"
             "verifying" -> if (zh) "正在校验安装包" else "Verifying update"
             "interrupted" -> if (zh) "下载已中断，点击继续" else "Download interrupted. Tap to continue"
+            "paused" -> if (zh) "下载已暂停，点击继续" else "Download paused. Tap to continue"
             "error" -> if (zh) "更新失败，点击查看" else "Update failed. Tap for details"
             else -> String.format(java.util.Locale.ROOT, "%d%% · %.1f / %.1f MB",
                 if (total > 0) (received * 100 / total).toInt() else 0,

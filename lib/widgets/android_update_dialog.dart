@@ -51,6 +51,7 @@ class AndroidUpdateDialog extends StatelessWidget {
         final update = state.update;
         final result = state.result;
         final downloading = state.phase == ApkUpdatePhase.downloading;
+        final pausing = state.phase == ApkUpdatePhase.pausing;
         final verifying = state.phase == ApkUpdatePhase.verifying;
         final checking = state.phase == ApkUpdatePhase.checking;
         final ready = state.phase == ApkUpdatePhase.ready;
@@ -61,6 +62,7 @@ class AndroidUpdateDialog extends StatelessWidget {
         String? status;
         if (ready) status = s.updateReady;
         if (interrupted) status = s.updateInterrupted;
+        if (interrupted && error == 'paused') status = s.paused;
         if (state.phase == ApkUpdatePhase.waitingPermission)
           status = s.updatePermission;
         if (result?.status == UpdateStatus.current) status = s.versionCurrent;
@@ -70,7 +72,7 @@ class AndroidUpdateDialog extends StatelessWidget {
         final retryInstall = state.path != null &&
             const ['permission', 'no_installer', 'unavailable'].contains(error);
         return AlertDialog(
-          title: Text(downloading
+          title: Text(downloading || pausing
               ? s.updateDownloading
               : verifying
                   ? s.updateVerifying
@@ -111,10 +113,11 @@ class AndroidUpdateDialog extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(status)
                     ],
-                    if (downloading || verifying || interrupted) ...[
+                    if (downloading || pausing || verifying || interrupted) ...[
                       const SizedBox(height: 16),
                       LinearProgressIndicator(
-                          value: (downloading || interrupted) && update != null
+                          value: (downloading || pausing || interrupted) &&
+                                  update != null
                               ? state.received / update.size
                               : null),
                       const SizedBox(height: 8),
@@ -123,7 +126,7 @@ class AndroidUpdateDialog extends StatelessWidget {
                       const SizedBox(height: 8),
                       if (!interrupted) Text(s.updateHiddenHint),
                     ],
-                    if (error != null) ...[
+                    if (error != null && error != 'paused') ...[
                       const SizedBox(height: 12),
                       Text(s.updateApkError(error))
                     ],
@@ -196,18 +199,31 @@ class AndroidUpdateDialog extends StatelessWidget {
                 ],
               )
             else
-              _dismissActions(context, s, working: downloading || verifying),
+              _dismissActions(context, s,
+                  working: downloading || pausing || verifying,
+                  showPause: downloading || pausing,
+                  pausing: pausing),
           ],
         );
       });
 
-  Widget _dismissActions(BuildContext context, S s, {bool working = false}) =>
+  Widget _dismissActions(BuildContext context, S s,
+          {bool working = false,
+          bool showPause = false,
+          bool pausing = false}) =>
       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
         if (working)
           Flexible(
             flex: 4,
             child: TextButton(
                 onPressed: cubit.cancel, child: Text(s.updateDownloadCancel)),
+          ),
+        if (showPause)
+          Flexible(
+            flex: 2,
+            child: TextButton(
+                onPressed: pausing ? null : cubit.pause,
+                child: Text(s.updatePause)),
           ),
         Flexible(
           flex: 2,

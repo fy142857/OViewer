@@ -113,6 +113,26 @@ void main() {
         await tester.tap(update);
         await tester.pump();
         expect(downloads.starts, 1);
+        final pause =
+            find.widgetWithText(TextButton, language == 'zh' ? '暂停' : 'Pause');
+        final cancelDownload = find.widgetWithText(
+            TextButton, language == 'zh' ? '取消下载' : 'Cancel download');
+        final hide =
+            find.widgetWithText(TextButton, language == 'zh' ? '隐藏' : 'Hide');
+        for (final scale in [1.0, 2.0]) {
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          await tester.binding.setSurfaceSize(const Size(320, 800));
+          await tester.pump();
+          expect(tester.getRect(cancelDownload).right,
+              lessThanOrEqualTo(tester.getRect(pause).left));
+          expect(tester.getRect(pause).right,
+              lessThanOrEqualTo(tester.getRect(hide).left));
+          expect(tester.getCenter(pause).dy, tester.getCenter(hide).dy);
+          expect(tester.takeException(), isNull);
+        }
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
+        await tester.binding.setSurfaceSize(const Size(360, 800));
+        await tester.pump();
         await tester.tap(find.text(language == 'zh' ? '隐藏' : 'Hide'));
         await tester.pumpAndSettle();
         showTile.value = false;

@@ -14,6 +14,7 @@ enum ApkUpdatePhase {
   checking,
   available,
   downloading,
+  pausing,
   verifying,
   waitingPermission,
   ready,
@@ -33,6 +34,7 @@ class ApkUpdateState {
   bool get working => const [
         ApkUpdatePhase.checking,
         ApkUpdatePhase.downloading,
+        ApkUpdatePhase.pausing,
         ApkUpdatePhase.verifying
       ].contains(phase);
 }
@@ -207,12 +209,12 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
       if (!_active(generation)) return;
       if (_interruption != null) throw ApkUpdateException(_interruption!);
       final file = await downloads.download(update, progress: (n) {
-        if (_active(generation)) {
+        if (_active(generation) && _interruption == null) {
           _set(ApkUpdatePhase.downloading, received: n);
           if (session != null) platform?.progress(session, n);
         }
       }, verifying: () {
-        if (_active(generation)) {
+        if (_active(generation) && _interruption == null) {
           _set(ApkUpdatePhase.verifying);
           if (session != null)
             platform?.progress(session, update.size, verifying: true);
@@ -247,14 +249,21 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
         }
         final partial = await downloads.restorePartial();
         if (!_active(generation)) return;
-        outcome = partial != null ? 'interrupted' : 'error';
+        final paused = code == 'paused';
+        outcome = paused
+            ? 'paused'
+            : partial != null
+                ? 'interrupted'
+                : 'error';
         if (session != null) {
           await platform!.finish(session, outcome);
           session = null;
         }
         if (!_active(generation)) return;
         emit(ApkUpdateState(
-            partial != null ? ApkUpdatePhase.interrupted : ApkUpdatePhase.error,
+            paused || partial != null
+                ? ApkUpdatePhase.interrupted
+                : ApkUpdatePhase.error,
             update: update,
             result: state.result,
             received: partial?.received ?? 0,
@@ -270,6 +279,15 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
         }
       }
     }
+  }
+
+  void pause() {
+    if (state.phase != ApkUpdatePhase.downloading) return;
+    _autoInstall = false;
+    _interruption = 'paused';
+    _set(ApkUpdatePhase.pausing);
+    // Interrupt preserves the partial file; cancel intentionally removes it.
+    downloads.interrupt();
   }
 
   void cancel() {

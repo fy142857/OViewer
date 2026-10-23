@@ -59,6 +59,32 @@ void main() {
     expect(await folder.list().isEmpty, isTrue);
   });
 
+  test('explicit interruption preserves bytes and resumes with Range',
+      () async {
+    final first = service(StreamClient(() async => http.StreamedResponse(
+        Stream.fromIterable([bytes.take(3).toList(), bytes.skip(3).toList()]),
+        200,
+        contentLength: 6,
+        headers: {'etag': '"asset-v1"'})));
+    await expectLater(
+        first.download(packageFor(bytes),
+            progress: (n) {
+              if (n == 3) first.interrupt();
+            },
+            verifying: () => fail('Interrupted download must not verify')),
+        throwsA(isA<ApkUpdateException>()
+            .having((e) => e.code, 'code', 'interrupted')));
+    expect((await first.restorePartial())!.received, 3);
+    final next = service(MockClient((r) async {
+      expect(r.headers['Range'], 'bytes=3-');
+      return http.Response.bytes(bytes.skip(3).toList(), 206,
+          headers: {'content-range': 'bytes 3-5/6'});
+    }));
+    final apk = await next.download(packageFor(bytes),
+        progress: (_) {}, verifying: () {});
+    expect(await apk.readAsBytes(), bytes);
+  });
+
   test('200 after Range truncates the old bytes instead of appending',
       () async {
     await interrupted();

@@ -33,7 +33,11 @@ class ControlledDownloads extends ApkDownloadService {
   @override
   Future<PartialApk?> restorePartial() async => partial;
   @override
-  void interrupt() {}
+  void interrupt() {
+    interrupts++;
+  }
+
+  int interrupts = 0;
   int starts = 0;
   int cancels = 0;
   int discards = 0;
@@ -220,6 +224,73 @@ void main() {
     expect(installer.installs, 0);
     expect(cubit.state.phase, ApkUpdatePhase.available);
     expect(cubit.state.path, isNull);
+  });
+
+  test(
+      'pause retains progress, stops service, and allows explicit continuation',
+      () async {
+    await cubit.close();
+    final platform = FakeUpdatePlatform();
+    cubit = UpdateCubit(repo, downloads, installer, platform: platform)
+      ..windowOpened();
+    await cubit.check();
+    final work = cubit.start();
+    await settleUpdate();
+    downloads.progress!(2);
+    downloads.partial = PartialApk(repo.package, File('package.part'), 2, null);
+    final before = downloads.interrupts;
+    cubit.pause();
+    cubit.pause();
+    expect(downloads.interrupts, before + 1);
+    expect(cubit.state.phase, ApkUpdatePhase.pausing);
+    downloads.progress!(3); // A queued progress callback cannot undo pausing.
+    await cubit.start();
+    expect(downloads.starts, 1);
+    downloads.pending.completeError(const ApkUpdateException('interrupted'));
+    await work;
+    expect(cubit.state.phase, ApkUpdatePhase.interrupted);
+    expect(cubit.state.error, 'paused');
+    expect(cubit.state.received, 2);
+    expect(downloads.discards, 0);
+    expect(downloads.cancels, 0);
+    expect(platform.finished, ['paused']);
+    expect(installer.installs, 0);
+    downloads.pending = Completer<File>();
+    final resumed = cubit.start();
+    await settleUpdate();
+    expect(downloads.starts, 2);
+    downloads.pending.complete(File('package.apk'));
+    await resumed;
+    expect(cubit.state.phase, ApkUpdatePhase.ready);
+  });
+
+  test('pause before service acknowledgement does not start transfer',
+      () async {
+    await cubit.close();
+    final platform = FakeUpdatePlatform()..pendingStart = Completer<int>();
+    cubit = UpdateCubit(repo, downloads, installer, platform: platform);
+    await cubit.check();
+    final work = cubit.start();
+    cubit.pause();
+    platform.pendingStart!.complete(1);
+    await work;
+    expect(downloads.starts, 0);
+    expect(cubit.state.phase, ApkUpdatePhase.interrupted);
+    expect(cubit.state.received, 0);
+    expect(platform.finished, ['paused']);
+    expect(downloads.discards, 0);
+  });
+
+  test('pause racing completed download retains APK without auto installation',
+      () async {
+    await cubit.check();
+    final work = cubit.start();
+    cubit.pause();
+    downloads.pending.complete(File('package.apk'));
+    await work;
+    expect(cubit.state.phase, ApkUpdatePhase.ready);
+    expect(installer.installs, 0);
+    expect(downloads.discards, 0);
   });
 
   test('complete package restoration is local and never auto installs',

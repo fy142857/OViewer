@@ -144,6 +144,7 @@ class S {
   String get updateReleaseLink => _zh ? '跳转发布页（下载更稳）' : 'Open release page (more reliable download)';
   String get updateHide => _zh ? '隐藏' : 'Hide';
   String get updateContinue => _zh ? '继续下载' : 'Continue';
+  String get updatePause => _zh ? '暂停' : 'Pause';
   String get updateInterrupted => _zh ? '下载已中断，可继续下载' : 'Download interrupted. You can continue.';
   String get updateDownloadCancel => _zh ? '取消下载' : 'Cancel download';
   String get updateDownloading => _zh ? '正在下载安装包…' : 'Downloading update…';
