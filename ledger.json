@@ -5045,7 +5045,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 修正详情页收藏请求的表单字段与提交格式，补齐来源信息；提交时显示进度并防止重复点击，成功后才更新收藏状态，失败时保留原状态并提示重试。\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "f717aa3b48d71e0b304cc1a215b91346e2c4ea73",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "fix",
