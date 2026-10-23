@@ -5034,8 +5034,33 @@
         }
       ],
       "version": "1.10.0"
+    },
+    {
+      "base_tag": "v1.10.0",
+      "branch": "dev",
+      "build_number": 106,
+      "build_sha": "15fe2ddc53de207a90e0628dd73550771246e064",
+      "candidate_id": "1.10.1+106",
+      "fingerprint": "1d72d58654cd0f61b6b8e1c35db23b149e684328e1c411b994a9c8b52a87f7d7",
+      "notes": "### 新增\n\n### 修复\n\n- 修正详情页收藏请求的表单字段与提交格式，补齐来源信息；提交时显示进度并防止重复点击，成功后才更新收藏状态，失败时保留原状态并提示重试。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "f717aa3b48d71e0b304cc1a215b91346e2c4ea73",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Send URL-encoded favorite forms with the submit field and same-site origin and referrer, prevent duplicate mutations, and keep detail state unchanged until success with visible failure feedback.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "f717aa3b48d71e0b304cc1a215b91346e2c4ea73",
+          "subject": "fix(favorites): correct form submission and await favorite changes",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.10.1"
     }
   ],
-  "last_build_number": 105,
+  "last_build_number": 106,
   "schema": 1
 }
