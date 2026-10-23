@@ -5070,7 +5070,7 @@
       "notes": "### 新增\n\n### 修复\n\n- 修正详情页收藏请求的表单字段与提交格式，补齐来源信息；保留点击立即改变状态的交互，防止重复提交，失败时恢复原收藏状态并提示重试。\n\n### 变更\n\n### 已知限制",
       "schema": 1,
       "source_sha": "b52fac41c23fbaa1a3b212649e2adefc94b11a05",
-      "stage": "reserved",
+      "stage": "ready",
       "summary": [
         {
           "change_kind": "fix",
