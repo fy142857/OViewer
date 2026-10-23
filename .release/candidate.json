@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.10.1",
   "branch": "dev",
-  "build_number": 110,
-  "candidate_id": "1.10.2+110",
-  "fingerprint": "cfcb59aa8d8593f1760ff52026830adc673830359f2ef9b1117fe2ab92b7aa3f",
-  "notes": "### 新增\n\n### 修复\n\n- 改善 Android 应用内更新的后台下载：新增通知栏进度、中断续传；隐藏窗口或切后台后完成下载时由用户点击安装，取消下载会清理文件（#60）。\n\n### 变更\n\n- 更新窗口的“重新检查版本”移至“立即更新”上方单独一行，并靠右对齐。\n\n### 已知限制",
+  "build_number": 111,
+  "candidate_id": "1.10.2+111",
+  "fingerprint": "977b0d1e354bffe7eaf996c68b30d2d6fea08d39ae989275853d21e6eee0b4dc",
+  "notes": "### 新增\n\n### 修复\n\n- 改善 Android 应用内更新的后台下载：新增通知栏进度、中断续传；隐藏窗口或切后台后完成下载时由用户点击安装，取消下载会清理文件（#60）。\n\n### 变更\n\n- 更新窗口的“重新检查版本”移至主操作按钮上方并靠右对齐；降低主按钮高度，“取消”的右边缘与上行重新检查按钮的左边缘对齐。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "c3b64bc2030e96429ad6d444d1e8f171c76175a6",
+  "source_sha": "c2d8d18a02ea48141615b3cc0b99e322b453bad1",
   "summary": [
     {
       "change_kind": "fix",
@@ -25,6 +25,16 @@
       "original_type": "fix",
       "sha": "c3b64bc2030e96429ad6d444d1e8f171c76175a6",
       "subject": "fix(updates): right-align recheck above the install action",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "Reduce update action surface height while preserving tap targets, and align the lower cancel edge to the recheck column with narrow-screen and large-text coverage.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "c2d8d18a02ea48141615b3cc0b99e322b453bad1",
+      "subject": "fix(updates): compact primary buttons and align dismiss actions",
       "type": "fix",
       "version_impact": "patch"
     }
