@@ -65,10 +65,12 @@ void main() {
           await tester.pumpAndSettle();
           final recheckRect = tester.getRect(recheck);
           final updateRect = tester.getRect(update);
-          expect(recheckRect.center.dy, closeTo(updateRect.center.dy, 0.1));
-          expect(recheckRect.right, lessThanOrEqualTo(updateRect.left));
-          expect(tester.getRect(cancel).right,
-              lessThanOrEqualTo(recheckRect.left));
+          expect(recheckRect.bottom, lessThanOrEqualTo(updateRect.top));
+          expect(recheckRect.right, closeTo(updateRect.right, 0.1));
+          expect(tester.getRect(cancel).center.dy,
+              closeTo(updateRect.center.dy, 0.1));
+          expect(
+              tester.getRect(cancel).right, lessThanOrEqualTo(updateRect.left));
           final row =
               find.ancestor(of: update, matching: find.byType(Row)).first;
           expect(updateRect.right, closeTo(tester.getRect(row).right, 0.1));

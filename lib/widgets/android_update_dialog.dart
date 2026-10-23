@@ -138,58 +138,68 @@ class AndroidUpdateDialog extends StatelessWidget {
                   ]))),
           actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
           actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (downloading || verifying || interrupted)
-                  Flexible(
-                    flex: 4,
-                    child: TextButton(
-                        onPressed: cubit.cancel,
-                        child: Text(s.updateDownloadCancel)),
-                  ),
-                Flexible(
-                  flex: 2,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: const Size(48, 48)),
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                        downloading || verifying ? s.updateHide : s.cancel),
-                  ),
-                ),
                 if (!state.working &&
-                    state.phase != ApkUpdatePhase.waitingPermission)
-                  Flexible(
-                    flex: 4,
+                    state.phase != ApkUpdatePhase.waitingPermission) ...[
+                  Align(
+                    alignment: Alignment.centerRight,
                     child: TextButton(
+                      style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(48, 48)),
+                      onPressed: () => unawaited(cubit.check(fresh: true)),
+                      child: Text(s.updateCheckAgain),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (downloading || verifying || interrupted)
+                      Flexible(
+                        flex: 4,
+                        child: TextButton(
+                            onPressed: cubit.cancel,
+                            child: Text(s.updateDownloadCancel)),
+                      ),
+                    Flexible(
+                      flex: 2,
+                      child: TextButton(
                         style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             minimumSize: const Size(48, 48)),
-                        onPressed: () => unawaited(cubit.check(fresh: true)),
-                        child: Text(s.updateCheckAgain)),
-                  ),
-                if (update != null &&
-                    !state.working &&
-                    state.phase != ApkUpdatePhase.waitingPermission)
-                  Flexible(
-                    flex: 3,
-                    child: FilledButton(
-                        style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: const Size(48, 48)),
-                        onPressed: () => unawaited(ready || retryInstall
-                            ? cubit.install()
-                            : cubit.start()),
-                        child: Text(ready || retryInstall
-                            ? s.installNow
-                            : interrupted
-                                ? s.updateContinue
-                                : error != null
-                                    ? s.retry
-                                    : s.updateNow)),
-                  ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                            downloading || verifying ? s.updateHide : s.cancel),
+                      ),
+                    ),
+                    if (update != null &&
+                        !state.working &&
+                        state.phase != ApkUpdatePhase.waitingPermission)
+                      Flexible(
+                        flex: 3,
+                        child: FilledButton(
+                            style: FilledButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: const Size(48, 48)),
+                            onPressed: () => unawaited(ready || retryInstall
+                                ? cubit.install()
+                                : cubit.start()),
+                            child: Text(ready || retryInstall
+                                ? s.installNow
+                                : interrupted
+                                    ? s.updateContinue
+                                    : error != null
+                                        ? s.retry
+                                        : s.updateNow)),
+                      ),
+                  ],
+                ),
               ],
             ),
           ],
