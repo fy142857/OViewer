@@ -138,71 +138,102 @@ class AndroidUpdateDialog extends StatelessWidget {
                   ]))),
           actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
           actions: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (!state.working &&
-                    state.phase != ApkUpdatePhase.waitingPermission) ...[
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          minimumSize: const Size(48, 48)),
-                      onPressed: () => unawaited(cubit.check(fresh: true)),
-                      child: Text(s.updateCheckAgain),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (downloading || verifying || interrupted)
-                      Flexible(
-                        flex: 4,
+            if (!state.working &&
+                state.phase != ApkUpdatePhase.waitingPermission)
+              Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(),
+                  1: _UpdateActionColumnWidth(),
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  TableRow(children: [
+                    if (interrupted)
+                      Align(
+                        alignment: Alignment.centerRight,
                         child: TextButton(
                             onPressed: cubit.cancel,
                             child: Text(s.updateDownloadCancel)),
-                      ),
-                    Flexible(
-                      flex: 2,
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
                       child: TextButton(
                         style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             minimumSize: const Size(48, 48)),
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                            downloading || verifying ? s.updateHide : s.cancel),
+                        onPressed: () => unawaited(cubit.check(fresh: true)),
+                        child: Text(s.updateCheckAgain),
                       ),
                     ),
-                    if (update != null &&
-                        !state.working &&
-                        state.phase != ApkUpdatePhase.waitingPermission)
-                      Flexible(
-                        flex: 3,
+                  ]),
+                  TableRow(children: [
+                    _dismissActions(context, s),
+                    if (update != null)
+                      Align(
+                        alignment: Alignment.centerRight,
                         child: FilledButton(
-                            style: FilledButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                minimumSize: const Size(48, 48)),
-                            onPressed: () => unawaited(ready || retryInstall
-                                ? cubit.install()
-                                : cubit.start()),
-                            child: Text(ready || retryInstall
-                                ? s.installNow
-                                : interrupted
-                                    ? s.updateContinue
-                                    : error != null
-                                        ? s.retry
-                                        : s.updateNow)),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                          style: FilledButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: const Size(48, 36)),
+                          onPressed: () => unawaited(ready || retryInstall
+                              ? cubit.install()
+                              : cubit.start()),
+                          child: Text(ready || retryInstall
+                              ? s.installNow
+                              : interrupted
+                                  ? s.updateContinue
+                                  : error != null
+                                      ? s.retry
+                                      : s.updateNow),
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                  ]),
+                ],
+              )
+            else
+              _dismissActions(context, s, working: downloading || verifying),
           ],
         );
       });
+
+  Widget _dismissActions(BuildContext context, S s, {bool working = false}) =>
+      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        if (working)
+          Flexible(
+            flex: 4,
+            child: TextButton(
+                onPressed: cubit.cancel, child: Text(s.updateDownloadCancel)),
+          ),
+        Flexible(
+          flex: 2,
+          child: TextButton(
+            style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(48, 48)),
+            onPressed: () => Navigator.pop(context),
+            child: Text(working ? s.updateHide : s.cancel),
+          ),
+        ),
+      ]);
+}
+
+// Keep the right column at its natural width while reserving room for dismiss
+// actions on narrow screens or when accessibility text is enlarged.
+class _UpdateActionColumnWidth extends IntrinsicColumnWidth {
+  const _UpdateActionColumnWidth();
+  @override
+  double minIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) =>
+      super
+          .minIntrinsicWidth(cells, containerWidth)
+          .clamp(0.0, containerWidth / 2);
+  @override
+  double maxIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) =>
+      super
+          .maxIntrinsicWidth(cells, containerWidth)
+          .clamp(0.0, containerWidth / 2);
 }
