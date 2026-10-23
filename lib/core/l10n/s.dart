@@ -384,6 +384,15 @@ class S {
   String get accountChallenge => _zh
       ? '因网络原因触发安全验证，前往webview完成验证'
       : 'A network security check is required. Continue in WebView to complete verification.';
+  String get accountBrowserRequired => _zh
+      ? '自动检查未能完成，可重试或前往 WebView 登录'
+      : 'The automatic check could not finish. Retry or continue in WebView.';
+  String get accountLoginWaiting => _zh
+      ? '正在登录，自动检查可能需要片刻'
+      : 'Signing in. Automatic checks may take a moment.';
+  String get accountVerificationHint => _zh
+      ? '正在完成网页验证；如出现验证框，请在下方完成，无需重复输入账号密码。'
+      : 'Completing website verification. If prompted, complete the check below; no need to re-enter your credentials.';
   String get accountNetworkError => _zh
       ? '连接失败，请检查网络或代理后重试'
       : 'Connection failed. Check your network or proxy and retry.';

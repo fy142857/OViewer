@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,9 @@ import '../core/constants/app_constants.dart';
 import '../core/l10n/s.dart';
 import '../core/network/network_proxy_io.dart';
 
+typedef PublicLoginInspector = Future<Map<String, dynamic>?> Function(
+    String script);
+
 /// Owns one browser session, including while switching tabs or saving a login.
 class LoginWebView extends StatefulWidget {
   const LoginWebView({
@@ -15,11 +19,28 @@ class LoginWebView extends StatefulWidget {
     required this.url,
     required this.enabled,
     required this.onLogin,
+    this.publicOnly = false,
+    this.onInspectorReady,
   });
 
   final Uri url;
   final bool enabled;
   final ValueChanged<Map<String, String>> onLogin;
+  final bool publicOnly;
+  final ValueChanged<PublicLoginInspector>? onInspectorReady;
+
+  static bool allowsPublicNavigation(Uri? uri, String? method) {
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.userInfo.isNotEmpty ||
+        uri.port != 443 ||
+        !const {'forums.e-hentai.org', 'e-hentai.org'}.contains(uri.host))
+      return false;
+    return !(method == 'POST' &&
+        uri.path == '/index.php' &&
+        uri.queryParameters['act'] == 'Login' &&
+        uri.queryParameters['CODE'] == '01');
+  }
 
   @override
   State<LoginWebView> createState() => _LoginWebViewState();
@@ -33,6 +54,7 @@ class _LoginWebViewState extends State<LoginWebView>
   bool _checking = false;
   bool _submitted = false;
   bool _loadFailed = false;
+  bool _publicGuardInstalled = false;
   Uri? _pendingUrl;
   late Future<void> _networkReady = NetworkProxy.waitUntilReady();
 
@@ -55,7 +77,11 @@ class _LoginWebViewState extends State<LoginWebView>
           .contains(url?.host);
 
   Future<void> _checkLogin(Uri? url) async {
-    if (!mounted || !widget.enabled || _submitted || !_trusted(url)) return;
+    if (!mounted ||
+        widget.publicOnly ||
+        !widget.enabled ||
+        _submitted ||
+        !_trusted(url)) return;
     _pendingUrl = url;
     if (_checking) return;
     _checking = true;
@@ -125,6 +151,42 @@ class _LoginWebViewState extends State<LoginWebView>
           break;
       }
     });
+    widget.onInspectorReady?.call(_inspectPublicForm);
+  }
+
+  Future<Map<String, dynamic>?> _inspectPublicForm(String script) async {
+    if (!mounted || !widget.publicOnly) return {'failed': true};
+    dynamic snapshot;
+    if (_channel != null) {
+      snapshot = await _channel!.invokeMapMethod<String, dynamic>(
+          'inspectPublicForm', {'script': script});
+    } else {
+      final controller = _androidController;
+      final url = await controller?.getUrl();
+      if (!LoginWebView.allowsPublicNavigation(url, 'GET'))
+        return {'ready': false};
+      // Leave interstitials untouched; inspect only the ordinary login page.
+      final title = (await controller?.getTitle())?.trim().toLowerCase();
+      if (!const {'log in', 'login', 'e-hentai.org login'}.contains(title)) {
+        return {'ready': false, 'phase': 'page_loading'};
+      }
+      if (!_publicGuardInstalled) {
+        _publicGuardInstalled = true;
+        await controller?.setOptions(options: _options());
+      }
+      snapshot = await controller?.evaluateJavascript(source: script);
+    }
+    if (!mounted || snapshot is! Map) return {'ready': false};
+    final result = Map<String, dynamic>.from(snapshot);
+    if (result['ready'] == true) {
+      final values = await CookieManager.instance().getCookies(url: widget.url);
+      if (!mounted) return {'failed': true};
+      result['cookies'] = values
+          .where((c) => const {'cf_clearance', '__cf_bm'}.contains(c.name))
+          .map((c) => '${c.name}=${c.value}')
+          .join('; ');
+    }
+    return result;
   }
 
   Future<void> _reload() async {
@@ -171,14 +233,15 @@ class _LoginWebViewState extends State<LoginWebView>
   Widget _buildReady(BuildContext context) {
     final s = S.of(context);
     return Column(children: [
-      Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: widget.enabled ? _reload : null,
-          icon: const Icon(Icons.refresh),
-          label: Text(s.reloadLoginPage),
+      if (!widget.publicOnly)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: widget.enabled ? _reload : null,
+            icon: const Icon(Icons.refresh),
+            label: Text(s.reloadLoginPage),
+          ),
         ),
-      ),
       if (_loadFailed)
         Padding(
           padding: const EdgeInsets.all(8),
@@ -188,26 +251,41 @@ class _LoginWebViewState extends State<LoginWebView>
         child: defaultTargetPlatform == TargetPlatform.iOS
             ? UiKitView(
                 viewType: 'oviewer/login-webview',
-                creationParams: {'url': widget.url.toString()},
+                creationParams: {
+                  'url': widget.url.toString(),
+                  if (widget.publicOnly) 'publicOnly': true
+                },
                 creationParamsCodec: const StandardMessageCodec(),
                 onPlatformViewCreated: _created,
               )
             : InAppWebView(
                 initialUrlRequest: URLRequest(url: widget.url),
-                initialOptions: InAppWebViewGroupOptions(
-                  crossPlatform: InAppWebViewOptions(
-                    javaScriptEnabled: true,
-                    useShouldOverrideUrlLoading: false,
-                    cacheEnabled: true,
-                    incognito: false,
-                  ),
-                  android: AndroidInAppWebViewOptions(
-                    domStorageEnabled: true,
-                    thirdPartyCookiesEnabled: true,
-                  ),
-                ),
-                onWebViewCreated: (controller) =>
-                    _androidController = controller,
+                initialOptions: _options(),
+                onWebViewCreated: (controller) {
+                  _androidController = controller;
+                  widget.onInspectorReady?.call(_inspectPublicForm);
+                },
+                shouldOverrideUrlLoading: (_, action) async =>
+                    !widget.publicOnly ||
+                            action.isForMainFrame == false ||
+                            LoginWebView.allowsPublicNavigation(
+                                action.request.url, action.request.method)
+                        ? NavigationActionPolicy.ALLOW
+                        : NavigationActionPolicy.CANCEL,
+                androidShouldInterceptRequest: (_, request) async {
+                  if (widget.publicOnly &&
+                      request.isForMainFrame == true &&
+                      !LoginWebView.allowsPublicNavigation(
+                          request.url, request.method)) {
+                    return WebResourceResponse(
+                        contentType: 'text/plain',
+                        data: Uint8List(0),
+                        statusCode: 403,
+                        reasonPhrase: 'Blocked',
+                        headers: {});
+                  }
+                  return null;
+                },
                 onLoadStart: (_, __) => _failed(false),
                 onLoadStop: (_, url) => _checkLogin(url),
                 onUpdateVisitedHistory: (_, url, __) => _checkLogin(url),
@@ -218,4 +296,17 @@ class _LoginWebViewState extends State<LoginWebView>
       ),
     ]);
   }
+
+  InAppWebViewGroupOptions _options() => InAppWebViewGroupOptions(
+        crossPlatform: InAppWebViewOptions(
+            javaScriptEnabled: true,
+            useShouldOverrideUrlLoading: widget.publicOnly,
+            cacheEnabled: !widget.publicOnly,
+            incognito: false),
+        android: AndroidInAppWebViewOptions(
+            domStorageEnabled: true,
+            thirdPartyCookiesEnabled: true,
+            useShouldInterceptRequest:
+                widget.publicOnly && _publicGuardInstalled),
+      );
 }

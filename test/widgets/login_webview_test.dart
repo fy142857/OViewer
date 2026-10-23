@@ -17,6 +17,7 @@ import 'package:oviewer/repositories/auth_repository.dart';
 import 'package:oviewer/screens/login/login_screen.dart';
 import 'package:oviewer/widgets/login_webview.dart';
 import 'package:oviewer/core/network/account_login_client.dart';
+import 'package:oviewer/core/network/automatic_login_check.dart';
 
 class MockSettingsBloc extends Mock implements SettingsBloc {}
 
@@ -79,6 +80,7 @@ void main() {
   });
 
   tearDown(() async {
+    AutomaticLoginCheck.activeView.value = null;
     for (final view in views) {
       messenger.setMockMethodCallHandler(
           MethodChannel('oviewer/login-webview/${view['id']}'), null);
@@ -94,11 +96,53 @@ void main() {
         value: settings,
         child: MaterialApp(home: Scaffold(body: child)),
       );
-  Widget page({bool enabled = true}) => app(LoginWebView(
+  Widget page({bool enabled = true, bool publicOnly = false}) =>
+      app(LoginWebView(
         url: loginUrl,
         enabled: enabled,
+        publicOnly: publicOnly,
         onLogin: submissions.add,
       ));
+
+  test(
+      'public preparation allows checks but never browser login submission or external navigation',
+      () {
+    expect(LoginWebView.allowsPublicNavigation(loginUrl, 'GET'), isTrue);
+    expect(
+        LoginWebView.allowsPublicNavigation(
+            Uri.parse('https://forums.e-hentai.org/cdn-cgi/check'), 'POST'),
+        isTrue);
+    for (final url in [
+      'http://forums.e-hentai.org/',
+      'https://example.com/',
+      'https://user@forums.e-hentai.org/',
+      'https://forums.e-hentai.org:444/'
+    ]) {
+      expect(
+          LoginWebView.allowsPublicNavigation(Uri.parse(url), 'GET'), isFalse);
+    }
+    expect(
+        LoginWebView.allowsPublicNavigation(
+            Uri.parse(
+                'https://forums.e-hentai.org/index.php?act=Login&CODE=01'),
+            'POST'),
+        isFalse);
+  });
+
+  testWidgets(
+      'public browser cannot submit existing authentication even when enabled',
+      (tester) async {
+    await tester.pumpWidget(page(publicOnly: true));
+    await tester.pumpAndSettle();
+    readCookies = (_) async => completeCookies;
+    final view = tester.widget<InAppWebView>(find.byType(InAppWebView));
+    await tester.runAsync(() async {
+      view.onLoadStop!(InAppWebViewController(0, view), loginUrl);
+      await Future<void>.delayed(Duration.zero);
+    });
+    expect(submissions, isEmpty);
+    expect(cookieReads, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   Future<MockAuthBloc> accountScreen(WidgetTester tester,
       {AuthState state =
@@ -113,6 +157,45 @@ void main() {
         BlocProvider<AuthBloc>.value(value: auth, child: const LoginScreen())));
     await tester.pumpAndSettle();
     return auth;
+  }
+
+  for (final target in [TargetPlatform.android, TargetPlatform.iOS]) {
+    testWidgets(
+        'verification stays in account tab and keeps credentials: $target',
+        (tester) async {
+      await accountScreen(tester);
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Username'), 'test-user');
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Password'), 'test-password');
+      AutomaticLoginCheck.activeView.value = 17;
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginWebView), findsOneWidget);
+      expect(tester.widget<LoginWebView>(find.byType(LoginWebView)).publicOnly,
+          isTrue);
+      expect(tester.widget<LoginWebView>(find.byType(LoginWebView)).enabled,
+          isFalse);
+      final tabBar = tester.widget<TabBar>(find.byType(TabBar));
+      expect(tabBar.controller!.index, 0);
+      expect(
+          tester
+              .widget<TextField>(find.widgetWithText(TextField, 'Username'))
+              .controller!
+              .text,
+          'test-user');
+      expect(
+          tester
+              .widget<TextField>(find.widgetWithText(TextField, 'Password'))
+              .controller!
+              .text,
+          'test-password');
+      AutomaticLoginCheck.activeView.value = null;
+      await tester.pumpAndSettle();
+      expect(
+          find.text(
+              'Completing website verification. If prompted, complete the check below; no need to re-enter your credentials.'),
+          findsNothing);
+    }, variant: TargetPlatformVariant.only(target));
   }
 
   testWidgets(

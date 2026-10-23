@@ -5,11 +5,19 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart' as cookies;
 import 'package:html/parser.dart' as html;
+import 'package:flutter/foundation.dart';
 
 import '../constants/api_endpoints.dart';
 import 'network_proxy_io.dart';
+import 'automatic_login_check.dart';
 
-enum AccountLoginFailure { credentials, challenge, network, site }
+enum AccountLoginFailure {
+  credentials,
+  challenge,
+  browserRequired,
+  network,
+  site
+}
 
 class AccountLoginException implements Exception {
   const AccountLoginException(this.reason);
@@ -33,9 +41,12 @@ class AccountLoginResult {
 /// An isolated, non-persistent cookie jar prevents failed attempts from changing
 /// the app session. Only a verified result is handed to the session owner.
 class AccountLoginClient {
-  AccountLoginClient({Dio Function()? createDio})
-      : _createDio = createDio ?? _nativeDio;
+  AccountLoginClient(
+      {Dio Function()? createDio, AutomaticLoginCheck? automaticCheck})
+      : _createDio = createDio ?? _nativeDio,
+        _automaticCheck = automaticCheck ?? AutomaticLoginCheck();
   final Dio Function() _createDio;
+  final AutomaticLoginCheck _automaticCheck;
 
   static Dio _nativeDio() => Dio()
     ..httpClientAdapter = IOHttpClientAdapter(
@@ -51,11 +62,12 @@ class AccountLoginClient {
 
   static bool isChallenge(String body) {
     final doc = html.parse(body);
-    return doc.querySelector('#challenge-form, #challenge-running, '
-                '[name="cf-turnstile-response"], [name="g-recaptcha-response"], '
-                '.g-recaptcha, .cf-turnstile') !=
-            null ||
-        body.contains('/cdn-cgi/challenge-platform/') ||
+    final title = doc.querySelector('title')?.text.trim().toLowerCase() ?? '';
+    // JSD scripts are also injected into ordinary login and authenticated pages.
+    // Their /cdn-cgi/challenge-platform/ URL alone is not an interstitial.
+    return doc.querySelector('#challenge-form, #challenge-running') != null ||
+        title == 'just a moment...' ||
+        title == 'just a moment…' ||
         body.contains('window._cf_chl_opt');
   }
 
@@ -83,7 +95,6 @@ class AccountLoginClient {
       followRedirects: false,
       validateStatus: (status) =>
           status != null && status >= 200 && status < 600,
-      headers: {'User-Agent': 'Mozilla/5.0 OViewer'},
     );
     dio.interceptors.add(cookies.CookieManager(jar));
     void current() {
@@ -110,8 +121,13 @@ class AccountLoginClient {
                       },
                 contentType: Headers.formUrlEncodedContentType));
         current();
-        if (isChallenge(response.data ?? '')) {
-          throw const AccountLoginException(AccountLoginFailure.challenge);
+        if (kDebugMode)
+          debugPrint(
+              'OVIEWER_ACCOUNT_HTTP ${form == null ? "GET" : "POST"} ${response.statusCode} interstitial=${isChallenge(response.data ?? "")}');
+        if (response.headers.value('cf-mitigated') == 'challenge' ||
+            isChallenge(response.data ?? '')) {
+          throw const AccountLoginException(
+              AccountLoginFailure.browserRequired);
         }
         final code = response.statusCode!;
         if ({301, 302, 303, 307, 308}.contains(code)) {
@@ -138,7 +154,39 @@ class AccountLoginClient {
     try {
       await Future.any([NetworkProxy.waitUntilReady(), cancelToken.whenCancel]);
       current();
-      final page = await request(Uri.parse(ApiEndpoints.loginPage));
+      // The site currently embeds Turnstile in its login form. Prepare that
+      // form in the real browser first, without an extra unverified HTTP GET.
+      final checkProxy = NetworkProxy.currentProxy;
+      final preparation = await _automaticCheck.run(cancelToken);
+      current();
+      if (checkProxy != NetworkProxy.currentProxy) {
+        throw const AccountLoginException(AccountLoginFailure.network);
+      }
+      if (preparation.status == BrowserCheckStatus.interactive) {
+        throw const AccountLoginException(AccountLoginFailure.challenge);
+      }
+      if (preparation.status != BrowserCheckStatus.ready ||
+          preparation.formHtml == null ||
+          preparation.formUrl == null ||
+          preparation.userAgent.isEmpty) {
+        throw const AccountLoginException(AccountLoginFailure.browserRequired);
+      }
+      if (!_trusted(preparation.formUrl!, allowEx: false) ||
+          preparation.formUrl!.host != 'forums.e-hentai.org') {
+        throw const AccountLoginException(AccountLoginFailure.site);
+      }
+      dio.options.headers['User-Agent'] = preparation.userAgent;
+      await jar.saveFromResponse(
+          Uri.parse(ApiEndpoints.loginPage),
+          preparation.cookies
+              .where((c) => AutomaticLoginCheck.cookieNames.contains(c.name))
+              .toList());
+      current();
+      // Keep this exact form and one-use response; a new GET would discard it.
+      final page = Response<String>(
+          data: preparation.formHtml,
+          statusCode: 200,
+          requestOptions: RequestOptions(path: preparation.formUrl.toString()));
       final doc = html.parse(page.data);
       final forms = doc
           .querySelectorAll('form')

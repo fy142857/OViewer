@@ -13,6 +13,7 @@ class NetworkProxy {
   static Future<void> waitUntilReady() async => await beforeRequest?.call();
 
   static bool get isEnabled => _proxyUrl != null && _proxyUrl!.isNotEmpty;
+  static String? get currentProxy => isEnabled ? _proxyUrl : null;
 
   static void setProxy(String? proxyUrl) {
     _proxyUrl = proxyUrl?.trim();

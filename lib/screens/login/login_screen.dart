@@ -10,6 +10,7 @@ import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
 import '../../core/network/account_login_client.dart';
 import '../../core/services/account_registration.dart';
+import '../../widgets/account_verification_view.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -276,6 +277,7 @@ class _LoginScreenState extends State<LoginScreen>
     final error = switch (state.accountFailure) {
       AccountLoginFailure.credentials => s.accountInvalid,
       AccountLoginFailure.challenge => s.accountChallenge,
+      AccountLoginFailure.browserRequired => s.accountBrowserRequired,
       AccountLoginFailure.network => s.accountNetworkError,
       AccountLoginFailure.site => s.accountSiteError,
       null => null,
@@ -286,8 +288,10 @@ class _LoginScreenState extends State<LoginScreen>
         TextField(
             controller: _usernameController,
             enabled: !loading,
+            keyboardType: TextInputType.text,
             autocorrect: false,
-            enableSuggestions: false,
+            // Android maps disabled suggestions to a password input variation.
+            enableSuggestions: true,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
                 labelText: s.username,
@@ -311,9 +315,11 @@ class _LoginScreenState extends State<LoginScreen>
                     icon: Icon(_showPassword
                         ? Icons.visibility_off
                         : Icons.visibility)))),
+        const AccountVerificationView(),
         if (error != null) ...[
           const SizedBox(height: 16),
-          if (state.accountFailure == AccountLoginFailure.challenge)
+          if (state.accountFailure == AccountLoginFailure.challenge ||
+              state.accountFailure == AccountLoginFailure.browserRequired)
             TextButton(
                 onPressed: () => _tabController.animateTo(1),
                 child: Text(error))
@@ -322,6 +328,10 @@ class _LoginScreenState extends State<LoginScreen>
                 style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ],
         const SizedBox(height: 24),
+        if (loading)
+          Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(s.accountLoginWaiting, textAlign: TextAlign.center)),
         FilledButton(
             onPressed: loading ? null : submit,
             child: loading

@@ -16,6 +16,7 @@ class MainActivity: FlutterActivity() {
     private var exporter: PageImageExporter? = null
     private var sponsor: SponsorBridge? = null
     private var updater: ApkUpdateBridge? = null
+    private var automaticLoginCheck: AutomaticLoginCheck? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +35,9 @@ class MainActivity: FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         updater = ApkUpdateBridge(this)
+        automaticLoginCheck = AutomaticLoginCheck(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/automatic_login_check")
+            .setMethodCallHandler(automaticLoginCheck)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/apk_update")
             .setMethodCallHandler(updater)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/release_link")
@@ -71,8 +75,9 @@ class MainActivity: FlutterActivity() {
     }
     override fun onDestroy() {
         updater?.dispose(); sponsor?.dispose(); exporter?.dispose()
+        automaticLoginCheck?.dispose()
         flutterEngine?.let { engine ->
-            for (name in listOf("oviewer/apk_update", "oviewer/release_link", "oviewer/account_registration", "oviewer/sponsor", "oviewer/page_image_export")) {
+            for (name in listOf("oviewer/apk_update", "oviewer/release_link", "oviewer/account_registration", "oviewer/automatic_login_check", "oviewer/sponsor", "oviewer/page_image_export")) {
                 MethodChannel(engine.dartExecutor.binaryMessenger, name).setMethodCallHandler(null)
             }
         }
