@@ -3,6 +3,9 @@ package com.oviewer.oviewer
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageInfo
@@ -19,7 +22,9 @@ import java.util.concurrent.Executors
 
 class UpdateFileProvider : FileProvider()
 
-class ApkUpdateBridge(private val activity: Activity) : MethodChannel.MethodCallHandler {
+class ApkUpdateBridge(private val context: Context,
+    private val host: () -> Activity? = { context as? Activity }) : MethodChannel.MethodCallHandler {
+    private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
     private var disposed = false
     private var permissionDialog: AlertDialog? = null
@@ -79,15 +84,15 @@ class ApkUpdateBridge(private val activity: Activity) : MethodChannel.MethodCall
         }
     }
 
-    private fun allowed() = Build.VERSION.SDK_INT < 26 || activity.packageManager.canRequestPackageInstalls()
+    private fun allowed() = Build.VERSION.SDK_INT < 26 || context.packageManager.canRequestPackageInstalls()
 
     @Suppress("DEPRECATION")
     private fun inspect(call: MethodCall): File {
         val path = call.argument<String>("path") ?: throw Failure("invalid_path")
-        val file = try { packageFile(activity.cacheDir, path) } catch (_: Exception) { throw Failure("invalid_path") }
+        val file = try { packageFile(context.cacheDir, path) } catch (_: Exception) { throw Failure("invalid_path") }
         val flags = signatureFlags()
-        val archive = activity.packageManager.getPackageArchiveInfo(file.path, flags) ?: throw Failure("invalid_apk")
-        val installed = activity.packageManager.getPackageInfo(activity.packageName, flags)
+        val archive = context.packageManager.getPackageArchiveInfo(file.path, flags) ?: throw Failure("invalid_apk")
+        val installed = context.packageManager.getPackageInfo(context.packageName, flags)
         validate(archive, installed,
             call.argument<String>("version") ?: throw Failure("version_mismatch"),
             call.argument<Number>("buildNumber")?.toLong() ?: throw Failure("version_mismatch"),
@@ -102,24 +107,26 @@ class ApkUpdateBridge(private val activity: Activity) : MethodChannel.MethodCall
             "inspect", "install" -> worker.execute {
                 try {
                     val file = inspect(call)
-                    activity.runOnUiThread {
-                        if (disposed || activity.isFinishing) { result.error("unavailable", null, null); return@runOnUiThread }
+                    main.post {
+                        if (disposed) { result.error("unavailable", null, null); return@post }
                         try {
                             if (call.method == "install") {
+                                val activity = host()?.takeIf { !it.isFinishing } ?: throw Failure("unavailable")
                                 if (!allowed()) throw Failure("permission")
                                 activity.startActivity(installIntent(activity, file))
                             }
                             result.success(null)
                         } catch (error: Exception) { fail(result, error) }
                     }
-                } catch (error: Exception) { activity.runOnUiThread { fail(result, error) } }
+                } catch (error: Exception) { main.post { fail(result, error) } }
             }
             else -> result.notImplemented()
         }
     }
 
     private fun explainPermission(call: MethodCall, result: MethodChannel.Result) {
-        if (disposed || activity.isFinishing || permissionDialog != null) {
+        val activity = host()
+        if (disposed || activity == null || activity.isFinishing || permissionDialog != null) {
             result.error("unavailable", null, null); return
         }
         if (Build.VERSION.SDK_INT < 26) { result.success(false); return }
@@ -133,7 +140,7 @@ class ApkUpdateBridge(private val activity: Activity) : MethodChannel.MethodCall
             .setPositiveButton(if (chinese) "前往设置" else "Open settings") { _, _ ->
                 try {
                     activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:${activity.packageName}")))
+                        Uri.parse("package:${context.packageName}")))
                     finish(true)
                 } catch (error: Exception) {
                     if (!answered) { answered = true; fail(result, error) }
@@ -151,6 +158,8 @@ class ApkUpdateBridge(private val activity: Activity) : MethodChannel.MethodCall
             is SecurityException -> "permission"
             else -> "invalid_apk"
         }, null, null)
+
+    fun detach() { permissionDialog?.dismiss(); permissionDialog = null }
 
     fun dispose() {
         disposed = true

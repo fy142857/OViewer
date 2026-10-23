@@ -18,8 +18,18 @@ class OViewerApplication : Application() {
     private var channel: MethodChannel? = null
     private var host = WeakReference<MainActivity>(null)
     private val handler = Handler(Looper.getMainLooper())
-    var serviceRunning = false
+    private val workOwners = mutableSetOf<String>()
+    val serviceRunning get() = workOwners.contains("offline")
+    var updates: ApkUpdateRuntime? = null
         private set
+    private var installer: ApkUpdateBridge? = null
+    private var foreground = false
+    fun retainWork(owner: String) { workOwners.add(owner) }
+    fun releaseWork(owner: String) { workOwners.remove(owner); releaseIfIdle() }
+    fun foregroundActivity(): MainActivity? = host.get()?.takeIf { foreground && !it.isFinishing }
+    fun setForeground(activity: MainActivity, value: Boolean) {
+        if (host.get() === activity) foreground = value
+    }
     private var pendingOpen = false
     private var dartReady = false
 
@@ -27,6 +37,10 @@ class OViewerApplication : Application() {
         engine?.let { return it }
         val created = FlutterEngine(this)
         engine = created
+        updates = ApkUpdateRuntime(this, created.dartExecutor.binaryMessenger)
+        installer = ApkUpdateBridge(this) { foregroundActivity() }
+        MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/apk_update")
+            .setMethodCallHandler(installer)
         channel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/offline").also { bridge ->
             bridge.setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -38,12 +52,12 @@ class OViewerApplication : Application() {
                         try {
                             val intent = Intent(this, OfflineDownloadService::class.java)
                                 .putExtra("language", call.argument<String>("language") ?: "zh")
-                            serviceRunning = true // Retain engine during asynchronous service startup.
+                            retainWork("offline") // Retain engine during asynchronous service startup.
                             ContextCompat.startForegroundService(this, intent)
                             requestNotifications(activity)
                             result.success(true)
                         } catch (_: Exception) {
-                            serviceRunning = false
+                            releaseWork("offline")
                             result.success(false)
                         }
                     }
@@ -69,10 +83,10 @@ class OViewerApplication : Application() {
 
     fun attach(activity: MainActivity) { host = WeakReference(activity) }
     fun detach(activity: MainActivity) {
-        if (host.get() === activity) host.clear()
+        if (host.get() === activity) { host.clear(); foreground = false; installer?.detach() }
         releaseIfIdle()
     }
-    fun serviceStopped() { serviceRunning = false; releaseIfIdle() }
+    fun serviceStopped() { releaseWork("offline") }
     fun send(method: String) { if (dartReady) channel?.invokeMethod(method, null) }
     fun openDownloads() {
         pendingOpen = true
@@ -81,16 +95,18 @@ class OViewerApplication : Application() {
     private fun releaseIfIdle() {
         // Allow Activity recreation and the final Dart platform reply to settle.
         handler.postDelayed({
-            if (!serviceRunning && host.get() == null) {
+            if (workOwners.isEmpty() && host.get() == null) {
                 channel?.setMethodCallHandler(null)
                 channel = null
+                updates?.dispose(); updates = null
+                installer?.dispose(); installer = null
                 engine?.destroy()
                 engine = null
                 dartReady = false
             }
         }, 1000)
     }
-    private fun requestNotifications(activity: MainActivity) {
+    fun requestNotifications(activity: MainActivity) {
         if (Build.VERSION.SDK_INT < 33 ||
             activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
         val preferences = getSharedPreferences("offline_service", MODE_PRIVATE)

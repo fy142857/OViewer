@@ -106,6 +106,10 @@ void main() {
       expect(downloads.starts, 1);
       downloads.pending.complete(File('package.apk'));
       await tester.pumpAndSettle();
+      expect(installer.installs, 0);
+      await tester.tap(find.widgetWithText(
+          FilledButton, language == 'zh' ? '立即安装' : 'Install now'));
+      await tester.pumpAndSettle();
       expect(installer.installs, 1);
       expect(
           find.widgetWithText(

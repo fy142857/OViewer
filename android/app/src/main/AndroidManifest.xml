@@ -21,6 +21,9 @@
         android:dataExtractionRules="@xml/data_extraction_rules">
         <service android:name=".OfflineDownloadService" android:exported="false"
             android:foregroundServiceType="dataSync" android:stopWithTask="false" />
+        <service android:name=".ApkDownloadService" android:exported="false"
+            android:foregroundServiceType="dataSync" android:stopWithTask="false" />
+        <receiver android:name=".ApkUpdateCancelReceiver" android:exported="false" />
         <provider
             android:name=".UpdateFileProvider"
             android:authorities="${applicationId}.apk_updates"

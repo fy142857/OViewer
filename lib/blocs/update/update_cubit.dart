@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/services/apk_download_service.dart';
 import '../../core/services/apk_installer.dart';
+import '../../core/services/apk_update_platform.dart';
 import '../../models/apk_update.dart';
 import '../../repositories/update_repository.dart';
 
@@ -16,6 +17,7 @@ enum ApkUpdatePhase {
   verifying,
   waitingPermission,
   ready,
+  interrupted,
   error
 }
 
@@ -36,15 +38,49 @@ class ApkUpdateState {
 }
 
 class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
-  UpdateCubit(this.repository, this.downloads, this.installer)
+  UpdateCubit(this.repository, this.downloads, this.installer, {this.platform})
       : super(const ApkUpdateState(ApkUpdatePhase.idle)) {
     WidgetsBinding.instance.addObserver(this);
+    platform?.onCancel = cancel;
+    platform?.onInterrupted = (reason) {
+      _autoInstall = false;
+      _interruption = reason;
+      downloads.interrupt();
+    };
     _foreground = WidgetsBinding.instance.lifecycleState == null ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
   }
   final UpdateRepository repository;
   final ApkDownloadService downloads;
   final ApkInstaller installer;
+  final ApkUpdatePlatform? platform;
+  int _windows = 0;
+  int _visibilityRevision = 0;
+  bool get windowVisible => _windows > 0;
+  String? _notificationInstallId;
+  String? _interruption;
+  void windowOpened() {
+    _windows++;
+  }
+
+  void windowClosed() {
+    _visibilityRevision++;
+    if (_windows > 0) _windows--;
+    _autoInstall = false;
+  }
+
+  String? get taskId =>
+      state.update == null ? null : ApkUpdatePlatform.taskId(state.update!);
+  Future<void> installFromNotification(String id) async {
+    if (id != taskId || state.phase != ApkUpdatePhase.ready) return;
+    if (!_foreground) {
+      _notificationInstallId = id;
+      return;
+    }
+    _notificationInstallId = null;
+    await install();
+  }
+
   UpdateCheckOperation? _check;
   int _generation = 0;
   bool _foreground = true;
@@ -77,7 +113,10 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
               ? error.failure.name
               : error is FileSystemException
                   ? 'storage'
-                  : 'network';
+                  : error is StateError &&
+                          error.message == 'background_unavailable'
+                      ? 'background_unavailable'
+                      : 'network';
 
   /// Opening the entry restores a verified complete package before networking.
   Future<void> check({bool fresh = false}) async {
@@ -116,6 +155,13 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
           if (error.code != 'not_newer') rethrow;
         }
       }
+      final partial = saved == null ? await downloads.restorePartial() : null;
+      if (!_active(generation)) return;
+      if (partial != null && !fresh) {
+        emit(ApkUpdateState(ApkUpdatePhase.interrupted,
+            update: partial.update, received: partial.received));
+        return;
+      }
       if (!_active(generation)) return;
       _check = repository.check(android: true);
       final result = await _check!.result;
@@ -125,8 +171,17 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
             result: result, update: result.apk, path: saved.file.path);
         return;
       }
-      if (saved != null && result.apk?.sha256 != saved.update.sha256)
+      if ((saved != null && result.apk?.sha256 != saved.update.sha256) ||
+          (partial != null && result.apk?.sha256 != partial.update.sha256)) {
         await downloads.discard();
+      }
+      if (partial != null && result.apk?.sha256 == partial.update.sha256) {
+        emit(ApkUpdateState(ApkUpdatePhase.interrupted,
+            result: result,
+            update: partial.update,
+            received: partial.received));
+        return;
+      }
       if (!_active(generation)) return;
       emit(ApkUpdateState(ApkUpdatePhase.available,
           result: result, update: result.apk));
@@ -141,24 +196,78 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
     final update = state.update;
     if (update == null || state.working || _installing) return;
     final generation = ++_generation;
-    _autoInstall = true;
+    _autoInstall = _foreground && _windows > 0;
+    _interruption = null;
+    int? session;
+    var outcome = 'cancelled';
     emit(ApkUpdateState(ApkUpdatePhase.downloading,
-        update: update, result: state.result));
+        update: update, result: state.result, received: state.received));
     try {
+      if (platform != null) session = await platform!.start(update);
+      if (!_active(generation)) return;
+      if (_interruption != null) throw ApkUpdateException(_interruption!);
       final file = await downloads.download(update, progress: (n) {
-        if (_active(generation)) _set(ApkUpdatePhase.downloading, received: n);
+        if (_active(generation)) {
+          _set(ApkUpdatePhase.downloading, received: n);
+          if (session != null) platform?.progress(session, n);
+        }
       }, verifying: () {
-        if (_active(generation)) _set(ApkUpdatePhase.verifying);
+        if (_active(generation)) {
+          _set(ApkUpdatePhase.verifying);
+          if (session != null)
+            platform?.progress(session, update.size, verifying: true);
+        }
       });
       if (!_active(generation)) return;
       await installer.inspect(file.path, update);
       if (!_active(generation)) return;
-      _set(ApkUpdatePhase.ready, path: file.path);
-      if (_foreground) await install();
+      outcome = 'ready';
+      if (session != null) {
+        await platform!.finish(session, outcome);
+        session = null;
+      }
+      if (!_active(generation)) return;
+      _set(ApkUpdatePhase.ready, path: file.path, received: update.size);
+      if (_autoInstall && _foreground && _windows > 0)
+        await install(automatic: true);
     } catch (error) {
       if (_active(generation)) {
         _autoInstall = false;
-        _set(ApkUpdatePhase.error, error: _error(error));
+        final code = _interruption ?? _error(error);
+        if (const [
+          'integrity',
+          'range',
+          'signature_mismatch',
+          'package_mismatch',
+          'version_mismatch',
+          'not_newer',
+          'invalid_apk'
+        ].contains(code)) {
+          await downloads.discard();
+        }
+        final partial = await downloads.restorePartial();
+        if (!_active(generation)) return;
+        outcome = partial != null ? 'interrupted' : 'error';
+        if (session != null) {
+          await platform!.finish(session, outcome);
+          session = null;
+        }
+        if (!_active(generation)) return;
+        emit(ApkUpdateState(
+            partial != null ? ApkUpdatePhase.interrupted : ApkUpdatePhase.error,
+            update: update,
+            result: state.result,
+            received: partial?.received ?? 0,
+            error: code));
+      }
+    } finally {
+      if (session != null) {
+        try {
+          await platform!
+              .finish(session, _active(generation) ? outcome : 'cancelled');
+        } catch (_) {
+          /* Native lifecycle also stops abandoned foreground work. */
+        }
       }
     }
   }
@@ -168,12 +277,14 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
     _check?.cancel();
     _check = null;
     downloads.cancel();
+    unawaited(downloads.discard().catchError((Object _) {}));
+    unawaited(platform?.clearNotification());
     _autoInstall = false;
     emit(ApkUpdateState(ApkUpdatePhase.available,
         update: state.update, result: state.result));
   }
 
-  Future<void> install() async {
+  Future<void> install({bool automatic = false}) async {
     if (_installing ||
         state.path == null ||
         state.update == null ||
@@ -181,18 +292,25 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
     _installing = true;
     _autoInstall = false;
     final generation = _generation;
+    final visibility = _visibilityRevision;
+    bool stillVisible() =>
+        !automatic || (visibility == _visibilityRevision && _windows > 0);
+    void deferTransientFocusLoss() {
+      if (automatic && stillVisible()) _autoInstall = true;
+    }
+
     try {
       await downloads.verify(File(state.path!), state.update!);
       await installer.inspect(state.path!, state.update!);
-      if (!_active(generation)) return;
+      if (!_active(generation) || !stillVisible()) return;
       if (!_foreground) {
-        _autoInstall = true;
+        deferTransientFocusLoss();
         return;
       }
       if (!await installer.canInstall()) {
-        if (_active(generation)) {
+        if (_active(generation) && stillVisible()) {
           if (!_foreground) {
-            _autoInstall = true;
+            deferTransientFocusLoss();
             return;
           }
           _set(ApkUpdatePhase.waitingPermission);
@@ -200,9 +318,9 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
         }
         return;
       }
-      if (!_active(generation)) return;
+      if (!_active(generation) || !stillVisible()) return;
       if (!_foreground) {
-        _autoInstall = true;
+        deferTransientFocusLoss();
         return;
       }
       // Consume the intent before leaving the app; returning must not relaunch.
@@ -237,13 +355,26 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
     if (!_foreground && _settingsOpened) _settingsLeftApp = true;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      _autoInstall = false;
+      _visibilityRevision++;
+    }
     if (!_foreground) return;
+    final notificationId = _notificationInstallId;
+    if (notificationId != null) {
+      _notificationInstallId = null;
+      unawaited(installFromNotification(notificationId));
+    }
     if (_settingsOpened && _settingsLeftApp) {
       _settingsOpened = false;
       _settingsLeftApp = false;
       unawaited(_afterSettings());
-    } else if (_autoInstall && this.state.phase == ApkUpdatePhase.ready) {
-      unawaited(install());
+    } else if (_autoInstall &&
+        this.state.phase == ApkUpdatePhase.ready &&
+        _windows > 0) {
+      unawaited(install(automatic: true));
     }
   }
 
@@ -265,7 +396,9 @@ class UpdateCubit extends Cubit<ApkUpdateState> with WidgetsBindingObserver {
   Future<void> close() {
     ++_generation;
     _check?.cancel();
-    downloads.cancel();
+    downloads.interrupt();
+    platform?.onCancel = null;
+    platform?.onInterrupted = null;
     WidgetsBinding.instance.removeObserver(this);
     return super.close();
   }

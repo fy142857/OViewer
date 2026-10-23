@@ -15,13 +15,13 @@ class MainActivity: FlutterActivity() {
     override fun shouldDestroyEngineWithHost(): Boolean = false
     private var exporter: PageImageExporter? = null
     private var sponsor: SponsorBridge? = null
-    private var updater: ApkUpdateBridge? = null
     private var automaticLoginCheck: AutomaticLoginCheck? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         runtime.attach(this)
         if (intent?.action == OfflineDownloadService.OPEN) runtime.openDownloads()
+        if (intent?.action == ApkDownloadService.OPEN) runtime.updates?.open(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             // Keep the same window bounds when the reader toggles system bars.
             // DEFAULT excludes the cutout only in fullscreen on some devices,
@@ -34,12 +34,9 @@ class MainActivity: FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        updater = ApkUpdateBridge(this)
         automaticLoginCheck = AutomaticLoginCheck(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/automatic_login_check")
             .setMethodCallHandler(automaticLoginCheck)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/apk_update")
-            .setMethodCallHandler(updater)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/release_link")
             .setMethodCallHandler(ReleaseLinkOpener(this))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/account_registration")
@@ -72,12 +69,15 @@ class MainActivity: FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.action == OfflineDownloadService.OPEN) runtime.openDownloads()
+        if (intent.action == ApkDownloadService.OPEN) runtime.updates?.open(intent)
     }
+    override fun onResume() { super.onResume(); runtime.setForeground(this, true) }
+    override fun onPause() { runtime.setForeground(this, false); super.onPause() }
     override fun onDestroy() {
-        updater?.dispose(); sponsor?.dispose(); exporter?.dispose()
+        sponsor?.dispose(); exporter?.dispose()
         automaticLoginCheck?.dispose()
         flutterEngine?.let { engine ->
-            for (name in listOf("oviewer/apk_update", "oviewer/release_link", "oviewer/account_registration", "oviewer/automatic_login_check", "oviewer/sponsor", "oviewer/page_image_export")) {
+            for (name in listOf("oviewer/release_link", "oviewer/account_registration", "oviewer/automatic_login_check", "oviewer/sponsor", "oviewer/page_image_export")) {
                 MethodChannel(engine.dartExecutor.binaryMessenger, name).setMethodCallHandler(null)
             }
         }

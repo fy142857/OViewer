@@ -20,6 +20,12 @@ class SavedApk {
   final File file;
 }
 
+class PartialApk extends SavedApk {
+  const PartialApk(super.update, super.file, this.received, this.validator);
+  final int received;
+  final String? validator;
+}
+
 /// Files and cleanup are serialized so a cancelled task cannot erase its retry.
 class ApkDownloadService {
   ApkDownloadService(
@@ -35,6 +41,8 @@ class ApkDownloadService {
   final Duration stallTimeout;
   http.Client? _client;
   int _generation = 0;
+  final _stops = <int, String>{};
+  final _live = <int>{};
   Future<void> _tail = Future.value();
 
   Future<T> _serial<T>(Future<T> Function() action) {
@@ -43,14 +51,19 @@ class ApkDownloadService {
     return operation;
   }
 
-  void cancel() {
+  void cancel() => _stop('cancelled');
+  void interrupt() => _stop('interrupted');
+  void _stop(String reason) {
+    if (_live.contains(_generation)) _stops[_generation] = reason;
     _generation++;
     _client?.close();
     _client = null;
   }
 
   void _active(int generation) {
-    if (generation != _generation) throw const ApkUpdateException('cancelled');
+    if (generation != _generation) {
+      throw ApkUpdateException(_stops[generation] ?? 'cancelled');
+    }
   }
 
   Future<Directory> _folder() async {
@@ -67,64 +80,97 @@ class ApkDownloadService {
     }
   }
 
+  static const _partialFiles = ['package.part', 'resume.json', 'resume.tmp'];
+  static const _completeFiles = [
+    'package.apk',
+    'metadata.json',
+    'metadata.part'
+  ];
   Future<void> discard() => _serial(() async {
-        await _remove(await _folder(),
-            ['package.part', 'metadata.part', 'package.apk', 'metadata.json']);
+        await _remove(await _folder(), [..._partialFiles, ..._completeFiles]);
       });
 
-  /// Lightweight first-frame maintenance, never starts a download or installer.
+  Future<Map<String, dynamic>> _json(File file) async {
+    if (!await file.exists() || await file.length() > 1024 * 1024) {
+      throw const FormatException('Missing or oversized update metadata');
+    }
+    return jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+  }
+
+  Future<PartialApk?> _partial(Directory folder) async {
+    try {
+      final record = await _json(File(p.join(folder.path, 'resume.json')));
+      if (record['schema'] != 1) throw const FormatException();
+      final update =
+          ApkUpdate.fromJson(record['update'] as Map<String, dynamic>);
+      final file = File(p.join(folder.path, 'package.part'));
+      final length = await file.length();
+      if (length > update.size) throw const FormatException();
+      final validator = record['validator'] as String?;
+      if (validator != null &&
+          (validator.contains('\r') || validator.contains('\n'))) {
+        throw const FormatException();
+      }
+      return PartialApk(update, file, length, validator);
+    } on Exception {
+      await _remove(folder, _partialFiles);
+      return null;
+    } on TypeError {
+      await _remove(folder, _partialFiles);
+      return null;
+    }
+  }
+
+  Future<void> _savePartial(
+      Directory folder, ApkUpdate update, String? validator) async {
+    final temp = File(p.join(folder.path, 'resume.tmp'));
+    await temp.writeAsString(
+        jsonEncode(
+            {'schema': 1, 'update': update.toJson(), 'validator': validator}),
+        flush: true);
+    await temp.rename(p.join(folder.path, 'resume.json'));
+  }
+
+  Future<PartialApk?> restorePartial() =>
+      _serial(() async => _partial(await _folder()));
+
+  /// First-frame maintenance retains valid partials but never resumes a transfer.
   Future<void> maintain(int installedBuild) => _serial(() async {
         final folder = await _directory();
         if (!await folder.exists()) return;
-        await _remove(folder, ['package.part', 'metadata.part']);
-        final metadata = File(p.join(folder.path, 'metadata.json'));
+        await _remove(folder, ['metadata.part', 'resume.tmp']);
+        final partial = await _partial(folder);
+        if (partial != null && partial.update.buildNumber <= installedBuild) {
+          await _remove(folder, _partialFiles);
+        }
         try {
-          if (!await metadata.exists() ||
-              await metadata.length() > 1024 * 1024) {
-            await _remove(folder, ['package.apk', 'metadata.json']);
-            return;
-          }
           final update = ApkUpdate.fromJson(
-              jsonDecode(await metadata.readAsString())
-                  as Map<String, dynamic>);
-          if (update.buildNumber <= installedBuild) {
-            await _remove(folder, ['package.apk', 'metadata.json']);
-          }
-        } on FormatException {
-          await _remove(folder, ['package.apk', 'metadata.json']);
+              await _json(File(p.join(folder.path, 'metadata.json'))));
+          if (update.buildNumber <= installedBuild)
+            await _remove(folder, _completeFiles);
+        } on Exception {
+          await _remove(folder, _completeFiles);
         } on TypeError {
-          await _remove(folder, ['package.apk', 'metadata.json']);
+          await _remove(folder, _completeFiles);
         }
       });
 
   Future<SavedApk?> restore() => _serial(() async {
         final folder = await _folder();
-        await _remove(folder, ['package.part', 'metadata.part']);
         try {
-          final metadata = File(p.join(folder.path, 'metadata.json'));
-          if (!await metadata.exists()) {
-            await _remove(folder, ['package.apk']);
-            return null;
-          }
-          if (await metadata.length() > 1024 * 1024)
-            throw const FormatException();
           final update = ApkUpdate.fromJson(
-              jsonDecode(await metadata.readAsString())
-                  as Map<String, dynamic>);
+              await _json(File(p.join(folder.path, 'metadata.json'))));
           final file = File(p.join(folder.path, 'package.apk'));
           await verify(file, update);
+          await _remove(folder, _partialFiles);
           return SavedApk(update, file);
-        } on FileSystemException {
-          await _remove(folder, ['package.apk', 'metadata.json']);
-          return null;
-        } on FormatException {
-          await _remove(folder, ['package.apk', 'metadata.json']);
-          return null;
-        } on ApkUpdateException {
-          await _remove(folder, ['package.apk', 'metadata.json']);
+        } on Exception {
+          await _remove(folder, _completeFiles);
+          await _partial(folder);
           return null;
         } on TypeError {
-          await _remove(folder, ['package.apk', 'metadata.json']);
+          await _remove(folder, _completeFiles);
+          await _partial(folder);
           return null;
         }
       });
@@ -142,6 +188,7 @@ class ApkDownloadService {
       {required void Function(int) progress,
       required void Function() verifying}) {
     final generation = ++_generation;
+    _live.add(generation);
     return _serial(() async {
       http.Client? client;
       Directory? folder;
@@ -150,73 +197,147 @@ class ApkDownloadService {
         _active(generation);
         folder = await _folder();
         _active(generation);
-        await _remove(folder,
-            ['package.part', 'metadata.part', 'package.apk', 'metadata.json']);
-        await NetworkProxy.waitUntilReady().timeout(stallTimeout);
-        _active(generation);
-        client = _clientFactory();
-        _client = client;
-        final response = await client
-            .send(http.Request('GET', update.downloadUrl))
-            .timeout(stallTimeout);
-        _active(generation);
-        if (response.statusCode != 200)
-          throw const ApkUpdateException('network');
-        if (response.contentLength != null &&
-            response.contentLength != update.size) {
-          throw const ApkUpdateException('integrity');
+        var partial = await _partial(folder);
+        if (partial != null &&
+            (partial.update.sha256 != update.sha256 ||
+                partial.update.buildNumber != update.buildNumber ||
+                partial.update.downloadUrl != update.downloadUrl ||
+                partial.update.size != update.size ||
+                partial.update.certificate != update.certificate)) {
+          await _remove(folder, _partialFiles);
+          partial = null;
         }
+        await _remove(folder, _completeFiles);
         final part = File(p.join(folder.path, 'package.part'));
-        output = await part.open(mode: FileMode.write);
-        var received = 0;
-        await for (final chunk in response.stream.timeout(stallTimeout)) {
-          _active(generation);
-          received += chunk.length;
-          if (received > update.size)
-            throw const ApkUpdateException('integrity');
-          await output.writeFrom(chunk);
-          _active(generation);
-          progress(received);
+        if (partial == null) await part.writeAsBytes([], flush: true);
+        var received = partial?.received ?? 0;
+        await _savePartial(folder, update, partial?.validator);
+        progress(received);
+        // An interrupted finalization may have all bytes already on disk.
+        if (received == update.size) {
+          try {
+            await verify(part, update);
+          } on ApkUpdateException {
+            received = 0;
+            await part.writeAsBytes([], flush: true);
+          }
         }
-        await output.flush();
-        await output.close();
-        output = null;
+        if (received < update.size) {
+          await NetworkProxy.waitUntilReady().timeout(stallTimeout);
+          _active(generation);
+          client = _clientFactory();
+          _client = client;
+          // At most one full restart if a server rejects an existing range.
+          for (var attempt = 0; attempt < 2; attempt++) {
+            final request = http.Request('GET', update.downloadUrl)
+              ..headers['Accept-Encoding'] = 'identity';
+            if (received > 0) {
+              request.headers['Range'] = 'bytes=$received-';
+              if (partial?.validator != null)
+                request.headers['If-Range'] = partial!.validator!;
+            }
+            final response = await client.send(request).timeout(stallTimeout);
+            _active(generation);
+            if (response.statusCode == 416 && received > 0 && attempt == 0) {
+              await response.stream.listen((_) {}).cancel();
+              received = 0;
+              partial = null;
+              await part.writeAsBytes([], flush: true);
+              await _savePartial(folder, update, null);
+              progress(0);
+              continue;
+            }
+            var expectedEnd = update.size;
+            if (response.statusCode == 206) {
+              final range = RegExp(r'^bytes (\d+)-(\d+)/(\d+)$')
+                  .firstMatch(response.headers['content-range'] ?? '');
+              if (range == null ||
+                  int.parse(range[1]!) != received ||
+                  int.parse(range[3]!) != update.size ||
+                  int.parse(range[2]!) < received ||
+                  int.parse(range[2]!) >= update.size) {
+                throw const ApkUpdateException('range');
+              }
+              expectedEnd = int.parse(range[2]!) + 1;
+            } else if (response.statusCode == 200) {
+              received = 0; // The server ignored Range or If-Range changed.
+              progress(0);
+            } else {
+              throw const ApkUpdateException('network');
+            }
+            if ((response.headers['content-encoding'] ?? 'identity') !=
+                    'identity' ||
+                (response.contentLength != null &&
+                    response.contentLength != expectedEnd - received)) {
+              throw const ApkUpdateException('range');
+            }
+            final etag = response.headers['etag'];
+            final validator =
+                etag != null && etag.startsWith('"') && etag.endsWith('"')
+                    ? etag
+                    : response.headers['last-modified'];
+            // Ensure truncation is durable before recording a new validator.
+            if (received == 0) await part.writeAsBytes([], flush: true);
+            await _savePartial(folder, update, validator);
+            output = await part.open(
+                mode: received == 0 ? FileMode.write : FileMode.append);
+            await for (final chunk in response.stream.timeout(stallTimeout)) {
+              _active(generation);
+              received += chunk.length;
+              if (received > expectedEnd)
+                throw const ApkUpdateException('integrity');
+              await output.writeFrom(chunk);
+              _active(generation);
+              progress(received);
+            }
+            await output.flush();
+            await output.close();
+            output = null;
+            if (received < update.size)
+              throw const ApkUpdateException('network');
+            break;
+          }
+        }
         _active(generation);
         verifying();
         await verify(part, update);
         _active(generation);
-        final file = await part.rename(p.join(folder.path, 'package.apk'));
+        // Leave resume.json until both the full metadata and APK exist. A crash
+        // before the rename still leaves a resumable (possibly complete) part.
         final metadata = File(p.join(folder.path, 'metadata.part'));
         await metadata.writeAsString(jsonEncode(update.toJson()), flush: true);
-        _active(generation);
         await metadata.rename(p.join(folder.path, 'metadata.json'));
+        final file = await part.rename(p.join(folder.path, 'package.apk'));
         _active(generation);
+        await _remove(folder, ['resume.json', 'resume.tmp']);
         return file;
       } catch (error) {
-        await output?.close();
+        try {
+          await output?.close();
+        } on FileSystemException {/* report below */}
         output = null;
-        if (folder != null) {
-          await _remove(folder, [
-            'package.part',
-            'metadata.part',
-            'package.apk',
-            'metadata.json'
-          ]);
+        final reason = _stops[generation];
+        final code = reason ??
+            (error is ApkUpdateException
+                ? error.code
+                : error is TimeoutException
+                    ? 'timeout'
+                    : error is FileSystemException
+                        ? (const [28, 112].contains(error.osError?.errorCode)
+                            ? 'space'
+                            : 'storage')
+                        : 'network');
+        if (folder != null &&
+            !const ['network', 'timeout', 'interrupted', 'space']
+                .contains(code)) {
+          await _remove(folder, [..._partialFiles, ..._completeFiles]);
         }
-        _active(generation);
-        if (error is ApkUpdateException) rethrow;
-        if (error is TimeoutException)
-          throw const ApkUpdateException('timeout');
-        if (error is FileSystemException) {
-          throw ApkUpdateException(
-              const [28, 112].contains(error.osError?.errorCode)
-                  ? 'space'
-                  : 'storage');
-        }
-        throw const ApkUpdateException('network');
+        throw ApkUpdateException(code);
       } finally {
         client?.close();
         if (identical(_client, client)) _client = null;
+        _stops.remove(generation);
+        _live.remove(generation);
       }
     });
   }

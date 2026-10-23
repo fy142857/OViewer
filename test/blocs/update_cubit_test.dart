@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oviewer/blocs/update/update_cubit.dart';
 import 'package:oviewer/core/services/apk_download_service.dart';
 import 'package:oviewer/core/services/apk_installer.dart';
+import 'package:oviewer/core/services/apk_update_platform.dart';
 import 'package:oviewer/models/apk_update.dart';
 import 'package:oviewer/repositories/update_repository.dart';
 import '../core/network/apk_download_service_test.dart' show packageFor;
@@ -28,6 +29,11 @@ class FakeUpdates extends UpdateRepository {
 class ControlledDownloads extends ApkDownloadService {
   Completer<File> pending = Completer<File>();
   SavedApk? saved;
+  PartialApk? partial;
+  @override
+  Future<PartialApk?> restorePartial() async => partial;
+  @override
+  void interrupt() {}
   int starts = 0;
   int cancels = 0;
   int discards = 0;
@@ -67,8 +73,11 @@ class FakeInstaller extends ApkInstaller {
   int installs = 0;
   int settings = 0;
   Object? inspectError;
+  int inspections = 0;
+  Future<void> Function(int)? onInspect;
   @override
   Future<void> inspect(String path, ApkUpdate update) async {
+    await onInspect?.call(++inspections);
     if (inspectError != null) throw inspectError!;
   }
 
@@ -86,6 +95,29 @@ class FakeInstaller extends ApkInstaller {
   }
 }
 
+class FakeUpdatePlatform extends ApkUpdatePlatform {
+  Completer<int>? pendingStart;
+  bool unavailable = false;
+  final finished = <String>[];
+  final progressEvents = <int>[];
+  @override
+  Future<int> start(ApkUpdate update) async {
+    if (unavailable) throw StateError('background_unavailable');
+    return pendingStart == null ? 1 : await pendingStart!.future;
+  }
+
+  @override
+  void progress(int session, int received, {bool verifying = false}) =>
+      progressEvents.add(received);
+  @override
+  Future<void> finish(int session, String outcome) async {
+    finished.add(outcome);
+  }
+
+  @override
+  Future<void> clearNotification() async {}
+}
+
 Future<void> settleUpdate() =>
     Future<void>.delayed(const Duration(milliseconds: 10));
 
@@ -101,6 +133,7 @@ void main() {
     installer = FakeInstaller();
     cubit = UpdateCubit(repo, downloads, installer);
     cubit.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    cubit.windowOpened();
   });
   tearDown(() async {
     await cubit.close();
@@ -125,7 +158,7 @@ void main() {
     expect(installer.installs, 2);
   });
 
-  test('background completion waits until foreground and installs only once',
+  test('background completion requires an explicit install even after resume',
       () async {
     await cubit.check();
     final work = cubit.start();
@@ -136,6 +169,8 @@ void main() {
     cubit.didChangeAppLifecycleState(AppLifecycleState.resumed);
     cubit.didChangeAppLifecycleState(AppLifecycleState.resumed);
     await settleUpdate();
+    expect(installer.installs, 0);
+    await cubit.installFromNotification(cubit.taskId!);
     expect(installer.installs, 1);
   });
 
@@ -226,5 +261,115 @@ void main() {
     await work;
     expect(cubit.state.error, 'signature_mismatch');
     expect(installer.installs, 0);
+  });
+
+  test('hidden window remains manual even when reopened before completion',
+      () async {
+    await cubit.check();
+    final work = cubit.start();
+    cubit.windowClosed();
+    cubit.windowOpened();
+    downloads.pending.complete(File('package.apk'));
+    await work;
+    expect(installer.installs, 0);
+    await cubit.installFromNotification('stale-notification');
+    expect(installer.installs, 0);
+    await cubit.installFromNotification(cubit.taskId!);
+    expect(installer.installs, 1);
+  });
+
+  test('temporary permission prompt focus loss can finish the foreground flow',
+      () async {
+    await cubit.check();
+    final work = cubit.start();
+    cubit.didChangeAppLifecycleState(AppLifecycleState.inactive);
+    downloads.pending.complete(File('package.apk'));
+    await work;
+    expect(installer.installs, 0);
+    cubit.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await settleUpdate();
+    expect(installer.installs, 1);
+  });
+
+  test('hiding during final native revalidation cancels automatic installation',
+      () async {
+    final gate = Completer<void>();
+    installer.onInspect = (n) async {
+      if (n == 2) await gate.future;
+    };
+    await cubit.check();
+    final work = cubit.start();
+    downloads.pending.complete(File('package.apk'));
+    await settleUpdate();
+    expect(installer.inspections, 2);
+    cubit.windowClosed();
+    gate.complete();
+    await work;
+    cubit.windowOpened();
+    cubit.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await settleUpdate();
+    expect(installer.installs, 0);
+  });
+
+  test('partial restoration never starts network or installation', () async {
+    downloads.partial =
+        PartialApk(repo.package, File('package.part'), 2, '"etag"');
+    await cubit.check();
+    expect(cubit.state.phase, ApkUpdatePhase.interrupted);
+    expect(cubit.state.received, 2);
+    expect(repo.checks, 0);
+    expect(downloads.starts, 0);
+    expect(installer.installs, 0);
+  });
+
+  test(
+      'service acknowledgement gates transfer and cancellation releases its owner',
+      () async {
+    await cubit.close();
+    final platform = FakeUpdatePlatform()..pendingStart = Completer<int>();
+    cubit = UpdateCubit(repo, downloads, installer, platform: platform)
+      ..windowOpened();
+    await cubit.check();
+    final work = cubit.start();
+    expect(downloads.starts, 0);
+    cubit.cancel();
+    platform.pendingStart!.complete(1);
+    await work;
+    expect(downloads.starts, 0);
+    expect(platform.finished, ['cancelled']);
+  });
+
+  test('service failure is visible and does not start unprotected downloading',
+      () async {
+    await cubit.close();
+    final platform = FakeUpdatePlatform()..unavailable = true;
+    cubit = UpdateCubit(repo, downloads, installer, platform: platform);
+    await cubit.check();
+    await cubit.start();
+    expect(downloads.starts, 0);
+    expect(cubit.state.error, 'background_unavailable');
+  });
+
+  test('background ready notification is posted after native inspection',
+      () async {
+    await cubit.close();
+    final platform = FakeUpdatePlatform();
+    cubit = UpdateCubit(repo, downloads, installer, platform: platform)
+      ..windowOpened();
+    await cubit.check();
+    final work = cubit.start();
+    await settleUpdate();
+    cubit.didChangeAppLifecycleState(AppLifecycleState.paused);
+    downloads.progress!(2);
+    expect(platform.progressEvents, [2]);
+    downloads.pending.complete(File('package.apk'));
+    await work;
+    expect(platform.finished, ['ready']);
+    expect(installer.installs, 0);
+    await cubit.installFromNotification(cubit.taskId!);
+    expect(installer.installs, 0);
+    cubit.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await settleUpdate();
+    expect(installer.installs, 1);
   });
 }

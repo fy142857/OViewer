@@ -81,10 +81,8 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
       setState(() => _busy = true);
       final updater = widget.androidUpdater!;
       unawaited(updater.check());
-      await showDialog<void>(
-          context: context,
-          builder: (_) => AndroidUpdateDialog(
-              cubit: updater, openRelease: widget.openRelease));
+      await showAndroidUpdateDialog(context,
+          cubit: updater, openRelease: widget.openRelease);
       if (mounted) setState(() => _busy = false);
       return;
     }

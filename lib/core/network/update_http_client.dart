@@ -26,7 +26,14 @@ class UpdateHttpClient extends http.BaseClient {
       if (!allowed(uri)) throw const FormatException('Invalid update URL');
       final next = http.Request('GET', uri)
         ..followRedirects = false
-        ..headers['User-Agent'] = 'OViewer-update';
+        ..headers['User-Agent'] = 'OViewer-update'
+        ..headers['Accept-Encoding'] = 'identity';
+      // Only public transfer headers survive redirects; never cookies or auth.
+      for (final entry in request.headers.entries) {
+        if (const {'range', 'if-range'}.contains(entry.key.toLowerCase())) {
+          next.headers[entry.key] = entry.value;
+        }
+      }
       final response = await _inner.send(next);
       if (!const [301, 302, 303, 307, 308].contains(response.statusCode)) {
         return response;

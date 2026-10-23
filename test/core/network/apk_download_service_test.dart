@@ -75,7 +75,7 @@ void main() {
     expect(await folder.list().isEmpty, isTrue);
   });
 
-  test('disconnect closes the client and removes incomplete files', () async {
+  test('disconnect closes the client and retains resumable bytes', () async {
     final client = StreamClient(() async => http.StreamedResponse(
         Stream<List<int>>.error(http.ClientException('connection lost')), 200));
     final service = ApkDownloadService(
@@ -85,7 +85,7 @@ void main() {
         throwsA(isA<ApkUpdateException>()
             .having((e) => e.code, 'code', 'network')));
     expect(client.closed, isTrue);
-    expect(await folder.list().isEmpty, isTrue);
+    expect((await service.restorePartial())?.received, 0);
   });
 
   test('streams binary bytes, reports progress and restores verified package',
@@ -124,7 +124,7 @@ void main() {
           service.download(packageFor([1, 2, 3]),
               progress: (_) {}, verifying: () {}),
           throwsA(isA<ApkUpdateException>()
-              .having((e) => e.code, 'code', 'integrity')));
+              .having((e) => e.code, 'code', 'range')));
       expect(await folder.list().isEmpty, isTrue);
     });
   }
@@ -184,7 +184,7 @@ void main() {
     expect(await other.exists(), isTrue);
   });
 
-  test('stalled download fails and removes partials', () async {
+  test('stalled download retains partials for an explicit retry', () async {
     final stream = StreamController<List<int>>();
     final service = ApkDownloadService(
         directory: () async => folder,
@@ -196,6 +196,6 @@ void main() {
         throwsA(isA<ApkUpdateException>()
             .having((e) => e.code, 'code', 'timeout')));
     await stream.close();
-    expect(await folder.list().isEmpty, isTrue);
+    expect((await service.restorePartial())?.received, 0);
   });
 }

@@ -31,6 +31,7 @@ import 'repositories/update_repository.dart';
 import 'core/services/release_link_opener.dart';
 import 'core/services/offline_download_coordinator.dart';
 import 'core/services/offline_platform.dart';
+import 'core/services/apk_update_platform.dart';
 import 'core/storage/offline_files.dart';
 import 'core/network/offline_download_network.dart';
 import 'repositories/offline_repository.dart';
@@ -87,9 +88,13 @@ Future<void> _initDependencies(
   sl.registerLazySingleton<UpdateRepository>(
       () => UpdateRepository(storage: sl<LocalStorage>()));
   sl.registerLazySingleton<ApkDownloadService>(() => ApkDownloadService());
+  sl.registerSingleton<ApkUpdatePlatform>(
+      ApkUpdatePlatform(language: localStorage.getLocale),
+      dispose: (value) => value.dispose());
   sl.registerLazySingleton<UpdateCubit>(
       () => UpdateCubit(sl<UpdateRepository>(), sl<ApkDownloadService>(),
-          ApkInstaller(language: localStorage.getLocale)),
+          ApkInstaller(language: localStorage.getLocale),
+          platform: sl<ApkUpdatePlatform>()),
       dispose: (value) => value.close());
   sl.registerLazySingleton<ReleaseLinkOpener>(() => ReleaseLinkOpener());
   sl.registerLazySingleton<GalleryRepository>(
@@ -176,6 +181,11 @@ Future<void> _startApp() async {
               await sl<ApkDownloadService>()
                   .maintain(int.parse(installed.buildNumber));
               await sl<UpdateRepository>().restoreUpdateStatus();
+              // Bind commands before advertising readiness to native notifications.
+              sl<UpdateCubit>();
+              await sl<ApkUpdatePlatform>()
+                  .maintainNotification(int.parse(installed.buildNumber));
+              await sl<ApkUpdatePlatform>().initialize();
             })(),
         ]);
       },

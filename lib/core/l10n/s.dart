@@ -143,15 +143,21 @@ class S {
   String get installNow => _zh ? '立即安装' : 'Install now';
   String get updateReleaseLink => _zh ? '跳转发布页（下载更稳）' : 'Open release page (more reliable download)';
   String get updateHide => _zh ? '隐藏' : 'Hide';
+  String get updateContinue => _zh ? '继续下载' : 'Continue';
+  String get updateInterrupted => _zh ? '下载已中断，可继续下载' : 'Download interrupted. You can continue.';
   String get updateDownloadCancel => _zh ? '取消下载' : 'Cancel download';
   String get updateDownloading => _zh ? '正在下载安装包…' : 'Downloading update…';
   String get updateVerifying => _zh ? '正在校验安装包…' : 'Verifying package…';
   String get updatePermission => _zh ? '等待安装授权' : 'Waiting for installation permission';
-  String get updateReady => _zh ? '安装包已就绪，请在系统界面确认安装' : 'Package ready. Confirm installation in the system installer.';
-  String get updateHiddenHint => _zh ? '隐藏后下载继续。' : 'Downloading continues when hidden.';
+  String get updateReady => _zh ? '安装包已就绪，可点击“立即安装”' : 'Package ready. Tap Install now to continue.';
+  String get updateHiddenHint => _zh ? '隐藏或切后台后继续下载，完成后点击通知或“立即安装”。' : 'Downloading continues in the background. Tap the notification or Install now when ready.';
   String get updateNoNotes => _zh ? '此版本没有“新增”“修复”或“变更”说明。' : 'No Added, Fixed or Changed notes for this release.';
   String get updateCheckAgain => _zh ? '重新检查版本' : 'Check again';
   String updateApkError(String code) {
+    if (code == 'background_unavailable') return _zh ? '暂时无法启动后台下载，请回到应用重试' : 'Background download could not start. Return to the app and retry.';
+    if (code == 'service_timeout') return _zh ? '后台下载已被系统暂停，可回到应用继续' : 'Android paused the download. Return to the app to continue.';
+    if (code == 'interrupted') return updateInterrupted;
+    if (code == 'range') return _zh ? '下载数据范围异常，请重新下载' : 'Invalid download range. Please download again.';
     final messages = <String, List<String>>{
       'metadata': ['此版本无法应用内更新，请打开发布页。', 'In-app update is unavailable for this release. Open the release page.'],
       'newer_build': ['当前构建号不低于此安装包，不能覆盖降级。', 'Your installed build is at least as new as this package. Downgrades are blocked.'],

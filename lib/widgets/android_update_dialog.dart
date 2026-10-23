@@ -5,6 +5,21 @@ import '../blocs/update/update_cubit.dart';
 import '../core/l10n/s.dart';
 import '../repositories/update_repository.dart';
 
+Future<void> showAndroidUpdateDialog(BuildContext context,
+    {required UpdateCubit cubit,
+    required Future<bool> Function(Uri) openRelease}) async {
+  if (cubit.windowVisible) return;
+  cubit.windowOpened();
+  try {
+    await showDialog<void>(
+        context: context,
+        builder: (_) =>
+            AndroidUpdateDialog(cubit: cubit, openRelease: openRelease));
+  } finally {
+    cubit.windowClosed();
+  }
+}
+
 class AndroidUpdateDialog extends StatelessWidget {
   const AndroidUpdateDialog(
       {super.key, required this.cubit, required this.openRelease});
@@ -39,11 +54,13 @@ class AndroidUpdateDialog extends StatelessWidget {
         final verifying = state.phase == ApkUpdatePhase.verifying;
         final checking = state.phase == ApkUpdatePhase.checking;
         final ready = state.phase == ApkUpdatePhase.ready;
+        final interrupted = state.phase == ApkUpdatePhase.interrupted;
         final error = state.error ?? result?.apkFailure;
         final url = update?.releaseUrl ?? result?.releaseUrl;
         final notes = update?.notes ?? result?.notes ?? '';
         String? status;
         if (ready) status = s.updateReady;
+        if (interrupted) status = s.updateInterrupted;
         if (state.phase == ApkUpdatePhase.waitingPermission)
           status = s.updatePermission;
         if (result?.status == UpdateStatus.current) status = s.versionCurrent;
@@ -94,17 +111,17 @@ class AndroidUpdateDialog extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(status)
                     ],
-                    if (downloading || verifying) ...[
+                    if (downloading || verifying || interrupted) ...[
                       const SizedBox(height: 16),
                       LinearProgressIndicator(
-                          value: downloading && update != null
+                          value: (downloading || interrupted) && update != null
                               ? state.received / update.size
                               : null),
                       const SizedBox(height: 8),
                       if (update != null)
                         Text('${size(state.received)} / ${size(update.size)}'),
                       const SizedBox(height: 8),
-                      Text(s.updateHiddenHint),
+                      if (!interrupted) Text(s.updateHiddenHint),
                     ],
                     if (error != null) ...[
                       const SizedBox(height: 12),
@@ -124,7 +141,7 @@ class AndroidUpdateDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (downloading || verifying)
+                if (downloading || verifying || interrupted)
                   Flexible(
                     flex: 4,
                     child: TextButton(
@@ -167,9 +184,11 @@ class AndroidUpdateDialog extends StatelessWidget {
                             : cubit.start()),
                         child: Text(ready || retryInstall
                             ? s.installNow
-                            : error != null
-                                ? s.retry
-                                : s.updateNow)),
+                            : interrupted
+                                ? s.updateContinue
+                                : error != null
+                                    ? s.retry
+                                    : s.updateNow)),
                   ),
               ],
             ),

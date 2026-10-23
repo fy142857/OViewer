@@ -28,6 +28,9 @@ void main() {
       calls++;
       expect(r.headers.containsKey('cookie'), isFalse);
       expect(r.headers.containsKey('authorization'), isFalse);
+      expect(r.headers['Range'], 'bytes=123-');
+      expect(r.headers['If-Range'], '"asset"');
+      expect(r.headers['Accept-Encoding'], 'identity');
       expect(r.followRedirects, isFalse);
       return calls == 1
           ? http.Response('', 302, headers: {
@@ -36,8 +39,13 @@ void main() {
             })
           : http.Response('apk', 200);
     }));
-    final response = await client.get(Uri.parse('https://github.com/start'),
-        headers: {'Cookie': 'private', 'Authorization': 'private'});
+    final response =
+        await client.get(Uri.parse('https://github.com/start'), headers: {
+      'Cookie': 'private',
+      'Authorization': 'private',
+      'Range': 'bytes=123-',
+      'If-Range': '"asset"'
+    });
     expect(response.body, 'apk');
     expect(calls, 2);
     client.close();

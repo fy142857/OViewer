@@ -19,6 +19,10 @@ import 'blocs/settings/settings_state.dart';
 import 'blocs/download/download_bloc.dart';
 import 'blocs/download/download_event.dart';
 import 'core/services/offline_platform.dart';
+import 'core/services/apk_update_platform.dart';
+import 'core/services/release_link_opener.dart';
+import 'blocs/update/update_cubit.dart';
+import 'widgets/android_update_dialog.dart';
 import 'repositories/search_repository.dart';
 import 'repositories/favorites_repository.dart';
 import 'repositories/history_repository.dart';
@@ -69,6 +73,25 @@ class OViewerApp extends StatelessWidget {
                         prev.themeMode != curr.themeMode ||
                         prev.locale != curr.locale,
                     builder: (context, settingsState) {
+                      if (sl.isRegistered<ApkUpdatePlatform>()) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final platform = sl<ApkUpdatePlatform>();
+                          platform.onOpen = (id, install) async {
+                            final navigator = navigatorKey.currentState;
+                            if (navigator == null || !navigator.mounted) return;
+                            final cubit = sl<UpdateCubit>();
+                            final dialog = showAndroidUpdateDialog(
+                                navigator.context,
+                                cubit: cubit,
+                                openRelease: sl<ReleaseLinkOpener>().open);
+                            await cubit.check();
+                            if (install)
+                              await cubit.installFromNotification(id);
+                            await dialog;
+                          };
+                          platform.drainOpen();
+                        });
+                      }
                       if (sl.isRegistered<OfflinePlatform>()) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           sl<OfflinePlatform>().attachNavigator(() =>
