@@ -5059,8 +5059,43 @@
         }
       ],
       "version": "1.10.1"
+    },
+    {
+      "base_tag": "v1.10.0",
+      "branch": "dev",
+      "build_number": 107,
+      "build_sha": "3cf1afd0643c90a4290968b25ab650d85115711e",
+      "candidate_id": "1.10.1+107",
+      "fingerprint": "15308fba1d2c66a612f8ad7ca420eefb841d00fbc61da2489dc9b845bf2c352a",
+      "notes": "### 新增\n\n### 修复\n\n- 修正详情页收藏请求的表单字段与提交格式，补齐来源信息；保留点击立即改变状态的交互，防止重复提交，失败时恢复原收藏状态并提示重试。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "b52fac41c23fbaa1a3b212649e2adefc94b11a05",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Send URL-encoded favorite forms with the submit field and same-site origin and referrer, prevent duplicate mutations, and keep detail state unchanged until success with visible failure feedback.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "f717aa3b48d71e0b304cc1a215b91346e2c4ea73",
+          "subject": "fix(favorites): correct form submission and await favorite changes",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Restore immediate favorite state changes as requested while retaining duplicate request protection and failure rollback feedback.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "b52fac41c23fbaa1a3b212649e2adefc94b11a05",
+          "subject": "fix(favorites): preserve immediate toggle feedback without a spinner",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.10.1"
     }
   ],
-  "last_build_number": 106,
+  "last_build_number": 107,
   "schema": 1
 }
