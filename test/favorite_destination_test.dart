@@ -145,7 +145,7 @@ void main() {
       bloc.add(const ToggleFavorite(gid: 42, token: 'abc', slot: 4));
       await flush();
       expect(bloc.state.savingFavorite, isTrue);
-      expect(bloc.state.detail!.isFavorited, isFalse);
+      expect(bloc.state.detail!.favoritedSlot, 4);
       bloc.add(const ToggleFavorite(gid: 42, token: 'abc', slot: 4));
       bloc.add(const FetchGalleryDetail(gid: 42, token: 'abc'));
       await flush();
@@ -159,8 +159,8 @@ void main() {
       expect(bloc.state.detail!.favoritedSlot, failRequest ? null : 4);
       expect(bloc.state.favoriteError,
           failRequest ? 'favoriteActionFailed' : null);
-      if (failRequest)
-        expect(states.any((s) => s.detail!.isFavorited), isFalse);
+      expect(states.map((s) => s.detail!.favoritedSlot),
+          failRequest ? [4, null] : [4, 4]);
       verify(() => dio.post(any(),
           data: any(named: 'data'),
           contentType: any(named: 'contentType'),

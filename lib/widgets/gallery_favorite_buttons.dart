@@ -89,12 +89,7 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
                 ? null
                 : () =>
                     widget.onToggle(widget.settings.getFavoriteDestination()),
-            icon: widget.saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.favorite, size: 20, color: Colors.red),
+            icon: const Icon(Icons.favorite, size: 20, color: Colors.red),
             label: Text(s.favoriteCategory(widget.favoritedSlot!)),
           ),
         )
@@ -107,17 +102,12 @@ class _GalleryFavoriteButtonsState extends State<GalleryFavoriteButtons> {
                 ? null
                 : () =>
                     widget.onToggle(widget.settings.getFavoriteDestination()),
-            icon: widget.saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : Icon(
-                    widget.favoritedSlot != null
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    size: 20,
-                    color: widget.favoritedSlot != null ? Colors.red : null)),
+            icon: Icon(
+                widget.favoritedSlot != null
+                    ? Icons.favorite
+                    : Icons.favorite_border,
+                size: 20,
+                color: widget.favoritedSlot != null ? Colors.red : null)),
     ]);
   }
 }

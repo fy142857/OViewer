@@ -81,8 +81,12 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
         revision == _detailRevision &&
         state.detail?.gid == detail.gid &&
         state.detail?.token == detail.token;
-    // Show progress until the request succeeds, rather than flashing success.
-    emit(state.copyWith(savingFavorite: true, clearFavoriteError: true));
+    // Keep immediate feedback while allowing only one request at a time.
+    emit(state.copyWith(
+        detail:
+            detail.withFavoriteSlot(wasFavorited ? null : (event.slot ?? 0)),
+        savingFavorite: true,
+        clearFavoriteError: true));
 
     try {
       if (wasFavorited) {
@@ -107,10 +111,7 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
         );
       }
       if (current()) {
-        emit(state.copyWith(
-            detail: state.detail!
-                .withFavoriteSlot(wasFavorited ? null : (event.slot ?? 0)),
-            savingFavorite: false));
+        emit(state.copyWith(savingFavorite: false));
       }
     } catch (error) {
       if (kDebugMode) {
@@ -119,7 +120,9 @@ class GalleryDetailBloc extends Bloc<GalleryDetailEvent, GalleryDetailState> {
       }
       if (current()) {
         emit(state.copyWith(
-            savingFavorite: false, favoriteError: 'favoriteActionFailed'));
+            detail: state.detail!.withFavoriteSlot(detail.favoritedSlot),
+            savingFavorite: false,
+            favoriteError: 'favoriteActionFailed'));
       }
     }
   }
