@@ -1,43 +1,23 @@
 {
-  "base_tag": "v1.10.0",
+  "base_tag": "v1.10.1",
   "branch": "dev",
-  "build_number": 108,
-  "candidate_id": "1.10.1+108",
-  "fingerprint": "4e1c72f13c22680a2cdcfd67c8083c5b704c8bbc8f1b1615eb942becca7c3c81",
-  "notes": "### 新增\n\n### 修复\n\n- 修正详情页收藏请求的表单字段与提交格式，补齐来源信息；点击立即切换收藏状态，不显示转圈、置灰或点击动画，内部防止重复提交，失败时恢复原状态并提示重试。\n\n### 变更\n\n### 已知限制",
+  "build_number": 109,
+  "candidate_id": "1.10.2+109",
+  "fingerprint": "a2abd05b4f706d00b913abff87cd1b1c54409721a0a4370282ad6837958f0667",
+  "notes": "### 新增\n\n### 修复\n\n- 改善 Android 应用内更新的后台下载：新增通知栏进度、中断续传；隐藏窗口或切后台后完成下载时由用户点击安装，取消下载会清理文件（#60）。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "2aa32b3ae757b6a64f7c5cb298a990a5c9d8cf18",
+  "source_sha": "921be963f743c683602bd1f1d6193096e79d202d",
   "summary": [
     {
       "change_kind": "fix",
-      "classification_reason": "Send URL-encoded favorite forms with the submit field and same-site origin and referrer, prevent duplicate mutations, and keep detail state unchanged until success with visible failure feedback.",
+      "classification_reason": "Protect Android update transfers with an independent foreground service, preserve validated resumable files, and require explicit installation after hiding the update window or backgrounding the app.",
       "classification_source": "commit-trailers",
       "original_type": "fix",
-      "sha": "f717aa3b48d71e0b304cc1a215b91346e2c4ea73",
-      "subject": "fix(favorites): correct form submission and await favorite changes",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Restore immediate favorite state changes as requested while retaining duplicate request protection and failure rollback feedback.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "b52fac41c23fbaa1a3b212649e2adefc94b11a05",
-      "subject": "fix(favorites): preserve immediate toggle feedback without a spinner",
-      "type": "fix",
-      "version_impact": "patch"
-    },
-    {
-      "change_kind": "fix",
-      "classification_reason": "Keep favorite controls visually enabled during requests and switch immediately without ripple or transition effects while retaining the internal duplicate-request guard.",
-      "classification_source": "commit-trailers",
-      "original_type": "fix",
-      "sha": "2aa32b3ae757b6a64f7c5cb298a990a5c9d8cf18",
-      "subject": "fix(favorites): remove pending dimming and toggle animations",
+      "sha": "921be963f743c683602bd1f1d6193096e79d202d",
+      "subject": "fix(updates): retain resumable APK downloads in the background",
       "type": "fix",
       "version_impact": "patch"
     }
   ],
-  "version": "1.10.1"
+  "version": "1.10.2"
 }
