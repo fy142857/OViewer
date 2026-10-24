@@ -99,6 +99,8 @@ void main() {
           () => OneFrameImageStreamCompleter(
               Future.value(ImageInfo(image: pixels!))));
       await tester.pumpWidget(const OViewerApp());
+      expect(tester.widget<MaterialApp>(find.byType(MaterialApp)).title,
+          'OViewer Debug');
       await tester.pump();
       // No history tab lookup or bloc read has occurred yet.
       expect(tester.widget<TabBar>(find.byType(TabBar)).controller!.index, 0);

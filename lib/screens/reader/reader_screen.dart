@@ -1,3 +1,4 @@
+import '../../widgets/reader_image_layout.dart';
 import '../../widgets/reader_scroll_physics.dart';
 import '../../models/reader_page_layout.dart';
 import '../../blocs/settings/settings_bloc.dart';
@@ -248,6 +249,8 @@ class _ReaderViewState extends State<_ReaderView> {
     super.didChangeDependencies();
     final viewport = MediaQuery.sizeOf(context);
     if (_viewport != null && _viewport != viewport) {
+      _explicitPage = context.read<ReaderBloc>().state.currentPage;
+      _scrollStorage = PageStorageBucket();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _zoomController.value = Matrix4.identity();
       });
@@ -267,12 +270,16 @@ class _ReaderViewState extends State<_ReaderView> {
     }
   }
 
-  Widget _spreadRow(ReaderState state, int spread, {required bool horizontal}) {
+  Widget _spreadRow(ReaderState state, int spread,
+      {required bool horizontal, required Size viewport}) {
     final pages = state.spreads
         .pages(spread, reverse: horizontal && state.readingMode == 1);
-    if (!horizontal &&
-        pages.length == 2 &&
-        state.spreadAlignment == ReaderSpreadAlignment.height) {
+    final landscape = viewport.width > viewport.height;
+    final fitHeight = !horizontal &&
+        landscape &&
+        state.spreadAlignment == ReaderSpreadAlignment.height;
+    final compact = horizontal && landscape && pages.length == 2;
+    if (fitHeight || compact) {
       double ratio(int page) {
         final decoded =
             _pageAspectRatios[(page, state.imageAttempts[page] ?? 0)];
@@ -283,22 +290,32 @@ class _ReaderViewState extends State<_ReaderView> {
                 : 0.7);
       }
 
-      return LayoutBuilder(builder: (_, constraints) {
-        final ratios = pages.map(ratio).toList();
-        final height = constraints.maxWidth / (ratios[0] + ratios[1]);
-        return Row(key: ValueKey('reader-spread-$spread'), children: [
-          for (var i = 0; i < pages.length; i++)
-            SizedBox(
-                width: height * ratios[i],
-                height: height,
-                child: _pageSurface(
-                    pages[i],
-                    SizedBox(
-                        key: ValueKey('reader-page-${pages[i]}'),
-                        child: _spreadImage(state, pages[i],
-                            horizontal: false, alignedHeight: height)))),
-        ]);
-      });
+      final ratios = pages.map(ratio).toList();
+      final sizes = fitHeight
+          ? heightFittedPages(ratios, viewport)
+          : compactHorizontalPages(ratios, viewport);
+      return SizedBox(
+        height: viewport.height,
+        child: Row(
+          key: ValueKey('reader-spread-$spread'),
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            for (var i = 0; i < pages.length; i++) ...[
+              if (i > 0) const SizedBox(width: readerSpreadGap),
+              SizedBox.fromSize(
+                  size: sizes[i],
+                  child: _pageSurface(
+                      pages[i],
+                      SizedBox(
+                          key: ValueKey('reader-page-${pages[i]}'),
+                          child: _spreadImage(state, pages[i],
+                              horizontal: horizontal,
+                              alignedHeight: sizes[i].height)))),
+            ]
+          ],
+        ),
+      );
     }
     return Row(
       key: ValueKey('reader-spread-$spread'),
@@ -864,7 +881,8 @@ class _ReaderViewState extends State<_ReaderView> {
               childSize: viewport,
               child: SizedBox.fromSize(
                   size: viewport,
-                  child: _spreadRow(state, index, horizontal: true)),
+                  child: _spreadRow(state, index,
+                      horizontal: true, viewport: viewport)),
               onTapUp: (_, __, ___) => _toggleUI(),
               initialScale: 1.0,
               minScale: 1.0,
@@ -931,82 +949,91 @@ class _ReaderViewState extends State<_ReaderView> {
 
   // ---- Vertical Continuous Scroll Reader ----
   Widget _buildVerticalReader(ReaderState state) {
-    return NotificationListener<ScrollStartNotification>(
-      onNotification: (notification) {
-        if (notification.dragDetails != null) _explicitPage = null;
-        return false;
-      },
-      child: PageStorage(
-        bucket: _scrollStorage,
-        child: InteractiveViewer(
-          transformationController: _zoomController,
-          minScale: 1.0,
-          maxScale: 3.0,
-          panEnabled: _isZoomed,
-          scaleEnabled: true,
-          child: ScrollablePositionedList.builder(
-            itemCount: state.spreads.count,
-            itemScrollController: _verticalScrollController,
-            itemPositionsListener: _verticalPositionsListener,
-            initialScrollIndex: state.spreads.spreadOf(state.currentPage),
-            itemBuilder: (context, index) {
-              if (state.pageLayout == ReaderPageLayout.doublePage) {
-                return _spreadRow(state, index, horizontal: false);
-              }
-              if (state.offlineBook != null) {
-                final provider = _offlineProvider(state, index);
-                return _pageSurface(
-                    index,
-                    provider == null
-                        ? SizedBox(height: 300, child: _offlineMissing(index))
-                        : ReaderPageImage(
-                            image: provider,
-                            loadingHeight: MediaQuery.sizeOf(context).height,
-                            errorBuilder: (_, __, ___) => SizedBox(
-                                height: 300,
-                                child: _offlineMissing(index, damaged: true))));
-              }
-              final image = state.loadedImages[index];
-              if (image == null ||
-                  state.loadingIndices.contains(index) ||
-                  state.failedIndices.contains(index)) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final viewport = constraints.biggest;
+      final fitHeight = viewport.width > viewport.height &&
+          state.spreadAlignment == ReaderSpreadAlignment.height;
+      return NotificationListener<ScrollStartNotification>(
+        onNotification: (notification) {
+          if (notification.dragDetails != null) _explicitPage = null;
+          return false;
+        },
+        child: PageStorage(
+          bucket: _scrollStorage,
+          child: InteractiveViewer(
+            transformationController: _zoomController,
+            minScale: 1.0,
+            maxScale: 3.0,
+            panEnabled: _isZoomed,
+            scaleEnabled: true,
+            child: ScrollablePositionedList.builder(
+              key: ObjectKey(_scrollStorage),
+              itemCount: state.spreads.count,
+              itemScrollController: _verticalScrollController,
+              itemPositionsListener: _verticalPositionsListener,
+              initialScrollIndex: state.spreads.spreadOf(state.currentPage),
+              itemBuilder: (context, index) {
+                if (state.pageLayout == ReaderPageLayout.doublePage ||
+                    fitHeight) {
+                  return _spreadRow(state, index,
+                      horizontal: false, viewport: viewport);
+                }
+                if (state.offlineBook != null) {
+                  final provider = _offlineProvider(state, index);
+                  return _pageSurface(
+                      index,
+                      provider == null
+                          ? SizedBox(height: 300, child: _offlineMissing(index))
+                          : ReaderPageImage(
+                              image: provider,
+                              loadingHeight: MediaQuery.sizeOf(context).height,
+                              errorBuilder: (_, __, ___) => SizedBox(
+                                  height: 300,
+                                  child:
+                                      _offlineMissing(index, damaged: true))));
+                }
+                final image = state.loadedImages[index];
+                if (image == null ||
+                    state.loadingIndices.contains(index) ||
+                    state.failedIndices.contains(index)) {
+                  return _pageSurface(
+                      index,
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.8,
+                        child: _pendingImage(state, index),
+                      ));
+                }
+
+                // Calculate aspect ratio for proper height
+                double aspectRatio = image.width > 0 && image.height > 0
+                    ? image.width / image.height
+                    : 0.7; // default portrait ratio
+                final screenWidth = MediaQuery.of(context).size.width;
+                final imageHeight = screenWidth / aspectRatio;
+
                 return _pageSurface(
                     index,
                     SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.8,
-                      child: _pendingImage(state, index),
+                      width: screenWidth,
+                      height: imageHeight.clamp(200.0, screenWidth * 3),
+                      child: ReaderPageImage(
+                        image: _imageProvider(image.imageUrl,
+                            page: index,
+                            attempt: state.imageAttempts[index] ?? 0),
+                        errorBuilder: (_, error, ___) =>
+                            error is ReaderLocalCacheMiss
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white))
+                                : _decodedImageError(state, index),
+                      ),
                     ));
-              }
-
-              // Calculate aspect ratio for proper height
-              double aspectRatio = image.width > 0 && image.height > 0
-                  ? image.width / image.height
-                  : 0.7; // default portrait ratio
-              final screenWidth = MediaQuery.of(context).size.width;
-              final imageHeight = screenWidth / aspectRatio;
-
-              return _pageSurface(
-                  index,
-                  SizedBox(
-                    width: screenWidth,
-                    height: imageHeight.clamp(200.0, screenWidth * 3),
-                    child: ReaderPageImage(
-                      image: _imageProvider(image.imageUrl,
-                          page: index,
-                          attempt: state.imageAttempts[index] ?? 0),
-                      errorBuilder: (_, error, ___) =>
-                          error is ReaderLocalCacheMiss
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white))
-                              : _decodedImageError(state, index),
-                    ),
-                  ));
-            },
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   // ---- Overlays ----

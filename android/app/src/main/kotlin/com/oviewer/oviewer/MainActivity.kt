@@ -19,6 +19,7 @@ class MainActivity: FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppTaskIdentity.apply(this)
         runtime.attach(this)
         if (intent?.action == OfflineDownloadService.OPEN) runtime.openDownloads()
         if (intent?.action == ApkDownloadService.OPEN) runtime.updates?.open(intent)

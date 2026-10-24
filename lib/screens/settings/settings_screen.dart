@@ -198,7 +198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               if (state.readingMode == 2 &&
-                  state.pageLayout == ReaderPageLayout.doublePage)
+                  MediaQuery.orientationOf(context) == Orientation.landscape)
                 ListTile(
                   key: const ValueKey('settings-reader-spread-alignment'),
                   leading: const Icon(Icons.align_vertical_top),

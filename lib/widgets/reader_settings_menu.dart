@@ -14,96 +14,146 @@ class ReaderSettingsButton extends StatelessWidget {
         icon: const Icon(Icons.auto_stories, color: Colors.white),
         tooltip: S.of(context).readerSettings,
         position: PopupMenuPosition.under,
-        constraints: const BoxConstraints(minWidth: 264, maxWidth: 300),
+        color: Theme.of(context).colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        constraints: const BoxConstraints(minWidth: 240, maxWidth: 300),
         itemBuilder: (_) => [
-          PopupMenuItem<void>(
-            enabled: false,
-            child: BlocProvider.value(
-                value: context.read<SettingsBloc>(),
-                child: const ReaderSettingsOptions()),
-          )
+          _ReaderSettingsEntry(
+              child: BlocProvider.value(
+                  value: context.read<SettingsBloc>(),
+                  child: const ReaderSettingsOptions()))
         ],
       );
 }
 
 class ReaderSettingsOptions extends StatelessWidget {
   const ReaderSettingsOptions({super.key});
+
+  Widget _selector<T>(BuildContext context,
+      {required String id,
+      required String label,
+      required T value,
+      required Map<T, (String, IconData)> choices,
+      required ValueChanged<T> onChanged}) {
+    final theme = Theme.of(context);
+    return Semantics(
+        label: label,
+        child: Row(children: [
+          Tooltip(
+              message: label,
+              child: Icon(choices[value]!.$2,
+                  size: 20, color: theme.colorScheme.onSurface)),
+          const SizedBox(width: 8),
+          Expanded(
+              child: DropdownButtonHideUnderline(
+                  child: DropdownButton<T>(
+            key: ValueKey(id),
+            value: value,
+            isExpanded: true,
+            isDense: false,
+            itemHeight: null,
+            dropdownColor: theme.colorScheme.surface,
+            style: theme.textTheme.bodyLarge
+                ?.copyWith(color: theme.colorScheme.onSurface),
+            selectedItemBuilder: (_) => [
+              for (final entry in choices.entries)
+                ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Align(
+                        heightFactor: 1,
+                        alignment: Alignment.centerLeft,
+                        child: Text(entry.value.$1)))
+            ],
+            items: [
+              for (final entry in choices.entries)
+                DropdownMenuItem<T>(
+                    value: entry.key,
+                    child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(children: [
+                          Icon(entry.value.$2, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(entry.value.$1)),
+                          if (entry.key == value)
+                            const Icon(Icons.check,
+                                size: 18, color: Colors.blue),
+                        ])))
+            ],
+            onChanged: (next) {
+              if (next != null) onChanged(next);
+            },
+          ))),
+        ]));
+  }
+
   @override
   Widget build(BuildContext context) =>
-      BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, state) {
-          final s = S.of(context);
-          return Column(mainAxisSize: MainAxisSize.min, children: [
-            DropdownButtonFormField<int>(
-              key: const ValueKey('reader-direction'),
+      BlocBuilder<SettingsBloc, SettingsState>(builder: (context, state) {
+        final s = S.of(context);
+        final settings = context.read<SettingsBloc>();
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          _selector<int>(context,
+              id: 'reader-direction',
+              label: s.readingDirection,
               value: state.readingMode,
-              isExpanded: true,
-              isDense: false,
-              itemHeight: null,
-              decoration: InputDecoration(labelText: s.readingDirection),
-              items: [
-                for (final item in {
-                  0: s.leftToRight,
-                  1: s.rightToLeft,
-                  2: s.verticalScroll
-                }.entries)
-                  DropdownMenuItem(value: item.key, child: Text(item.value))
-              ],
-              onChanged: (value) {
-                if (value != null)
-                  context.read<SettingsBloc>().add(UpdateReadingMode(value));
+              choices: {
+                0: (s.leftToRight, Icons.arrow_forward),
+                1: (s.rightToLeft, Icons.arrow_back),
+                2: (s.verticalScroll, Icons.swap_vert)
               },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<ReaderPageLayout>(
-              key: const ValueKey('reader-page-layout'),
+              onChanged: (value) => settings.add(UpdateReadingMode(value))),
+          _selector<ReaderPageLayout>(context,
+              id: 'reader-page-layout',
+              label: s.readerPageLayout,
               value: state.pageLayout,
-              isExpanded: true,
-              isDense: false,
-              itemHeight: null,
-              decoration: InputDecoration(labelText: s.readerPageLayout),
-              items: [
-                DropdownMenuItem(
-                    value: ReaderPageLayout.single,
-                    child: Text(s.readerSinglePage)),
-                DropdownMenuItem(
-                    value: ReaderPageLayout.doublePage,
-                    child: Text(s.readerDoublePage))
-              ],
-              onChanged: (value) {
-                if (value != null)
-                  context
-                      .read<SettingsBloc>()
-                      .add(UpdateReaderPageLayout(value));
+              choices: {
+                ReaderPageLayout.single: (
+                  s.readerSinglePage,
+                  Icons.crop_portrait
+                ),
+                ReaderPageLayout.doublePage: (
+                  s.readerDoublePage,
+                  Icons.auto_stories
+                )
               },
-            ),
-            if (state.readingMode == 2 &&
-                state.pageLayout == ReaderPageLayout.doublePage) ...[
-              const SizedBox(height: 16),
-              DropdownButtonFormField<ReaderSpreadAlignment>(
-                key: const ValueKey('reader-spread-alignment'),
+              onChanged: (value) =>
+                  settings.add(UpdateReaderPageLayout(value))),
+          if (state.readingMode == 2 &&
+              MediaQuery.orientationOf(context) == Orientation.landscape)
+            _selector<ReaderSpreadAlignment>(context,
+                id: 'reader-spread-alignment',
+                label: s.readerSpreadAlignment,
                 value: state.spreadAlignment,
-                isExpanded: true,
-                isDense: false,
-                itemHeight: null,
-                decoration: InputDecoration(labelText: s.readerSpreadAlignment),
-                items: [
-                  DropdownMenuItem(
-                      value: ReaderSpreadAlignment.width,
-                      child: Text(s.readerAlignWidth)),
-                  DropdownMenuItem(
-                      value: ReaderSpreadAlignment.height,
-                      child: Text(s.readerAlignHeight))
-                ],
-                onChanged: (value) {
-                  if (value != null)
-                    context
-                        .read<SettingsBloc>()
-                        .add(UpdateReaderSpreadAlignment(value));
+                choices: {
+                  ReaderSpreadAlignment.width: (
+                    s.readerAlignWidth,
+                    Icons.swap_horiz
+                  ),
+                  ReaderSpreadAlignment.height: (
+                    s.readerAlignHeight,
+                    Icons.height
+                  )
                 },
-              ),
-            ],
-          ]);
-        },
-      );
+                onChanged: (value) =>
+                    settings.add(UpdateReaderSpreadAlignment(value))),
+        ]);
+      });
+}
+
+class _ReaderSettingsEntry extends PopupMenuEntry<void> {
+  const _ReaderSettingsEntry({required this.child});
+  final Widget child;
+  @override
+  double get height => kMinInteractiveDimension;
+  @override
+  bool represents(void value) => false;
+  @override
+  State<_ReaderSettingsEntry> createState() => _ReaderSettingsEntryState();
+}
+
+class _ReaderSettingsEntryState extends State<_ReaderSettingsEntry> {
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16), child: widget.child);
 }

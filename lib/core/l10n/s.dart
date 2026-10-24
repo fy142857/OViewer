@@ -496,9 +496,9 @@ class S {
   String get loadingReader => _zh ? '正在加载阅读器...' : 'Loading reader...';
   String get failedToLoadReader => _zh ? '加载阅读器失败' : 'Failed to load reader';
   String get noPagesAvailable => _zh ? '没有可用页面' : 'No pages available';
-  String get readerSpreadAlignment => _zh ? '双页对齐' : 'Spread alignment';
-  String get readerAlignWidth => _zh ? '按宽度对齐' : 'Equal width';
-  String get readerAlignHeight => _zh ? '按高度对齐' : 'Equal height';
+  String get readerSpreadAlignment => _zh ? '图片对齐' : 'Image alignment';
+  String get readerAlignWidth => _zh ? '按宽度对齐' : 'Fit width';
+  String get readerAlignHeight => _zh ? '按高度对齐' : 'Fit height';
   String get readerSettings => _zh ? '阅读设置' : 'Reading settings';
   String get readingDirection => _zh ? '阅读方向' : 'Reading direction';
   String get readerPageLayout => _zh ? '页面布局' : 'Page layout';

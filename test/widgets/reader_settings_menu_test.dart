@@ -21,8 +21,10 @@ void main() {
           initialState:
               SettingsBloc.readSaved(repository).copyWith(locale: locale));
       addTearDown(bloc.close);
-      await tester.binding.setSurfaceSize(const Size(320, 600));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 600);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       tester.platformDispatcher.textScaleFactorTestValue = 1.6;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pumpWidget(BlocProvider.value(
@@ -58,12 +60,16 @@ void main() {
       await tester
           .tap(find.text(locale == 'zh' ? '垂直滚动' : 'Vertical Scroll').last);
       await tester.pumpAndSettle();
+      expect(
+          find.byKey(const ValueKey('reader-spread-alignment')), findsNothing);
+      expect(find.byType(DropdownButtonFormField<int>), findsNothing);
+      tester.view.physicalSize = const Size(800, 400);
+      await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('reader-spread-alignment')),
           findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('reader-spread-alignment')));
       await tester.pumpAndSettle();
-      await tester
-          .tap(find.text(locale == 'zh' ? '按高度对齐' : 'Equal height').last);
+      await tester.tap(find.text(locale == 'zh' ? '按高度对齐' : 'Fit height').last);
       await tester.pumpAndSettle();
       expect(
           repository.getReaderSpreadAlignment(), ReaderSpreadAlignment.height);
@@ -71,17 +77,17 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(locale == 'zh' ? '单页' : 'Single page').last);
       await tester.pumpAndSettle();
-      expect(
-          find.byKey(const ValueKey('reader-spread-alignment')), findsNothing);
+      expect(find.byKey(const ValueKey('reader-spread-alignment')),
+          findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('reader-page-layout')));
       await tester.pumpAndSettle();
       await tester.tap(find.text(locale == 'zh' ? '双页' : 'Double page').last);
       await tester.pumpAndSettle();
       expect(
           tester
-              .widget<DropdownButtonFormField<ReaderSpreadAlignment>>(
+              .widget<DropdownButton<ReaderSpreadAlignment>>(
                   find.byKey(const ValueKey('reader-spread-alignment')))
-              .initialValue,
+              .value,
           ReaderSpreadAlignment.height);
 
       await tester.tap(find.byKey(const ValueKey('reader-direction')));
@@ -94,7 +100,7 @@ void main() {
       expect(repository.getReadingMode(), 1);
       expect(repository.getReaderPageLayout(), ReaderPageLayout.doublePage);
       expect(tester.takeException(), isNull);
-      await tester.tapAt(const Offset(10, 550));
+      await tester.tapAt(const Offset(10, 350));
       await tester.pumpAndSettle();
       expect(find.byType(ReaderSettingsOptions), findsNothing);
       expect(SettingsBloc.readSaved(repository).pageLayout,

@@ -326,10 +326,12 @@ void main() {
   }
 
   testWidgets(
-      'vertical equal-height uses decoded ratios and keeps original focus',
+      'landscape height fit centres unequal pages and supports single-page reading',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(360, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 360);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     when(() => settings.getReadingMode()).thenReturn(2);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.doublePage);
@@ -360,8 +362,8 @@ void main() {
     await settleOffline(tester);
     final first = find.byKey(const ValueKey('reader-page-0'));
     final second = find.byKey(const ValueKey('reader-page-1'));
-    expect(tester.getSize(first).width, 180);
-    expect(tester.getSize(second).width, 180);
+    expect(tester.getSize(first).width, 400);
+    expect(tester.getSize(second).width, 400);
     expect(tester.getSize(first).height,
         greaterThan(tester.getSize(second).height));
     final bloc = tester
@@ -370,18 +372,44 @@ void main() {
     bloc.add(const ChangeReaderPreferences(2, ReaderPageLayout.doublePage,
         alignment: ReaderSpreadAlignment.height));
     await settleOffline(tester);
-    expect(tester.getSize(first).height, closeTo(360 / 3.5, 0.1));
-    expect(tester.getSize(second).height,
-        closeTo(tester.getSize(first).height, 0.1));
-    expect(tester.getSize(second).width / tester.getSize(first).width,
-        closeTo(6, 0.01));
-    expect(tester.getSize(second).width + tester.getSize(first).width,
-        closeTo(360, 0.1));
+    expect(tester.getSize(first).height, closeTo(360, 0.1));
+    expect(tester.getSize(second).height, closeTo(60, 0.1));
+    expect(tester.getSize(first).width,
+        closeTo(tester.getSize(second).width, 0.1));
+    expect(tester.getRect(first).center.dy,
+        closeTo(tester.getRect(second).center.dy, 0.1));
+    expect(tester.getRect(first).top, closeTo(0, 0.1));
     expect(bloc.state.currentPage, 1);
     bloc.add(const ChangeReaderPreferences(2, ReaderPageLayout.doublePage));
     await settleOffline(tester);
-    expect(tester.getSize(first).width, 180);
+    expect(tester.getSize(first).width, 400);
     expect(bloc.state.currentPage, 1);
+    bloc.add(const ChangeReaderPreferences(2, ReaderPageLayout.single,
+        alignment: ReaderSpreadAlignment.height));
+    await settleOffline(tester);
+    bloc.add(ToggleReaderUI());
+    await settleOffline(tester);
+    tester.widget<Slider>(find.byType(Slider)).onChangeEnd!(0);
+    await settleOffline(tester);
+    expect(tester.getSize(first).height, closeTo(360, 0.1));
+    expect(tester.getSize(first).width, closeTo(180, 0.1));
+    tester.view.physicalSize = const Size(360, 800);
+    await settleOffline(tester);
+    expect(bloc.state.currentPage, 0);
+    tester.view.physicalSize = const Size(800, 360);
+    await settleOffline(tester);
+    for (final mode in [0, 1]) {
+      bloc.add(ChangeReaderPreferences(mode, ReaderPageLayout.doublePage));
+      await settleOffline(tester);
+      final a = tester.getRect(first), b = tester.getRect(second);
+      expect(mode == 0 ? b.left - a.right : a.left - b.right, closeTo(4, 0.1));
+      expect(a.center.dy, closeTo(b.center.dy, 0.1));
+      expect(a.expandToInclude(b).center.dx, closeTo(400, 0.1));
+      expect(a.height, closeTo(360, 0.1));
+      expect(a.left, greaterThanOrEqualTo(0));
+      expect(b.right, lessThanOrEqualTo(800));
+      expect(bloc.state.currentPage, 0);
+    }
     expect(tester.takeException(), isNull);
     verifyZeroInteractions(gallery);
     await tester.pumpWidget(const SizedBox.shrink());
