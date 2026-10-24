@@ -5299,8 +5299,33 @@
         }
       ],
       "version": "1.10.2"
+    },
+    {
+      "base_tag": "v1.10.2",
+      "branch": "dev",
+      "build_number": 113,
+      "build_sha": "a5cceec1020a770db3c7d108252cc7286936e19b",
+      "candidate_id": "1.10.3+113",
+      "fingerprint": "e34496098fb97adcc291a216e1e49d6043c9a0da58975561e89b5e99554275e4",
+      "notes": "### 新增\n\n### 修复\n\n- iOS 更新窗口显示新版本的“新增、修复、变更”说明，分类标题加粗，长内容支持滚动；确认后仍跳转发布页（#69）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "4b27058358774c79e2c3d3287fe2ceb1ae542541",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Display existing Added, Fixed and Changed release notes in the iOS update dialog using shared Android heading styles while preserving release-page navigation.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "4b27058358774c79e2c3d3287fe2ceb1ae542541",
+          "subject": "fix(updates): show release notes in iOS update dialog",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.10.3"
     }
   ],
-  "last_build_number": 112,
+  "last_build_number": 113,
   "schema": 1
 }
