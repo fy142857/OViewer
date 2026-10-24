@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/update/update_cubit.dart';
 import '../core/l10n/s.dart';
 import '../repositories/update_repository.dart';
+import 'update_release_notes.dart';
 
 Future<void> showAndroidUpdateDialog(BuildContext context,
     {required UpdateCubit cubit,
@@ -27,20 +28,6 @@ class AndroidUpdateDialog extends StatelessWidget {
   final Future<bool> Function(Uri) openRelease;
   static String size(int bytes) =>
       '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-
-  Widget _releaseNotes(String notes) {
-    final lines = notes.split('\n');
-    return Text.rich(TextSpan(children: [
-      for (var i = 0; i < lines.length; i++)
-        TextSpan(
-          text: '${i == 0 ? '' : '\n'}${lines[i]}',
-          style: const {'新增', '修复', '变更', 'added', 'fixed', 'changed'}
-                  .contains(lines[i].trim().toLowerCase())
-              ? const TextStyle(fontWeight: FontWeight.bold)
-              : null,
-        ),
-    ]));
-  }
 
   @override
   Widget build(BuildContext context) => BlocBuilder<UpdateCubit,
@@ -133,10 +120,7 @@ class AndroidUpdateDialog extends StatelessWidget {
                     if (result?.status == UpdateStatus.available ||
                         update != null) ...[
                       const SizedBox(height: 16),
-                      if (notes.isEmpty)
-                        Text(s.updateNoNotes)
-                      else
-                        _releaseNotes(notes),
+                      UpdateReleaseNotes(notes),
                     ],
                   ]))),
           actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),

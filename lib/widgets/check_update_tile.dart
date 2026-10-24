@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../blocs/update/update_cubit.dart';
 import 'android_update_dialog.dart';
+import 'update_release_notes.dart';
 
 import '../core/l10n/s.dart';
 import '../repositories/update_repository.dart';
@@ -105,7 +106,20 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
             context: context,
             builder: (context) => AlertDialog(
               title: Text(s.updateAvailable),
-              content: Text(s.updateInstallPrompt(version)),
+              content: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(s.updateInstallPrompt(version)),
+                      const SizedBox(height: 16),
+                      UpdateReleaseNotes(result.notes),
+                    ],
+                  ),
+                ),
+              ),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context, false),

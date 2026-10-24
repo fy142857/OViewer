@@ -10,6 +10,7 @@ import 'package:oviewer/blocs/settings/settings_bloc.dart';
 import 'package:oviewer/blocs/settings/settings_state.dart';
 import 'package:oviewer/repositories/update_repository.dart';
 import 'package:oviewer/widgets/check_update_tile.dart';
+import 'package:oviewer/widgets/update_release_notes.dart';
 import 'package:oviewer/core/storage/local_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,13 +20,16 @@ import '../repositories/update_repository_test.dart'
 class MockSettings extends Mock implements SettingsBloc {}
 
 Widget app(UpdateRepository repo, Future<bool> Function(Uri) open,
-    {String locale = 'zh', GlobalKey<NavigatorState>? navigatorKey}) {
+    {String locale = 'zh',
+    GlobalKey<NavigatorState>? navigatorKey,
+    TargetPlatform? platform}) {
   final settings = MockSettings();
   when(() => settings.state).thenReturn(SettingsState(locale: locale));
   when(() => settings.stream).thenAnswer((_) => const Stream.empty());
   return BlocProvider<SettingsBloc>.value(
       value: settings,
       child: MaterialApp(
+          theme: ThemeData(platform: platform),
           navigatorKey: navigatorKey,
           home: Scaffold(
               body: CheckUpdateTile(repository: repo, openRelease: open))));
@@ -58,6 +62,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(opened, isEmpty);
     expect(find.text('最新版本为 1.2.0，点击安装'), findsOneWidget);
+    expect(find.text('此版本没有“新增”“修复”或“变更”说明。'), findsOneWidget);
     expect(
         find.byKey(const ValueKey('update-available-badge')), findsOneWidget);
     await tester.tap(find.text('确认'));
@@ -67,6 +72,76 @@ void main() {
         find.byKey(const ValueKey('update-available-badge')), findsOneWidget);
     expect(client.closes, 1);
   });
+
+  for (final locale in ['zh', 'en']) {
+    testWidgets(
+        'iOS shows filtered notes with bold headings and scrolls ($locale)',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final headings =
+          locale == 'zh' ? ['新增', '修复', '变更'] : ['Added', 'Fixed', 'Changed'];
+      final body = [
+        '## [1.2.0]',
+        '### ${headings[0]}',
+        '- New feature',
+        '### ${headings[1]}',
+        '- Bug fix',
+        '### ${headings[2]}',
+        for (var i = 0; i < 30; i++) '- Change $i',
+        '### Build provenance',
+        'HIDDEN_BUILD_DETAILS',
+        '## [1.1.0]',
+        '### ${headings[0]}',
+        'HIDDEN_OLD_VERSION',
+      ].join('\n');
+      var requests = 0;
+      final opened = <Uri>[];
+      final repo = UpdateRepository(
+        readVersion: () async => '1.0.0',
+        clientFactory: () => TrackingClient((request) async {
+          requests++;
+          expect(request.url, UpdateRepository.endpoint);
+          return http.Response(jsonEncode({...release(), 'body': body}), 200,
+              headers: {'content-type': 'application/json; charset=utf-8'});
+        }),
+      );
+      await tester.pumpWidget(app(repo, (url) async {
+        opened.add(url);
+        return true;
+      }, locale: locale, platform: TargetPlatform.iOS));
+      await tester.tap(find.byKey(const ValueKey('check-update')));
+      await tester.pumpAndSettle();
+      final notes = tester.widget<Text>(find.descendant(
+          of: find.byType(UpdateReleaseNotes), matching: find.byType(Text)));
+      final span = notes.textSpan! as TextSpan;
+      final text = span.toPlainText();
+      expect(text, contains('New feature'));
+      expect(text, contains('Bug fix'));
+      expect(text, contains('Change 29'));
+      expect(text, isNot(contains('HIDDEN_')));
+      for (final heading in headings) {
+        final section = span.children!
+            .cast<TextSpan>()
+            .singleWhere((part) => part.text!.trim() == heading);
+        expect(section.style!.fontWeight, FontWeight.bold);
+      }
+      expect(requests, 1);
+      expect(opened, isEmpty);
+      final scrollable = find.descendant(
+          of: find.byType(AlertDialog), matching: find.byType(Scrollable));
+      final position = tester.state<ScrollableState>(scrollable).position;
+      expect(position.maxScrollExtent, greaterThan(0));
+      await tester.drag(scrollable, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(position.pixels, greaterThan(0));
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text(locale == 'zh' ? '确认' : 'Confirm'));
+      await tester.pumpAndSettle();
+      expect(opened.single.toString(), release()['html_url']);
+      expect(requests, 1);
+    });
+  }
 
   for (final sample in [
     ('zh', '1.2.0', '当前已是最新版本'),
