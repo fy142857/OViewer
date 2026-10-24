@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:oviewer/widgets/reader_page_menu.dart';
 import 'package:oviewer/models/reader_page_layout.dart';
@@ -106,6 +107,8 @@ void main() {
     when(() => settings.getReadingMode()).thenReturn(0);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
+    when(() => settings.getReaderSpreadAlignment())
+        .thenReturn(ReaderSpreadAlignment.width);
     when(() => history.updateProgress(any(), any(), any()))
         .thenAnswer((_) async {});
     when(() => settingsBloc.state)
@@ -132,6 +135,8 @@ void main() {
     when(() => settings.getReadingMode()).thenReturn(2);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
+    when(() => settings.getReaderSpreadAlignment())
+        .thenReturn(ReaderSpreadAlignment.width);
     await tester.runAsync(() async {
       await repository.putIndex(
           book.id,
@@ -170,6 +175,8 @@ void main() {
       when(() => settings.getReadingMode()).thenReturn(mode);
       when(() => settings.getReaderPageLayout())
           .thenReturn(ReaderPageLayout.single);
+      when(() => settings.getReaderSpreadAlignment())
+          .thenReturn(ReaderSpreadAlignment.width);
       await tester.runAsync(() async {
         await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
             value: settingsBloc,
@@ -318,6 +325,70 @@ void main() {
     });
   }
 
+  testWidgets(
+      'vertical equal-height uses decoded ratios and keeps original focus',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.doublePage);
+    await tester.runAsync(() async {
+      for (final pair in [(0, 10, 20), (1, 30, 10)]) {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+        canvas.drawColor(Colors.orange, BlendMode.src);
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(pair.$2, pair.$3);
+        final png = (await image.toByteData(format: ui.ImageByteFormat.png))!
+            .buffer
+            .asUint8List();
+        image.dispose();
+        picture.dispose();
+        final saved = await repository.files
+            .write(book.id, pair.$1, Stream.value(png), current: () => true);
+        await repository.savePage(book.id, pair.$1, saved, current: () => true);
+      }
+      book = (await repository.get(book.id))!;
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settingsBloc,
+          child: MaterialApp(
+              home: ReaderScreen(
+                  gid: 42, token: 'abc', initialPage: 1, offlineBook: book))));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await settleOffline(tester);
+    final first = find.byKey(const ValueKey('reader-page-0'));
+    final second = find.byKey(const ValueKey('reader-page-1'));
+    expect(tester.getSize(first).width, 180);
+    expect(tester.getSize(second).width, 180);
+    expect(tester.getSize(first).height,
+        greaterThan(tester.getSize(second).height));
+    final bloc = tester
+        .element(find.byType(ScrollablePositionedList))
+        .read<ReaderBloc>();
+    bloc.add(const ChangeReaderPreferences(2, ReaderPageLayout.doublePage,
+        alignment: ReaderSpreadAlignment.height));
+    await settleOffline(tester);
+    expect(tester.getSize(first).height, closeTo(360 / 3.5, 0.1));
+    expect(tester.getSize(second).height,
+        closeTo(tester.getSize(first).height, 0.1));
+    expect(tester.getSize(second).width / tester.getSize(first).width,
+        closeTo(6, 0.01));
+    expect(tester.getSize(second).width + tester.getSize(first).width,
+        closeTo(360, 0.1));
+    expect(bloc.state.currentPage, 1);
+    bloc.add(const ChangeReaderPreferences(2, ReaderPageLayout.doublePage));
+    await settleOffline(tester);
+    expect(tester.getSize(first).width, 180);
+    expect(bloc.state.currentPage, 1);
+    expect(tester.takeException(), isNull);
+    verifyZeroInteractions(gallery);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+  });
+
   test(
       'repair invalidates stale page resources and updates local directory size',
       () async {
@@ -441,6 +512,8 @@ void main() {
     when(() => settings.getReadingMode()).thenReturn(2);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
+    when(() => settings.getReaderSpreadAlignment())
+        .thenReturn(ReaderSpreadAlignment.width);
     await tester.runAsync(() async {
       final first = book.pages.first;
       final bytes = await repository.files

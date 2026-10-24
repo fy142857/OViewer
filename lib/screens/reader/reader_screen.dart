@@ -1,7 +1,8 @@
+import '../../widgets/reader_scroll_physics.dart';
 import '../../models/reader_page_layout.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/settings/settings_state.dart';
-import '../../widgets/reader_settings_dialog.dart';
+import '../../widgets/reader_settings_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -151,10 +152,11 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
         child: BlocListener<SettingsBloc, SettingsState>(
           listenWhen: (previous, current) =>
               previous.readingMode != current.readingMode ||
-              previous.pageLayout != current.pageLayout,
+              previous.pageLayout != current.pageLayout ||
+              previous.spreadAlignment != current.spreadAlignment,
           listener: (context, settings) => context.read<ReaderBloc>().add(
-              ChangeReaderPreferences(
-                  settings.readingMode, settings.pageLayout)),
+              ChangeReaderPreferences(settings.readingMode, settings.pageLayout,
+                  alignment: settings.spreadAlignment)),
           child: _ReaderView(
               startup: _startup,
               requests: _requests,
@@ -207,6 +209,8 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _firstImageLogged = false;
   int? _lastReadingMode;
   ReaderPageLayout? _lastPageLayout;
+  ReaderSpreadAlignment? _lastSpreadAlignment;
+  final _pageAspectRatios = <(int, int), double>{};
   Size? _viewport;
   int? _sliderPage;
   int? _explicitPage;
@@ -227,6 +231,7 @@ class _ReaderViewState extends State<_ReaderView> {
       _positionInitialized = true;
       _lastReadingMode = initial.readingMode;
       _lastPageLayout = initial.pageLayout;
+      _lastSpreadAlignment = initial.spreadAlignment;
     }
     _imageFiles = EhImageCacheManager.readerFileService(
       GetIt.I<app.CookieManager>(),
@@ -265,6 +270,36 @@ class _ReaderViewState extends State<_ReaderView> {
   Widget _spreadRow(ReaderState state, int spread, {required bool horizontal}) {
     final pages = state.spreads
         .pages(spread, reverse: horizontal && state.readingMode == 1);
+    if (!horizontal &&
+        pages.length == 2 &&
+        state.spreadAlignment == ReaderSpreadAlignment.height) {
+      double ratio(int page) {
+        final decoded =
+            _pageAspectRatios[(page, state.imageAttempts[page] ?? 0)];
+        final metadata = state.loadedImages[page];
+        return decoded ??
+            (metadata != null && metadata.width > 0 && metadata.height > 0
+                ? metadata.width / metadata.height
+                : 0.7);
+      }
+
+      return LayoutBuilder(builder: (_, constraints) {
+        final ratios = pages.map(ratio).toList();
+        final height = constraints.maxWidth / (ratios[0] + ratios[1]);
+        return Row(key: ValueKey('reader-spread-$spread'), children: [
+          for (var i = 0; i < pages.length; i++)
+            SizedBox(
+                width: height * ratios[i],
+                height: height,
+                child: _pageSurface(
+                    pages[i],
+                    SizedBox(
+                        key: ValueKey('reader-page-${pages[i]}'),
+                        child: _spreadImage(state, pages[i],
+                            horizontal: false, alignedHeight: height)))),
+        ]);
+      });
+    }
     return Row(
       key: ValueKey('reader-spread-$spread'),
       crossAxisAlignment:
@@ -282,7 +317,8 @@ class _ReaderViewState extends State<_ReaderView> {
     );
   }
 
-  Widget _spreadImage(ReaderState state, int page, {required bool horizontal}) {
+  Widget _spreadImage(ReaderState state, int page,
+      {required bool horizontal, double? alignedHeight}) {
     ImageProvider? provider;
     Widget? placeholder;
     if (state.offlineBook != null) {
@@ -300,13 +336,26 @@ class _ReaderViewState extends State<_ReaderView> {
       }
     }
     final loadingHeight = MediaQuery.sizeOf(context).height * 0.6;
-    Widget bounded(Widget child) =>
-        horizontal ? child : SizedBox(height: loadingHeight, child: child);
+    Widget bounded(Widget child) => horizontal || alignedHeight != null
+        ? child
+        : SizedBox(height: loadingHeight, child: child);
     if (placeholder != null) return bounded(placeholder);
     return ReaderPageImage(
       image: provider!,
-      fit: horizontal ? BoxFit.contain : BoxFit.fitWidth,
-      loadingHeight: horizontal ? null : loadingHeight,
+      fit: horizontal || alignedHeight != null
+          ? BoxFit.contain
+          : BoxFit.fitWidth,
+      onDecodedSize: (size) {
+        if (!mounted || widget.requests.isCancelled || size.height <= 0) return;
+        final key = (page, state.imageAttempts[page] ?? 0);
+        final ratio = size.width / size.height;
+        if (_pageAspectRatios[key] == ratio) return;
+        setState(() {
+          _pageAspectRatios.removeWhere((entry, _) => entry.$1 == page);
+          _pageAspectRatios[key] = ratio;
+        });
+      },
+      loadingHeight: horizontal || alignedHeight != null ? null : loadingHeight,
       errorBuilder: (_, error, ___) => bounded(state.offlineBook != null
           ? _offlineMissing(page, damaged: true)
           : error is ReaderLocalCacheMiss
@@ -397,12 +446,14 @@ class _ReaderViewState extends State<_ReaderView> {
       _positionInitialized = true;
       _lastReadingMode = initial.readingMode;
       _lastPageLayout = initial.pageLayout;
+      _lastSpreadAlignment = initial.spreadAlignment;
     }
     return BlocConsumer<ReaderBloc, ReaderState>(
       listenWhen: (prev, curr) =>
           prev.status != curr.status ||
           prev.readingMode != curr.readingMode ||
           prev.pageLayout != curr.pageLayout ||
+          prev.spreadAlignment != curr.spreadAlignment ||
           prev.currentPage != curr.currentPage ||
           prev.showUI != curr.showUI,
       listener: (context, state) {
@@ -422,7 +473,8 @@ class _ReaderViewState extends State<_ReaderView> {
         if (state.status == ReaderStatus.ready &&
             (!_positionInitialized ||
                 _lastReadingMode != state.readingMode ||
-                _lastPageLayout != state.pageLayout)) {
+                _lastPageLayout != state.pageLayout ||
+                _lastSpreadAlignment != state.spreadAlignment)) {
           _explicitPage = state.currentPage;
           _zoomController.value = Matrix4.identity();
           _pageController.dispose();
@@ -436,6 +488,7 @@ class _ReaderViewState extends State<_ReaderView> {
         }
         _lastReadingMode = state.readingMode;
         _lastPageLayout = state.pageLayout;
+        _lastSpreadAlignment = state.spreadAlignment;
         ReaderPresentation.maybeOf(context)?.showControls(state.showUI ||
             state.status == ReaderStatus.error ||
             state.status == ReaderStatus.contentWarning);
@@ -803,6 +856,7 @@ class _ReaderViewState extends State<_ReaderView> {
             : ObjectKey(_pageController),
         pageController: _pageController,
         itemCount: state.spreads.count,
+        scrollPhysics: const ReaderScrollPhysics(),
         reverse: state.readingMode == 1, // RTL
         builder: (context, index) {
           if (state.pageLayout == ReaderPageLayout.doublePage) {
@@ -991,12 +1045,7 @@ class _ReaderViewState extends State<_ReaderView> {
                 ),
               ),
             ),
-            IconButton(
-              key: const ValueKey('reader-settings'),
-              icon: const Icon(Icons.auto_stories, color: Colors.white),
-              tooltip: S.of(context).readerSettings,
-              onPressed: () => showReaderSettings(context),
-            ),
+            const ReaderSettingsButton(),
           ],
         ),
       ),

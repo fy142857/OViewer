@@ -362,6 +362,8 @@ void main() {
     when(() => settings.getReadingMode()).thenReturn(0);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
+    when(() => settings.getReaderSpreadAlignment())
+        .thenReturn(ReaderSpreadAlignment.width);
     when(() => history.updateProgress(any(), any(), any()))
         .thenAnswer((_) async {});
     const request = LoadReaderImages(gid: 42, token: 'token', initialPage: 0);

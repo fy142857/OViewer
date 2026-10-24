@@ -46,6 +46,8 @@ void main() {
     when(() => settingsRepository.getReadingMode()).thenReturn(0);
     when(() => settingsRepository.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
+    when(() => settingsRepository.getReaderSpreadAlignment())
+        .thenReturn(ReaderSpreadAlignment.width);
     when(() => galleryRepository.fetchReaderIndexPage(
           42,
           'token',
@@ -143,6 +145,8 @@ void main() {
       when(() => settings.getReadingMode()).thenReturn(0);
       when(() => settings.getReaderPageLayout())
           .thenReturn(ReaderPageLayout.single);
+      when(() => settings.getReaderSpreadAlignment())
+          .thenReturn(ReaderSpreadAlignment.width);
       when(() => history.getProgress(any())).thenAnswer((_) async => null);
       when(() => history.updateProgress(any(), any(), any()))
           .thenAnswer((_) async {});

@@ -1,5 +1,7 @@
 enum ReaderPageLayout { single, doublePage }
 
+enum ReaderSpreadAlignment { width, height }
+
 /// Presentation indices never replace original page indices in storage/network.
 class ReaderSpreads {
   const ReaderSpreads(this.totalPages, this.layout);

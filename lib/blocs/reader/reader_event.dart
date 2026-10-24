@@ -56,9 +56,11 @@ class ToggleReaderUI extends ReaderEvent {}
 class ChangeReaderPreferences extends ReaderEvent {
   final int mode;
   final ReaderPageLayout layout;
-  const ChangeReaderPreferences(this.mode, this.layout);
+  final ReaderSpreadAlignment alignment;
+  const ChangeReaderPreferences(this.mode, this.layout,
+      {this.alignment = ReaderSpreadAlignment.width});
   @override
-  List<Object?> get props => [mode, layout];
+  List<Object?> get props => [mode, layout, alignment];
 }
 
 class ChangeReadingMode extends ReaderEvent {

@@ -50,6 +50,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<LoadSettings>(_onLoad);
     on<UpdateThemeMode>(_onTheme);
     on<UpdateReadingMode>(_onReading);
+    on<UpdateReaderSpreadAlignment>((event, emit) async {
+      await _repository.setReaderSpreadAlignment(event.alignment);
+      emit(state.copyWith(spreadAlignment: event.alignment));
+    });
     on<UpdateReaderPageLayout>((event, emit) async {
       await _repository.setReaderPageLayout(event.layout);
       emit(state.copyWith(pageLayout: event.layout));
@@ -68,6 +72,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         themeMode: repository.getThemeMode(),
         readingMode: repository.getReadingMode(),
         pageLayout: repository.getReaderPageLayout(),
+        spreadAlignment: repository.getReaderSpreadAlignment(),
         displayMode: repository.getDisplayMode(),
         cacheLimitMB: repository.getCacheLimit(),
         proxyUrl: repository.getProxy(),

@@ -70,6 +70,8 @@ void main() {
     when(() => settings.getReadingMode()).thenReturn(0);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
+    when(() => settings.getReaderSpreadAlignment())
+        .thenReturn(ReaderSpreadAlignment.width);
     when(() => history.getProgress(any())).thenAnswer((_) async => null);
     when(() => history.updateProgress(any(), any(), any()))
         .thenAnswer((_) async {});

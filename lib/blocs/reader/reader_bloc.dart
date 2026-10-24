@@ -41,6 +41,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (snapshot == null) {
       return ReaderState(
           readingMode: settings.getReadingMode(),
+          spreadAlignment: settings.getReaderSpreadAlignment(),
           pageLayout: settings.getReaderPageLayout());
     }
     final page = (request!.initialPage ?? snapshot.currentPage)
@@ -50,6 +51,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         gid: request.gid,
         token: request.token,
         readingMode: settings.getReadingMode(),
+        spreadAlignment: settings.getReaderSpreadAlignment(),
         pageLayout: settings.getReaderPageLayout(),
         currentPage: page,
         totalPages: snapshot.metadata.totalPages,
@@ -93,6 +95,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                         offlineBook.record.lastReadPage)
                     .clamp(0, offlineBook.record.totalPages - 1),
                 readingMode: settings.getReadingMode(),
+                spreadAlignment: settings.getReaderSpreadAlignment(),
                 pageLayout: settings.getReaderPageLayout(),
                 thumbnails: {
                     for (var i = 0; i < offlineBook.record.totalPages; i++)
@@ -214,7 +217,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     });
     on<ChangeReaderPreferences>((event, emit) {
       if (!_active) return;
-      emit(state.copyWith(readingMode: event.mode, pageLayout: event.layout));
+      emit(state.copyWith(
+          readingMode: event.mode,
+          pageLayout: event.layout,
+          spreadAlignment: event.alignment));
       _loadVisiblePages();
     });
   }
@@ -245,7 +251,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         gid: event.gid,
         token: event.token,
         readingMode: state.readingMode,
-        pageLayout: state.pageLayout));
+        pageLayout: state.pageLayout,
+        spreadAlignment: state.spreadAlignment));
     try {
       // Null means resume. An explicit zero really means the first page.
       final start = event.initialPage ??

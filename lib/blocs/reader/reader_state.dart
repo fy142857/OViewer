@@ -25,6 +25,7 @@ class ReaderState extends Equatable {
   final Set<int> cacheOnlyPages;
   final bool showUI;
   final ReaderPageLayout pageLayout;
+  final ReaderSpreadAlignment spreadAlignment;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
   final String? errorMessage;
 
@@ -47,6 +48,7 @@ class ReaderState extends Equatable {
     this.showUI = false,
     this.readingMode = 0,
     this.pageLayout = ReaderPageLayout.single,
+    this.spreadAlignment = ReaderSpreadAlignment.width,
     this.errorMessage,
   });
 
@@ -73,6 +75,7 @@ class ReaderState extends Equatable {
     bool? showUI,
     int? readingMode,
     ReaderPageLayout? pageLayout,
+    ReaderSpreadAlignment? spreadAlignment,
     String? errorMessage,
   }) {
     return ReaderState(
@@ -94,6 +97,7 @@ class ReaderState extends Equatable {
       showUI: showUI ?? this.showUI,
       readingMode: readingMode ?? this.readingMode,
       pageLayout: pageLayout ?? this.pageLayout,
+      spreadAlignment: spreadAlignment ?? this.spreadAlignment,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
@@ -118,6 +122,7 @@ class ReaderState extends Equatable {
         showUI,
         readingMode,
         pageLayout,
+        spreadAlignment,
         errorMessage,
       ];
 }

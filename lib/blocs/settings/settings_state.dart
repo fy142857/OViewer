@@ -6,6 +6,7 @@ const _sentinel = Object();
 class SettingsState extends Equatable {
   final int themeMode; // 0=system, 1=light, 2=dark
   final ReaderPageLayout pageLayout;
+  final ReaderSpreadAlignment spreadAlignment;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
   final int displayMode; // 0=list, 1=grid
   final int cacheLimitMB;
@@ -25,6 +26,7 @@ class SettingsState extends Equatable {
     this.themeMode = 0,
     this.readingMode = 0,
     this.pageLayout = ReaderPageLayout.single,
+    this.spreadAlignment = ReaderSpreadAlignment.width,
     this.displayMode = 0,
     this.cacheLimitMB = 500,
     this.proxyUrl,
@@ -42,6 +44,7 @@ class SettingsState extends Equatable {
     int? themeMode,
     int? readingMode,
     ReaderPageLayout? pageLayout,
+    ReaderSpreadAlignment? spreadAlignment,
     int? displayMode,
     int? cacheLimitMB,
     Object? proxyUrl = _sentinel,
@@ -58,6 +61,7 @@ class SettingsState extends Equatable {
       themeMode: themeMode ?? this.themeMode,
       readingMode: readingMode ?? this.readingMode,
       pageLayout: pageLayout ?? this.pageLayout,
+      spreadAlignment: spreadAlignment ?? this.spreadAlignment,
       displayMode: displayMode ?? this.displayMode,
       cacheLimitMB: cacheLimitMB ?? this.cacheLimitMB,
       proxyUrl: proxyUrl == _sentinel ? this.proxyUrl : proxyUrl as String?,
@@ -86,6 +90,7 @@ class SettingsState extends Equatable {
         themeMode,
         readingMode,
         pageLayout,
+        spreadAlignment,
         displayMode,
         cacheLimitMB,
         proxyUrl,

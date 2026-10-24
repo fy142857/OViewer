@@ -29,6 +29,30 @@ void main() {
       });
     }
   }
+  for (final saved in [null, 'width', 'height', 'invalid', 12]) {
+    test('alignment preference $saved restores safely and persists', () async {
+      SharedPreferences.setMockInitialValues(
+          {if (saved != null) 'reader_spread_alignment': saved});
+      final storage = LocalStorage();
+      await storage.init();
+      final repository = SettingsRepository(storage);
+      expect(
+          repository.getReaderSpreadAlignment(),
+          saved == 'height'
+              ? ReaderSpreadAlignment.height
+              : ReaderSpreadAlignment.width);
+      final bloc = SettingsBloc(repository,
+          initialState: SettingsBloc.readSaved(repository));
+      bloc.add(const UpdateReaderSpreadAlignment(ReaderSpreadAlignment.height));
+      await Future<void>.delayed(Duration.zero);
+      expect(bloc.state.spreadAlignment, ReaderSpreadAlignment.height);
+      final reopened = LocalStorage();
+      await reopened.init();
+      expect(reopened.getReaderSpreadAlignment(), ReaderSpreadAlignment.height);
+      await bloc.close();
+    });
+  }
+
   test('range label stays in original ascending page numbers', () {
     expect(const ReaderSpreads(5, ReaderPageLayout.doublePage).label(1), '1–2');
     expect(const ReaderSpreads(5, ReaderPageLayout.doublePage).label(3), '3–4');

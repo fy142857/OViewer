@@ -26,6 +26,11 @@ class SettingsRepository {
   int getThemeMode() => _storage.getThemeMode();
   Future<void> setThemeMode(int mode) => _storage.setThemeMode(mode);
 
+  ReaderSpreadAlignment getReaderSpreadAlignment() =>
+      _storage.getReaderSpreadAlignment();
+  Future<void> setReaderSpreadAlignment(ReaderSpreadAlignment value) =>
+      _storage.setReaderSpreadAlignment(value);
+
   ReaderPageLayout getReaderPageLayout() => _storage.getReaderPageLayout();
   Future<void> setReaderPageLayout(ReaderPageLayout layout) =>
       _storage.setReaderPageLayout(layout);

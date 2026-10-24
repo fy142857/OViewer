@@ -146,6 +146,16 @@ class LocalStorage {
   int getThemeMode() => _prefs.getInt(_keyThemeMode) ?? 0; // 0=system
   Future<void> setThemeMode(int mode) => _prefs.setInt(_keyThemeMode, mode);
 
+  ReaderSpreadAlignment getReaderSpreadAlignment() =>
+      _prefs.get('reader_spread_alignment') == 'height'
+          ? ReaderSpreadAlignment.height
+          : ReaderSpreadAlignment.width;
+  Future<void> setReaderSpreadAlignment(ReaderSpreadAlignment value) async {
+    if (!await _prefs.setString('reader_spread_alignment', value.name)) {
+      throw StateError('Unable to save reader alignment');
+    }
+  }
+
   ReaderPageLayout getReaderPageLayout() =>
       _prefs.get('reader_page_layout') == 'doublePage'
           ? ReaderPageLayout.doublePage

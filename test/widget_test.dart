@@ -73,6 +73,8 @@ void main() {
       when(() => settings.getReadingMode()).thenReturn(0);
       when(() => settings.getReaderPageLayout())
           .thenReturn(ReaderPageLayout.single);
+      when(() => settings.getReaderSpreadAlignment())
+          .thenReturn(ReaderSpreadAlignment.width);
       when(() => settings.getDisplayMode()).thenReturn(0);
       when(() => settings.getCacheLimit()).thenReturn(500);
       when(() => settings.getHiddenTags()).thenReturn([]);

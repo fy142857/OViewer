@@ -19,6 +19,13 @@ class UpdateThemeMode extends SettingsEvent {
   List<Object?> get props => [mode];
 }
 
+class UpdateReaderSpreadAlignment extends SettingsEvent {
+  final ReaderSpreadAlignment alignment;
+  const UpdateReaderSpreadAlignment(this.alignment);
+  @override
+  List<Object?> get props => [alignment];
+}
+
 class UpdateReaderPageLayout extends SettingsEvent {
   final ReaderPageLayout layout;
   const UpdateReaderPageLayout(this.layout);
