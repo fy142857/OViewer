@@ -1,3 +1,7 @@
+import '../../models/reader_page_layout.dart';
+import '../../blocs/settings/settings_bloc.dart';
+import '../../blocs/settings/settings_state.dart';
+import '../../widgets/reader_settings_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -144,11 +148,19 @@ class _ReaderScreenState extends State<ReaderScreen> with RouteAware {
             token: widget.token,
             initialPage: widget.initialPage,
           )),
-        child: _ReaderView(
-            startup: _startup,
-            requests: _requests,
-            diagnostics: widget.diagnostics,
-            initialRead: widget.initialRead),
+        child: BlocListener<SettingsBloc, SettingsState>(
+          listenWhen: (previous, current) =>
+              previous.readingMode != current.readingMode ||
+              previous.pageLayout != current.pageLayout,
+          listener: (context, settings) => context.read<ReaderBloc>().add(
+              ChangeReaderPreferences(
+                  settings.readingMode, settings.pageLayout)),
+          child: _ReaderView(
+              startup: _startup,
+              requests: _requests,
+              diagnostics: widget.diagnostics,
+              initialRead: widget.initialRead),
+        ),
       ),
     );
   }
@@ -194,8 +206,10 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _positionInitialized = false;
   bool _firstImageLogged = false;
   int? _lastReadingMode;
+  ReaderPageLayout? _lastPageLayout;
+  Size? _viewport;
   int? _sliderPage;
-  int? _explicitOfflinePage;
+  int? _explicitPage;
   PageStorageBucket _scrollStorage = PageStorageBucket();
 
   @override
@@ -203,13 +217,16 @@ class _ReaderViewState extends State<_ReaderView> {
     super.initState();
     final initial = context.read<ReaderBloc>().state;
     _entryPage = initial.currentPage;
+    _explicitPage = initial.currentPage;
     widget.requests.onCancel(_releaseEntryPriority);
-    _pageController =
-        PageController(initialPage: initial.currentPage, keepPage: false);
+    _pageController = PageController(
+        initialPage: initial.spreads.spreadOf(initial.currentPage),
+        keepPage: false);
     if (initial.offlineBook != null) {
-      _explicitOfflinePage = initial.currentPage;
+      _explicitPage = initial.currentPage;
       _positionInitialized = true;
       _lastReadingMode = initial.readingMode;
+      _lastPageLayout = initial.pageLayout;
     }
     _imageFiles = EhImageCacheManager.readerFileService(
       GetIt.I<app.CookieManager>(),
@@ -219,6 +236,84 @@ class _ReaderViewState extends State<_ReaderView> {
     // Listen for vertical scroll position changes
     _verticalPositionsListener.itemPositions.addListener(_onVerticalScroll);
     _zoomController.addListener(_onZoomChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final viewport = MediaQuery.sizeOf(context);
+    if (_viewport != null && _viewport != viewport) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _zoomController.value = Matrix4.identity();
+      });
+    }
+    _viewport = viewport;
+  }
+
+  void _jumpToPage(int page) {
+    final bloc = context.read<ReaderBloc>();
+    _explicitPage = page;
+    bloc.add(PageChanged(page));
+    final spread = bloc.state.spreads.spreadOf(page);
+    if (bloc.state.readingMode == 2) {
+      _verticalScrollController.jumpTo(index: spread);
+    } else {
+      _pageController.jumpToPage(spread);
+    }
+  }
+
+  Widget _spreadRow(ReaderState state, int spread, {required bool horizontal}) {
+    final pages = state.spreads
+        .pages(spread, reverse: horizontal && state.readingMode == 1);
+    return Row(
+      key: ValueKey('reader-spread-$spread'),
+      crossAxisAlignment:
+          horizontal ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+      children: [
+        for (final page in pages)
+          Expanded(
+              child: _pageSurface(
+                  page,
+                  SizedBox(
+                      key: ValueKey('reader-page-$page'),
+                      child:
+                          _spreadImage(state, page, horizontal: horizontal)))),
+      ],
+    );
+  }
+
+  Widget _spreadImage(ReaderState state, int page, {required bool horizontal}) {
+    ImageProvider? provider;
+    Widget? placeholder;
+    if (state.offlineBook != null) {
+      provider = _offlineProvider(state, page);
+      if (provider == null) placeholder = _offlineMissing(page);
+    } else {
+      final image = state.loadedImages[page];
+      if (image == null ||
+          state.loadingIndices.contains(page) ||
+          state.failedIndices.contains(page)) {
+        placeholder = _pendingImage(state, page);
+      } else {
+        provider = _imageProvider(image.imageUrl,
+            page: page, attempt: state.imageAttempts[page] ?? 0);
+      }
+    }
+    final loadingHeight = MediaQuery.sizeOf(context).height * 0.6;
+    Widget bounded(Widget child) =>
+        horizontal ? child : SizedBox(height: loadingHeight, child: child);
+    if (placeholder != null) return bounded(placeholder);
+    return ReaderPageImage(
+      image: provider!,
+      fit: horizontal ? BoxFit.contain : BoxFit.fitWidth,
+      loadingHeight: horizontal ? null : loadingHeight,
+      errorBuilder: (_, error, ___) => bounded(state.offlineBook != null
+          ? _offlineMissing(page, damaged: true)
+          : error is ReaderLocalCacheMiss
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white))
+              : _decodedImageError(state, page)),
+    );
   }
 
   void _onZoomChanged() {
@@ -233,10 +328,9 @@ class _ReaderViewState extends State<_ReaderView> {
     final positions = _verticalPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
     final offlineState = context.read<ReaderBloc>().state;
-    if (offlineState.offlineBook != null && _explicitOfflinePage != null) {
-      final target =
-          _explicitOfflinePage!.clamp(0, offlineState.totalPages - 1);
-      _explicitOfflinePage = target;
+    if (_explicitPage != null) {
+      final target = _explicitPage!.clamp(0, offlineState.totalPages - 1);
+      _explicitPage = target;
       _releaseOffscreenResources();
       if (offlineState.currentPage != target)
         context.read<ReaderBloc>().add(PageChanged(target));
@@ -258,8 +352,9 @@ class _ReaderViewState extends State<_ReaderView> {
     }
     _releaseOffscreenResources();
     final bloc = context.read<ReaderBloc>();
-    if (current.index != bloc.state.currentPage) {
-      bloc.add(PageChanged(current.index));
+    final page = bloc.state.spreads.pages(current.index).first;
+    if (page != bloc.state.currentPage) {
+      bloc.add(PageChanged(page));
     }
   }
 
@@ -296,15 +391,18 @@ class _ReaderViewState extends State<_ReaderView> {
     final initial = context.read<ReaderBloc>().state;
     if (!_positionInitialized && initial.status == ReaderStatus.ready) {
       _pageController.dispose();
-      _pageController =
-          PageController(initialPage: initial.currentPage, keepPage: false);
+      _pageController = PageController(
+          initialPage: initial.spreads.spreadOf(initial.currentPage),
+          keepPage: false);
       _positionInitialized = true;
       _lastReadingMode = initial.readingMode;
+      _lastPageLayout = initial.pageLayout;
     }
     return BlocConsumer<ReaderBloc, ReaderState>(
       listenWhen: (prev, curr) =>
           prev.status != curr.status ||
           prev.readingMode != curr.readingMode ||
+          prev.pageLayout != curr.pageLayout ||
           prev.currentPage != curr.currentPage ||
           prev.showUI != curr.showUI,
       listener: (context, state) {
@@ -322,18 +420,22 @@ class _ReaderViewState extends State<_ReaderView> {
           return;
         }
         if (state.status == ReaderStatus.ready &&
-            (!_positionInitialized || _lastReadingMode != state.readingMode)) {
-          if (state.offlineBook != null)
-            _explicitOfflinePage = state.currentPage;
+            (!_positionInitialized ||
+                _lastReadingMode != state.readingMode ||
+                _lastPageLayout != state.pageLayout)) {
+          _explicitPage = state.currentPage;
+          _zoomController.value = Matrix4.identity();
           _pageController.dispose();
-          _pageController =
-              PageController(initialPage: state.currentPage, keepPage: false);
+          _pageController = PageController(
+              initialPage: state.spreads.spreadOf(state.currentPage),
+              keepPage: false);
           // ScrollablePositionedList restores PageStorage ahead of its
           // initialScrollIndex. Keep that storage private to this entry/mode.
           _scrollStorage = PageStorageBucket();
           _positionInitialized = true;
         }
         _lastReadingMode = state.readingMode;
+        _lastPageLayout = state.pageLayout;
         ReaderPresentation.maybeOf(context)?.showControls(state.showUI ||
             state.status == ReaderStatus.error ||
             state.status == ReaderStatus.contentWarning);
@@ -405,7 +507,8 @@ class _ReaderViewState extends State<_ReaderView> {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: state.readingMode == 2 ? _toggleUI : null,
-                onLongPress: state.readingMode == 2
+                onLongPress: state.readingMode == 2 ||
+                        state.pageLayout == ReaderPageLayout.doublePage
                     ? null
                     : () => _showPageMenu(state.currentPage),
                 onDoubleTap: state.readingMode == 2 && _isZoomed
@@ -575,12 +678,18 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _isResourceVisible(int page, {int? horizontalPage}) {
     final state = context.read<ReaderBloc>().state;
     if (state.readingMode != 2) {
-      return (page - (horizontalPage ?? state.currentPage)).abs() <= 1;
+      return (state.spreads.spreadOf(page) -
+                  state.spreads.spreadOf(horizontalPage ?? state.currentPage))
+              .abs() <=
+          1;
     }
     final positions = _verticalPositionsListener.itemPositions.value;
-    if (positions.isEmpty) return page == state.currentPage;
+    if (positions.isEmpty)
+      return state.spreads.containing(state.currentPage).contains(page);
     return positions.any((p) =>
-        p.index == page && p.itemLeadingEdge < 1 && p.itemTrailingEdge > 0);
+        p.index == state.spreads.spreadOf(page) &&
+        p.itemLeadingEdge < 1 &&
+        p.itemTrailingEdge > 0);
   }
 
   void _releaseOffscreenResources({int? horizontalPage}) {
@@ -686,66 +795,91 @@ class _ReaderViewState extends State<_ReaderView> {
   }
 
   Widget _buildHorizontalReader(ReaderState state) {
-    return PhotoViewGallery.builder(
-      key: ObjectKey(_pageController),
-      pageController: _pageController,
-      itemCount: state.totalPages,
-      reverse: state.readingMode == 1, // RTL
-      builder: (context, index) {
-        if (state.offlineBook != null) {
-          final provider = _offlineProvider(state, index);
-          if (provider == null)
+    return LayoutBuilder(builder: (context, constraints) {
+      final viewport = constraints.biggest;
+      return PhotoViewGallery.builder(
+        key: state.pageLayout == ReaderPageLayout.doublePage
+            ? ValueKey((_pageController, viewport))
+            : ObjectKey(_pageController),
+        pageController: _pageController,
+        itemCount: state.spreads.count,
+        reverse: state.readingMode == 1, // RTL
+        builder: (context, index) {
+          if (state.pageLayout == ReaderPageLayout.doublePage) {
             return PhotoViewGalleryPageOptions.customChild(
-                disableGestures: true,
-                child: GestureDetector(
-                    onTap: _toggleUI, child: _offlineMissing(index)));
-          return PhotoViewGalleryPageOptions(
+              childSize: viewport,
+              child: SizedBox.fromSize(
+                  size: viewport,
+                  child: _spreadRow(state, index, horizontal: true)),
               onTapUp: (_, __, ___) => _toggleUI(),
-              imageProvider: provider,
-              initialScale: PhotoViewComputedScale.contained,
-              minScale: PhotoViewComputedScale.contained,
-              maxScale: PhotoViewComputedScale.covered * 3,
-              errorBuilder: (_, __, ___) =>
-                  _offlineMissing(index, damaged: true));
-        }
-        final image = state.loadedImages[index];
-        if (image == null ||
-            state.loadingIndices.contains(index) ||
-            state.failedIndices.contains(index)) {
-          return PhotoViewGalleryPageOptions.customChild(
+              initialScale: 1.0,
+              minScale: 1.0,
+              maxScale: 3.0,
+            );
+          }
+          if (state.offlineBook != null) {
+            final provider = _offlineProvider(state, index);
+            if (provider == null)
+              return PhotoViewGalleryPageOptions.customChild(
+                  disableGestures: true,
+                  child: GestureDetector(
+                      onTap: _toggleUI, child: _offlineMissing(index)));
+            return PhotoViewGalleryPageOptions(
+                onTapUp: (_, __, ___) => _toggleUI(),
+                imageProvider: provider,
+                initialScale: PhotoViewComputedScale.contained,
+                minScale: PhotoViewComputedScale.contained,
+                maxScale: PhotoViewComputedScale.covered * 3,
+                errorBuilder: (_, __, ___) =>
+                    _offlineMissing(index, damaged: true));
+          }
+          final image = state.loadedImages[index];
+          if (image == null ||
+              state.loadingIndices.contains(index) ||
+              state.failedIndices.contains(index)) {
+            return PhotoViewGalleryPageOptions.customChild(
+              onTapUp: (_, __, ___) => _toggleUI(),
+              child: _pendingImage(state, index),
+            );
+          }
+          return PhotoViewGalleryPageOptions(
             onTapUp: (_, __, ___) => _toggleUI(),
-            child: _pendingImage(state, index),
+            imageProvider: _imageProvider(image.imageUrl,
+                page: index, attempt: state.imageAttempts[index] ?? 0),
+            filterQuality: FilterQuality.medium,
+            initialScale: PhotoViewComputedScale.contained,
+            minScale: PhotoViewComputedScale.contained,
+            maxScale: PhotoViewComputedScale.covered * 3,
+            errorBuilder: (_, error, ___) => error is ReaderLocalCacheMiss
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white))
+                : _decodedImageError(state, index),
           );
-        }
-        return PhotoViewGalleryPageOptions(
-          onTapUp: (_, __, ___) => _toggleUI(),
-          imageProvider: _imageProvider(image.imageUrl,
-              page: index, attempt: state.imageAttempts[index] ?? 0),
-          filterQuality: FilterQuality.medium,
-          initialScale: PhotoViewComputedScale.contained,
-          minScale: PhotoViewComputedScale.contained,
-          maxScale: PhotoViewComputedScale.covered * 3,
-          errorBuilder: (_, error, ___) => error is ReaderLocalCacheMiss
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white))
-              : _decodedImageError(state, index),
-        );
-      },
-      onPageChanged: (page) {
-        _releaseOffscreenResources(horizontalPage: page);
-        context.read<ReaderBloc>().add(PageChanged(page));
-      },
-      loadingBuilder: (_, __) => const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      ),
-    );
+        },
+        onPageChanged: (spread) {
+          final explicit = _explicitPage;
+          final page =
+              explicit != null && state.spreads.spreadOf(explicit) == spread
+                  ? explicit
+                  : state.spreads.pages(spread).first;
+          if (page != explicit) _explicitPage = null;
+          _releaseOffscreenResources(horizontalPage: page);
+          if (context.read<ReaderBloc>().state.currentPage != page) {
+            context.read<ReaderBloc>().add(PageChanged(page));
+          }
+        },
+        loadingBuilder: (_, __) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    });
   }
 
   // ---- Vertical Continuous Scroll Reader ----
   Widget _buildVerticalReader(ReaderState state) {
     return NotificationListener<ScrollStartNotification>(
       onNotification: (notification) {
-        if (notification.dragDetails != null) _explicitOfflinePage = null;
+        if (notification.dragDetails != null) _explicitPage = null;
         return false;
       },
       child: PageStorage(
@@ -757,11 +891,14 @@ class _ReaderViewState extends State<_ReaderView> {
           panEnabled: _isZoomed,
           scaleEnabled: true,
           child: ScrollablePositionedList.builder(
-            itemCount: state.totalPages,
+            itemCount: state.spreads.count,
             itemScrollController: _verticalScrollController,
             itemPositionsListener: _verticalPositionsListener,
-            initialScrollIndex: state.currentPage,
+            initialScrollIndex: state.spreads.spreadOf(state.currentPage),
             itemBuilder: (context, index) {
+              if (state.pageLayout == ReaderPageLayout.doublePage) {
+                return _spreadRow(state, index, horizontal: false);
+              }
               if (state.offlineBook != null) {
                 final provider = _offlineProvider(state, index);
                 return _pageSurface(
@@ -845,7 +982,7 @@ class _ReaderViewState extends State<_ReaderView> {
             ),
             Expanded(
               child: Text(
-                '${state.offlineBook == null ? '' : '${state.offlineBook!.source?.shortName ?? ''} · '}${state.currentPage + 1} / ${state.totalPages}',
+                '${state.offlineBook == null ? '' : '${state.offlineBook!.source?.shortName ?? ''} · '}${state.spreads.label(state.currentPage)} / ${state.totalPages}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
@@ -854,44 +991,14 @@ class _ReaderViewState extends State<_ReaderView> {
                 ),
               ),
             ),
-            PopupMenuButton<int>(
+            IconButton(
+              key: const ValueKey('reader-settings'),
               icon: const Icon(Icons.auto_stories, color: Colors.white),
-              tooltip: S.of(context).readingMode,
-              onSelected: (mode) {
-                context.read<ReaderBloc>().add(ChangeReadingMode(mode));
-              },
-              itemBuilder: (_) {
-                final s = S.of(context);
-                return [
-                  _modeMenuItem(
-                      0, s.leftToRight, Icons.arrow_forward, state.readingMode),
-                  _modeMenuItem(
-                      1, s.rightToLeft, Icons.arrow_back, state.readingMode),
-                  _modeMenuItem(
-                      2, s.verticalScroll, Icons.swap_vert, state.readingMode),
-                ];
-              },
+              tooltip: S.of(context).readerSettings,
+              onPressed: () => showReaderSettings(context),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  PopupMenuItem<int> _modeMenuItem(
-      int value, String label, IconData icon, int current) {
-    return PopupMenuItem(
-      value: value,
-      child: Row(
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Text(label),
-          if (current == value) ...[
-            const Spacer(),
-            const Icon(Icons.check, size: 18, color: Colors.blue),
-          ],
-        ],
       ),
     );
   }
@@ -929,19 +1036,11 @@ class _ReaderViewState extends State<_ReaderView> {
                   itemCount: state.totalPages,
                   itemBuilder: (_, index) {
                     final thumb = state.thumbnails[index];
-                    final isCurrent = index == state.currentPage;
+                    final isCurrent = state.spreads
+                        .containing(state.currentPage)
+                        .contains(index);
                     return GestureDetector(
-                      onTap: () {
-                        if (state.offlineBook != null) {
-                          _explicitOfflinePage = index;
-                          context.read<ReaderBloc>().add(PageChanged(index));
-                        }
-                        if (state.readingMode == 2) {
-                          _verticalScrollController.jumpTo(index: index);
-                        } else {
-                          _pageController.jumpToPage(index);
-                        }
-                      },
+                      onTap: () => _jumpToPage(index),
                       child: Container(
                         width: 40,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -986,16 +1085,8 @@ class _ReaderViewState extends State<_ReaderView> {
                       },
                       onChangeEnd: (value) {
                         final page = value.round();
-                        if (state.offlineBook != null) {
-                          _explicitOfflinePage = page;
-                          context.read<ReaderBloc>().add(PageChanged(page));
-                        }
                         setState(() => _sliderPage = null);
-                        if (state.readingMode == 2) {
-                          _verticalScrollController.jumpTo(index: page);
-                        } else {
-                          _pageController.jumpToPage(page);
-                        }
+                        _jumpToPage(page);
                       },
                     ),
                   ),
@@ -1023,7 +1114,7 @@ class _ReaderViewState extends State<_ReaderView> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          '${state.currentPage + 1} / ${state.totalPages}',
+          '${state.spreads.label(state.currentPage)} / ${state.totalPages}',
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ),

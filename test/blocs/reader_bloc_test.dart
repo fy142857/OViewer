@@ -1,3 +1,4 @@
+import 'package:oviewer/models/reader_page_layout.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:oviewer/models/reader_page_resource.dart';
@@ -43,6 +44,8 @@ void main() {
     final tokenCompleter = Completer<CancelToken>();
 
     when(() => settingsRepository.getReadingMode()).thenReturn(0);
+    when(() => settingsRepository.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.single);
     when(() => galleryRepository.fetchReaderIndexPage(
           42,
           'token',
@@ -138,6 +141,8 @@ void main() {
       history = MockHistoryRepository();
       settings = MockSettingsRepository();
       when(() => settings.getReadingMode()).thenReturn(0);
+      when(() => settings.getReaderPageLayout())
+          .thenReturn(ReaderPageLayout.single);
       when(() => history.getProgress(any())).thenAnswer((_) async => null);
       when(() => history.updateProgress(any(), any(), any()))
           .thenAnswer((_) async {});
@@ -159,6 +164,41 @@ void main() {
     });
 
     tearDown(() => bloc.close());
+
+    test('double-page companion loads even when primary stalls or fails',
+        () async {
+      await bloc.close();
+      when(() => settings.getReaderPageLayout())
+          .thenReturn(ReaderPageLayout.doublePage);
+      when(() =>
+          gallery.fetchReaderIndexPage(42, 'token',
+              cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async =>
+          ReaderIndexPage(
+              totalPages: 2,
+              indexPage: 0,
+              indexPageCount: 1,
+              pageSize: 2,
+              thumbnails: {
+                0: ThumbnailInfo(pageToken: 'page', pageIndex: 0, thumbUrl: ''),
+                1: ThumbnailInfo(pageToken: 'page', pageIndex: 1, thumbUrl: ''),
+              }));
+      final stalled = Completer<GalleryImage>();
+      when(() => gallery.fetchImage('page', 42, 0,
+              cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) => stalled.future);
+      when(() => gallery.fetchImage('page', 42, 1,
+              cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => const GalleryImage(
+              index: 1, pageUrl: 'p1', imageUrl: 'https://example.org/1.png'));
+      bloc = ReaderBloc(gallery, history, settings);
+      bloc.add(const LoadReaderImages(gid: 42, token: 'token'));
+      await waitFor((s) => s.loadedImages.containsKey(1));
+      expect(bloc.state.loadingIndices, contains(0));
+      stalled.completeError(StateError('offline'));
+      await waitFor((s) => s.failedIndices.contains(0));
+      expect(bloc.state.loadedImages, contains(1));
+      expect(bloc.state.currentPage, 0);
+    });
 
     ReaderIndexPage part(int page) => ReaderIndexPage(
             totalPages: 105,

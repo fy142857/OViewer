@@ -496,6 +496,12 @@ class S {
   String get loadingReader => _zh ? '正在加载阅读器...' : 'Loading reader...';
   String get failedToLoadReader => _zh ? '加载阅读器失败' : 'Failed to load reader';
   String get noPagesAvailable => _zh ? '没有可用页面' : 'No pages available';
+  String get readerSettings => _zh ? '阅读设置' : 'Reading settings';
+  String get readingDirection => _zh ? '阅读方向' : 'Reading direction';
+  String get readerPageLayout => _zh ? '页面布局' : 'Page layout';
+  String get readerSinglePage => _zh ? '单页' : 'Single page';
+  String get readerDoublePage => _zh ? '双页' : 'Double page';
+  String get closeReaderSettings => _zh ? '关闭' : 'Close';
   String get readingMode => _zh ? '阅读模式' : 'Reading mode';
 
   // ---- Error Widget ----

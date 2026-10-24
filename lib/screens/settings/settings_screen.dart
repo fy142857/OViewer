@@ -1,3 +1,4 @@
+import '../../models/reader_page_layout.dart';
 import '../../widgets/site_mode_tile.dart';
 import '../../widgets/offline_settings_panel.dart';
 import '../../repositories/settings_repository.dart';
@@ -161,6 +162,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: Text(_readingModeLabel(state.readingMode, s)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _showReadingModeDialog(context, state.readingMode),
+              ),
+
+              ListTile(
+                key: const ValueKey('settings-reader-page-layout'),
+                leading: const Icon(Icons.view_carousel_outlined),
+                title: Text(s.readerPageLayout),
+                subtitle: Text(state.pageLayout == ReaderPageLayout.single
+                    ? s.readerSinglePage
+                    : s.readerDoublePage),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => SimpleDialog(
+                    title: Text(s.readerPageLayout),
+                    children: [
+                      for (final layout in ReaderPageLayout.values)
+                        RadioListTile<ReaderPageLayout>(
+                          value: layout,
+                          groupValue: state.pageLayout,
+                          title: Text(layout == ReaderPageLayout.single
+                              ? s.readerSinglePage
+                              : s.readerDoublePage),
+                          onChanged: (value) {
+                            if (value != null)
+                              context
+                                  .read<SettingsBloc>()
+                                  .add(UpdateReaderPageLayout(value));
+                            Navigator.pop(dialogContext);
+                          },
+                        ),
+                    ],
+                  ),
+                ),
               ),
 
               if (GetIt.I.isRegistered<OfflineDownloadCoordinator>()) ...[

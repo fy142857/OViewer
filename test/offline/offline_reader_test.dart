@@ -1,3 +1,6 @@
+import 'package:photo_view/photo_view_gallery.dart';
+import 'package:oviewer/widgets/reader_page_menu.dart';
+import 'package:oviewer/models/reader_page_layout.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
@@ -101,6 +104,8 @@ void main() {
     settingsBloc = SettingsBlocMock();
     final history = History();
     when(() => settings.getReadingMode()).thenReturn(0);
+    when(() => settings.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.single);
     when(() => history.updateProgress(any(), any(), any()))
         .thenAnswer((_) async {});
     when(() => settingsBloc.state)
@@ -125,6 +130,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.single);
     await tester.runAsync(() async {
       await repository.putIndex(
           book.id,
@@ -161,6 +168,8 @@ void main() {
         'offline mode $mode decodes local pages without any gallery requests',
         (tester) async {
       when(() => settings.getReadingMode()).thenReturn(mode);
+      when(() => settings.getReaderPageLayout())
+          .thenReturn(ReaderPageLayout.single);
       await tester.runAsync(() async {
         await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
             value: settingsBloc,
@@ -180,6 +189,135 @@ void main() {
       expect(decoded, isTrue);
     });
   }
+  for (final mode in [0, 1, 2]) {
+    testWidgets(
+        'double-page mode $mode keeps explicit focus, gestures and local resources',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final preferences = StreamController<SettingsState>.broadcast();
+      addTearDown(preferences.close);
+      when(() => settingsBloc.stream).thenAnswer((_) => preferences.stream);
+      when(() => settingsBloc.state).thenReturn(SettingsState(
+          locale: 'en',
+          readingMode: mode,
+          pageLayout: ReaderPageLayout.doublePage));
+      when(() => settings.getReadingMode()).thenReturn(mode);
+      when(() => settings.getReaderPageLayout())
+          .thenReturn(ReaderPageLayout.doublePage);
+      await tester.runAsync(() async {
+        await repository.putIndex(
+            book.id,
+            5,
+            [
+              for (var i = 0; i < 5; i++)
+                ThumbnailInfo(pageToken: 'p$i', pageIndex: i, thumbUrl: '')
+            ],
+            current: () => true);
+        book = (await repository.get(book.id))!;
+        await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+            value: settingsBloc,
+            child: MaterialApp(
+                home: ReaderScreen(
+                    gid: 42,
+                    token: 'abc',
+                    initialPage: 1,
+                    offlineBook: book))));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await settleOffline(tester);
+      final content =
+          find.byType(mode == 2 ? ScrollablePositionedList : PhotoViewGallery);
+      final bloc = tester.element(content).read<ReaderBloc>();
+      expect(bloc.state.currentPage, 1);
+      final first = find.byKey(const ValueKey('reader-page-0'));
+      final second = find.byKey(const ValueKey('reader-page-1'));
+      expect(first, findsOneWidget);
+      expect(second, findsOneWidget);
+      expect(
+          tester.getRect(first).left < tester.getRect(second).left, mode != 1);
+      // Missing target page must release entry priority so its sibling can decode.
+      expect(
+          tester
+              .widgetList<RawImage>(
+                  find.descendant(of: first, matching: find.byType(RawImage)))
+              .any((image) => image.image != null),
+          isTrue);
+      for (final page in [0, 1]) {
+        await tester.longPress(find.byKey(ValueKey('reader-page-$page')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<ReaderPageMenu>(find.byType(ReaderPageMenu)).page,
+            page);
+        expect(find.byKey(const ValueKey('save-page')),
+            page == 0 ? findsOneWidget : findsNothing);
+        await tester.tap(find.text('Cancel'));
+        await settleOffline(tester);
+      }
+      // A two-finger gesture scales the pair together, not a single cell.
+      final beforeZoom = tester.getRect(first).width;
+      final center = tester.getRect(content).center;
+      final finger1 =
+          await tester.startGesture(center - const Offset(40, 0), pointer: 1);
+      final finger2 =
+          await tester.startGesture(center + const Offset(40, 0), pointer: 2);
+      await tester.pump();
+      await finger1.moveTo(center - const Offset(55, 0));
+      await finger2.moveTo(center + const Offset(55, 0));
+      await tester.pump();
+      await finger1.moveTo(center - const Offset(100, 0));
+      await finger2.moveTo(center + const Offset(100, 0));
+      await tester.pump();
+      await finger1.up();
+      await finger2.up();
+      await settleOffline(tester);
+      expect(tester.getRect(first).width, greaterThan(beforeZoom * 1.1));
+      expect(tester.getRect(first).width,
+          closeTo(tester.getRect(second).width, 0.1));
+      expect(bloc.state.currentPage, 1);
+      await tester.binding.setSurfaceSize(const Size(800, 360));
+      await settleOffline(tester);
+      expect(bloc.state.currentPage, 1);
+      expect(first, findsOneWidget);
+      expect(second, findsOneWidget);
+      // A mode change resets viewport storage but preserves the exact second page.
+      preferences.add(SettingsState(
+          locale: 'en',
+          readingMode: mode,
+          pageLayout: ReaderPageLayout.single));
+      await settleOffline(tester);
+      expect(bloc.state.currentPage, 1);
+      preferences.add(SettingsState(
+          locale: 'en',
+          readingMode: mode,
+          pageLayout: ReaderPageLayout.doublePage));
+      await settleOffline(tester);
+      expect(bloc.state.currentPage, 1);
+      // Natural navigation moves to a new spread using its first original page.
+      await tester.drag(
+          content,
+          mode == 2
+              ? const Offset(0, -300)
+              : Offset(mode == 1 ? 600 : -600, 0));
+      await settleOffline(tester);
+      expect(bloc.state.currentPage, greaterThanOrEqualTo(2));
+      expect(bloc.state.currentPage.isEven, isTrue);
+      // Slide within original page indices to the odd tail page.
+      bloc.add(ToggleReaderUI());
+      await settleOffline(tester);
+      tester.widget<Slider>(find.byType(Slider)).onChangeEnd!(4);
+      await settleOffline(tester);
+      expect(bloc.state.currentPage, 4);
+      expect(find.byKey(const ValueKey('reader-page-4')), findsOneWidget);
+      expect(tester.getSize(find.byKey(const ValueKey('reader-page-4'))).width,
+          800);
+      expect(tester.takeException(), isNull);
+      verifyZeroInteractions(gallery);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)));
+    });
+  }
+
   test(
       'repair invalidates stale page resources and updates local directory size',
       () async {
@@ -301,6 +439,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(400, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.single);
     await tester.runAsync(() async {
       final first = book.pages.first;
       final bytes = await repository.files

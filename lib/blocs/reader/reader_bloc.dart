@@ -23,7 +23,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   StreamSubscription<void>? _offlineChanges;
   final GalleryRepository _galleryRepo;
   final HistoryRepository _historyRepo;
-  final SettingsRepository _settingsRepo;
   final ReaderRequestController _requests;
   ReaderIndexSession? _index;
   final ReaderReentryCache _reentry;
@@ -40,7 +39,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         ? null
         : cache.get((AppConstants.baseUrl, request.gid, request.token));
     if (snapshot == null) {
-      return ReaderState(readingMode: settings.getReadingMode());
+      return ReaderState(
+          readingMode: settings.getReadingMode(),
+          pageLayout: settings.getReaderPageLayout());
     }
     final page = (request!.initialPage ?? snapshot.currentPage)
         .clamp(0, snapshot.metadata.totalPages - 1);
@@ -49,6 +50,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         gid: request.gid,
         token: request.token,
         readingMode: settings.getReadingMode(),
+        pageLayout: settings.getReaderPageLayout(),
         currentPage: page,
         totalPages: snapshot.metadata.totalPages,
         loadedImages: snapshot.pages.map((i, p) => MapEntry(i, p.image)),
@@ -70,7 +72,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   int _requestedStart = 0;
 
-  ReaderBloc(this._galleryRepo, this._historyRepo, this._settingsRepo,
+  ReaderBloc(this._galleryRepo, this._historyRepo, SettingsRepository settings,
       {ReaderRequestController? requestController,
       ReaderReentryCache? reentryCache,
       OfflineBook? offlineBook,
@@ -79,7 +81,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       : _requests = requestController ?? ReaderRequestController(),
         _reentry = reentryCache ?? ReaderReentryCache.shared,
         super(offlineBook == null
-            ? _initial(_settingsRepo, reentryCache ?? ReaderReentryCache.shared,
+            ? _initial(settings, reentryCache ?? ReaderReentryCache.shared,
                 initialRequest)
             : ReaderState(
                 status: ReaderStatus.ready,
@@ -90,7 +92,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                 currentPage: (initialRequest?.initialPage ??
                         offlineBook.record.lastReadPage)
                     .clamp(0, offlineBook.record.totalPages - 1),
-                readingMode: _settingsRepo.getReadingMode(),
+                readingMode: settings.getReadingMode(),
+                pageLayout: settings.getReaderPageLayout(),
                 thumbnails: {
                     for (var i = 0; i < offlineBook.record.totalPages; i++)
                       i: ThumbnailInfo(
@@ -206,9 +209,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<ToggleReaderUI>((event, emit) {
       if (!_requests.isCancelled) emit(state.copyWith(showUI: !state.showUI));
     });
-    on<ChangeReadingMode>((event, emit) async {
-      await _settingsRepo.setReadingMode(event.mode);
-      if (!_requests.isCancelled) emit(state.copyWith(readingMode: event.mode));
+    on<ChangeReadingMode>((event, emit) {
+      if (_active) emit(state.copyWith(readingMode: event.mode));
+    });
+    on<ChangeReaderPreferences>((event, emit) {
+      if (!_active) return;
+      emit(state.copyWith(readingMode: event.mode, pageLayout: event.layout));
+      _loadVisiblePages();
     });
   }
 
@@ -225,6 +232,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       _restored = false;
       _reentry.focus(galleryKey, state.currentPage);
       _saveProgress(state.currentPage);
+      _loadVisiblePages();
       if (!state.loadedImages.containsKey(state.currentPage)) {
         add(LoadImageAtIndex(state.currentPage));
       }
@@ -236,7 +244,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         status: ReaderStatus.loading,
         gid: event.gid,
         token: event.token,
-        readingMode: state.readingMode));
+        readingMode: state.readingMode,
+        pageLayout: state.pageLayout));
     try {
       // Null means resume. An explicit zero really means the first page.
       final start = event.initialPage ??
@@ -262,7 +271,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       }
       _prepareCache();
       _saveProgress(current);
-      add(LoadImageAtIndex(current));
+      _loadVisiblePages();
       // Neighbours are queued only after the current page URL is available.
     } on GalleryContentWarning catch (warning) {
       if (_active) {
@@ -433,6 +442,19 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     }
   }
 
+  void _loadVisiblePages() {
+    if (!_active ||
+        state.status != ReaderStatus.ready ||
+        state.offlineBook != null) return;
+    for (final page in state.spreads.containing(state.currentPage)) {
+      if (!state.loadedImages.containsKey(page) &&
+          !state.loadingIndices.contains(page) &&
+          !state.failedIndices.contains(page)) {
+        add(LoadImageAtIndex(page));
+      }
+    }
+  }
+
   void _preloadAdjacent(int page) {
     if (state.offlineBook != null) return;
     if (!_active) return;
@@ -456,6 +478,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final page = event.page.clamp(0, state.totalPages - 1);
     _index?.prioritize(page);
     emit(state.copyWith(currentPage: page));
+    _loadVisiblePages();
     if (state.offlineBook != null) {
       _saveProgress(page);
       return;

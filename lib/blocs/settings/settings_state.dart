@@ -1,9 +1,11 @@
+import '../../models/reader_page_layout.dart';
 import 'package:equatable/equatable.dart';
 
 const _sentinel = Object();
 
 class SettingsState extends Equatable {
   final int themeMode; // 0=system, 1=light, 2=dark
+  final ReaderPageLayout pageLayout;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
   final int displayMode; // 0=list, 1=grid
   final int cacheLimitMB;
@@ -22,6 +24,7 @@ class SettingsState extends Equatable {
   const SettingsState({
     this.themeMode = 0,
     this.readingMode = 0,
+    this.pageLayout = ReaderPageLayout.single,
     this.displayMode = 0,
     this.cacheLimitMB = 500,
     this.proxyUrl,
@@ -38,6 +41,7 @@ class SettingsState extends Equatable {
   SettingsState copyWith({
     int? themeMode,
     int? readingMode,
+    ReaderPageLayout? pageLayout,
     int? displayMode,
     int? cacheLimitMB,
     Object? proxyUrl = _sentinel,
@@ -53,6 +57,7 @@ class SettingsState extends Equatable {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       readingMode: readingMode ?? this.readingMode,
+      pageLayout: pageLayout ?? this.pageLayout,
       displayMode: displayMode ?? this.displayMode,
       cacheLimitMB: cacheLimitMB ?? this.cacheLimitMB,
       proxyUrl: proxyUrl == _sentinel ? this.proxyUrl : proxyUrl as String?,
@@ -80,6 +85,7 @@ class SettingsState extends Equatable {
   List<Object?> get props => [
         themeMode,
         readingMode,
+        pageLayout,
         displayMode,
         cacheLimitMB,
         proxyUrl,

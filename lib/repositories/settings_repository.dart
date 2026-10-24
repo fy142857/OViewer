@@ -1,3 +1,4 @@
+import '../models/reader_page_layout.dart';
 import '../core/storage/local_storage.dart';
 
 class SettingsRepository {
@@ -24,6 +25,10 @@ class SettingsRepository {
   // Theme (0=system, 1=light, 2=dark)
   int getThemeMode() => _storage.getThemeMode();
   Future<void> setThemeMode(int mode) => _storage.setThemeMode(mode);
+
+  ReaderPageLayout getReaderPageLayout() => _storage.getReaderPageLayout();
+  Future<void> setReaderPageLayout(ReaderPageLayout layout) =>
+      _storage.setReaderPageLayout(layout);
 
   // Reading mode (0=left-to-right, 1=right-to-left, 2=vertical)
   int getReadingMode() => _storage.getReadingMode();

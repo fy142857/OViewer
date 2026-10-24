@@ -1,3 +1,4 @@
+import 'package:oviewer/models/reader_page_layout.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -120,6 +121,8 @@ void main() {
     final history = MockHistoryRepository();
     final settings = MockSettingsRepository();
     when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.single);
     when(() => history.updateProgress(any(), any(), any()))
         .thenAnswer((_) async {});
     final bloc = ReaderBloc(repo, history, settings);

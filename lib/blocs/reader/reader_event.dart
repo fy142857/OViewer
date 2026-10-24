@@ -1,3 +1,4 @@
+import '../../models/reader_page_layout.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/reader_page_resource.dart';
 import '../../models/offline_book.dart';
@@ -51,6 +52,14 @@ class PageChanged extends ReaderEvent {
 }
 
 class ToggleReaderUI extends ReaderEvent {}
+
+class ChangeReaderPreferences extends ReaderEvent {
+  final int mode;
+  final ReaderPageLayout layout;
+  const ChangeReaderPreferences(this.mode, this.layout);
+  @override
+  List<Object?> get props => [mode, layout];
+}
 
 class ChangeReadingMode extends ReaderEvent {
   final int mode; // 0=LR, 1=RL, 2=vertical

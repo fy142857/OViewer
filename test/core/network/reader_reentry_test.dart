@@ -1,3 +1,4 @@
+import 'package:oviewer/models/reader_page_layout.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -359,6 +360,8 @@ void main() {
     final settings = MockSettingsRepository();
     when(() => gallery.readerIndexCache).thenReturn(ReaderIndexCache());
     when(() => settings.getReadingMode()).thenReturn(0);
+    when(() => settings.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.single);
     when(() => history.updateProgress(any(), any(), any()))
         .thenAnswer((_) async {});
     const request = LoadReaderImages(gid: 42, token: 'token', initialPage: 0);

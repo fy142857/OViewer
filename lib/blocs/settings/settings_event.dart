@@ -1,3 +1,4 @@
+import '../../models/reader_page_layout.dart';
 import 'dart:async';
 import 'package:equatable/equatable.dart';
 
@@ -16,6 +17,13 @@ class UpdateThemeMode extends SettingsEvent {
   const UpdateThemeMode(this.mode);
   @override
   List<Object?> get props => [mode];
+}
+
+class UpdateReaderPageLayout extends SettingsEvent {
+  final ReaderPageLayout layout;
+  const UpdateReaderPageLayout(this.layout);
+  @override
+  List<Object?> get props => [layout];
 }
 
 class UpdateReadingMode extends SettingsEvent {

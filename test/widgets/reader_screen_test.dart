@@ -1,3 +1,4 @@
+import 'package:oviewer/models/reader_page_layout.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -67,6 +68,8 @@ void main() {
         .thenReturn(const SettingsState(locale: 'en'));
     when(() => settingsBloc.stream).thenAnswer((_) => const Stream.empty());
     when(() => settings.getReadingMode()).thenReturn(0);
+    when(() => settings.getReaderPageLayout())
+        .thenReturn(ReaderPageLayout.single);
     when(() => history.getProgress(any())).thenAnswer((_) async => null);
     when(() => history.updateProgress(any(), any(), any()))
         .thenAnswer((_) async {});
@@ -357,85 +360,94 @@ void main() {
   }
 
   for (final mode in [0, 1, 2]) {
-    for (final selected in [0, 5]) {
-      testWidgets(
-          'mode $mode: changed explicit preview page $selected overrides previous reading position',
-          (tester) async {
-        when(() => GetIt.I<SettingsRepository>().getReadingMode())
-            .thenReturn(mode);
-        when(() => GetIt.I<HistoryRepository>().getProgress(42)).thenAnswer(
-            (_) async => ReadingProgress(
-                gid: 42,
-                lastReadPage: 12,
-                totalPages: 20,
-                lastReadAt: DateTime(2026)));
-        when(() => gallery.fetchReaderIndexPage(42, 'token',
-                cancelToken: any(named: 'cancelToken')))
-            .thenAnswer((_) async => ReaderIndexPage(
-                    totalPages: 20,
-                    indexPage: 0,
-                    indexPageCount: 1,
-                    pageSize: 20,
-                    thumbnails: {
-                      for (var i = 0; i < 20; i++)
-                        i: ThumbnailInfo(
-                            pageToken: 'page', pageIndex: i, thumbUrl: '')
-                    }));
-        for (var page = 0; page < 20; page++) {
-          when(() => gallery.fetchImage('page', 42, page,
-              cancelToken: any(named: 'cancelToken'))).thenAnswer((call) {
-            final result = Completer<GalleryImage>();
-            pending.add(result);
-            tokens.add(call.namedArguments[#cancelToken] as CancelToken);
-            return result.future;
-          });
-        }
-        Widget app(int? initialPage) => BlocProvider<SettingsBloc>.value(
-            value: settingsBloc,
-            child: MaterialApp(
-                home: ReaderScreen(
-                    gid: 42, token: 'token', initialPage: initialPage)));
-        Finder content() => find
-            .byType(mode == 2 ? ScrollablePositionedList : PhotoViewGallery);
-        Future<void> settleLayout() async {
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 400));
-          await tester.pump();
-        }
+    for (final layout in ReaderPageLayout.values) {
+      for (final selected in [0, 5]) {
+        testWidgets(
+            'mode $mode layout $layout: changed explicit preview page $selected overrides previous reading position',
+            (tester) async {
+          when(() => GetIt.I<SettingsRepository>().getReaderPageLayout())
+              .thenReturn(layout);
+          final selectedSpread = ReaderSpreads(20, layout).spreadOf(selected);
+          when(() => GetIt.I<SettingsRepository>().getReadingMode())
+              .thenReturn(mode);
+          when(() => GetIt.I<HistoryRepository>().getProgress(42)).thenAnswer(
+              (_) async => ReadingProgress(
+                  gid: 42,
+                  lastReadPage: 12,
+                  totalPages: 20,
+                  lastReadAt: DateTime(2026)));
+          when(() => gallery.fetchReaderIndexPage(42, 'token',
+                  cancelToken: any(named: 'cancelToken')))
+              .thenAnswer((_) async => ReaderIndexPage(
+                      totalPages: 20,
+                      indexPage: 0,
+                      indexPageCount: 1,
+                      pageSize: 20,
+                      thumbnails: {
+                        for (var i = 0; i < 20; i++)
+                          i: ThumbnailInfo(
+                              pageToken: 'page', pageIndex: i, thumbUrl: '')
+                      }));
+          for (var page = 0; page < 20; page++) {
+            when(() => gallery.fetchImage('page', 42, page,
+                cancelToken: any(named: 'cancelToken'))).thenAnswer((call) {
+              final result = Completer<GalleryImage>();
+              pending.add(result);
+              tokens.add(call.namedArguments[#cancelToken] as CancelToken);
+              return result.future;
+            });
+          }
+          Widget app(int? initialPage) => BlocProvider<SettingsBloc>.value(
+              value: settingsBloc,
+              child: MaterialApp(
+                  home: ReaderScreen(
+                      gid: 42, token: 'token', initialPage: initialPage)));
+          Finder content() => find
+              .byType(mode == 2 ? ScrollablePositionedList : PhotoViewGallery);
+          Future<void> settleLayout() async {
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+            await tester.pump();
+          }
 
-        try {
-          await tester.pumpWidget(app(null));
-          await settleLayout();
-          expect(tester.element(content()).read<ReaderBloc>().state.currentPage,
-              12);
-          final previousTokens = List<CancelToken>.of(tokens);
-          await tester.pumpWidget(app(selected));
-          await settleLayout();
-          expect(tester.element(content()).read<ReaderBloc>().state.currentPage,
-              selected);
-          if (mode != 2) {
-            final view = tester.widget<PhotoViewGallery>(content());
-            expect(view.pageController!.page!.round(), selected);
-          } else {
-            final view = tester.widget<ScrollablePositionedList>(content());
-            final positions = view.itemPositionsNotifier!.itemPositions.value;
+          try {
+            await tester.pumpWidget(app(null));
+            await settleLayout();
             expect(
-                positions.any((p) =>
-                    p.index == selected && p.itemLeadingEdge.abs() < 0.01),
-                isTrue);
-          }
-          expect(previousTokens.every((t) => t.isCancelled), isTrue);
-          verify(() => GetIt.I<HistoryRepository>().getProgress(42)).called(1);
-        } finally {
-          await tester.pumpWidget(const SizedBox.shrink());
-          for (final request in pending) {
-            if (!request.isCompleted) {
-              request.completeError(StateError('cancelled'));
+                tester.element(content()).read<ReaderBloc>().state.currentPage,
+                12);
+            final previousTokens = List<CancelToken>.of(tokens);
+            await tester.pumpWidget(app(selected));
+            await settleLayout();
+            expect(
+                tester.element(content()).read<ReaderBloc>().state.currentPage,
+                selected);
+            if (mode != 2) {
+              final view = tester.widget<PhotoViewGallery>(content());
+              expect(view.pageController!.page!.round(), selectedSpread);
+            } else {
+              final view = tester.widget<ScrollablePositionedList>(content());
+              final positions = view.itemPositionsNotifier!.itemPositions.value;
+              expect(
+                  positions.any((p) =>
+                      p.index == selectedSpread &&
+                      p.itemLeadingEdge.abs() < 0.01),
+                  isTrue);
             }
+            expect(previousTokens.every((t) => t.isCancelled), isTrue);
+            verify(() => GetIt.I<HistoryRepository>().getProgress(42))
+                .called(1);
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            for (final request in pending) {
+              if (!request.isCompleted) {
+                request.completeError(StateError('cancelled'));
+              }
+            }
+            await tester.pump();
           }
-          await tester.pump();
-        }
-      });
+        });
+      }
     }
   }
 

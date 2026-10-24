@@ -1,3 +1,4 @@
+import '../../models/reader_page_layout.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/gallery_image.dart';
 import '../../models/reader_page_resource.dart';
@@ -23,6 +24,7 @@ class ReaderState extends Equatable {
   final Map<int, ReaderPageResource> readyResources;
   final Set<int> cacheOnlyPages;
   final bool showUI;
+  final ReaderPageLayout pageLayout;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
   final String? errorMessage;
 
@@ -44,8 +46,11 @@ class ReaderState extends Equatable {
     this.cacheOnlyPages = const {},
     this.showUI = false,
     this.readingMode = 0,
+    this.pageLayout = ReaderPageLayout.single,
     this.errorMessage,
   });
+
+  ReaderSpreads get spreads => ReaderSpreads(totalPages, pageLayout);
 
   GalleryImage? get currentImage => loadedImages[currentPage];
 
@@ -67,6 +72,7 @@ class ReaderState extends Equatable {
     Set<int>? cacheOnlyPages,
     bool? showUI,
     int? readingMode,
+    ReaderPageLayout? pageLayout,
     String? errorMessage,
   }) {
     return ReaderState(
@@ -87,6 +93,7 @@ class ReaderState extends Equatable {
       cacheOnlyPages: cacheOnlyPages ?? this.cacheOnlyPages,
       showUI: showUI ?? this.showUI,
       readingMode: readingMode ?? this.readingMode,
+      pageLayout: pageLayout ?? this.pageLayout,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
@@ -110,6 +117,7 @@ class ReaderState extends Equatable {
         cacheOnlyPages,
         showUI,
         readingMode,
+        pageLayout,
         errorMessage,
       ];
 }

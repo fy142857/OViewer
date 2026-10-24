@@ -6,18 +6,20 @@ class ReaderPageImage extends StatelessWidget {
   final ImageProvider image;
   final ImageErrorWidgetBuilder errorBuilder;
   final double? loadingHeight;
+  final BoxFit fit;
 
   const ReaderPageImage(
       {super.key,
       required this.image,
       required this.errorBuilder,
-      this.loadingHeight});
+      this.loadingHeight,
+      this.fit = BoxFit.fitWidth});
 
   @override
   Widget build(BuildContext context) => Image(
         key: ValueKey(image),
         image: image,
-        fit: BoxFit.fitWidth,
+        fit: fit,
         frameBuilder: (context, child, frame, synchronouslyLoaded) =>
             synchronouslyLoaded || frame != null
                 ? child

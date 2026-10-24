@@ -50,6 +50,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<LoadSettings>(_onLoad);
     on<UpdateThemeMode>(_onTheme);
     on<UpdateReadingMode>(_onReading);
+    on<UpdateReaderPageLayout>((event, emit) async {
+      await _repository.setReaderPageLayout(event.layout);
+      emit(state.copyWith(pageLayout: event.layout));
+    });
     on<UpdateDisplayMode>(_onDisplay);
     on<UpdateProxy>(_onProxy);
     on<ToggleAutoProxy>(_onToggleAutoProxy);
@@ -63,6 +67,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       SettingsState(
         themeMode: repository.getThemeMode(),
         readingMode: repository.getReadingMode(),
+        pageLayout: repository.getReaderPageLayout(),
         displayMode: repository.getDisplayMode(),
         cacheLimitMB: repository.getCacheLimit(),
         proxyUrl: repository.getProxy(),

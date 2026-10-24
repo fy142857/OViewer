@@ -1,3 +1,4 @@
+import '../../models/reader_page_layout.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -144,6 +145,16 @@ class LocalStorage {
   static const _keyThemeMode = 'theme_mode';
   int getThemeMode() => _prefs.getInt(_keyThemeMode) ?? 0; // 0=system
   Future<void> setThemeMode(int mode) => _prefs.setInt(_keyThemeMode, mode);
+
+  ReaderPageLayout getReaderPageLayout() =>
+      _prefs.get('reader_page_layout') == 'doublePage'
+          ? ReaderPageLayout.doublePage
+          : ReaderPageLayout.single;
+  Future<void> setReaderPageLayout(ReaderPageLayout layout) async {
+    if (!await _prefs.setString('reader_page_layout', layout.name)) {
+      throw StateError('Unable to save reader layout');
+    }
+  }
 
   // Reading mode
   static const _keyReadingMode = 'reading_mode';
