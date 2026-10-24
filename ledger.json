@@ -5324,8 +5324,43 @@
         }
       ],
       "version": "1.10.3"
+    },
+    {
+      "base_tag": "v1.10.2",
+      "branch": "dev",
+      "build_number": 114,
+      "build_sha": "8d39f24093391780d92a000b7b0104c923a0c9db",
+      "candidate_id": "1.11.0+114",
+      "fingerprint": "2a956e923135e46aa25ccf27a7a85ea0e52c3fc71d84960009611ca4e8148ff4",
+      "notes": "### 新增\n\n- 新增双页阅读：横向翻页和纵向滚动均支持固定两页配对、整体缩放及独立单页操作；设置页与阅读器共用单／双页偏好，阅读器设置面板提供阅读方向和页面布局两个选择器（#70）。\n\n### 修复\n\n- iOS 更新窗口显示新版本的“新增、修复、变更”说明，分类标题加粗，长内容支持滚动；确认后仍跳转发布页（#69）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "10f30003a21003c054e473edc6f52cde649d634a",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Display existing Added, Fixed and Changed release notes in the iOS update dialog using shared Android heading styles while preserving release-page navigation.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "4b27058358774c79e2c3d3287fe2ceb1ae542541",
+          "subject": "fix(updates): show release notes in iOS update dialog",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "feature",
+          "classification_reason": "Introduce double-page reading in all three directions with shared zoom, per-page actions, persistent layout preferences and original-page navigation.",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "10f30003a21003c054e473edc6f52cde649d634a",
+          "subject": "feat(reader): add paired-page reading and shared preferences",
+          "type": "feat",
+          "version_impact": "minor"
+        }
+      ],
+      "version": "1.11.0"
     }
   ],
-  "last_build_number": 113,
+  "last_build_number": 114,
   "schema": 1
 }
