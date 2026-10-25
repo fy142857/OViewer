@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.10.2",
   "branch": "dev",
-  "build_number": 118,
-  "candidate_id": "1.11.0+118",
-  "fingerprint": "2209c45de306bfed7ecd30b23f0f5deb1b44a9b0d68cdcea12a93a152c190fd3",
-  "notes": "### 新增\n\n- 新增双页阅读：横向翻页和纵向滚动均支持固定两页配对、整体缩放及独立单页操作；设置页与阅读器共用单／双页偏好，阅读器设置面板提供阅读方向和页面布局两个选择器（#70）。\n\n### 修复\n\n- 修正 Debug 版在系统后台任务中的名称；横屏高度适配以单页或双页较高图片为基准，较矮图片沿中线居中，宽度不足时完整缩小显示。\n\n- iOS 更新窗口显示新版本的“新增、修复、变更”说明，分类标题加粗，长内容支持滚动；确认后仍跳转发布页（#69）。\n\n### 变更\n\n- 设置页“阅读”中常驻显示按宽度／高度对齐选项；双页图片在横竖屏及两种对齐偏好下均保持同一水平中线居中。\n\n- 横屏双页按宽度对齐时，两张图片沿同一水平中线居中；阅读设置次级菜单固定从选择器顶部向下展开，空间不足时可在菜单内滚动。\n\n- 左右翻页吸附动画调整为 2 倍速；阅读设置恢复为右上角按钮处弹出的菜单，采用纯色简约选项；横屏垂直阅读提供单页／双页的“按宽度对齐／按高度对齐”设置，横屏左右翻页的双页图片向中间靠拢。\n\n### 已知限制",
+  "build_number": 119,
+  "candidate_id": "1.11.0+119",
+  "fingerprint": "a10f430e2df52631c7875a4708cbf8238548e8a6107a8ff24b74778b358689e9",
+  "notes": "### 新增\n\n- 新增双页阅读：横向翻页和纵向滚动均支持固定两页配对、整体缩放及独立单页操作；设置页与阅读器共用单／双页偏好，阅读器设置面板提供阅读方向和页面布局两个选择器（#70）。\n\n### 修复\n\n- 修正 Debug 版在系统后台任务中的名称；横屏高度适配以单页或双页较高图片为基准，较矮图片沿中线居中，宽度不足时完整缩小显示。\n\n- iOS 更新窗口显示新版本的“新增、修复、变更”说明，分类标题加粗，长内容支持滚动；确认后仍跳转发布页（#69）。\n\n### 变更\n\n- 详情页及全部预览页按可用宽度自适应缩略图列数，手机保持约 4 列，横屏和大屏增加列数；大屏不足一屏时自动继续加载预览图。\n\n- 设置页“阅读”中常驻显示按宽度／高度对齐选项；双页图片在横竖屏及两种对齐偏好下均保持同一水平中线居中。\n\n- 横屏双页按宽度对齐时，两张图片沿同一水平中线居中；阅读设置次级菜单固定从选择器顶部向下展开，空间不足时可在菜单内滚动。\n\n- 左右翻页吸附动画调整为 2 倍速；阅读设置恢复为右上角按钮处弹出的菜单，采用纯色简约选项；横屏垂直阅读提供单页／双页的“按宽度对齐／按高度对齐”设置，横屏左右翻页的双页图片向中间靠拢。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "013d90e5498b155c47aa63a8860533d3cc43b3f8",
+  "source_sha": "6f243e0b1593a7bfca1ed8d3a89f572539e3c8fd",
   "summary": [
     {
       "change_kind": "fix",
@@ -65,6 +65,16 @@
       "original_type": "fix",
       "sha": "013d90e5498b155c47aa63a8860533d3cc43b3f8",
       "subject": "fix(reader): expose alignment settings and center all spreads",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "enhancement",
+      "classification_reason": "Reuse the card grid sizing rule for compact detail and full-preview thumbnails, preserve original-page navigation, and fill wider preview viewports without losing pagination retries.",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "6f243e0b1593a7bfca1ed8d3a89f572539e3c8fd",
+      "subject": "fix(preview): adapt thumbnail columns to available width",
       "type": "fix",
       "version_impact": "patch"
     }
