@@ -9,6 +9,55 @@ import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/widgets/reader_settings_menu.dart';
 
 void main() {
+  testWidgets(
+      'selected last option opens downward and scrolls in limited height',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = LocalStorage();
+    await storage.init();
+    final repository = SettingsRepository(storage);
+    final bloc = SettingsBloc(repository,
+        initialState: SettingsBloc.readSaved(repository).copyWith(
+            readingMode: 2,
+            pageLayout: ReaderPageLayout.doublePage,
+            spreadAlignment: ReaderSpreadAlignment.height));
+    addTearDown(bloc.close);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 240);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(BlocProvider.value(
+        value: bloc,
+        child: MaterialApp(
+            home: Scaffold(
+                appBar: AppBar(actions: const [ReaderSettingsButton()])))));
+    await tester.tap(find.byKey(const ValueKey('reader-settings')));
+    await tester.pumpAndSettle();
+    final selector = find.byKey(const ValueKey('reader-spread-alignment'));
+    await tester.ensureVisible(selector);
+    final top = tester.getTopLeft(selector).dy;
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    final first = find.byKey(const ValueKey(
+        'reader-spread-alignment-option-ReaderSpreadAlignment.width'));
+    final last = find.byKey(const ValueKey(
+        'reader-spread-alignment-option-ReaderSpreadAlignment.height'));
+    expect(tester.getTopLeft(first).dy, closeTo(top + 8, 0.1));
+    expect(
+        tester.getTopLeft(last).dy, greaterThan(tester.getTopLeft(first).dy));
+    final scroll = find
+        .ancestor(of: first, matching: find.byType(SingleChildScrollView))
+        .first;
+    expect(tester.getBottomLeft(scroll).dy, lessThanOrEqualTo(232.1));
+    await tester.drag(scroll, const Offset(0, -100));
+    await tester.pumpAndSettle();
+    await tester.tap(last);
+    await tester.pumpAndSettle();
+    expect(repository.getReaderSpreadAlignment(), ReaderSpreadAlignment.height);
+    expect(find.byType(ReaderSettingsOptions), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final locale in ['zh', 'en']) {
     testWidgets(
         'anchored menu conditionally shows alignment and saves global preferences ($locale)',
@@ -48,8 +97,16 @@ void main() {
       expect(bloc.state.pageLayout, ReaderPageLayout.doublePage);
       expect(repository.getReaderPageLayout(), ReaderPageLayout.doublePage);
       expect(find.byType(ReaderSettingsOptions), findsOneWidget);
+      final selectorTop =
+          tester.getTopLeft(find.byKey(const ValueKey('reader-direction'))).dy;
       await tester.tap(find.byKey(const ValueKey('reader-direction')));
       await tester.pumpAndSettle();
+      expect(
+          tester
+              .getTopLeft(
+                  find.byKey(const ValueKey('reader-direction-option-0')))
+              .dy,
+          closeTo(selectorTop + 8, 0.1));
       await tester
           .tap(find.text(locale == 'zh' ? '从右到左' : 'Right to Left').last);
       await tester.pumpAndSettle();
@@ -67,8 +124,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('reader-spread-alignment')),
           findsOneWidget);
+      final alignmentTop = tester
+          .getTopLeft(find.byKey(const ValueKey('reader-spread-alignment')))
+          .dy;
       await tester.tap(find.byKey(const ValueKey('reader-spread-alignment')));
       await tester.pumpAndSettle();
+      expect(
+          tester
+              .getTopLeft(find.byKey(const ValueKey(
+                  'reader-spread-alignment-option-ReaderSpreadAlignment.width')))
+              .dy,
+          closeTo(alignmentTop + 8, 0.1));
       await tester.tap(find.text(locale == 'zh' ? '按高度对齐' : 'Fit height').last);
       await tester.pumpAndSettle();
       expect(
@@ -84,11 +150,10 @@ void main() {
       await tester.tap(find.text(locale == 'zh' ? '双页' : 'Double page').last);
       await tester.pumpAndSettle();
       expect(
-          tester
-              .widget<DropdownButton<ReaderSpreadAlignment>>(
-                  find.byKey(const ValueKey('reader-spread-alignment')))
-              .value,
-          ReaderSpreadAlignment.height);
+          find.descendant(
+              of: find.byKey(const ValueKey('reader-spread-alignment')),
+              matching: find.text(locale == 'zh' ? '按高度对齐' : 'Fit height')),
+          findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('reader-direction')));
       await tester.pumpAndSettle();

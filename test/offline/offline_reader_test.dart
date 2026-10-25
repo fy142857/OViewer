@@ -366,6 +366,8 @@ void main() {
     expect(tester.getSize(second).width, 400);
     expect(tester.getSize(first).height,
         greaterThan(tester.getSize(second).height));
+    expect(tester.getRect(first).center.dy,
+        closeTo(tester.getRect(second).center.dy, 0.1));
     final bloc = tester
         .element(find.byType(ScrollablePositionedList))
         .read<ReaderBloc>();

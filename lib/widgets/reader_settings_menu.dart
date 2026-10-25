@@ -37,54 +37,79 @@ class ReaderSettingsOptions extends StatelessWidget {
       required Map<T, (String, IconData)> choices,
       required ValueChanged<T> onChanged}) {
     final theme = Theme.of(context);
-    return Semantics(
-        label: label,
-        child: Row(children: [
-          Tooltip(
-              message: label,
-              child: Icon(choices[value]!.$2,
-                  size: 20, color: theme.colorScheme.onSurface)),
-          const SizedBox(width: 8),
-          Expanded(
-              child: DropdownButtonHideUnderline(
-                  child: DropdownButton<T>(
-            key: ValueKey(id),
-            value: value,
-            isExpanded: true,
-            isDense: false,
-            itemHeight: null,
-            dropdownColor: theme.colorScheme.surface,
-            style: theme.textTheme.bodyLarge
-                ?.copyWith(color: theme.colorScheme.onSurface),
-            selectedItemBuilder: (_) => [
-              for (final entry in choices.entries)
-                ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 48),
-                    child: Align(
-                        heightFactor: 1,
-                        alignment: Alignment.centerLeft,
-                        child: Text(entry.value.$1)))
-            ],
-            items: [
-              for (final entry in choices.entries)
-                DropdownMenuItem<T>(
-                    value: entry.key,
-                    child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(children: [
-                          Icon(entry.value.$2, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(entry.value.$1)),
-                          if (entry.key == value)
-                            const Icon(Icons.check,
-                                size: 18, color: Colors.blue),
-                        ])))
-            ],
-            onChanged: (next) {
-              if (next != null) onChanged(next);
-            },
-          ))),
-        ]));
+    return Builder(
+        key: ValueKey(id),
+        builder: (anchorContext) => Semantics(
+              label: label,
+              value: choices[value]!.$1,
+              button: true,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: () async {
+                  final overlay = Navigator.of(anchorContext)
+                      .overlay!
+                      .context
+                      .findRenderObject()! as RenderBox;
+                  final anchor = anchorContext.findRenderObject()! as RenderBox;
+                  final bounds =
+                      anchor.localToGlobal(Offset.zero, ancestor: overlay) &
+                          anchor.size;
+                  final media = MediaQuery.of(anchorContext);
+                  final below = (overlay.size.height -
+                          media.padding.bottom -
+                          8 -
+                          bounds.top)
+                      .clamp(0.0, overlay.size.height);
+                  final selected = await showMenu<T>(
+                    context: anchorContext,
+                    position: RelativeRect.fromRect(
+                        bounds, Offset.zero & overlay.size),
+                    // No initialValue: a selected item must not recenter the popup.
+                    constraints: BoxConstraints(
+                        minWidth: anchor.size.width,
+                        maxWidth: anchor.size.width,
+                        maxHeight: below),
+                    color: theme.colorScheme.surface,
+                    surfaceTintColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4)),
+                    items: [
+                      for (final entry in choices.entries)
+                        PopupMenuItem<T>(
+                            key: ValueKey('$id-option-${entry.key}'),
+                            value: entry.key,
+                            child: Row(children: [
+                              Icon(entry.value.$2, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(entry.value.$1)),
+                              if (entry.key == value)
+                                const Icon(Icons.check,
+                                    size: 18, color: Colors.blue),
+                            ])),
+                    ],
+                  );
+                  if (selected != null && anchorContext.mounted)
+                    onChanged(selected);
+                },
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(children: [
+                        Icon(choices[value]!.$2,
+                            size: 20, color: theme.colorScheme.onSurface),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text(choices[value]!.$1,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: theme.colorScheme.onSurface))),
+                        const SizedBox(width: 8),
+                        Icon(Icons.arrow_drop_down,
+                            color: theme.colorScheme.onSurface),
+                      ])),
+                ),
+              ),
+            ));
   }
 
   @override
