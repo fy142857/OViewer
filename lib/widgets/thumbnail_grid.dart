@@ -3,6 +3,7 @@ import 'scoped_network_image.dart';
 import '../core/network/eh_image_cache_manager.dart';
 import '../core/parser/gallery_detail_parser.dart';
 import 'sprite_thumbnail.dart';
+import 'adaptive_thumbnail_grid.dart';
 
 class ThumbnailGrid extends StatelessWidget {
   final List<ThumbnailInfo> thumbnails;
@@ -16,15 +17,10 @@ class ThumbnailGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
+    return AdaptiveThumbnailGrid(
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
-      ),
       itemCount: thumbnails.length,
       itemBuilder: (context, index) {
         final thumb = thumbnails[index];

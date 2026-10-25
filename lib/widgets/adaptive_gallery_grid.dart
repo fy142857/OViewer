@@ -22,11 +22,15 @@ class AdaptiveGalleryGrid extends StatelessWidget {
   static const spacing = 8.0;
   static const padding = 8.0;
 
-  static int columnCount(double availableWidth, double textScale) {
-    final maxCardWidth = 220 * textScale.clamp(1, 2);
+  static int columnCount(double availableWidth, double textScale,
+      {double maxItemWidth = 220,
+      double horizontalPadding = padding * 2,
+      double itemSpacing = spacing}) {
+    final maxCardWidth = maxItemWidth * textScale.clamp(1, 2);
     return math.max(
         1,
-        ((availableWidth - padding * 2 + spacing) / (maxCardWidth + spacing))
+        ((availableWidth - horizontalPadding + itemSpacing) /
+                (maxCardWidth + itemSpacing))
             .ceil());
   }
 

@@ -1,3 +1,5 @@
+import 'package:oviewer/widgets/adaptive_gallery_grid.dart';
+import 'package:oviewer/widgets/adaptive_thumbnail_grid.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -68,8 +70,12 @@ void main() {
       await tester.binding.setSurfaceSize(viewport);
       await tester.pumpWidget(
           MaterialApp(home: LayoutBuilder(builder: (_, constraints) {
-        // Match the four-column preview grid's tile size in both orientations.
-        final width = (constraints.maxWidth - 12) / 4;
+        // Match responsive preview tile sizes through portrait/landscape changes.
+        final columns = AdaptiveGalleryGrid.columnCount(constraints.maxWidth, 1,
+            maxItemWidth: AdaptiveThumbnailGrid.maxThumbnailWidth,
+            horizontalPadding: 0,
+            itemSpacing: 4);
+        final width = (constraints.maxWidth - (columns - 1) * 4) / columns;
         return Center(
             child: RepaintBoundary(
                 key: boundaryKey,

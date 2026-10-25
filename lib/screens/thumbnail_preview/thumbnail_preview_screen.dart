@@ -13,6 +13,7 @@ import '../../core/parser/gallery_detail_parser.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/sprite_thumbnail.dart';
+import '../../widgets/adaptive_thumbnail_grid.dart';
 
 class ThumbnailPreviewScreen extends StatelessWidget {
   final int gid;
@@ -66,13 +67,18 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
         notification is! OverscrollNotification) {
       return false;
     }
-    final metrics = notification.metrics;
+    _requestMore(notification.metrics);
+    return false;
+  }
+
+  void _requestMore(ScrollMetrics metrics) {
     if (metrics.pixels >= metrics.maxScrollExtent - 300) {
       final bloc = context.read<ThumbnailPreviewBloc>();
-      if (bloc.state.isLoadingMore || bloc.state.hasReachedEnd) return false;
+      if (bloc.state.status != ThumbnailPreviewStatus.loaded ||
+          bloc.state.isLoadingMore ||
+          bloc.state.hasReachedEnd) return;
       bloc.add(const LoadMoreThumbnails());
     }
-    return false;
   }
 
   @override
@@ -98,7 +104,8 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
       ),
       body: BlocBuilder<ThumbnailPreviewBloc, ThumbnailPreviewState>(
         builder: (context, state) {
-          if (state.status == ThumbnailPreviewStatus.loading) {
+          if (state.status == ThumbnailPreviewStatus.initial ||
+              state.status == ThumbnailPreviewStatus.loading) {
             return LoadingIndicator(message: s.loadingThumbnails);
           }
           if (state.status == ThumbnailPreviewStatus.error) {
@@ -119,89 +126,95 @@ class _ThumbnailPreviewViewState extends State<_ThumbnailPreviewView> {
 
           return NotificationListener<ScrollNotification>(
             onNotification: _handleScrollNotification,
-            child: GridView.builder(
-              padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
-              ),
-              itemCount: itemCount,
-              itemBuilder: (context, index) {
-                // Loading indicator as the last item
-                if (index >= thumbCount) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  );
+            child: NotificationListener<ScrollMetricsNotification>(
+              onNotification: (notification) {
+                // A wider viewport may fit the whole batch and cannot scroll.
+                if (notification.metrics.maxScrollExtent <= 0 &&
+                    identical(
+                        context.read<ThumbnailPreviewBloc>().state.thumbnails,
+                        state.thumbnails)) {
+                  _requestMore(notification.metrics);
                 }
-
-                final thumb = state.thumbnails[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.pushNamed(context, '/reader', arguments: {
-                      'gid': widget.gid,
-                      'source': widget.source,
-                      'token': widget.token,
-                      'initialPage': thumb.pageIndex,
-                    });
-                  },
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: thumb.isSprite
-                            ? _buildSpriteThumbnail(context, thumb)
-                            : scopedNetworkImage(
-                                imageUrl: thumb.thumbUrl,
-                                fit: BoxFit.cover,
-                                cacheManager: EhImageCacheManager.instance,
-                                placeholder: (_, __) => Container(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceVariant,
-                                ),
-                                errorWidget: (_, __, ___) => Container(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceVariant,
-                                  child:
-                                      const Icon(Icons.broken_image, size: 20),
-                                ),
-                              ),
+                return false;
+              },
+              child: AdaptiveThumbnailGrid(
+                padding: const EdgeInsets.all(8),
+                itemCount: itemCount,
+                itemBuilder: (context, index) {
+                  // Loading indicator as the last item
+                  if (index >= thumbCount) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       ),
-                      Positioned(
-                        right: 4,
-                        bottom: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: Text(
-                            '${thumb.pageIndex + 1}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                    );
+                  }
+
+                  final thumb = state.thumbnails[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/reader', arguments: {
+                        'gid': widget.gid,
+                        'source': widget.source,
+                        'token': widget.token,
+                        'initialPage': thumb.pageIndex,
+                      });
+                    },
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: thumb.isSprite
+                              ? _buildSpriteThumbnail(context, thumb)
+                              : scopedNetworkImage(
+                                  imageUrl: thumb.thumbUrl,
+                                  fit: BoxFit.cover,
+                                  cacheManager: EhImageCacheManager.instance,
+                                  placeholder: (_, __) => Container(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceVariant,
+                                  ),
+                                  errorWidget: (_, __, ___) => Container(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceVariant,
+                                    child: const Icon(Icons.broken_image,
+                                        size: 20),
+                                  ),
+                                ),
+                        ),
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              '${thumb.pageIndex + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           );
         },
