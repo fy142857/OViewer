@@ -412,6 +412,22 @@ void main() {
       expect(b.right, lessThanOrEqualTo(800));
       expect(bloc.state.currentPage, 0);
     }
+    // Every direction/orientation/preference keeps the two page centres aligned.
+    for (final size in [const Size(360, 800), const Size(800, 360)]) {
+      tester.view.physicalSize = size;
+      await settleOffline(tester);
+      for (final mode in [0, 1, 2]) {
+        for (final alignment in ReaderSpreadAlignment.values) {
+          bloc.add(ChangeReaderPreferences(mode, ReaderPageLayout.doublePage,
+              alignment: alignment));
+          await settleOffline(tester);
+          expect(tester.getRect(first).center.dy,
+              closeTo(tester.getRect(second).center.dy, 0.1),
+              reason: '$size direction=$mode alignment=$alignment');
+          expect(bloc.state.currentPage, 0);
+        }
+      }
+    }
     expect(tester.takeException(), isNull);
     verifyZeroInteractions(gallery);
     await tester.pumpWidget(const SizedBox.shrink());

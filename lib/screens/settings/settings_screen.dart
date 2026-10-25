@@ -197,39 +197,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
-              if (state.readingMode == 2 &&
-                  MediaQuery.orientationOf(context) == Orientation.landscape)
-                ListTile(
-                  key: const ValueKey('settings-reader-spread-alignment'),
-                  leading: const Icon(Icons.align_vertical_top),
-                  title: Text(s.readerSpreadAlignment),
-                  subtitle: Text(
-                      state.spreadAlignment == ReaderSpreadAlignment.width
-                          ? s.readerAlignWidth
-                          : s.readerAlignHeight),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (dialogContext) => SimpleDialog(
-                            title: Text(s.readerSpreadAlignment),
-                            children: [
-                              for (final value in ReaderSpreadAlignment.values)
-                                RadioListTile<ReaderSpreadAlignment>(
-                                    value: value,
-                                    groupValue: state.spreadAlignment,
-                                    title: Text(
-                                        value == ReaderSpreadAlignment.width
-                                            ? s.readerAlignWidth
-                                            : s.readerAlignHeight),
-                                    onChanged: (value) {
-                                      if (value != null)
-                                        context.read<SettingsBloc>().add(
-                                            UpdateReaderSpreadAlignment(value));
-                                      Navigator.pop(dialogContext);
-                                    }),
-                            ],
-                          )),
-                ),
+              ListTile(
+                key: const ValueKey('settings-reader-spread-alignment'),
+                leading: const Icon(Icons.align_vertical_top),
+                title: Text(s.readerSpreadAlignment),
+                subtitle: Text(
+                    state.spreadAlignment == ReaderSpreadAlignment.width
+                        ? s.readerAlignWidth
+                        : s.readerAlignHeight),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (dialogContext) => SimpleDialog(
+                          title: Text(s.readerSpreadAlignment),
+                          children: [
+                            for (final value in ReaderSpreadAlignment.values)
+                              RadioListTile<ReaderSpreadAlignment>(
+                                  value: value,
+                                  groupValue: state.spreadAlignment,
+                                  title: Text(
+                                      value == ReaderSpreadAlignment.width
+                                          ? s.readerAlignWidth
+                                          : s.readerAlignHeight),
+                                  onChanged: (value) {
+                                    if (value != null)
+                                      context.read<SettingsBloc>().add(
+                                          UpdateReaderSpreadAlignment(value));
+                                    Navigator.pop(dialogContext);
+                                  }),
+                          ],
+                        )),
+              ),
 
               if (GetIt.I.isRegistered<OfflineDownloadCoordinator>()) ...[
                 _sectionHeader(s.offlineCache),

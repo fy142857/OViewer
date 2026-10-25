@@ -319,11 +319,8 @@ class _ReaderViewState extends State<_ReaderView> {
     }
     return Row(
       key: ValueKey('reader-spread-$spread'),
-      crossAxisAlignment: horizontal
-          ? CrossAxisAlignment.stretch
-          : landscape
-              ? CrossAxisAlignment.center
-              : CrossAxisAlignment.start,
+      crossAxisAlignment:
+          horizontal ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
       children: [
         for (final page in pages)
           Expanded(
