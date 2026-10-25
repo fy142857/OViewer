@@ -5599,8 +5599,93 @@
         }
       ],
       "version": "1.11.0"
+    },
+    {
+      "base_tag": "v1.10.2",
+      "branch": "dev",
+      "build_number": 119,
+      "build_sha": "01a7aa40b246331815857849eecd6686be3def69",
+      "candidate_id": "1.11.0+119",
+      "fingerprint": "a10f430e2df52631c7875a4708cbf8238548e8a6107a8ff24b74778b358689e9",
+      "notes": "### 新增\n\n- 新增双页阅读：横向翻页和纵向滚动均支持固定两页配对、整体缩放及独立单页操作；设置页与阅读器共用单／双页偏好，阅读器设置面板提供阅读方向和页面布局两个选择器（#70）。\n\n### 修复\n\n- 修正 Debug 版在系统后台任务中的名称；横屏高度适配以单页或双页较高图片为基准，较矮图片沿中线居中，宽度不足时完整缩小显示。\n\n- iOS 更新窗口显示新版本的“新增、修复、变更”说明，分类标题加粗，长内容支持滚动；确认后仍跳转发布页（#69）。\n\n### 变更\n\n- 详情页及全部预览页按可用宽度自适应缩略图列数，手机保持约 4 列，横屏和大屏增加列数；大屏不足一屏时自动继续加载预览图。\n\n- 设置页“阅读”中常驻显示按宽度／高度对齐选项；双页图片在横竖屏及两种对齐偏好下均保持同一水平中线居中。\n\n- 横屏双页按宽度对齐时，两张图片沿同一水平中线居中；阅读设置次级菜单固定从选择器顶部向下展开，空间不足时可在菜单内滚动。\n\n- 左右翻页吸附动画调整为 2 倍速；阅读设置恢复为右上角按钮处弹出的菜单，采用纯色简约选项；横屏垂直阅读提供单页／双页的“按宽度对齐／按高度对齐”设置，横屏左右翻页的双页图片向中间靠拢。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "6f243e0b1593a7bfca1ed8d3a89f572539e3c8fd",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "Display existing Added, Fixed and Changed release notes in the iOS update dialog using shared Android heading styles while preserving release-page navigation.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "4b27058358774c79e2c3d3287fe2ceb1ae542541",
+          "subject": "fix(updates): show release notes in iOS update dialog",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "feature",
+          "classification_reason": "Introduce double-page reading in all three directions with shared zoom, per-page actions, persistent layout preferences and original-page navigation.",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "10f30003a21003c054e473edc6f52cde649d634a",
+          "subject": "feat(reader): add paired-page reading and shared preferences",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "Refine existing paired-page reading with twice-speed horizontal settling, persistent vertical spread alignment and a button-anchored settings menu.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "e27ee6cbc856af25774f1feaebc8bda084ea90c5",
+          "subject": "fix(reader): refine paging speed and anchored spread settings",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Correct Debug task naming, restore plain reader menu styling, compact landscape spreads, and fit vertical single or paired pages to viewport height with width-safe scaling.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "3014dd647397345b1447f7c4d1439b77a04afb0b",
+          "subject": "fix(reader): fit landscape pages and simplify settings",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Center landscape width-fitted page pairs and anchor reader submenus to each selector top without selected-item recentering.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "4c3b3963537bbaab90432c2d7897d4f431d16cd9",
+          "subject": "fix(reader): center width-fitted spreads and open submenus downward",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "Keep reader alignment preferences visible in settings and center paired pages across orientations and alignment preferences.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "013d90e5498b155c47aa63a8860533d3cc43b3f8",
+          "subject": "fix(reader): expose alignment settings and center all spreads",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "Reuse the card grid sizing rule for compact detail and full-preview thumbnails, preserve original-page navigation, and fill wider preview viewports without losing pagination retries.",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "6f243e0b1593a7bfca1ed8d3a89f572539e3c8fd",
+          "subject": "fix(preview): adapt thumbnail columns to available width",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.11.0"
     }
   ],
-  "last_build_number": 118,
+  "last_build_number": 119,
   "schema": 1
 }
