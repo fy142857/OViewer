@@ -5,12 +5,11 @@ import '../blocs/settings/settings_bloc.dart';
 import '../blocs/settings/settings_event.dart';
 import '../blocs/settings/settings_state.dart';
 import '../core/l10n/s.dart';
-import '../models/reader_page_layout.dart';
 
-/// Shared by the settings page and the reader menu.
+/// Shared by the settings page and the reader toolbar.
 class ReaderPreloadSetting extends StatefulWidget {
-  const ReaderPreloadSetting({super.key, this.compact = false});
-  final bool compact;
+  const ReaderPreloadSetting({super.key, this.toolbar = false});
+  final bool toolbar;
   @override
   State<ReaderPreloadSetting> createState() => _ReaderPreloadSettingState();
 }
@@ -34,8 +33,7 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
                         key: ValueKey('reader-preload-option-$n'),
                         value: n,
                         groupValue: state.preloadCount,
-                        title: Text(s.readerPreloadLabel(n,
-                            state.pageLayout == ReaderPageLayout.doublePage)),
+                        title: Text('$n'),
                         onChanged: (value) => Navigator.pop(dialog, value)),
                 ],
               ));
@@ -57,21 +55,46 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
   Widget build(BuildContext context) =>
       BlocBuilder<SettingsBloc, SettingsState>(builder: (context, state) {
         final s = S.of(context);
+        final enabled = !_choosing && !state.savingPreloadCount;
+        if (widget.toolbar) {
+          return Tooltip(
+            message: s.readerPreloadCount,
+            child: Semantics(
+              label: s.readerPreloadCount,
+              value: '${state.preloadCount}',
+              child: TextButton(
+                key: const ValueKey('reader-preload-button'),
+                style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                onPressed: enabled ? () => _choose(state) : null,
+                child: state.savingPreloadCount
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text('${state.preloadCount}'),
+                        const Icon(Icons.arrow_drop_down, size: 20),
+                      ]),
+              ),
+            ),
+          );
+        }
         return ListTile(
           key: const ValueKey('reader-preload-count'),
-          dense: widget.compact,
-          contentPadding: widget.compact ? EdgeInsets.zero : null,
           leading: const Icon(Icons.download_for_offline_outlined),
           title: Text(s.readerPreloadCount),
-          subtitle: Text(s.readerPreloadLabel(state.preloadCount,
-              state.pageLayout == ReaderPageLayout.doublePage)),
+          subtitle: Text('${state.preloadCount}'),
           trailing: state.savingPreloadCount
               ? const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.chevron_right),
-          enabled: !_choosing && !state.savingPreloadCount,
+          enabled: enabled,
           onTap: () => _choose(state),
         );
       });

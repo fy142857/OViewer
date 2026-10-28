@@ -563,6 +563,13 @@ void main() {
       await tester.tapAt(tester.getCenter(find.byType(ReaderScreen)));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(
+          tester
+              .getCenter(find.byKey(const ValueKey('reader-preload-button')))
+              .dx,
+          lessThan(tester
+              .getCenter(find.byKey(const ValueKey('reader-settings')))
+              .dx));
       expect(systemModes.last, 'SystemUiMode.edgeToEdge');
       await tester.tapAt(tester.getCenter(find.byType(ReaderScreen)));
       await tester.pump(const Duration(milliseconds: 400));

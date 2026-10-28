@@ -93,28 +93,53 @@ void main() {
           value: bloc,
           child: MaterialApp(
               home: Scaffold(
-            appBar: AppBar(actions: const [ReaderSettingsButton()]),
+            appBar: AppBar(actions: const [
+              ReaderPreloadSetting(toolbar: true),
+              ReaderSettingsButton(),
+            ]),
             body: const ReaderPreloadSetting(),
           ))));
       await tester.tap(find.byKey(const ValueKey('reader-preload-count')));
       await tester.pumpAndSettle();
       expect(find.byType(RadioListTile<int>), findsNWidgets(5));
+      expect(
+          tester
+              .widgetList<RadioListTile<int>>(find.byType(RadioListTile<int>))
+              .map((tile) => (tile.title! as Text).data),
+          ['1', '2', '3', '4', '5']);
       await tester.tap(find.byKey(const ValueKey('reader-preload-option-5')));
       await tester.pumpAndSettle();
       expect(bloc.state.preloadCount, 5);
       bloc.add(const UpdateReaderPageLayout(ReaderPageLayout.doublePage));
       await tester.pumpAndSettle();
       expect(
-          find.text(locale == 'zh' ? '前后各 5 组' : '5 spreads before and after'),
+          find.descendant(
+              of: find.byKey(const ValueKey('reader-preload-count')),
+              matching: find.text('5')),
           findsOneWidget);
+      expect(
+          tester
+              .getCenter(find.byKey(const ValueKey('reader-preload-button')))
+              .dx,
+          lessThan(tester
+              .getCenter(find.byKey(const ValueKey('reader-settings')))
+              .dx));
       await tester.tap(find.byKey(const ValueKey('reader-settings')));
       await tester.pumpAndSettle();
-      final menu = find.descendant(
-          of: find.byType(ReaderSettingsOptions),
-          matching: find.byKey(const ValueKey('reader-preload-count')));
-      await tester.ensureVisible(menu);
-      await tester.tap(menu);
+      expect(
+          find.descendant(
+              of: find.byType(ReaderSettingsOptions),
+              matching: find.byType(ReaderPreloadSetting)),
+          findsNothing);
+      await tester.tapAt(const Offset(10, 350));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('reader-preload-button')));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widgetList<RadioListTile<int>>(find.byType(RadioListTile<int>))
+              .map((tile) => (tile.title! as Text).data),
+          ['1', '2', '3', '4', '5']);
       expect(
           tester
               .widget<RadioListTile<int>>(
@@ -144,7 +169,7 @@ void main() {
             home: Scaffold(
                 body: Column(children: [
           ReaderPreloadSetting(),
-          ReaderPreloadSetting(compact: true),
+          ReaderPreloadSetting(toolbar: true),
         ])))));
     await tester.tap(find.byKey(const ValueKey('reader-preload-count')).first);
     await tester.pumpAndSettle();
@@ -158,6 +183,12 @@ void main() {
             .widgetList<ListTile>(find.byType(ListTile))
             .every((tile) => !tile.enabled),
         true);
+    expect(
+        tester
+            .widget<TextButton>(
+                find.byKey(const ValueKey('reader-preload-button')))
+            .onPressed,
+        isNull);
     final repeated = Completer<void>();
     bloc.add(UpdateReaderPreloadCount(1, completer: repeated));
     await tester.pump();

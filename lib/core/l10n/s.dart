@@ -503,9 +503,6 @@ class S {
   String get readingDirection => _zh ? '阅读方向' : 'Reading direction';
   String get readerPageLayout => _zh ? '页面布局' : 'Page layout';
   String get readerPreloadCount => _zh ? '预读数量' : 'Preload count';
-  String readerPreloadLabel(int count, bool doublePage) => _zh
-      ? '前后各 $count ${doublePage ? '组' : '页'}'
-      : '$count ${doublePage ? (count == 1 ? 'spread' : 'spreads') : (count == 1 ? 'page' : 'pages')} before and after';
   String get readerPreloadSaveFailed =>
       _zh ? '预读数量保存失败，请重试' : 'Could not save preload count. Please retry.';
   String get readerSinglePage => _zh ? '单页' : 'Single page';

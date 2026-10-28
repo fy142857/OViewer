@@ -4,6 +4,7 @@ import '../../models/reader_page_layout.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/settings/settings_state.dart';
 import '../../widgets/reader_settings_menu.dart';
+import '../../widgets/reader_preload_setting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -1233,6 +1234,7 @@ class _ReaderViewState extends State<_ReaderView> {
                 ),
               ),
             ),
+            const ReaderPreloadSetting(toolbar: true),
             const ReaderSettingsButton(),
           ],
         ),
