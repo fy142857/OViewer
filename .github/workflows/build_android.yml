@@ -68,7 +68,7 @@ jobs:
           packages: 'platform-tools'
 
       - name: Install Android SDK build dependencies
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;26.1.10909125"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

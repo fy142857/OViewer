@@ -24,7 +24,7 @@ Future<T?> showReaderMenu<T>({
     shape: shape,
     menuPadding: menuPadding,
     themes: InheritedTheme.capture(from: context, to: navigator.context),
-    barrierLabel: MaterialLocalizations.of(context).menuDismissLabel,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     semanticLabel: MaterialLocalizations.of(context).popupMenuLabel,
   ));
 }
