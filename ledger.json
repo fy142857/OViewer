@@ -5709,8 +5709,43 @@
         }
       ],
       "version": "1.11.1"
+    },
+    {
+      "base_tag": "v1.11.0",
+      "branch": "dev",
+      "build_number": 121,
+      "build_sha": "f249c2762d878aec2b7ada117c7869b6ed09b4b6",
+      "candidate_id": "1.11.1+121",
+      "fingerprint": "86a6b8415fbbbb3da4f955e3f26d0f187810e471e526cc9f2e4fcffeffad6e1e",
+      "notes": "### 新增\n\n### 修复\n\n- 横向和反向在线阅读提前下载前后各一屏图片，双页模式按组预加载，翻页时复用已有请求与缓存（#71）。\n\n### 变更\n\n- 阅读设置和阅读器菜单可调整前后预读数量（1–5，默认 1），单页按页、双页按组计数，三种在线模式共用并持久保存；后台按两张图片并行预读，可见图片优先，地址至少预取前后各 3 页。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "ac0b76145fae4255af3518d2fd8e36f541da67ea",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复既有横向阅读仅预取地址而未提前下载相邻屏图片的问题，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "fd2708a84df209181a2d7f0c1825569a77513b92",
+          "subject": "fix(reader): preload adjacent horizontal image screens",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "将既有在线相邻图片预读改为可配置并限制后台并行，完善原有阅读体验，没有新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "ac0b76145fae4255af3518d2fd8e36f541da67ea",
+          "subject": "feat(reader): make online preloading configurable",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.11.1"
     }
   ],
-  "last_build_number": 120,
+  "last_build_number": 121,
   "schema": 1
 }
