@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +36,35 @@ import '../core/network/reader_image_session_test.dart' show makePng;
 
 class _HttpClient extends Mock implements HttpClient {}
 
+class _Request extends Mock implements HttpClientRequest {}
+
+class _Headers extends Fake implements HttpHeaders {
+  @override
+  void set(String name, Object value, {bool preserveHeaderCase = false}) {}
+  @override
+  void forEach(void Function(String, List<String>) action) {}
+}
+
+class _Response extends StreamView<List<int>> implements HttpClientResponse {
+  _Response(Uint8List bytes)
+      : contentLength = bytes.length,
+        super(Stream.value(bytes));
+  @override
+  final int contentLength;
+  @override
+  int get statusCode => 200;
+  @override
+  bool get isRedirect => false;
+  @override
+  bool get persistentConnection => false;
+  @override
+  String get reasonPhrase => 'OK';
+  @override
+  HttpHeaders get headers => _Headers();
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 // Hold image GETs open to measure downloads while the current image is slow.
 // Gallery HTML is mocked independently; no external requests are made.
 void main() {
@@ -43,37 +73,40 @@ void main() {
     registerFallbackValue(CancelToken());
     registerFallbackValue(Uri.parse('https://example.test'));
     registerFallbackValue(<String, String>{});
+    registerFallbackValue(const Stream<List<int>>.empty());
   });
 
   final scenarios = [
-    for (final mode in [0, 1])
+    for (final mode in [0, 1, 2])
       for (final layout in ReaderPageLayout.values)
         for (final start in [0, 10, 18])
-          (mode: mode, layout: layout, start: start, cache: false, fail: false),
-    (
-      mode: 2,
-      layout: ReaderPageLayout.single,
-      start: 10,
-      cache: false,
-      fail: false
-    ),
+          for (final n in [1, 3, 5])
+            (
+              mode: mode,
+              layout: layout,
+              start: start,
+              n: n,
+              cache: false,
+              fail: false
+            ),
     for (final mode in [0, 1])
       for (final fail in [false, true])
         (
           mode: mode,
           layout: ReaderPageLayout.single,
           start: 10,
+          n: 3,
           cache: true,
           fail: fail
         ),
   ];
   for (final scenario in scenarios) {
-    final (:mode, :layout, :start, :cache, :fail) = scenario;
+    final (:mode, :layout, :start, :n, :cache, :fail) = scenario;
     const total = 19; // The final double-page spread has only one page.
     final spreads = ReaderSpreads(total, layout);
     Set<int> window(int page) => {
-          for (var spread = spreads.spreadOf(page) - 1;
-              spread <= spreads.spreadOf(page) + 1;
+          for (var spread = spreads.spreadOf(page) - n;
+              spread <= spreads.spreadOf(page) + n;
               spread++)
             if (spread >= 0 && spread < spreads.count) ...spreads.pages(spread),
         };
@@ -88,6 +121,9 @@ void main() {
       final htmlPages = <int>[];
       final imagePages = <int>[];
       final pending = <Completer<HttpClientRequest>>[];
+      final pendingPages = <int>[];
+      final foreground = {...spreads.containing(start)};
+      ReaderBloc? liveBloc;
       final client = _HttpClient();
       when(() => client.openUrl(any(), any())).thenAnswer((call) {
         expect(call.positionalArguments.first, 'GET');
@@ -99,32 +135,52 @@ void main() {
         }
         final request = Completer<HttpClientRequest>();
         pending.add(request);
+        pendingPages.add(page);
+        if (liveBloc != null) {
+          final visible = liveBloc!.state.preloadWindow.visible;
+          foreground.addAll(visible);
+          final background = {
+            for (var i = 0; i < pending.length; i++)
+              if (!pending[i].isCompleted &&
+                  !foreground.contains(pendingPages[i]))
+                pendingPages[i]
+          };
+          expect(background.length, lessThanOrEqualTo(2));
+        }
         return request.future;
       });
       when(() => cookies.applyRequestHeaders(any(), any()))
           .thenAnswer((_) async {});
-      when(() => settingsBloc.state)
-          .thenReturn(const SettingsState(locale: 'en'));
-      when(() => settingsBloc.stream).thenAnswer((_) => const Stream.empty());
+      var savedSettings = SettingsState(
+          locale: 'en', readingMode: mode, pageLayout: layout, preloadCount: n);
+      final settingsChanges = StreamController<SettingsState>.broadcast();
+      addTearDown(settingsChanges.close);
+      when(() => settingsBloc.state).thenAnswer((_) => savedSettings);
+      when(() => settingsBloc.stream).thenAnswer((_) => settingsChanges.stream);
       when(() => settings.getReadingMode()).thenReturn(mode);
+      when(() => settings.getReaderPreloadCount()).thenReturn(n);
       when(() => settings.getReaderPageLayout()).thenReturn(layout);
       when(() => settings.getReaderSpreadAlignment())
           .thenReturn(ReaderSpreadAlignment.width);
       when(() => history.updateProgress(any(), any(), any()))
           .thenAnswer((_) async {});
       when(() => gallery.readerIndexCache).thenReturn(ReaderIndexCache());
-      when(() => gallery.fetchReaderIndexPage(42, 'token',
-              cancelToken: any(named: 'cancelToken')))
-          .thenAnswer((_) async => ReaderIndexPage(
-                  totalPages: total,
-                  indexPage: 0,
-                  indexPageCount: 1,
-                  pageSize: total,
-                  thumbnails: {
-                    for (var i = 0; i < total; i++)
-                      i: ThumbnailInfo(
-                          pageToken: 'page', pageIndex: i, thumbUrl: '')
-                  }));
+      for (var part = 0; part < 5; part++) {
+        when(() => gallery.fetchReaderIndexPage(42, 'token',
+                page: part, cancelToken: any(named: 'cancelToken')))
+            .thenAnswer((_) async => ReaderIndexPage(
+                    totalPages: total,
+                    indexPage: part,
+                    indexPageCount: 5,
+                    pageSize: 4,
+                    thumbnails: {
+                      for (var i = part * 4;
+                          i < (part + 1) * 4 && i < total;
+                          i++)
+                        i: ThumbnailInfo(
+                            pageToken: 'page', pageIndex: i, thumbUrl: '')
+                    }));
+      }
       for (var page = 0; page < total; page++) {
         when(() => gallery.fetchImage('page', 42, page,
             cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
@@ -172,6 +228,43 @@ void main() {
         }
       }
 
+      Future<void> finishDownloads() async {
+        final png = (await tester.runAsync(makePng))!;
+        for (var round = 0; round < 100; round++) {
+          final outstanding =
+              pending.where((request) => !request.isCompleted).toList();
+          if (outstanding.isEmpty) {
+            await advance();
+            final state = liveBloc!.state;
+            if (pending.every((request) => request.isCompleted) &&
+                state.preloadWindow.targets.every((page) =>
+                    (fail && page == start - 1) ||
+                    state.readyResources.containsKey(page))) return;
+            continue;
+          }
+          for (final request in outstanding) {
+            final response = _Request();
+            when(() => response.headers).thenReturn(_Headers());
+            when(() => response.addStream(any())).thenAnswer((call) async {
+              await (call.positionalArguments.first as Stream<List<int>>)
+                  .drain<void>();
+            });
+            when(() => response.close())
+                .thenAnswer((_) async => _Response(png));
+            request.complete(response);
+          }
+          await advance();
+        }
+        final state = liveBloc!.state;
+        throw TestFailure('Preload queue did not drain: '
+            'targets=${state.preloadWindow.targets} ready=${state.readyResources.keys} '
+            'loading=${state.loadingIndices} failed=${state.failedIndices} GETs=$imagePages '
+            'pending=${[
+          for (var i = 0; i < pending.length; i++)
+            if (!pending[i].isCompleted) pendingPages[i]
+        ]}');
+      }
+
       await HttpOverrides.runZoned(() async {
         try {
           await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
@@ -183,6 +276,13 @@ void main() {
           final content = find
               .byType(mode == 2 ? ScrollablePositionedList : PhotoViewGallery);
           final bloc = tester.element(content).read<ReaderBloc>();
+          liveBloc = bloc;
+          final admitted = {...bloc.state.preloadWindow.targets};
+          final subscription = bloc.stream.listen((state) {
+            admitted.addAll(state.preloadWindow.targets);
+            foreground.addAll(state.preloadWindow.visible);
+          });
+          addTearDown(subscription.cancel);
           expect(bloc.state.currentPage, start);
           expect(
               htmlPages.toSet(),
@@ -192,12 +292,34 @@ void main() {
               ]));
           expect(htmlPages.length, htmlPages.toSet().length);
           debugPrint('issue71 $scenario HTML=$htmlPages imageGET=$imagePages');
-          if (mode == 2) {
-            expect(imagePages.any((page) => page != start), isTrue,
-                reason: 'The vertical list builds nearby images eagerly.');
-          } else {
-            final expected = window(start).difference(cachedPages);
-            expect(imagePages.toSet(), expected);
+          final initialWindow = bloc.state.preloadWindow;
+          if (!cache && mode != 2) {
+            expect(initialWindow.visible, contains(imagePages.first),
+                reason: 'Visible image IO starts before background image IO');
+          }
+          expect(imagePages.toSet(), everyElement(isIn(initialWindow.targets)));
+          expect(
+              imagePages
+                  .where((p) => !initialWindow.visible.contains(p))
+                  .toSet()
+                  .length,
+              lessThanOrEqualTo(2));
+          var focus = start;
+          if (mode != 2 &&
+              start == 10 &&
+              n == 3 &&
+              !cache &&
+              layout == ReaderPageLayout.single) {
+            // Both background slots and the current image are still stalled.
+            // Turning to a prefetched page must reuse its existing GET.
+            await tester.drag(content, Offset(mode == 0 ? -700 : 700, 0));
+            await advance();
+            focus = 11;
+            expect(bloc.state.currentPage, focus);
+            expect(imagePages.where((page) => page == 11), hasLength(1));
+            expect(imagePages, contains(12));
+          }
+          {
             if (cache) {
               expect(
                   tester
@@ -217,20 +339,78 @@ void main() {
                       .any((image) => image.image != null),
                   isTrue);
             } else {
-              expect(imagePages.length, expected.length);
+              expect(imagePages.length, imagePages.toSet().length);
             }
-            final forward = start < total - 1;
+            await finishDownloads();
+            expect(
+                imagePages.toSet(),
+                containsAll(
+                    bloc.state.preloadWindow.targets.difference(cachedPages)));
+            expect(imagePages.toSet(), everyElement(isIn(admitted)));
+            final cached = {
+              for (final page in bloc.state.preloadWindow.targets)
+                if (!(fail && page == start - 1))
+                  page: ReaderImageCache(EhImageCacheManager.instance)
+                      .read('https://example.test/$page.png'),
+            };
+            var cacheReadDone = false;
+            final cacheReads = Future.wait(cached.values)
+                .whenComplete(() => cacheReadDone = true);
+            for (var i = 0; i < 60 && !cacheReadDone; i++) await advance();
+            expect(cacheReadDone, true,
+                reason: 'Cached byte reads must finish');
+            expect(await cacheReads, everyElement(isNotNull));
+            if (start == 10 && n == 1 && !cache) {
+              final position = bloc.state.currentPage;
+              savedSettings = savedSettings.copyWith(preloadCount: 5);
+              settingsChanges.add(savedSettings);
+              await advance();
+              expect(bloc.state.preloadCount, 5);
+              expect(bloc.state.currentPage, position);
+              savedSettings = savedSettings.copyWith(preloadCount: 1);
+              settingsChanges.add(savedSettings);
+              await advance();
+              final before = imagePages.length;
+              await advance();
+              expect(imagePages.length, before);
+              await finishDownloads();
+              savedSettings = savedSettings.copyWith(preloadCount: 5);
+              settingsChanges.add(savedSettings);
+              await advance();
+              await finishDownloads();
+              expect(bloc.state.preloadCount, 5);
+              expect(bloc.state.currentPage, position);
+              expect(imagePages.toSet(),
+                  containsAll(bloc.state.preloadWindow.targets));
+            }
+            if (start == 18 && n == 5 && !cache) {
+              // A far jump must bypass the queue; exit while the new visible
+              // and background GETs are still stalled, with more work queued.
+              bloc.add(ToggleReaderUI());
+              await advance();
+              tester.widget<Slider>(find.byType(Slider)).onChangeEnd!(0);
+              await advance();
+              expect(bloc.state.currentPage, 0);
+              expect(pending.any((request) => !request.isCompleted), true);
+              return;
+            }
+            if (mode == 2) {
+              expect(bloc.state.preloadWindow.visible, contains(start));
+              expect(tester.takeException(), isNull);
+              return;
+            }
+            final forward = focus < total - 1;
             final target = forward
-                ? start + spreads.pagesPerSpread
-                : spreads.pages(spreads.spreadOf(start) - 1).first;
+                ? focus + spreads.pagesPerSpread
+                : spreads.pages(spreads.spreadOf(focus) - 1).first;
             final dx = (mode == 0 ? -700.0 : 700.0) * (forward ? 1 : -1);
             await tester.drag(content, Offset(dx, 0));
             await advance();
             expect(bloc.state.currentPage, target);
-            final visited =
-                {...window(start), ...window(target)}.difference(cachedPages);
-            expect(imagePages.toSet(), visited);
-            if (!fail) expect(imagePages.length, visited.length);
+            await finishDownloads();
+            expect(imagePages.toSet(),
+                containsAll(window(target).difference(cachedPages)));
+            if (!fail) expect(imagePages.length, imagePages.toSet().length);
             // Rebuilds and switching direction reuse in-flight/cached images.
             if (start == 10 && !cache && layout == ReaderPageLayout.single) {
               bloc.add(const ChangeReadingMode(2));
@@ -247,26 +427,35 @@ void main() {
           final previousErrorHandler = FlutterError.onError;
           FlutterError.onError = (details) {
             if (details.exception is StateError &&
-                details.exception.toString() ==
-                    'Bad state: The reader image request has been cancelled.') {
+                const {
+                  'Bad state: The reader image request has been cancelled.',
+                  'Bad state: Reader image request cancelled',
+                }.contains(details.exception.toString())) {
               return;
             }
             previousErrorHandler?.call(details);
           };
           try {
+            final beforeExit = imagePages.length;
             await tester.pumpWidget(const SizedBox.shrink());
             for (final request in pending) {
-              request
-                  .completeError(const SocketException('test reader closed'));
+              if (!request.isCompleted)
+                request
+                    .completeError(const SocketException('test reader closed'));
             }
             await advance();
+            expect(imagePages.length, beforeExit,
+                reason: 'Exiting must not start any more queued requests');
             verify(() => client.close(force: true)).called(greaterThan(0));
           } finally {
             FlutterError.onError = previousErrorHandler;
             ReaderReentryCache.shared.clear();
             await GetIt.I.reset();
             final disposal = EhImageCacheManager.instance.dispose();
-            await advance();
+            var disposed = false;
+            disposal.whenComplete(() => disposed = true);
+            for (var i = 0; i < 60 && !disposed; i++) await advance();
+            expect(disposed, true, reason: 'Cache disposal must finish');
             await disposal;
             await tester.runAsync(() async {
               expect(directory.parent.absolute.path,

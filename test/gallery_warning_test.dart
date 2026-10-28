@@ -121,6 +121,7 @@ void main() {
     final history = MockHistoryRepository();
     final settings = MockSettingsRepository();
     when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPreloadCount()).thenReturn(1);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
     when(() => settings.getReaderSpreadAlignment())

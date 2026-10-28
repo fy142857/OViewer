@@ -31,6 +31,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   int? _cacheGeneration;
   bool _restored = false;
   bool _starting = false;
+  final _pageWaiters = <int, List<Completer<bool>>>{};
   ReaderGalleryKey get galleryKey => (_site, state.gid, state.token);
 
   static ReaderState _initial(SettingsRepository settings,
@@ -41,6 +42,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (snapshot == null) {
       return ReaderState(
           readingMode: settings.getReadingMode(),
+          preloadCount: settings.getReaderPreloadCount(),
           spreadAlignment: settings.getReaderSpreadAlignment(),
           pageLayout: settings.getReaderPageLayout());
     }
@@ -51,6 +53,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         gid: request.gid,
         token: request.token,
         readingMode: settings.getReadingMode(),
+        preloadCount: settings.getReaderPreloadCount(),
         spreadAlignment: settings.getReaderSpreadAlignment(),
         pageLayout: settings.getReaderPageLayout(),
         currentPage: page,
@@ -95,6 +98,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                         offlineBook.record.lastReadPage)
                     .clamp(0, offlineBook.record.totalPages - 1),
                 readingMode: settings.getReadingMode(),
+                preloadCount: settings.getReaderPreloadCount(),
                 spreadAlignment: settings.getReaderSpreadAlignment(),
                 pageLayout: settings.getReaderPageLayout(),
                 thumbnails: {
@@ -146,6 +150,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       }
     });
     _cacheGeneration = _reentry.generation;
+    _requests.onCancel(() {
+      for (final page in _pageWaiters.keys.toList()) {
+        _finishPageWaiters(page);
+      }
+    });
     if (state.status == ReaderStatus.ready && offlineBook == null) {
       final snapshot = _reentry.get(galleryKey)!;
       _index =
@@ -173,6 +182,19 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<LoadThumbnailAtIndex>(_onLoadThumbnail);
     on<RetryImageAtIndex>(_onRetryImageAtIndex);
     on<PageChanged>(_onPageChanged);
+    on<ReaderViewportChanged>((event, emit) {
+      if (!_active ||
+          state.offlineBook != null ||
+          state.status != ReaderStatus.ready ||
+          event.mode != state.readingMode ||
+          event.layout != state.pageLayout ||
+          event.pages.isEmpty ||
+          setEquals(event.pages, state.visiblePages)) return;
+      emit(state.copyWith(visiblePages: event.pages));
+      _prioritize();
+      _loadVisiblePages();
+      _preloadAdjacent();
+    });
     on<AcceptReaderContentWarning>((event, emit) async {
       if (!_active || state.status != ReaderStatus.contentWarning) return;
       try {
@@ -213,19 +235,65 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       if (!_requests.isCancelled) emit(state.copyWith(showUI: !state.showUI));
     });
     on<ChangeReadingMode>((event, emit) {
-      if (_active) emit(state.copyWith(readingMode: event.mode));
+      if (!_active) return;
+      emit(state.copyWith(readingMode: event.mode, visiblePages: {}));
+      _prioritize();
+      _loadVisiblePages();
+      _preloadAdjacent();
     });
     on<ChangeReaderPreferences>((event, emit) {
       if (!_active) return;
       emit(state.copyWith(
           readingMode: event.mode,
+          preloadCount: event.preloadCount,
+          visiblePages: event.mode != state.readingMode ||
+                  event.layout != state.pageLayout
+              ? <int>{}
+              : state.visiblePages,
           pageLayout: event.layout,
           spreadAlignment: event.alignment));
       _loadVisiblePages();
+      _prioritize();
+      _preloadAdjacent();
     });
   }
 
   bool get _active => !_requests.isCancelled && !isClosed;
+
+  /// Shares an existing address request with the foreground or another waiter.
+  Future<bool> ensureImageAtIndex(int page) {
+    if (!_active ||
+        !imageScope.isCurrent ||
+        _index?.isActive != true ||
+        state.offlineBook != null) return Future.value(false);
+    if (!state.loadingIndices.contains(page)) {
+      if (state.loadedImages.containsKey(page)) return Future.value(true);
+      if (state.failedIndices.contains(page)) return Future.value(false);
+    }
+    final done = Completer<bool>();
+    (_pageWaiters[page] ??= []).add(done);
+    add(LoadImageAtIndex(page));
+    return done.future;
+  }
+
+  void _finishPageWaiters(int page) {
+    final active = _active && imageScope.isCurrent && _index?.isActive == true;
+    if (active && state.loadingIndices.contains(page)) return;
+    final ready = active &&
+        state.loadedImages.containsKey(page) &&
+        !state.failedIndices.contains(page);
+    for (final waiter in _pageWaiters.remove(page) ?? <Completer<bool>>[]) {
+      waiter.complete(ready);
+    }
+  }
+
+  void _prioritize() {
+    final pages = state.preloadWindow.addresses.toList()..sort();
+    if (pages.isNotEmpty) {
+      _index?.prioritize(state.currentPage,
+          firstPage: pages.first, lastPage: pages.last);
+    }
+  }
 
   Future<void> _onLoadImages(
       LoadReaderImages event, Emitter<ReaderState> emit) async {
@@ -239,6 +307,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       _reentry.focus(galleryKey, state.currentPage);
       _saveProgress(state.currentPage);
       _loadVisiblePages();
+      _prioritize();
+      _preloadAdjacent();
       if (!state.loadedImages.containsKey(state.currentPage)) {
         add(LoadImageAtIndex(state.currentPage));
       }
@@ -251,6 +321,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         gid: event.gid,
         token: event.token,
         readingMode: state.readingMode,
+        preloadCount: state.preloadCount,
         pageLayout: state.pageLayout,
         spreadAlignment: state.spreadAlignment));
     try {
@@ -277,9 +348,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             '[reader] interface ready in ${watch.elapsedMilliseconds}ms');
       }
       _prepareCache();
+      _prioritize();
       _saveProgress(current);
       _loadVisiblePages();
-      // Neighbours are queued only after the current page URL is available.
+      _preloadAdjacent();
     } on GalleryContentWarning catch (warning) {
       if (_active) {
         emit(state.copyWith(
@@ -299,8 +371,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   Future<void> _onLoadImageAtIndex(
       LoadImageAtIndex event, Emitter<ReaderState> emit) async {
     if (state.offlineBook != null) return;
+    if (event.speculative &&
+        !state.preloadWindow.addresses.contains(event.index)) return;
     if (state.loadedImages.containsKey(event.index) ||
-        state.failedIndices.contains(event.index)) return;
+        state.failedIndices.contains(event.index)) {
+      _finishPageWaiters(event.index);
+      return;
+    }
     await _loadImage(event.index, emit);
   }
 
@@ -392,7 +469,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                 height: image.height,
                 nlKey: image.nlKey)
           }));
-          if (page == state.currentPage) _preloadAdjacent(page);
+          if (page == state.currentPage) _preloadAdjacent();
           return;
         } catch (error) {
           // Refresh stale page tokens once. Network/login errors remain local
@@ -413,6 +490,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         emit(state.copyWith(
             loadingIndices: {...state.loadingIndices}..remove(page)));
       }
+      _finishPageWaiters(page);
     }
   }
 
@@ -453,7 +531,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (!_active ||
         state.status != ReaderStatus.ready ||
         state.offlineBook != null) return;
-    for (final page in state.spreads.containing(state.currentPage)) {
+    for (final page in state.preloadWindow.visible) {
       if (!state.loadedImages.containsKey(page) &&
           !state.loadingIndices.contains(page) &&
           !state.failedIndices.contains(page)) {
@@ -462,20 +540,17 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     }
   }
 
-  void _preloadAdjacent(int page) {
+  void _preloadAdjacent() {
     if (state.offlineBook != null) return;
     if (!_active) return;
-    for (var distance = 1;
-        distance <= AppConstants.preloadPageCount;
-        distance++) {
-      for (final neighbour in [page + distance, page - distance]) {
-        if (neighbour >= 0 &&
-            neighbour < state.totalPages &&
-            !state.loadedImages.containsKey(neighbour) &&
-            !state.loadingIndices.contains(neighbour) &&
-            !state.failedIndices.contains(neighbour)) {
-          add(LoadImageAtIndex(neighbour));
-        }
+    if (state.status != ReaderStatus.ready) return;
+    for (final neighbour in state.preloadWindow.addresses) {
+      if (neighbour >= 0 &&
+          neighbour < state.totalPages &&
+          !state.loadedImages.containsKey(neighbour) &&
+          !state.loadingIndices.contains(neighbour) &&
+          !state.failedIndices.contains(neighbour)) {
+        add(LoadImageAtIndex(neighbour, speculative: true));
       }
     }
   }
@@ -483,8 +558,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   void _onPageChanged(PageChanged event, Emitter<ReaderState> emit) {
     if (!_active || state.status != ReaderStatus.ready) return;
     final page = event.page.clamp(0, state.totalPages - 1);
-    _index?.prioritize(page);
-    emit(state.copyWith(currentPage: page));
+    if (page == state.currentPage) return;
+    // Vertical progress can move within a viewport containing several rows.
+    // Keep that measured viewport; only a jump outside it needs a fresh one.
+    final visible = state.readingMode == 2 && state.visiblePages.contains(page)
+        ? state.visiblePages
+        : <int>{};
+    emit(state.copyWith(currentPage: page, visiblePages: visible));
+    _prioritize();
     _loadVisiblePages();
     if (state.offlineBook != null) {
       _saveProgress(page);
@@ -493,7 +574,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     _reentry.focus(galleryKey, page);
     _saveProgress(page);
     if (state.loadedImages.containsKey(page)) {
-      _preloadAdjacent(page);
+      _preloadAdjacent();
     } else {
       add(LoadImageAtIndex(page));
     }
@@ -513,6 +594,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   @override
   Future<void> close() async {
     _requests.cancel();
+    for (final page in _pageWaiters.keys.toList()) {
+      _finishPageWaiters(page);
+    }
     await _offlineChanges?.cancel();
     await super.close();
   }

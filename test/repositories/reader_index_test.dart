@@ -186,6 +186,36 @@ void main() {
     requests.cancel();
   });
 
+  test('dynamic address bounds retain queued index pages beyond the old radius',
+      () async {
+    final calls = <int>[];
+    final slow = Completer<String>();
+    final entered = Completer<void>();
+    when(() => dio.get(any(), cancelToken: any(named: 'cancelToken')))
+        .thenAnswer((call) {
+      final part = int.parse(Uri.parse(call.positionalArguments.first as String)
+          .queryParameters['p']!);
+      calls.add(part);
+      if (part == 1) {
+        entered.complete();
+        return slow.future;
+      }
+      return Future.value(indexHtml(page: part));
+    });
+    final requests = ReaderRequestController();
+    final session = ReaderIndexSession(repository, requests, 42, 'token');
+    await session.bootstrap();
+    final first = session.ensureImage(20);
+    await entered.future;
+    final distant = session.ensureImage(80);
+    session.prioritize(0, firstPage: 0, lastPage: 104);
+    slow.complete(indexHtml(page: 1));
+    await first;
+    expect((await distant).pageIndex, 80);
+    expect(calls, [0, 1, 4]);
+    requests.cancel();
+  });
+
   test('changed pagination is corrected once from page zero', () async {
     cache.put(AppConstants.baseUrl, 42, 'token',
         GalleryDetailParser.parseReaderIndex(indexHtml()));

@@ -40,6 +40,8 @@ Choose **left-to-right paging, right-to-left paging, or continuous vertical scro
 
 Zoom into images and jump between pages using the progress slider or thumbnail strip. Opening a preview starts at the selected page, while the regular reading entry resumes your saved progress.
 
+Adjust **Preload count** in Settings → Reading or the reader menu. Choose 1–5 (default 1) pages before and after the visible content, or spreads in double-page mode. All three online directions share the saved value, and changes apply immediately. Up to two background images load at once; visible images take priority. Image addresses are still fetched for at least three pages before and after. Offline reading keeps its existing loading policy.
+
 Tap the reading area to show or hide the controls and status bar. While the app remains running, reopening the reader can display a recently retained full-resolution image immediately. Otherwise, a known cached file is read and decoded without first requesting its image page. Leaving the reader still stops unfinished loads; failed images can be retried.
 
 ## Favorites and history

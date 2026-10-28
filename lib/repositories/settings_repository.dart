@@ -36,6 +36,10 @@ class SettingsRepository {
       _storage.setReaderPageLayout(layout);
 
   // Reading mode (0=left-to-right, 1=right-to-left, 2=vertical)
+  int getReaderPreloadCount() => _storage.getReaderPreloadCount();
+  Future<void> setReaderPreloadCount(int count) =>
+      _storage.setReaderPreloadCount(count);
+
   int getReadingMode() => _storage.getReadingMode();
   Future<void> setReadingMode(int mode) => _storage.setReadingMode(mode);
 

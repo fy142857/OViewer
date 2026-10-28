@@ -45,16 +45,16 @@ class ReaderIndexSession {
     await _page(0);
   }
 
-  void prioritize(int index) {
+  void prioritize(int index, {int? firstPage, int? lastPage}) {
     _focus = index;
     final size = _metadata?.pageSize;
     if (size != null) {
-      final min =
-          (index - AppConstants.preloadPageCount).clamp(0, totalPages - 1) ~/
-              size;
-      final max =
-          (index + AppConstants.preloadPageCount).clamp(0, totalPages - 1) ~/
-              size;
+      final min = (firstPage ?? index - AppConstants.preloadPageCount)
+              .clamp(0, totalPages - 1) ~/
+          size;
+      final max = (lastPage ?? index + AppConstants.preloadPageCount)
+              .clamp(0, totalPages - 1) ~/
+          size;
       for (final job in List<_IndexJob>.of(_queue)) {
         if (job.page < min || job.page > max) {
           _queue.remove(job);

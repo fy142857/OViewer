@@ -1,4 +1,5 @@
 import '../../models/reader_page_layout.dart';
+import '../../widgets/reader_preload_setting.dart';
 import '../../widgets/site_mode_tile.dart';
 import '../../widgets/offline_settings_panel.dart';
 import '../../repositories/settings_repository.dart';
@@ -156,6 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // ---- Reading ----
               _sectionHeader(s.reading),
+              const ReaderPreloadSetting(),
               ListTile(
                 leading: const Icon(Icons.auto_stories),
                 title: Text(s.defaultReadingMode),

@@ -40,6 +40,14 @@ class UpdateReadingMode extends SettingsEvent {
   List<Object?> get props => [mode];
 }
 
+class UpdateReaderPreloadCount extends SettingsEvent {
+  final int count;
+  final Completer<void>? completer;
+  const UpdateReaderPreloadCount(this.count, {this.completer});
+  @override
+  List<Object?> get props => [count];
+}
+
 class UpdateDisplayMode extends SettingsEvent {
   final int mode;
   const UpdateDisplayMode(this.mode);

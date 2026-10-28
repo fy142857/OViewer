@@ -1,4 +1,5 @@
 import '../../models/reader_page_layout.dart';
+import '../../models/reader_preload_window.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/gallery_image.dart';
 import '../../models/reader_page_resource.dart';
@@ -27,6 +28,8 @@ class ReaderState extends Equatable {
   final ReaderPageLayout pageLayout;
   final ReaderSpreadAlignment spreadAlignment;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
+  final int preloadCount;
+  final Set<int> visiblePages;
   final String? errorMessage;
 
   const ReaderState({
@@ -47,12 +50,17 @@ class ReaderState extends Equatable {
     this.cacheOnlyPages = const {},
     this.showUI = false,
     this.readingMode = 0,
+    this.preloadCount = 1,
+    this.visiblePages = const {},
     this.pageLayout = ReaderPageLayout.single,
     this.spreadAlignment = ReaderSpreadAlignment.width,
     this.errorMessage,
   });
 
   ReaderSpreads get spreads => ReaderSpreads(totalPages, pageLayout);
+  ReaderPreloadWindow get preloadWindow =>
+      ReaderPreloadWindow(spreads, currentPage, preloadCount,
+          visiblePages: visiblePages, expandAroundVisible: readingMode == 2);
 
   GalleryImage? get currentImage => loadedImages[currentPage];
 
@@ -74,6 +82,8 @@ class ReaderState extends Equatable {
     Set<int>? cacheOnlyPages,
     bool? showUI,
     int? readingMode,
+    int? preloadCount,
+    Set<int>? visiblePages,
     ReaderPageLayout? pageLayout,
     ReaderSpreadAlignment? spreadAlignment,
     String? errorMessage,
@@ -96,6 +106,8 @@ class ReaderState extends Equatable {
       cacheOnlyPages: cacheOnlyPages ?? this.cacheOnlyPages,
       showUI: showUI ?? this.showUI,
       readingMode: readingMode ?? this.readingMode,
+      preloadCount: preloadCount ?? this.preloadCount,
+      visiblePages: visiblePages ?? this.visiblePages,
       pageLayout: pageLayout ?? this.pageLayout,
       spreadAlignment: spreadAlignment ?? this.spreadAlignment,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -121,6 +133,8 @@ class ReaderState extends Equatable {
         cacheOnlyPages,
         showUI,
         readingMode,
+        preloadCount,
+        visiblePages,
         pageLayout,
         spreadAlignment,
         errorMessage,

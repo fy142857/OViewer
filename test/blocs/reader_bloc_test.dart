@@ -44,6 +44,7 @@ void main() {
     final tokenCompleter = Completer<CancelToken>();
 
     when(() => settingsRepository.getReadingMode()).thenReturn(0);
+    when(() => settingsRepository.getReaderPreloadCount()).thenReturn(1);
     when(() => settingsRepository.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
     when(() => settingsRepository.getReaderSpreadAlignment())
@@ -143,6 +144,7 @@ void main() {
       history = MockHistoryRepository();
       settings = MockSettingsRepository();
       when(() => settings.getReadingMode()).thenReturn(0);
+      when(() => settings.getReaderPreloadCount()).thenReturn(1);
       when(() => settings.getReaderPageLayout())
           .thenReturn(ReaderPageLayout.single);
       when(() => settings.getReaderSpreadAlignment())
@@ -465,6 +467,17 @@ void main() {
       await waitFor(
           (s) => s.loadedImages.containsKey(13) && s.loadingIndices.isEmpty);
       expect(bloc.state.loadedImages.containsKey(14), isFalse);
+      bloc.add(const ChangeReadingMode(2));
+      await waitFor((s) => s.readingMode == 2);
+      bloc.add(const ReaderViewportChanged(
+          {9, 10, 11, 12}, 2, ReaderPageLayout.single));
+      await waitFor((s) => s.visiblePages.length == 4);
+      bloc.add(const PageChanged(11));
+      await waitFor((s) => s.currentPage == 11);
+      expect(bloc.state.visiblePages, {9, 10, 11, 12});
+      bloc.add(const PageChanged(18));
+      await waitFor((s) => s.currentPage == 18);
+      expect(bloc.state.visiblePages, isEmpty);
     });
   });
 }

@@ -68,6 +68,7 @@ void main() {
         .thenReturn(const SettingsState(locale: 'en'));
     when(() => settingsBloc.stream).thenAnswer((_) => const Stream.empty());
     when(() => settings.getReadingMode()).thenReturn(0);
+    when(() => settings.getReaderPreloadCount()).thenReturn(1);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
     when(() => settings.getReaderSpreadAlignment())
@@ -119,6 +120,8 @@ void main() {
         (tester) async {
       when(() => GetIt.I<SettingsRepository>().getReadingMode())
           .thenReturn(mode);
+      when(() => GetIt.I<SettingsRepository>().getReaderPreloadCount())
+          .thenReturn(1);
       final directory = await tester.runAsync(
           () => Directory.systemTemp.createTemp('oviewer-warm-screen-'));
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -189,6 +192,8 @@ void main() {
 
   void stubTwentyPages() {
     when(() => GetIt.I<SettingsRepository>().getReadingMode()).thenReturn(2);
+    when(() => GetIt.I<SettingsRepository>().getReaderPreloadCount())
+        .thenReturn(1);
     when(() => GetIt.I<HistoryRepository>().getProgress(42)).thenAnswer(
         (_) async => ReadingProgress(
             gid: 42,
@@ -335,6 +340,8 @@ void main() {
         (tester) async {
       when(() => GetIt.I<SettingsRepository>().getReadingMode())
           .thenReturn(mode);
+      when(() => GetIt.I<SettingsRepository>().getReaderPreloadCount())
+          .thenReturn(1);
       await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
           value: settingsBloc,
           child:
@@ -372,6 +379,8 @@ void main() {
           final selectedSpread = ReaderSpreads(20, layout).spreadOf(selected);
           when(() => GetIt.I<SettingsRepository>().getReadingMode())
               .thenReturn(mode);
+          when(() => GetIt.I<SettingsRepository>().getReaderPreloadCount())
+              .thenReturn(1);
           when(() => GetIt.I<HistoryRepository>().getProgress(42)).thenAnswer(
               (_) async => ReadingProgress(
                   gid: 42,
@@ -531,6 +540,8 @@ void main() {
         (tester) async {
       when(() => GetIt.I<SettingsRepository>().getReadingMode())
           .thenReturn(mode);
+      when(() => GetIt.I<SettingsRepository>().getReaderPreloadCount())
+          .thenReturn(1);
       final navigator = GlobalKey<NavigatorState>();
       await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
         value: settingsBloc,

@@ -105,6 +105,7 @@ void main() {
     settingsBloc = SettingsBlocMock();
     final history = History();
     when(() => settings.getReadingMode()).thenReturn(0);
+    when(() => settings.getReaderPreloadCount()).thenReturn(1);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
     when(() => settings.getReaderSpreadAlignment())
@@ -133,6 +134,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPreloadCount()).thenReturn(1);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
     when(() => settings.getReaderSpreadAlignment())
@@ -173,6 +175,7 @@ void main() {
         'offline mode $mode decodes local pages without any gallery requests',
         (tester) async {
       when(() => settings.getReadingMode()).thenReturn(mode);
+      when(() => settings.getReaderPreloadCount()).thenReturn(1);
       when(() => settings.getReaderPageLayout())
           .thenReturn(ReaderPageLayout.single);
       when(() => settings.getReaderSpreadAlignment())
@@ -210,6 +213,7 @@ void main() {
           readingMode: mode,
           pageLayout: ReaderPageLayout.doublePage));
       when(() => settings.getReadingMode()).thenReturn(mode);
+      when(() => settings.getReaderPreloadCount()).thenReturn(1);
       when(() => settings.getReaderPageLayout())
           .thenReturn(ReaderPageLayout.doublePage);
       await tester.runAsync(() async {
@@ -333,6 +337,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPreloadCount()).thenReturn(1);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.doublePage);
     await tester.runAsync(() async {
@@ -556,6 +561,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(400, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     when(() => settings.getReadingMode()).thenReturn(2);
+    when(() => settings.getReaderPreloadCount()).thenReturn(1);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
     when(() => settings.getReaderSpreadAlignment())

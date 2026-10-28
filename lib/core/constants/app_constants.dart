@@ -32,7 +32,7 @@ class AppConstants {
   static const int maxCacheSizeMB = 500;
   static const int maxCacheAgeDays = 7;
 
-  // Reader
+  // Minimum address look-ahead in original pages. Image preloads are configurable.
   static const int preloadPageCount = 3;
   static const int maxZoomScale = 5;
 

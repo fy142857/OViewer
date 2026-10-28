@@ -5,6 +5,7 @@ import '../blocs/settings/settings_event.dart';
 import '../blocs/settings/settings_state.dart';
 import '../core/l10n/s.dart';
 import '../models/reader_page_layout.dart';
+import 'reader_preload_setting.dart';
 
 class ReaderSettingsButton extends StatelessWidget {
   const ReaderSettingsButton({super.key});
@@ -162,6 +163,7 @@ class ReaderSettingsOptions extends StatelessWidget {
                 },
                 onChanged: (value) =>
                     settings.add(UpdateReaderSpreadAlignment(value))),
+          const ReaderPreloadSetting(compact: true),
         ]);
       });
 }

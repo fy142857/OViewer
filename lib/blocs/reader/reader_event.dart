@@ -31,9 +31,10 @@ class LoadReaderImages extends ReaderEvent {
 
 class LoadImageAtIndex extends ReaderEvent {
   final int index;
-  const LoadImageAtIndex(this.index);
+  final bool speculative;
+  const LoadImageAtIndex(this.index, {this.speculative = false});
   @override
-  List<Object?> get props => [index];
+  List<Object?> get props => [index, speculative];
 }
 
 class LoadThumbnailAtIndex extends ReaderEvent {
@@ -57,10 +58,20 @@ class ChangeReaderPreferences extends ReaderEvent {
   final int mode;
   final ReaderPageLayout layout;
   final ReaderSpreadAlignment alignment;
+  final int? preloadCount;
   const ChangeReaderPreferences(this.mode, this.layout,
-      {this.alignment = ReaderSpreadAlignment.width});
+      {this.alignment = ReaderSpreadAlignment.width, this.preloadCount});
   @override
-  List<Object?> get props => [mode, layout, alignment];
+  List<Object?> get props => [mode, layout, alignment, preloadCount];
+}
+
+class ReaderViewportChanged extends ReaderEvent {
+  final Set<int> pages;
+  final int mode;
+  final ReaderPageLayout layout;
+  const ReaderViewportChanged(this.pages, this.mode, this.layout);
+  @override
+  List<Object?> get props => [pages, mode, layout];
 }
 
 class ChangeReadingMode extends ReaderEvent {

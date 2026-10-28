@@ -71,6 +71,7 @@ void main() {
       when(() => settings.getProxy()).thenReturn(null);
       when(() => settings.getThemeMode()).thenReturn(0);
       when(() => settings.getReadingMode()).thenReturn(0);
+      when(() => settings.getReaderPreloadCount()).thenReturn(1);
       when(() => settings.getReaderPageLayout())
           .thenReturn(ReaderPageLayout.single);
       when(() => settings.getReaderSpreadAlignment())

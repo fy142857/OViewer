@@ -360,6 +360,7 @@ void main() {
     final settings = MockSettingsRepository();
     when(() => gallery.readerIndexCache).thenReturn(ReaderIndexCache());
     when(() => settings.getReadingMode()).thenReturn(0);
+    when(() => settings.getReaderPreloadCount()).thenReturn(1);
     when(() => settings.getReaderPageLayout())
         .thenReturn(ReaderPageLayout.single);
     when(() => settings.getReaderSpreadAlignment())

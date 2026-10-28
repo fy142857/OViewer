@@ -8,6 +8,8 @@ class SettingsState extends Equatable {
   final ReaderPageLayout pageLayout;
   final ReaderSpreadAlignment spreadAlignment;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
+  final int preloadCount;
+  final bool savingPreloadCount;
   final int displayMode; // 0=list, 1=grid
   final int cacheLimitMB;
   final String? proxyUrl;
@@ -25,6 +27,8 @@ class SettingsState extends Equatable {
   const SettingsState({
     this.themeMode = 0,
     this.readingMode = 0,
+    this.preloadCount = 1,
+    this.savingPreloadCount = false,
     this.pageLayout = ReaderPageLayout.single,
     this.spreadAlignment = ReaderSpreadAlignment.width,
     this.displayMode = 0,
@@ -43,6 +47,8 @@ class SettingsState extends Equatable {
   SettingsState copyWith({
     int? themeMode,
     int? readingMode,
+    int? preloadCount,
+    bool? savingPreloadCount,
     ReaderPageLayout? pageLayout,
     ReaderSpreadAlignment? spreadAlignment,
     int? displayMode,
@@ -60,6 +66,8 @@ class SettingsState extends Equatable {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       readingMode: readingMode ?? this.readingMode,
+      preloadCount: preloadCount ?? this.preloadCount,
+      savingPreloadCount: savingPreloadCount ?? this.savingPreloadCount,
       pageLayout: pageLayout ?? this.pageLayout,
       spreadAlignment: spreadAlignment ?? this.spreadAlignment,
       displayMode: displayMode ?? this.displayMode,
@@ -89,6 +97,8 @@ class SettingsState extends Equatable {
   List<Object?> get props => [
         themeMode,
         readingMode,
+        preloadCount,
+        savingPreloadCount,
         pageLayout,
         spreadAlignment,
         displayMode,

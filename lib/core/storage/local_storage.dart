@@ -167,6 +167,22 @@ class LocalStorage {
   }
 
   // Reading mode
+  int? _readerPreloadCount;
+  int getReaderPreloadCount() {
+    final value = _prefs.get('reader_preload_count');
+    return _readerPreloadCount ??=
+        value is int && value >= 1 && value <= 5 ? value : 1;
+  }
+
+  Future<void> setReaderPreloadCount(int value) async {
+    if (value < 1 || value > 5) throw ArgumentError.value(value);
+    getReaderPreloadCount();
+    if (!await _prefs.setInt('reader_preload_count', value)) {
+      throw StateError('Unable to save reader preload count');
+    }
+    _readerPreloadCount = value;
+  }
+
   static const _keyReadingMode = 'reading_mode';
   int getReadingMode() =>
       _prefs.getInt(_keyReadingMode) ?? 0; // 0=LR, 1=RL, 2=vertical
