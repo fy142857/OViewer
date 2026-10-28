@@ -5844,8 +5844,73 @@
         }
       ],
       "version": "1.11.1"
+    },
+    {
+      "base_tag": "v1.11.0",
+      "branch": "dev",
+      "build_number": 124,
+      "build_sha": "729cebe5d23ca52fc1165d2fc7dd5842a9878dae",
+      "candidate_id": "1.11.1+124",
+      "fingerprint": "cda615d250fe8f5fc6bf98386acbd5b8c6cf9024db101ed8a8f3441ebfef0da4",
+      "notes": "### 新增\n\n### 修复\n\n- 横向和反向在线阅读提前下载前后各一屏图片，双页模式按组预加载，翻页时复用已有请求与缓存（#71）。\n\n### 变更\n\n- 阅读器阅读设置与预加载菜单收窄，次级菜单同步缩窄；预加载菜单标题增大至与阅读方向选项相同字号，并添加加载图标。\n\n- 预读设置统一命名为“预加载图片数量”，使用加载图标；阅读器在书本图标左侧打开下拉菜单，显示标题及“前后各 X 页／组”选项；设置页恢复页／组备注，点开后仍使用 1–5 数字选项。\n\n- 阅读设置和阅读器工具栏可调整前后预读数量（1–5，默认 1），单页按页、双页按组计数，三种在线模式共用并持久保存；后台按两张图片并行预读，可见图片优先，地址至少预取前后各 3 页。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "502f8c1cb36de6aed7670d9f9be3eef3bba6dc39",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复既有横向阅读仅预取地址而未提前下载相邻屏图片的问题，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "fd2708a84df209181a2d7f0c1825569a77513b92",
+          "subject": "fix(reader): preload adjacent horizontal image screens",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "将既有在线相邻图片预读改为可配置并限制后台并行，完善原有阅读体验，没有新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "ac0b76145fae4255af3518d2fd8e36f541da67ea",
+          "subject": "feat(reader): make online preloading configurable",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "调整既有预读数量入口的位置和选择器文案，预读策略与保存行为不变。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "a008bfeab553710b7f433b78303969d6fde66865",
+          "subject": "fix(reader): move preload selector beside reading settings",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "调整既有预读设置的名称、说明、图标和菜单呈现，不改变预读策略或新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "06eadd7070f189d6cc62ec6632e0fe44c5cad4c2",
+          "subject": "fix(reader): present image preload controls with loading icons",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "调整既有阅读设置与预加载设置的文案、菜单宽度和标题样式，不改变预加载策略或新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "502f8c1cb36de6aed7670d9f9be3eef3bba6dc39",
+          "subject": "fix(reader): tighten menus and update preload heading",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.11.1"
     }
   ],
-  "last_build_number": 123,
+  "last_build_number": 124,
   "schema": 1
 }
