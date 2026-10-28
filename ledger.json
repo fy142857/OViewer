@@ -5684,8 +5684,33 @@
         }
       ],
       "version": "1.11.0"
+    },
+    {
+      "base_tag": "v1.11.0",
+      "branch": "dev",
+      "build_number": 120,
+      "build_sha": "6fadb6a37191d408f7e4bc25ae2c43c2149c1eb1",
+      "candidate_id": "1.11.1+120",
+      "fingerprint": "88c15228e427fe68ca2dd78114e3af6c30313b2fd6281675fc9fe5d13a1e6ee0",
+      "notes": "### 新增\n\n### 修复\n\n- 横向和反向在线阅读提前下载前后各一屏图片，双页模式按组预加载，翻页时复用已有请求与缓存（#71）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "fd2708a84df209181a2d7f0c1825569a77513b92",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复既有横向阅读仅预取地址而未提前下载相邻屏图片的问题，不新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "fd2708a84df209181a2d7f0c1825569a77513b92",
+          "subject": "fix(reader): preload adjacent horizontal image screens",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.11.1"
     }
   ],
-  "last_build_number": 119,
+  "last_build_number": 120,
   "schema": 1
 }
