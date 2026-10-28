@@ -868,6 +868,9 @@ class _ReaderViewState extends State<_ReaderView> {
     return LayoutBuilder(builder: (context, constraints) {
       final viewport = constraints.biggest;
       return PhotoViewGallery.builder(
+        // Build one neighbouring spread on each side so online images start
+        // downloading before the user turns the page, as in the vertical list.
+        allowImplicitScrolling: state.offlineBook == null,
         key: state.pageLayout == ReaderPageLayout.doublePage
             ? ValueKey((_pageController, viewport))
             : ObjectKey(_pageController),
