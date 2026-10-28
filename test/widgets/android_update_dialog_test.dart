@@ -8,14 +8,161 @@ import 'package:oviewer/blocs/settings/settings_state.dart';
 import 'package:oviewer/blocs/update/update_cubit.dart';
 import 'package:oviewer/core/theme/app_theme.dart';
 import 'package:oviewer/core/services/apk_download_service.dart';
+import 'package:oviewer/repositories/update_repository.dart';
 import 'package:oviewer/widgets/check_update_tile.dart';
+import 'package:oviewer/widgets/android_update_dialog.dart';
 import '../blocs/update_cubit_test.dart'
     show FakeUpdates, ControlledDownloads, FakeInstaller;
 
 class _Settings extends Mock implements SettingsBloc {}
 
+class _Update extends Mock implements UpdateCubit {}
+
+class _CheckOnlyUpdates extends FakeUpdates {
+  _CheckOnlyUpdates(this.outcome);
+  final Object outcome;
+
+  @override
+  UpdateCheckOperation check({bool android = false}) {
+    checks++;
+    return UpdateCheckOperation(Future.sync(() {
+      if (outcome is UpdateFailure) {
+        throw UpdateCheckException(outcome as UpdateFailure);
+      }
+      return outcome as UpdateCheckResult;
+    }), () {});
+  }
+}
+
 void main() {
   for (final language in ['zh', 'en']) {
+    testWidgets('all update phases keep actions visible ($language)',
+        (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final settings = _Settings();
+      when(() => settings.state).thenReturn(SettingsState(locale: language));
+      when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+      final package = FakeUpdates().package;
+      for (final phase in ApkUpdatePhase.values) {
+        final cubit = _Update();
+        when(() => cubit.state).thenReturn(ApkUpdateState(phase,
+            update: phase == ApkUpdatePhase.checking ? null : package,
+            error: phase == ApkUpdatePhase.error ? 'no_installer' : null,
+            path: phase == ApkUpdatePhase.error ? 'package.apk' : null));
+        when(() => cubit.stream).thenAnswer((_) => const Stream.empty());
+        for (final size in [const Size(320, 568), const Size(568, 320)]) {
+          for (final scale in [1.0, 2.0]) {
+            await tester.binding.setSurfaceSize(size);
+            tester.platformDispatcher.textScaleFactorTestValue = scale;
+            // A new tree binds each static phase without triggering downloads.
+            await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+              key: UniqueKey(),
+              value: settings,
+              child: MaterialApp(
+                theme: AppTheme.light,
+                home: Scaffold(
+                  body: AndroidUpdateDialog(
+                      cubit: cubit, openRelease: (_) async => true),
+                ),
+              ),
+            ));
+            await tester.pump();
+            final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+            final actions = find.byWidget(dialog.actions!.single);
+            final bounds = tester.getRect(actions);
+            expect(bounds.top, greaterThanOrEqualTo(24));
+            expect(bounds.bottom, lessThanOrEqualTo(size.height - 24));
+            expect(bounds.left, greaterThanOrEqualTo(40));
+            expect(bounds.right, lessThanOrEqualTo(size.width - 40));
+            for (final button in find
+                .descendant(
+                    of: actions, matching: find.bySubtype<ButtonStyleButton>())
+                .evaluate()) {
+              final rect = tester.getRect(find.byWidget(button.widget));
+              expect(bounds.contains(rect.center), isTrue);
+            }
+            expect(tester.takeException(), isNull,
+                reason: '$phase $language $size scale $scale');
+          }
+        }
+      }
+    });
+
+    final checkOnlyOutcomes = <String, Object>{
+      for (final failure in UpdateFailure.values) failure.name: failure,
+      for (final status in [
+        UpdateStatus.current,
+        UpdateStatus.ahead,
+        UpdateStatus.noRelease,
+      ])
+        status.name: UpdateCheckResult(status),
+      'no installable APK': UpdateCheckResult(UpdateStatus.available,
+          version: '1.8.0',
+          releaseUrl: Uri.parse('https://github.com/fy142857/OViewer/releases'),
+          apkFailure: 'manifest',
+          notes: '### Fixed\n${List.filled(30, '- A change').join('\n')}'),
+    };
+    for (final entry in checkOnlyOutcomes.entries) {
+      testWidgets('check-only actions share a row: ${entry.key} ($language)',
+          (tester) async {
+        await tester.binding.setSurfaceSize(const Size(360, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final repo = _CheckOnlyUpdates(entry.value);
+        final cubit = UpdateCubit(repo, ControlledDownloads(), FakeInstaller());
+        addTearDown(cubit.close);
+        final settings = _Settings();
+        when(() => settings.state).thenReturn(SettingsState(locale: language));
+        when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+        await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settings,
+          child: MaterialApp(
+            theme: AppTheme.dark,
+            home: Scaffold(
+              body: CheckUpdateTile(
+                repository: repo,
+                androidUpdater: cubit,
+                openRelease: (_) async => true,
+              ),
+            ),
+          ),
+        ));
+        await tester.tap(find.byKey(const ValueKey('check-update')));
+        await tester.pumpAndSettle();
+        final recheck = find.widgetWithText(
+            TextButton, language == 'zh' ? '重新检查版本' : 'Check again');
+        final cancel =
+            find.widgetWithText(TextButton, language == 'zh' ? '取消' : 'Cancel');
+        for (final size in [
+          const Size(320, 568),
+          const Size(360, 800),
+          const Size(568, 320),
+        ]) {
+          for (final scale in [1.0, 1.6, 2.0]) {
+            await tester.binding.setSurfaceSize(size);
+            tester.platformDispatcher.textScaleFactorTestValue = scale;
+            await tester.pumpAndSettle();
+            final retryRect = tester.getRect(recheck);
+            final cancelRect = tester.getRect(cancel);
+            expect(cancelRect.center.dy, closeTo(retryRect.center.dy, 0.1));
+            expect(cancelRect.right, lessThanOrEqualTo(retryRect.left));
+            expect(retryRect.right, lessThanOrEqualTo(size.width - 40));
+            expect(retryRect.bottom, lessThanOrEqualTo(size.height - 24));
+            expect(retryRect.top, greaterThanOrEqualTo(24));
+            expect(tester.takeException(), isNull,
+                reason: '${entry.key} $language $size text scale $scale');
+          }
+        }
+        await tester.tap(recheck);
+        await tester.pumpAndSettle();
+        expect(repo.checks, 2);
+        await tester.tap(cancel);
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+      });
+    }
+
     for (final interrupted in [false, true]) {
       testWidgets(
           'Android link, download hiding and installation in $language (resume=$interrupted)',

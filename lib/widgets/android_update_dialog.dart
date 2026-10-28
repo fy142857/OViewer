@@ -59,6 +59,8 @@ class AndroidUpdateDialog extends StatelessWidget {
         final retryInstall = state.path != null &&
             const ['permission', 'no_installer', 'unavailable'].contains(error);
         return AlertDialog(
+          // Keep actions reachable when the title/content grows with text scale.
+          scrollable: true,
           title: Text(downloading || pausing
               ? s.updateDownloading
               : verifying
@@ -66,11 +68,10 @@ class AndroidUpdateDialog extends StatelessWidget {
                   : s.checkUpdate),
           content: SizedBox(
               width: 400,
-              child: SingleChildScrollView(
-                  child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     if (url != null)
                       TextButton(
                           key: const ValueKey('update-release-link'),
@@ -122,42 +123,44 @@ class AndroidUpdateDialog extends StatelessWidget {
                       const SizedBox(height: 16),
                       UpdateReleaseNotes(notes),
                     ],
-                  ]))),
+                  ])),
           actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
           actions: [
             if (!state.working &&
                 state.phase != ApkUpdatePhase.waitingPermission)
-              Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(),
-                  1: _UpdateActionColumnWidth(),
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: [
-                  TableRow(children: [
-                    if (interrupted)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                            onPressed: cubit.cancel,
-                            child: Text(s.updateDownloadCancel)),
-                      )
-                    else
-                      const SizedBox.shrink(),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            minimumSize: const Size(48, 48)),
-                        onPressed: () => unawaited(cubit.check(fresh: true)),
-                        child: Text(s.updateCheckAgain),
+              if (update == null)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Flexible(flex: 2, child: _closeButton(context, s)),
+                    Flexible(flex: 3, child: _checkAgainButton(s)),
+                  ],
+                )
+              else
+                Table(
+                  columnWidths: const {
+                    0: FlexColumnWidth(),
+                    1: _UpdateActionColumnWidth(),
+                  },
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: [
+                    TableRow(children: [
+                      if (interrupted)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                              onPressed: cubit.cancel,
+                              child: Text(s.updateDownloadCancel)),
+                        )
+                      else
+                        const SizedBox.shrink(),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: _checkAgainButton(s),
                       ),
-                    ),
-                  ]),
-                  TableRow(children: [
-                    _dismissActions(context, s),
-                    if (update != null)
+                    ]),
+                    TableRow(children: [
+                      _dismissActions(context, s),
                       Align(
                         alignment: Alignment.centerRight,
                         child: FilledButton(
@@ -176,12 +179,10 @@ class AndroidUpdateDialog extends StatelessWidget {
                                       ? s.retry
                                       : s.updateNow),
                         ),
-                      )
-                    else
-                      const SizedBox.shrink(),
-                  ]),
-                ],
-              )
+                      ),
+                    ]),
+                  ],
+                )
             else
               _dismissActions(context, s,
                   working: downloading || pausing || verifying,
@@ -190,6 +191,24 @@ class AndroidUpdateDialog extends StatelessWidget {
           ],
         );
       });
+
+  Widget _checkAgainButton(S s) => TextButton(
+        style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(48, 48)),
+        onPressed: () => unawaited(cubit.check(fresh: true)),
+        child: Text(s.updateCheckAgain, textAlign: TextAlign.center),
+      );
+
+  Widget _closeButton(BuildContext context, S s, {bool working = false}) =>
+      TextButton(
+        style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(48, 48)),
+        onPressed: () => Navigator.pop(context),
+        child: Text(working ? s.updateHide : s.cancel,
+            textAlign: TextAlign.center),
+      );
 
   Widget _dismissActions(BuildContext context, S s,
           {bool working = false,
@@ -211,13 +230,7 @@ class AndroidUpdateDialog extends StatelessWidget {
           ),
         Flexible(
           flex: 2,
-          child: TextButton(
-            style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: const Size(48, 48)),
-            onPressed: () => Navigator.pop(context),
-            child: Text(working ? s.updateHide : s.cancel),
-          ),
+          child: _closeButton(context, s, working: working),
         ),
       ]);
 }

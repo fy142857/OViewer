@@ -125,6 +125,7 @@ void main() {
       final foreground = {...spreads.containing(start)};
       ReaderBloc? liveBloc;
       final client = _HttpClient();
+      var clientCreated = false;
       when(() => client.openUrl(any(), any())).thenAnswer((call) {
         expect(call.positionalArguments.first, 'GET');
         final uri = call.positionalArguments[1] as Uri;
@@ -321,6 +322,16 @@ void main() {
           }
           {
             if (cache) {
+              // Disk reads and image decoding run outside the fake test clock.
+              // Wait for the frame instead of assuming one advance is enough.
+              for (var attempt = 0;
+                  attempt < 20 &&
+                      !tester
+                          .widgetList<RawImage>(find.byType(RawImage))
+                          .any((image) => image.image != null);
+                  attempt++) {
+                await advance();
+              }
               expect(
                   tester
                       .widgetList<RawImage>(find.byType(RawImage))
@@ -446,7 +457,11 @@ void main() {
             await advance();
             expect(imagePages.length, beforeExit,
                 reason: 'Exiting must not start any more queued requests');
-            verify(() => client.close(force: true)).called(greaterThan(0));
+            // A cached-only run may never create a transport. Do not mask an
+            // earlier visibility assertion with a missing close on that client.
+            if (clientCreated) {
+              verify(() => client.close(force: true)).called(greaterThan(0));
+            }
           } finally {
             FlutterError.onError = previousErrorHandler;
             ReaderReentryCache.shared.clear();
@@ -467,7 +482,10 @@ void main() {
                 const MethodChannel('plugins.flutter.io/path_provider'), null);
           }
         }
-      }, createHttpClient: (_) => client);
+      }, createHttpClient: (_) {
+        clientCreated = true;
+        return client;
+      });
     });
   }
 }
