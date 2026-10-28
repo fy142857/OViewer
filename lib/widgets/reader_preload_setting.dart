@@ -84,7 +84,7 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
             Offset.zero & overlay.size),
         constraints:
             BoxConstraints(minWidth: 210, maxWidth: 210, maxHeight: below),
-        menuPadding: const EdgeInsets.symmetric(vertical: 4),
+        menuPadding: const EdgeInsets.only(top: 8, bottom: 4),
         color: theme.colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
