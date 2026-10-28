@@ -502,9 +502,12 @@ class S {
   String get readerSettings => _zh ? '阅读设置' : 'Reading settings';
   String get readingDirection => _zh ? '阅读方向' : 'Reading direction';
   String get readerPageLayout => _zh ? '页面布局' : 'Page layout';
-  String get readerPreloadCount => _zh ? '预读数量' : 'Preload count';
+  String get readerPreloadCount => _zh ? '预读图片数量' : 'Image preload count';
+  String readerPreloadLabel(int count, bool doublePage) => _zh
+      ? '前后各 $count ${doublePage ? '组' : '页'}'
+      : '$count ${doublePage ? (count == 1 ? 'spread' : 'spreads') : (count == 1 ? 'page' : 'pages')} before and after';
   String get readerPreloadSaveFailed =>
-      _zh ? '预读数量保存失败，请重试' : 'Could not save preload count. Please retry.';
+      _zh ? '预读图片数量保存失败，请重试' : 'Could not save image preload count. Please retry.';
   String get readerSinglePage => _zh ? '单页' : 'Single page';
   String get readerDoublePage => _zh ? '双页' : 'Double page';
   String get closeReaderSettings => _zh ? '关闭' : 'Close';

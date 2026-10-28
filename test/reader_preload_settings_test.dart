@@ -99,6 +99,14 @@ void main() {
             ]),
             body: const ReaderPreloadSetting(),
           ))));
+      expect(find.text(locale == 'zh' ? '预读图片数量' : 'Image preload count'),
+          findsOneWidget);
+      expect(find.byIcon(Icons.autorenew), findsNWidgets(2));
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('reader-preload-button')),
+              matching: find.byType(Text)),
+          findsNothing);
       await tester.tap(find.byKey(const ValueKey('reader-preload-count')));
       await tester.pumpAndSettle();
       expect(find.byType(RadioListTile<int>), findsNWidgets(5));
@@ -115,7 +123,8 @@ void main() {
       expect(
           find.descendant(
               of: find.byKey(const ValueKey('reader-preload-count')),
-              matching: find.text('5')),
+              matching: find.text(
+                  locale == 'zh' ? '前后各 5 组' : '5 spreads before and after')),
           findsOneWidget);
       expect(
           tester
@@ -133,19 +142,39 @@ void main() {
           findsNothing);
       await tester.tapAt(const Offset(10, 350));
       await tester.pumpAndSettle();
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 240);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('reader-preload-button')));
       await tester.pumpAndSettle();
+      expect(find.byType(SimpleDialog), findsNothing);
+      expect(
+          find.byKey(const ValueKey('reader-preload-title')), findsOneWidget);
       expect(
           tester
-              .widgetList<RadioListTile<int>>(find.byType(RadioListTile<int>))
-              .map((tile) => (tile.title! as Text).data),
-          ['1', '2', '3', '4', '5']);
-      expect(
-          tester
-              .widget<RadioListTile<int>>(
-                  find.byKey(const ValueKey('reader-preload-option-5')))
-              .groupValue,
-          5);
+              .getTopLeft(find.byKey(const ValueKey('reader-preload-title')))
+              .dy,
+          greaterThanOrEqualTo(tester
+              .getBottomLeft(
+                  find.byKey(const ValueKey('reader-preload-button')))
+              .dy));
+      for (var n = 1; n <= 5; n++) {
+        expect(
+            find.descendant(
+                of: find.byKey(ValueKey('reader-preload-option-$n')),
+                matching: find.text(locale == 'zh'
+                    ? '前后各 $n 组'
+                    : '$n ${n == 1 ? 'spread' : 'spreads'} before and after')),
+            findsOneWidget);
+      }
+      final last = find.byKey(const ValueKey('reader-preload-option-5'));
+      await tester.ensureVisible(last);
+      expect(find.descendant(of: last, matching: find.byIcon(Icons.check)),
+          findsOneWidget);
+      await tester
+          .ensureVisible(find.byKey(const ValueKey('reader-preload-option-1')));
       await tester.tap(find.byKey(const ValueKey('reader-preload-option-1')));
       await tester.pumpAndSettle();
       expect(bloc.state.preloadCount, 1);
@@ -185,7 +214,7 @@ void main() {
         true);
     expect(
         tester
-            .widget<TextButton>(
+            .widget<IconButton>(
                 find.byKey(const ValueKey('reader-preload-button')))
             .onPressed,
         isNull);
@@ -198,6 +227,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(bloc.state.preloadCount, 3);
     expect(bloc.state.savingPreloadCount, false);
-    expect(find.text('预读数量保存失败，请重试'), findsOneWidget);
+    expect(find.text('预读图片数量保存失败，请重试'), findsOneWidget);
   });
 }

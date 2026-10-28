@@ -5,6 +5,7 @@ import '../blocs/settings/settings_bloc.dart';
 import '../blocs/settings/settings_event.dart';
 import '../blocs/settings/settings_state.dart';
 import '../core/l10n/s.dart';
+import '../models/reader_page_layout.dart';
 
 /// Shared by the settings page and the reader toolbar.
 class ReaderPreloadSetting extends StatefulWidget {
@@ -20,7 +21,6 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
   Future<void> _choose(SettingsState state) async {
     if (_choosing || state.savingPreloadCount) return;
     setState(() => _choosing = true);
-    final bloc = context.read<SettingsBloc>();
     final s = S.of(context);
     try {
       final selected = await showDialog<int>(
@@ -37,15 +37,77 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
                         onChanged: (value) => Navigator.pop(dialog, value)),
                 ],
               ));
-      if (selected == null || !mounted || bloc.state.savingPreloadCount) return;
+      if (selected != null && mounted) await _persist(selected);
+    } finally {
+      if (mounted) setState(() => _choosing = false);
+    }
+  }
+
+  Future<void> _persist(int value) async {
+    final bloc = context.read<SettingsBloc>();
+    if (bloc.state.savingPreloadCount) return;
+    try {
       final done = Completer<void>();
-      bloc.add(UpdateReaderPreloadCount(selected, completer: done));
+      bloc.add(UpdateReaderPreloadCount(value, completer: done));
       await done.future;
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(s.readerPreloadSaveFailed)));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(S.of(context).readerPreloadSaveFailed)));
       }
+    }
+  }
+
+  Future<void> _chooseMenu(SettingsState state) async {
+    if (_choosing || context.read<SettingsBloc>().state.savingPreloadCount)
+      return;
+    setState(() => _choosing = true);
+    try {
+      final s = S.of(context);
+      final theme = Theme.of(context);
+      final overlay = Navigator.of(context).overlay!.context.findRenderObject()!
+          as RenderBox;
+      final anchor = context.findRenderObject()! as RenderBox;
+      final bounds =
+          anchor.localToGlobal(Offset.zero, ancestor: overlay) & anchor.size;
+      final below = (overlay.size.height -
+              MediaQuery.of(context).padding.bottom -
+              8 -
+              bounds.bottom)
+          .clamp(0.0, overlay.size.height);
+      final doublePage = state.pageLayout == ReaderPageLayout.doublePage;
+      final selected = await showMenu<int>(
+        context: context,
+        position: RelativeRect.fromRect(
+            Rect.fromLTWH(bounds.left, bounds.bottom, bounds.width, 0),
+            Offset.zero & overlay.size),
+        constraints:
+            BoxConstraints(minWidth: 240, maxWidth: 300, maxHeight: below),
+        color: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        // Do not use initialValue: it recenters the menu on the selected row.
+        items: [
+          PopupMenuItem<int>(
+            key: const ValueKey('reader-preload-title'),
+            enabled: false,
+            child: Text(s.readerPreloadCount,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(color: theme.colorScheme.onSurface)),
+          ),
+          for (var n = 1; n <= 5; n++)
+            PopupMenuItem<int>(
+              key: ValueKey('reader-preload-option-$n'),
+              value: n,
+              child: Row(children: [
+                Expanded(child: Text(s.readerPreloadLabel(n, doublePage))),
+                if (state.preloadCount == n)
+                  const Icon(Icons.check, size: 18, color: Colors.blue),
+              ]),
+            ),
+        ],
+      );
+      if (selected != null && mounted) await _persist(selected);
     } finally {
       if (mounted) setState(() => _choosing = false);
     }
@@ -56,38 +118,28 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
       BlocBuilder<SettingsBloc, SettingsState>(builder: (context, state) {
         final s = S.of(context);
         final enabled = !_choosing && !state.savingPreloadCount;
+        final doublePage = state.pageLayout == ReaderPageLayout.doublePage;
         if (widget.toolbar) {
-          return Tooltip(
-            message: s.readerPreloadCount,
-            child: Semantics(
-              label: s.readerPreloadCount,
-              value: '${state.preloadCount}',
-              child: TextButton(
+          return Semantics(
+              value: s.readerPreloadLabel(state.preloadCount, doublePage),
+              child: IconButton(
                 key: const ValueKey('reader-preload-button'),
-                style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(48, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 8)),
-                onPressed: enabled ? () => _choose(state) : null,
-                child: state.savingPreloadCount
+                tooltip: s.readerPreloadCount,
+                onPressed: enabled ? () => _chooseMenu(state) : null,
+                icon: state.savingPreloadCount
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
-                    : Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text('${state.preloadCount}'),
-                        const Icon(Icons.arrow_drop_down, size: 20),
-                      ]),
-              ),
-            ),
-          );
+                    : const Icon(Icons.autorenew, color: Colors.white),
+              ));
         }
         return ListTile(
           key: const ValueKey('reader-preload-count'),
-          leading: const Icon(Icons.download_for_offline_outlined),
+          leading: const Icon(Icons.autorenew),
           title: Text(s.readerPreloadCount),
-          subtitle: Text('${state.preloadCount}'),
+          subtitle: Text(s.readerPreloadLabel(state.preloadCount, doublePage)),
           trailing: state.savingPreloadCount
               ? const SizedBox(
                   width: 20,
