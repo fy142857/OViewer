@@ -17,7 +17,7 @@ class ReaderSettingsButton extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        constraints: const BoxConstraints(minWidth: 240, maxWidth: 300),
+        constraints: const BoxConstraints(minWidth: 220, maxWidth: 260),
         itemBuilder: (_) => [
           _ReaderSettingsEntry(
               child: BlocProvider.value(

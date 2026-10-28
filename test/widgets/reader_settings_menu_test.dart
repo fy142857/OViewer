@@ -84,6 +84,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('reader-settings')));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
+      expect(tester.getSize(find.byType(ReaderSettingsOptions)).width,
+          lessThanOrEqualTo(228));
       final anchor =
           tester.getRect(find.byKey(const ValueKey('reader-settings')));
       expect(tester.getTopLeft(find.byType(ReaderSettingsOptions)).dy,
@@ -101,6 +103,11 @@ void main() {
           tester.getTopLeft(find.byKey(const ValueKey('reader-direction'))).dy;
       await tester.tap(find.byKey(const ValueKey('reader-direction')));
       await tester.pumpAndSettle();
+      expect(
+          tester
+              .getSize(find.byKey(const ValueKey('reader-direction-option-0')))
+              .width,
+          tester.getSize(find.byKey(const ValueKey('reader-direction'))).width);
       expect(
           tester
               .getTopLeft(

@@ -82,7 +82,7 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
             Rect.fromLTWH(bounds.left, bounds.bottom, bounds.width, 0),
             Offset.zero & overlay.size),
         constraints:
-            BoxConstraints(minWidth: 240, maxWidth: 300, maxHeight: below),
+            BoxConstraints(minWidth: 220, maxWidth: 260, maxHeight: below),
         color: theme.colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -91,9 +91,15 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
           PopupMenuItem<int>(
             key: const ValueKey('reader-preload-title'),
             enabled: false,
-            child: Text(s.readerPreloadCount,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(color: theme.colorScheme.onSurface)),
+            child: Row(children: [
+              Icon(Icons.autorenew,
+                  size: 20, color: theme.colorScheme.onSurface),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: Text(s.readerPreloadCount,
+                      style: theme.textTheme.bodyLarge
+                          ?.copyWith(color: theme.colorScheme.onSurface))),
+            ]),
           ),
           for (var n = 1; n <= 5; n++)
             PopupMenuItem<int>(

@@ -99,7 +99,7 @@ void main() {
             ]),
             body: const ReaderPreloadSetting(),
           ))));
-      expect(find.text(locale == 'zh' ? '预读图片数量' : 'Image preload count'),
+      expect(find.text(locale == 'zh' ? '预加载图片数量' : 'Image preload count'),
           findsOneWidget);
       expect(find.byIcon(Icons.autorenew), findsNWidgets(2));
       expect(
@@ -135,6 +135,12 @@ void main() {
               .dx));
       await tester.tap(find.byKey(const ValueKey('reader-settings')));
       await tester.pumpAndSettle();
+      final directionFontSize = tester
+          .widget<Text>(find.descendant(
+              of: find.byKey(const ValueKey('reader-direction')),
+              matching: find.byType(Text)))
+          .style!
+          .fontSize;
       expect(
           find.descendant(
               of: find.byType(ReaderSettingsOptions),
@@ -152,6 +158,16 @@ void main() {
       expect(find.byType(SimpleDialog), findsNothing);
       expect(
           find.byKey(const ValueKey('reader-preload-title')), findsOneWidget);
+      final heading = find.byKey(const ValueKey('reader-preload-title'));
+      final headingText =
+          find.descendant(of: heading, matching: find.byType(Text));
+      final headingIcon =
+          find.descendant(of: heading, matching: find.byIcon(Icons.autorenew));
+      expect(
+          tester.widget<Text>(headingText).style!.fontSize, directionFontSize);
+      expect(tester.getCenter(headingIcon).dx,
+          lessThan(tester.getCenter(headingText).dx));
+      expect(tester.getSize(heading).width, lessThanOrEqualTo(260));
       expect(
           tester
               .getTopLeft(find.byKey(const ValueKey('reader-preload-title')))
@@ -227,6 +243,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(bloc.state.preloadCount, 3);
     expect(bloc.state.savingPreloadCount, false);
-    expect(find.text('预读图片数量保存失败，请重试'), findsOneWidget);
+    expect(find.text('预加载图片数量保存失败，请重试'), findsOneWidget);
   });
 }
