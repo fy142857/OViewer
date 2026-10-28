@@ -159,6 +159,9 @@ void main() {
       expect(
           find.byKey(const ValueKey('reader-preload-title')), findsOneWidget);
       final heading = find.byKey(const ValueKey('reader-preload-title'));
+      expect(ModalRoute.of(tester.element(heading))!.transitionDuration,
+          const Duration(milliseconds: 150));
+      if (locale == 'zh') expect(tester.getSize(heading).height, 32);
       final headingText =
           find.descendant(of: heading, matching: find.byType(Text));
       final headingIcon =
@@ -167,7 +170,7 @@ void main() {
           tester.widget<Text>(headingText).style!.fontSize, directionFontSize);
       expect(tester.getCenter(headingIcon).dx,
           lessThan(tester.getCenter(headingText).dx));
-      expect(tester.getSize(heading).width, lessThanOrEqualTo(260));
+      expect(tester.getSize(heading).width, 210);
       expect(
           tester
               .getTopLeft(find.byKey(const ValueKey('reader-preload-title')))

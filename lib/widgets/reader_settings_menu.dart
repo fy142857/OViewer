@@ -5,25 +5,41 @@ import '../blocs/settings/settings_event.dart';
 import '../blocs/settings/settings_state.dart';
 import '../core/l10n/s.dart';
 import '../models/reader_page_layout.dart';
+import 'reader_menu.dart';
 
 class ReaderSettingsButton extends StatelessWidget {
   const ReaderSettingsButton({super.key});
   @override
-  Widget build(BuildContext context) => PopupMenuButton<void>(
+  Widget build(BuildContext context) => IconButton(
         key: const ValueKey('reader-settings'),
         icon: const Icon(Icons.auto_stories, color: Colors.white),
         tooltip: S.of(context).readerSettings,
-        position: PopupMenuPosition.under,
-        color: Theme.of(context).colorScheme.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        constraints: const BoxConstraints(minWidth: 220, maxWidth: 260),
-        itemBuilder: (_) => [
-          _ReaderSettingsEntry(
-              child: BlocProvider.value(
-                  value: context.read<SettingsBloc>(),
-                  child: const ReaderSettingsOptions()))
-        ],
+        onPressed: () {
+          final overlay = Navigator.of(context)
+              .overlay!
+              .context
+              .findRenderObject()! as RenderBox;
+          final anchor = context.findRenderObject()! as RenderBox;
+          final bounds = anchor.localToGlobal(Offset.zero, ancestor: overlay) &
+              anchor.size;
+          showReaderMenu<void>(
+            context: context,
+            position: RelativeRect.fromRect(
+                Rect.fromLTWH(bounds.left, bounds.bottom, bounds.width, 0),
+                Offset.zero & overlay.size),
+            color: Theme.of(context).colorScheme.surface,
+            surfaceTintColor: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            constraints: const BoxConstraints(minWidth: 220, maxWidth: 260),
+            items: [
+              _ReaderSettingsEntry(
+                  child: BlocProvider.value(
+                      value: context.read<SettingsBloc>(),
+                      child: const ReaderSettingsOptions()))
+            ],
+          );
+        },
       );
 }
 
@@ -60,7 +76,7 @@ class ReaderSettingsOptions extends StatelessWidget {
                           8 -
                           bounds.top)
                       .clamp(0.0, overlay.size.height);
-                  final selected = await showMenu<T>(
+                  final selected = await showReaderMenu<T>(
                     context: anchorContext,
                     position: RelativeRect.fromRect(
                         bounds, Offset.zero & overlay.size),

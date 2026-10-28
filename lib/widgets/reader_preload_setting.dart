@@ -6,6 +6,7 @@ import '../blocs/settings/settings_event.dart';
 import '../blocs/settings/settings_state.dart';
 import '../core/l10n/s.dart';
 import '../models/reader_page_layout.dart';
+import 'reader_menu.dart';
 
 /// Shared by the settings page and the reader toolbar.
 class ReaderPreloadSetting extends StatefulWidget {
@@ -76,13 +77,14 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
               bounds.bottom)
           .clamp(0.0, overlay.size.height);
       final doublePage = state.pageLayout == ReaderPageLayout.doublePage;
-      final selected = await showMenu<int>(
+      final selected = await showReaderMenu<int>(
         context: context,
         position: RelativeRect.fromRect(
             Rect.fromLTWH(bounds.left, bounds.bottom, bounds.width, 0),
             Offset.zero & overlay.size),
         constraints:
-            BoxConstraints(minWidth: 220, maxWidth: 260, maxHeight: below),
+            BoxConstraints(minWidth: 210, maxWidth: 210, maxHeight: below),
+        menuPadding: const EdgeInsets.symmetric(vertical: 4),
         color: theme.colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -90,6 +92,7 @@ class _ReaderPreloadSettingState extends State<ReaderPreloadSetting> {
         items: [
           PopupMenuItem<int>(
             key: const ValueKey('reader-preload-title'),
+            height: 32,
             enabled: false,
             child: Row(children: [
               Icon(Icons.autorenew,

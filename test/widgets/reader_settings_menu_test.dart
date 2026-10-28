@@ -34,6 +34,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('reader-settings')));
     await tester.pumpAndSettle();
     final selector = find.byKey(const ValueKey('reader-spread-alignment'));
+    expect(ModalRoute.of(tester.element(selector))!.transitionDuration,
+        const Duration(milliseconds: 150));
     await tester.ensureVisible(selector);
     final top = tester.getTopLeft(selector).dy;
     await tester.tap(selector);
@@ -42,6 +44,8 @@ void main() {
         'reader-spread-alignment-option-ReaderSpreadAlignment.width'));
     final last = find.byKey(const ValueKey(
         'reader-spread-alignment-option-ReaderSpreadAlignment.height'));
+    expect(ModalRoute.of(tester.element(first))!.transitionDuration,
+        const Duration(milliseconds: 150));
     expect(tester.getTopLeft(first).dy, closeTo(top + 8, 0.1));
     expect(
         tester.getTopLeft(last).dy, greaterThan(tester.getTopLeft(first).dy));
