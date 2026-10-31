@@ -30,6 +30,8 @@ import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/screens/home/home_screen.dart';
 import 'package:oviewer/widgets/fast_drawer_controller.dart';
+import 'package:oviewer/widgets/adaptive_gallery_grid.dart';
+import 'package:oviewer/widgets/gallery_grid_item.dart';
 import 'package:oviewer/screens/history/history_screen.dart';
 
 class MockGallery extends Mock implements GalleryRepository {}
@@ -287,6 +289,61 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('home grid appends a delayed page without moving boundary cards',
+      (tester) async {
+    final next = Completer<GalleryListResult>();
+    final items = List.generate(
+        9,
+        (i) => GalleryPreview(
+              gid: i + 1,
+              token: 'abc',
+              title: i.isEven
+                  ? 'Short $i'
+                  : 'A long gallery title that wraps over two lines $i',
+              thumbUrl: thumb,
+              category: 'Manga',
+              rating: 4,
+              uploader: '',
+              fileCount: 12,
+              postedAt: DateTime(2026),
+            ));
+    when(() => repo.fetchGalleryList(nextUrl: null)).thenAnswer((_) async =>
+        GalleryListResult(
+            galleries: items.take(5).toList(),
+            totalPages: 2,
+            nextPageUrl: 'https://example.test/page2'));
+    when(() => repo.fetchGalleryList(nextUrl: 'https://example.test/page2'))
+        .thenAnswer((_) => next.future);
+    await boot(tester, displayMode: 1);
+    final grid = find.byType(AdaptiveGalleryGrid).first;
+    final scroll = tester
+        .state<ScrollableState>(
+            find.descendant(of: grid, matching: find.byType(Scrollable)).first)
+        .position;
+    Finder card(int gid) => find
+        .byWidgetPredicate((w) => w is GalleryGridItem && w.gallery.gid == gid);
+    scroll.jumpTo(scroll.maxScrollExtent);
+    await frames(tester);
+    verify(() => repo.fetchGalleryList(nextUrl: 'https://example.test/page2'))
+        .called(1);
+    final before = tester.getTopLeft(card(5));
+    final offset = scroll.pixels;
+    final loading = tester.getRect(find.descendant(
+        of: grid, matching: find.byType(CircularProgressIndicator)));
+    expect(loading.center.dx, 180);
+    expect(loading.top, greaterThan(tester.getBottomLeft(card(5)).dy));
+    next.complete(GalleryListResult(
+        galleries: items.skip(5).toList(),
+        totalPages: 2,
+        nextPageUrl: 'https://example.test/page3'));
+    await frames(tester);
+    expect(scroll.pixels, offset);
+    expect(tester.getTopLeft(card(5)), before);
+    expect(tester.getTopLeft(card(6)).dy, before.dy);
+    expect(tester.getTopLeft(card(6)).dx, greaterThan(before.dx));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('home menu button opens the accelerated drawer', (tester) async {
     await boot(tester);

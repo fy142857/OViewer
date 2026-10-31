@@ -448,8 +448,12 @@ class _SearchViewState extends State<_SearchView> {
                                         key:
                                             const PageStorageKey('search-grid'),
                                         controller: _gridScrollController,
-                                        itemCount: state.results.length +
-                                            (state.isLoadingMore ? 1 : 0),
+                                        itemCount: state.results.length,
+                                        footer: state.isLoadingMore
+                                            ? _buildResult(
+                                                state, state.results.length,
+                                                isGrid: true)
+                                            : null,
                                         itemBuilder: (context, index) =>
                                             _buildResult(state, index,
                                                 isGrid: true),

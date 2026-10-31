@@ -51,13 +51,18 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
         final skeleton =
-            tester.widget<MasonryGridView>(find.byType(MasonryGridView));
+            tester.widget<SliverAlignedGrid>(find.byType(SliverAlignedGrid));
         final delegate = skeleton.gridDelegate
             as SliverSimpleGridDelegateWithFixedCrossAxisCount;
         expect(delegate.crossAxisCount, entry.value);
-        expect(skeleton.padding, const EdgeInsets.all(8));
-        expect(skeleton.physics, isA<NeverScrollableScrollPhysics>());
-        expect(skeleton.childrenDelegate.estimatedChildCount, entry.value * 3);
+        expect(tester.widget<SliverPadding>(find.byType(SliverPadding)).padding,
+            const EdgeInsets.all(8));
+        expect(
+            tester
+                .widget<CustomScrollView>(find.byType(CustomScrollView))
+                .physics,
+            isA<NeverScrollableScrollPhysics>());
+        expect(skeleton.itemCount, entry.value * 3);
         final covers = find.byType(AspectRatio);
         final positions =
             List.generate(entry.value, (i) => tester.getRect(covers.at(i)));
@@ -67,13 +72,17 @@ void main() {
         loading.value = false;
         await tester.pump();
         final results =
-            tester.widget<MasonryGridView>(find.byType(MasonryGridView));
+            tester.widget<SliverAlignedGrid>(find.byType(SliverAlignedGrid));
         expect(
             (results.gridDelegate
                     as SliverSimpleGridDelegateWithFixedCrossAxisCount)
                 .crossAxisCount,
             entry.value);
-        expect(results.physics, isA<AlwaysScrollableScrollPhysics>());
+        expect(
+            tester
+                .widget<CustomScrollView>(find.byType(CustomScrollView))
+                .physics,
+            isA<AlwaysScrollableScrollPhysics>());
         for (var i = 0; i < entry.value; i++) {
           final rect = tester.getRect(find.byKey(ValueKey('result-$i')));
           expect(rect.left, positions[i].left);
@@ -90,9 +99,8 @@ void main() {
         home: Scaffold(body: ShimmerGalleryGrid(itemCount: 4))));
     expect(
         tester
-            .widget<MasonryGridView>(find.byType(MasonryGridView))
-            .childrenDelegate
-            .estimatedChildCount,
+            .widget<SliverAlignedGrid>(find.byType(SliverAlignedGrid))
+            .itemCount,
         4);
     await tester.pumpWidget(const SizedBox.shrink());
   });

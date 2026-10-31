@@ -2,13 +2,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-/// Cards retain their portrait cover ratio as the available width changes.
+/// Cards follow source order across rows, even when their heights differ.
 class AdaptiveGalleryGrid extends StatelessWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final ScrollController? controller;
   final ScrollPhysics physics;
   final EdgeInsetsGeometry contentPadding;
+  final Widget? footer;
 
   const AdaptiveGalleryGrid({
     super.key,
@@ -17,6 +18,7 @@ class AdaptiveGalleryGrid extends StatelessWidget {
     this.controller,
     this.physics = const AlwaysScrollableScrollPhysics(),
     this.contentPadding = const EdgeInsets.all(8),
+    this.footer,
   });
 
   static const spacing = 8.0;
@@ -39,15 +41,27 @@ class AdaptiveGalleryGrid extends StatelessWidget {
     return LayoutBuilder(builder: (context, constraints) {
       final columns = columnCount(
           constraints.maxWidth, MediaQuery.textScaleFactorOf(context));
-      return MasonryGridView.count(
+      return CustomScrollView(
         controller: controller,
         physics: physics,
-        padding: contentPadding,
-        crossAxisCount: columns,
-        mainAxisSpacing: spacing,
-        crossAxisSpacing: spacing,
-        itemCount: itemCount,
-        itemBuilder: itemBuilder,
+        semanticChildCount: itemCount,
+        slivers: [
+          SliverPadding(
+            padding: contentPadding,
+            // The aligned-grid delegate expects at least one row.
+            sliver: itemCount == 0
+                ? const SliverToBoxAdapter(child: SizedBox.shrink())
+                : SliverAlignedGrid.count(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: spacing,
+                    crossAxisSpacing: spacing,
+                    itemCount: itemCount,
+                    itemBuilder: itemBuilder,
+                  ),
+          ),
+          // Loading/retry UI must not take a card slot or shift page boundaries.
+          if (footer != null) SliverToBoxAdapter(child: footer),
+        ],
       );
     });
   }

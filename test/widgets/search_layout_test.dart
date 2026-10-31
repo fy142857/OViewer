@@ -99,9 +99,9 @@ void main() {
       await tester.pumpAndSettle();
       final toggle = find.byKey(const ValueKey('search-view-toggle'));
       ScrollController activeController() =>
-          find.byType(MasonryGridView).evaluate().isNotEmpty
+          find.byType(CustomScrollView).evaluate().isNotEmpty
               ? tester
-                  .widget<MasonryGridView>(find.byType(MasonryGridView))
+                  .widget<CustomScrollView>(find.byType(CustomScrollView))
                   .controller!
               : tester.widget<ListView>(find.byType(ListView)).controller!;
       activeController().jumpTo(450);
@@ -260,9 +260,9 @@ void main() {
       final buttonRect = tester.getRect(toggle);
       expect(fieldRect.right, lessThanOrEqualTo(buttonRect.left));
       expect(buttonRect.right, closeTo(viewport.width, 1));
-      final grid = tester.widget<MasonryGridView>(find.byType(MasonryGridView));
-      final delegate =
-          grid.gridDelegate as SliverSimpleGridDelegateWithFixedCrossAxisCount;
+      final delegate = tester
+          .widget<SliverAlignedGrid>(find.byType(SliverAlignedGrid))
+          .gridDelegate as SliverSimpleGridDelegateWithFixedCrossAxisCount;
       expect(delegate.crossAxisCount, ((viewport.width - 8) / 228).ceil());
       final cover = find.descendant(
           of: find.byType(GalleryGridItem).first,
@@ -288,7 +288,7 @@ void main() {
     expect(requests, 1);
     await tester.tap(toggle);
     await tester.pumpAndSettle();
-    final grid = tester.widget<MasonryGridView>(find.byType(MasonryGridView));
+    final grid = tester.widget<CustomScrollView>(find.byType(CustomScrollView));
     grid.controller!.jumpTo(grid.controller!.position.maxScrollExtent);
     await tester.pumpAndSettle();
     expect(requests, 2);

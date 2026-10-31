@@ -636,11 +636,10 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildGridView(BuildContext context, GalleryListState state) {
     return AdaptiveGalleryGrid(
       key: PageStorageKey('home-${state.currentTab.name}-grid'),
-      itemCount: state.galleries.length + (state.hasReachedEnd ? 0 : 1),
+      itemCount: state.galleries.length,
+      footer:
+          state.hasReachedEnd ? null : _buildLoadMoreIndicator(context, state),
       itemBuilder: (context, index) {
-        if (index >= state.galleries.length) {
-          return _buildLoadMoreIndicator(context, state);
-        }
         final gallery = state.galleries[index];
         return GalleryGridItem(
           gallery: gallery,

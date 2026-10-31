@@ -87,3 +87,12 @@ a447d18c3eb7db00cbac4418ef505facf5d2d408ee64311817050ea25977a1e2
 - 本机 Git 忽略的 iOS 监听、下载工具已兼容新标题后缀和范围元数据，79 项本地工具回归通过；修改前已备份到忽略的构建目录，没有修改账号、签名或设备状态。这些本机工具继续不纳入仓库分发。
 
 机器可读证据：[产物与测试范围](benchmarks/test-selection/1.11.1+138/acceptance.json)、[自动执行及复用记录](benchmarks/test-selection/1.11.1+138/execution.json)、[iOS 最低版本](benchmarks/test-selection/1.11.1+138/minimum-os.json)。
+
+## Issue #72：卡片分页衔接顺序（2026-11-01）
+
+- [问题](https://github.com/fy142857/OViewer/issues/72)：卡片视图底部加载新内容时，漫画在衔接处偶发错列。原瀑布流按最短列放置下一张卡片，标题行数造成高度差；首页和搜索还把加载提示作为卡片参与排列。
+- 改为惰性构建的按行对齐网格，同一行使用最大内容高度，保留自适应列数与封面比例；加载、重试提示使用独立底部区域。首页、搜索、收藏及骨架屏共用布局，不改源数据顺序、分页请求或阅读器行为。
+- 修复前新增的两列、三列、四列顺序回归均失败；修复后通过。覆盖多次追加、不完整末行、上下滚动、页脚加载/重试/消失及空列表刷新。
+- Flutter 3.16 本地共通过 35 个相关用例：`gallery_grid_pagination_test.dart`、`search_layout_test.dart`、`shimmer_grid_layout_test.dart`、`home_swipe_test.dart`、`favorites_search_ui_test.dart`。包含真实首页卡片的延迟分页、原有滚动位置、搜索导航与视图切换、收藏入口、宽屏及大字体场景。
+- 慢测试选择为 `skip`：只调整画廊卡片布局与分页提示呈现，没有改变阅读器位置、图片预加载、缓存或网络调度。未进行真机安装或正式发布。
+- 静态分析保留 157 条既有诊断，没有新增错误或警告。

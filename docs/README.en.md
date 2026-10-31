@@ -24,7 +24,7 @@ The project targets **Android 5.0 and iOS 12.0** as its minimum OS versions, kee
 
 - Explore the latest and popular galleries, your favorites, and your reading history.
 - Swipe horizontally or tap the top tabs to switch between Latest, Popular, History, and Favorites. Each tab keeps its list and scroll position. Long-press a record in the home History tab to delete it.
-- Switch between list and card views on the home and search screens. Cards adapt to the screen width while keeping portrait cover proportions.
+- Switch between list and card views on the home and search screens. Cards adapt to the screen width, preserve source order across rows and pages, and keep portrait cover proportions.
 - Find manga using keywords, categories, and minimum-rating filters.
 - See matching search history first as you type, followed by tag suggestions.
 - Search with Chinese tag translations, multiword tags, and tag aliases.
