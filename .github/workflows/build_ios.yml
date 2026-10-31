@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   build-ios:
-    # macos-14 is retiring. Validate Xcode 16.0 on macos-15 while retaining
+    # macos-14 is retiring. Validate Xcode 16.4 on macos-15 while retaining
     # the project's iOS 12 deployment target; device compatibility needs testing.
     runs-on: macos-15
     env:
@@ -59,16 +59,16 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.0'
+          xcode-version: '16.4'
 
-      - name: Install iOS platform for selected Xcode
-        # macos-15 no longer preinstalls the iOS 18.0 platform required by
-        # Xcode 16.0, even for generic device builds (runner-images#12758).
-        # This installs build support; the deployment target remains iOS 12.
+      - name: Initialize preinstalled iOS platform
+        # macos-15 includes the iOS 18.5 runtime matching Xcode 16.4.
+        # Validate that environment without downloading another runtime.
+        # The application's deployment target remains iOS 12.
         run: |
           sudo xcodebuild -runFirstLaunch
           xcrun simctl list runtimes
-          xcodebuild -downloadPlatform iOS
+          xcodebuild -showsdks
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
