@@ -96,3 +96,5 @@ a447d18c3eb7db00cbac4418ef505facf5d2d408ee64311817050ea25977a1e2
 - Flutter 3.16 本地共通过 35 个相关用例：`gallery_grid_pagination_test.dart`、`search_layout_test.dart`、`shimmer_grid_layout_test.dart`、`home_swipe_test.dart`、`favorites_search_ui_test.dart`。包含真实首页卡片的延迟分页、原有滚动位置、搜索导航与视图切换、收藏入口、宽屏及大字体场景。
 - 慢测试选择为 `skip`：只调整画廊卡片布局与分页提示呈现，没有改变阅读器位置、图片预加载、缓存或网络调度。未进行真机安装或正式发布。
 - 静态分析保留 157 条既有诊断，没有新增错误或警告。
+- 候选 **1.11.1+139**：源提交 `185a4d32189b0556c1d39cf5c3b437f48c925ef5`，构建提交 `dbf940b36996169f0817a3b45480d0f50cc3ec6e`。[候选准备](https://github.com/fy142857/OViewer/actions/runs/41249884471)、[Android](https://github.com/fy142857/OViewer/actions/runs/41249920457)、[iOS](https://github.com/fy142857/OViewer/actions/runs/41249922438) 均首次运行成功。
+- 两端各通过 1,083 项 Flutter 测试和 91 项脚本测试，静态分析均无新增错误或警告。自动采用 `slow:skip`，排除 64 个预读慢场景；Android APK、iOS IPA 及既有平台/产物检查通过，不代表全量测试或真机验收。
