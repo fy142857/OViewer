@@ -178,3 +178,5 @@ VOG-AL10 已从 **1.11.0+119 覆盖安装到 1.11.1+130**。主题、语言及�
 - [候选 133 / iOS 41233420046](https://github.com/fy142857/OViewer/actions/runs/41233420046)：增加 `sudo xcodebuild -runFirstLaunch` 和 `xcrun simctl list runtimes` 后，平台准备通过；静态分析、脚本测试及 **1142 项 Flutter 测试通过**，随后实际原生编译失败。
 
 最终阻塞位于 `flutter_inappwebview 5.8.0` 的 `InAppWebView.swift`：第 1226 行 `evaluateJavaScript` 覆写报 `method does not override any method from its superclass`，多处调用报 `ambiguous use of 'evaluateJavaScript(_:completionHandler:)'`。需要后续处理该插件与 Xcode 16 / WebKit SDK 的 Swift 接口兼容问题。本次未升级插件或提高最低系统版本，未生成 IPA，也没有 iOS 12 真机通过结论。
+
+后续结果（2026-11-01）：已通过仓库内 WebView 5.8 修补版解决该编译阻塞。候选 **1.11.1+135** 的 Android、iOS 构建均成功，下载的 IPA 通过最低版本声明检查，主应用仍为 iOS 12.0。iOS 12 真机验收仍未完成；具体构建、产物哈希及发布前清单见 [Xcode 16 兼容修补验收](IOS12_XCODE16_COMPATIBILITY.md)。

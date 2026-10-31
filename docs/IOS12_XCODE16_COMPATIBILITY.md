@@ -31,17 +31,25 @@ Ruby 检查需要 CocoaPods / Xcodeproj，在 macOS CI 上运行。Windows 本�
 
 | 项目 | 状态与证据 |
 | --- | --- |
-| 官方归档与补丁范围 | 本地通过：归档 SHA-256、270 个文件的完整清单与允许转换 |
+| 官方归档与补丁范围 | 本地及双端 CI 通过：归档 SHA-256、270 个文件的完整清单与允许转换 |
 | Flutter 3.13 回归 | 84 项通过，覆盖登录、Cookie、注销、网页设置、阅读及图片保存 |
 | Flutter 3.13 Android 调试构建 | 通过 |
 | Python 脚本测试 | 66 项通过，包含新增负向校验 |
+| macOS Pod 检查测试 | 4 项 / 9 个断言通过：版本比较、父 Pod 继承、工程继承及条件 xcconfig |
 | Flutter 3.16 静态检查 | 通过：157 条既有诊断，无新增错误或警告 |
-| Flutter 3.16 全量回归 | 1,142 项通过；pub.dev 解析，代码生成成功 |
-| Android / iOS 候选构建 | 待完成 |
-| 安装包版本、哈希与 iOS 最低版本声明 | 待完成 |
+| Flutter 3.16 全量回归 | 本地、Android CI、iOS CI 各 1,142 项通过；pub.dev 解析，代码生成成功 |
+| Android 候选 1.11.1+135 | [构建通过](https://github.com/fy142857/OViewer/actions/runs/41239612514)，下载 APK 的版本、哈希、固定正式签名及候选提交均已核验 |
+| iOS 候选 1.11.1+135 | [构建通过](https://github.com/fy142857/OViewer/actions/runs/41239619832)，Xcode 16.0 原生编译成功，未签名 IPA 的版本、哈希及候选提交均已核验 |
+| iOS 最低版本声明 | 通过：下载 IPA 重新检查结果与 CI 报告一致；28 个二进制、11 个应用／框架目录；主应用 12.0，所有设备架构切片均不高于 12.0 |
 | iOS 12 真机 | 未验收，发布前必须完成 |
 
-后续根据实际候选构建与产物检查结果更新本表。构建通过、最低版本声明通过、真机通过须分别记录。
+验收日期：2026-11-01。机器可读记录：[双端产物验收](benchmarks/ios-compatibility/1.11.1+135/acceptance.json)、[最低版本声明报告](benchmarks/ios-compatibility/1.11.1+135/minimum-os.json)。报告中的 `runtime_device_test: not_performed` 表示未进行真机验收。构建通过、最低版本声明通过、真机通过分别记录。
+
+首次候选 134 的 iOS 构建被新增 Ruby 测试拦截：CocoaPods Consumer 没有 `deployment_target` 方法。已改用 `Specification.deployment_target(:ios)`，并验证子 Pod 继承要求；候选 135 的该项检查已通过。
+
+候选 135 构建提交：`1d7ac858c2561d8f2924ae6d1e70d5bb2a0178d9`。APK SHA-256：`b2acccba24f91aab71bfbce7177d84e378dc0012afd7f1dc1bd8102406067e40`；正式签名证书 SHA-256：`a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4`。
+
+IPA SHA-256：`51e5909c2ad8f675b3859a2b78663b4b1b0bdfd1eaf9d1deb5257bb5708c7cf5`。实际 Mach-O 最低版本包含 7.0、11.0、12.0，均未超过应用要求的 12.0；检查同时覆盖嵌入的 Swift 动态库。
 
 ## iOS 12 发布前真机清单
 

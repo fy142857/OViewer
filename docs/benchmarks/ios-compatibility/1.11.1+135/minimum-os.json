@@ -1,0 +1,364 @@
+{
+  "schema": 1,
+  "app": "Runner.app",
+  "maximum_ios": "12.0",
+  "runtime_device_test": "not_performed",
+  "binaries": [
+    {
+      "path": "Frameworks/App.framework/App",
+      "sha256": "70a2c7a1490e22fb3a168c5fbdad6c5153c12f7e7581ded860c6b979654a7ad7",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "11.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/Flutter.framework/Flutter",
+      "sha256": "f0a27dbe0a63ec43442b5e88ba7eb627d3dab855fb0dbea2b92ab2c7521087dd",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "11.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/OrderedSet.framework/OrderedSet",
+      "sha256": "96689fa53c5831ffebce3b13935a87bb4d377fd3ccf4e61c016f1b77bb5a5fd9",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/flutter_inappwebview.framework/flutter_inappwebview",
+      "sha256": "c153bb7e227642c2db367489f90c05ee5e163ba5b6d76b9304f7f17f64d53fe1",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftAVFoundation.dylib",
+      "sha256": "f4fedabdb34e2ed92ea815db439227f3a228c1969b1b72f973538e2381a0b7d4",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftCore.dylib",
+      "sha256": "9509614ae4bbbcbb45a297e09ac8835c9d75eb64e6bb61dd74748b6e72fc601a",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftCoreAudio.dylib",
+      "sha256": "feb5d313336479fdb89451f64c54b362f64153e97a4f3306f692db5e1fb87500",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftCoreFoundation.dylib",
+      "sha256": "d2d55ba178e869d42031ae14a884da6148aad84f0ad3e623e821fb194c8afdea",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftCoreGraphics.dylib",
+      "sha256": "faf8a06946220b1701abe460cb63490a29bd45b89abf9c07c7a6376b0c864def",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftCoreImage.dylib",
+      "sha256": "4a65a297c1f57aa30d98ca4b6c133e0820c937f798d2d65c12efe388b6fa279c",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftCoreLocation.dylib",
+      "sha256": "fbb01f4796572612c71a50dce453f7c69396251a545c3d5e1383dc2e7e5165b3",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftCoreMedia.dylib",
+      "sha256": "ec67a8196b2eab5c2433718355c8d01c6426a5c0bb16d0af598a1be6adf0a76e",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftDarwin.dylib",
+      "sha256": "70b7ab8bb3be37cb17830b8d94d785cea230806666ea38e83533f0342b93baf3",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftDispatch.dylib",
+      "sha256": "0122c8c90e2d0d87cf78524773980d9225026a9046353580348c43a88de42f32",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftFoundation.dylib",
+      "sha256": "7c293fabcfb446755c8c30eca569f4653c15718d36c68a06d74daac3e06f12a0",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftMetal.dylib",
+      "sha256": "f309e12d26f18a1b601c25928e1c5634e2620a6d299488c7dd903827c851e184",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftObjectiveC.dylib",
+      "sha256": "f0ce9d466bc71237d0478e3749dafa197eb2b16d4518a5d2f18ef6175c80eaed",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftQuartzCore.dylib",
+      "sha256": "0f0e0f6567b539e4be81d303d0bfc7b8afaac7a60f8ceddda8d5840e719e2a87",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftUIKit.dylib",
+      "sha256": "d04a7eab18a3adfac631bfdd0868583d0ecc8cd15e119a1129511a6e18d2d463",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftos.dylib",
+      "sha256": "8d3a0e51478dd310b2fd4149c1b3508aa86b9790f69ed525ce2b8e11db8db856",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/libswiftsimd.dylib",
+      "sha256": "14267c0ebc93c58955451d843c0c41ea9144e321131806ae6a547446fe76f278",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "7.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/package_info_plus.framework/package_info_plus",
+      "sha256": "0b6d9734bb7b7cf58c0f3d2beec0c43f31efebd199d1d6cdefd664d20de1cefc",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/path_provider_foundation.framework/path_provider_foundation",
+      "sha256": "586682ceb408db39f995b83518b0e803f17f42de59c9fddbe6514390c7c28770",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/shared_preferences_foundation.framework/shared_preferences_foundation",
+      "sha256": "efd36893a79313149438c8ea7873c269fb8060f6d37d4865d5c5e6b14bb9304b",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/sqflite.framework/sqflite",
+      "sha256": "22b8cb0b03d5022a57041a274261204750526a87306a5ed6495e591ac19b0e18",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/sqlite3.framework/sqlite3",
+      "sha256": "ee92b56e940b3751a8dcf2a41f2b46c6d0b31135d461bf50aeb9288b21562b9d",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Frameworks/sqlite3_flutter_libs.framework/sqlite3_flutter_libs",
+      "sha256": "7bf21e97ed8815257fab5b7bbff452c0c75ddaba8faf7b5091026c58a77a45ff",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    },
+    {
+      "path": "Runner",
+      "sha256": "32c2b2dc5a3d44a8a28a481ee35d6cc4cd98d97577bc59da28b74beef3b7947a",
+      "slices": [
+        {
+          "cpu_type": 16777228,
+          "cpu_subtype": 0,
+          "minimum_os": "12.0.0"
+        }
+      ]
+    }
+  ],
+  "bundles": [
+    {
+      "path": ".",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/App.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/Flutter.framework",
+      "minimum_os": "11.0"
+    },
+    {
+      "path": "Frameworks/OrderedSet.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/flutter_inappwebview.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/package_info_plus.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/path_provider_foundation.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/shared_preferences_foundation.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/sqflite.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/sqlite3.framework",
+      "minimum_os": "12.0"
+    },
+    {
+      "path": "Frameworks/sqlite3_flutter_libs.framework",
+      "minimum_os": "12.0"
+    }
+  ],
+  "errors": [],
+  "passed": true
+}
