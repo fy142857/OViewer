@@ -1,0 +1,48 @@
+{
+  "candidate_id": "1.11.1+137",
+  "build_sha": "7b17b6ac9060085458f9437845fc96cf0330c3e1",
+  "android": {
+    "build_number": 137,
+    "build_sha": "7b17b6ac9060085458f9437845fc96cf0330c3e1",
+    "candidate_id": "1.11.1+137",
+    "filename": "OViewer.apk",
+    "platform": "android",
+    "run_attempt": 1,
+    "run_id": 41245462893,
+    "schema": 1,
+    "sha256": "d10ad4722ef04ca8be1763d9030ba98833456156bb0c70c07f24529fc5089d2f",
+    "signing_cert_sha256": "a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4",
+    "size": 30704942,
+    "source_sha": "325aed4555a872a575caf2d209a3de93d4261d9d",
+    "version": "1.11.1",
+    "artifact_filename": "app-release.apk"
+  },
+  "ios": {
+    "build_number": 137,
+    "build_sha": "7b17b6ac9060085458f9437845fc96cf0330c3e1",
+    "candidate_id": "1.11.1+137",
+    "filename": "OViewer.ipa",
+    "platform": "ios",
+    "run_attempt": 1,
+    "run_id": 41245466504,
+    "schema": 1,
+    "sha256": "e097982e1d7beddbcd076f23b1fb5e1e17b13b60205a4ee286ea72b99af8145b",
+    "size": 26923952,
+    "source_sha": "325aed4555a872a575caf2d209a3de93d4261d9d",
+    "version": "1.11.1"
+  },
+  "ios_binary_count": 28,
+  "ios_bundle_count": 11,
+  "minimum_os_passed": true,
+  "ios12_device_test": "not_performed",
+  "test_scope": {
+    "skip_reader_prefetch_tests": true,
+    "excluded_tag": "reader_prefetch_slow",
+    "excluded_file": "test/widgets/reader_prefetch_issue71_test.dart",
+    "excluded_scenarios": 64,
+    "flutter_tests_passed_per_platform": 1078,
+    "full_suite_verified_in_this_run": false,
+    "default_for_new_builds": "full suite; opt-in exclusion only"
+  },
+  "explicit_ios_platform_initialization": false
+}
