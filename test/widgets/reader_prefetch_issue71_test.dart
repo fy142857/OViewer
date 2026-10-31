@@ -568,6 +568,6 @@ void main() {
         clientCreated = true;
         return client;
       });
-    });
+    }, tags: 'reader_prefetch_slow');
   }
 }

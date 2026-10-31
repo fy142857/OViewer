@@ -15,6 +15,10 @@ on:
         description: 'Registered candidate, for example 1.0.1+2'
         required: true
         type: string
+      skip_reader_prefetch_tests:
+        description: 'Trial build only: omit the 64 slow reader prefetch scenarios'
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -61,15 +65,6 @@ jobs:
         with:
           xcode-version: '16.4'
 
-      - name: Initialize preinstalled iOS platform
-        # macos-15 includes the iOS 18.5 runtime matching Xcode 16.4.
-        # Validate that environment without downloading another runtime.
-        # The application's deployment target remains iOS 12.
-        run: |
-          sudo xcodebuild -runFirstLaunch
-          xcrun simctl list runtimes
-          xcodebuild -showsdks
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -96,7 +91,15 @@ jobs:
         run: python -m scripts.versioning.analyze
 
       - name: Flutter tests
-        run: flutter test --no-pub --reporter expanded
+        env:
+          SKIP_READER_PREFETCH_TESTS: ${{ inputs.skip_reader_prefetch_tests }}
+        run: |
+          if [[ "$SKIP_READER_PREFETCH_TESTS" == "true" ]]; then
+            echo "::notice::Trial build: excluding 64 reader_prefetch_slow scenarios; other tests remain enabled."
+            flutter test --no-pub --reporter expanded --exclude-tags reader_prefetch_slow
+          else
+            flutter test --no-pub --reporter expanded
+          fi
 
       - name: Build iOS (no codesign)
         if: github.event_name == 'workflow_dispatch'

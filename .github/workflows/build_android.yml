@@ -19,6 +19,10 @@ on:
         description: 'Also build isolated offline fixture APK for local emulator acceptance'
         default: false
         type: boolean
+      skip_reader_prefetch_tests:
+        description: 'Trial build only: omit the 64 slow reader prefetch scenarios'
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -96,7 +100,15 @@ jobs:
         run: python -m scripts.versioning.analyze
 
       - name: Flutter tests
-        run: flutter test --no-pub --reporter expanded
+        env:
+          SKIP_READER_PREFETCH_TESTS: ${{ inputs.skip_reader_prefetch_tests }}
+        run: |
+          if [[ "$SKIP_READER_PREFETCH_TESTS" == "true" ]]; then
+            echo "::notice::Trial build: excluding 64 reader_prefetch_slow scenarios; other tests remain enabled."
+            flutter test --no-pub --reporter expanded --exclude-tags reader_prefetch_slow
+          else
+            flutter test --no-pub --reporter expanded
+          fi
 
       - name: Restore permanent signing key
         if: github.event_name == 'workflow_dispatch'

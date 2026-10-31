@@ -18,6 +18,8 @@
 
 构建失败时可重跑该运行，或手动运行对应构建工作流并填写已登记的 `candidate_id`。同一个候选不会重新编号；有代码修改则提交新的候选。
 
+两端构建工作流提供试构建选项 `skip_reader_prefetch_tests`，默认关闭。显式开启时，仅排除标记为 `reader_prefetch_slow` 的 64 个阅读器预读组合场景；快速策略、设置及其他阅读器测试仍执行。自动候选构建和 PR 检查保持全量测试。本地对应命令为 `flutter test --no-pub --reporter expanded --exclude-tags reader_prefetch_slow`。启用此选项的验收记录必须注明缩减的测试范围，不能描述为全量测试通过。
+
 ## 候选与台账
 
 `version-state` 分支的 `ledger.json` 保存全局递增编号和候选的源提交、最终构建提交、内容指纹及阶段。请勿手动编辑台账。
