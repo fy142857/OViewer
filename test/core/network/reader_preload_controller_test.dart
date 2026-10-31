@@ -5,6 +5,64 @@ import 'package:oviewer/models/reader_page_layout.dart';
 import 'package:oviewer/models/reader_preload_window.dart';
 
 void main() {
+  // A literal contract from the device report, deliberately independent of
+  // addressLeadForCount so a policy regression cannot change its own oracle.
+  for (final layout in ReaderPageLayout.values) {
+    for (var n = 1; n <= 5; n++) {
+      test('shipping range contract $layout N=$n', () {
+        const linkRadii = [3, 4, 5, 5, 6];
+        final size = layout == ReaderPageLayout.single ? 1 : 2;
+        for (final total in [0, 1, 19, 50]) {
+          final spreads = ReaderSpreads(total, layout);
+          for (var page = 0; page < (total == 0 ? 1 : total); page++) {
+            final group = page ~/ size;
+            Set<int> pages(int radius) => {
+                  for (var p = 0; p < total; p++)
+                    if ((p ~/ size - group).abs() <= radius) p,
+                };
+            final window = ReaderPreloadWindow(spreads, page, n);
+            expect(window.targets, pages(n));
+            expect(window.addresses, pages(linkRadii[n - 1]));
+            expect(window.visible, pages(0));
+            expect(window.neighbours.toSet(), pages(n).difference(pages(0)));
+          }
+        }
+      });
+    }
+
+    test('3 to 4 to 3 drops queued outer images and reuses active jobs $layout',
+        () async {
+      final jobs = <ReaderPreloadKey, Completer<bool>>{};
+      final started = <ReaderPreloadKey>[];
+      final controller = ReaderPreloadController(load: (p, a) {
+        final key = (p, a);
+        started.add(key);
+        return (jobs[key] = Completer<bool>()).future;
+      });
+      addTearDown(controller.dispose);
+      final spreads = ReaderSpreads(50, layout);
+      final small = ReaderPreloadWindow(spreads, 20, 3);
+      final large = ReaderPreloadWindow(spreads, 20, 4);
+      controller.update(small, {});
+      final initialJobs = [...started];
+      controller.update(large, {});
+      controller.update(small, {});
+      expect(started, initialJobs);
+      expect(controller.backgroundCount, 2);
+      for (var round = 0; round < small.neighbours.length; round++) {
+        for (final job in jobs.values.toList()) {
+          if (!job.isCompleted) job.complete(true);
+        }
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(started.map((key) => key.$1).toSet(), small.neighbours.toSet());
+      expect(started.length, small.neighbours.length);
+      expect(started.map((key) => key.$1),
+          isNot(anyElement(isIn(large.targets.difference(small.targets)))));
+      expect(controller.backgroundCount, 0);
+    });
+  }
+
   test('horizontal drag anchors background range at current group', () {
     final window = ReaderPreloadWindow(
         const ReaderSpreads(50, ReaderPageLayout.single), 10, 1,

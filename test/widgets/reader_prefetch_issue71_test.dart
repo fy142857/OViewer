@@ -56,6 +56,8 @@ class _Response extends StreamView<List<int>> implements HttpClientResponse {
   @override
   bool get isRedirect => false;
   @override
+  List<RedirectInfo> get redirects => const [];
+  @override
   bool get persistentConnection => false;
   @override
   String get reasonPhrase => 'OK';
@@ -87,7 +89,8 @@ void main() {
               start: start,
               n: n,
               cache: false,
-              fail: false
+              fail: false,
+              boundary: false
             ),
     for (final mode in [0, 1])
       for (final fail in [false, true])
@@ -97,11 +100,23 @@ void main() {
           start: 10,
           n: 3,
           cache: true,
-          fail: fail
+          fail: fail,
+          boundary: false
+        ),
+    for (final mode in [0, 1, 2])
+      for (final layout in ReaderPageLayout.values)
+        (
+          mode: mode,
+          layout: layout,
+          start: 10,
+          n: 3,
+          cache: false,
+          fail: false,
+          boundary: true
         ),
   ];
   for (final scenario in scenarios) {
-    final (:mode, :layout, :start, :n, :cache, :fail) = scenario;
+    final (:mode, :layout, :start, :n, :cache, :fail, :boundary) = scenario;
     const total = 19; // The final double-page spread has only one page.
     final spreads = ReaderSpreads(total, layout);
     Set<int> window(int page) => {
@@ -119,6 +134,9 @@ void main() {
       final settingsBloc = MockSettingsBloc();
       final cookies = MockCookies();
       final htmlPages = <int>[];
+      final boundaryCase = boundary;
+      final heldPage = start + 4 * spreads.pagesPerSpread;
+      final heldLink = Completer<GalleryImage>();
       final imagePages = <int>[];
       final pending = <Completer<HttpClientRequest>>[];
       final pendingPages = <int>[];
@@ -186,12 +204,14 @@ void main() {
         when(() => gallery.fetchImage('page', 42, page,
             cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
           htmlPages.add(page);
-          return GalleryImage(
+          final image = GalleryImage(
               index: page,
               pageUrl: 'page',
               imageUrl: 'https://example.test/$page.png',
               width: 600,
               height: 900);
+          if (boundaryCase && page == heldPage) return heldLink.future;
+          return image;
         });
       }
       ReaderReentryCache.shared.clear();
@@ -230,7 +250,10 @@ void main() {
       }
 
       Future<void> finishDownloads() async {
-        final png = (await tester.runAsync(makePng))!;
+        // Keep decoded aspect ratio equal to the HTML metadata in the tier
+        // test; a 1x1 fixture would change the vertical viewport after decode.
+        final png = (await tester.runAsync(
+            () => boundaryCase ? makePng(width: 2, height: 3) : makePng()))!;
         for (var round = 0; round < 100; round++) {
           final outstanding =
               pending.where((request) => !request.isCompleted).toList();
@@ -304,6 +327,61 @@ void main() {
                   .toSet()
                   .length,
               lessThanOrEqualTo(2));
+          if (boundaryCase) {
+            final position = bloc.state.currentPage;
+            final visible = {...initialWindow.visible};
+            final groups = visible.map(spreads.spreadOf).toList()..sort();
+            final first = mode == 2 ? groups.first : spreads.spreadOf(position);
+            final last = mode == 2 ? groups.last : spreads.spreadOf(position);
+            Set<int> expectedPages(int radius) => {
+                  for (var page = 0; page < total; page++)
+                    if (spreads.spreadOf(page) >= first - radius &&
+                        spreads.spreadOf(page) <= last + radius)
+                      page,
+                };
+            final links = expectedPages(5);
+            final initialCalls = [...htmlPages];
+            expect(initialWindow.addresses, links);
+            expect(htmlPages.toSet(), links);
+            expect(bloc.state.loadingIndices, contains(heldPage));
+            final pendingLink = bloc.ensureImageAtIndex(heldPage);
+            var linkFinished = false;
+            pendingLink.then((_) => linkFinished = true);
+            final startedBeforeShrink = <int>{};
+            for (final count in [4, 3]) {
+              if (count == 3) startedBeforeShrink.addAll(imagePages);
+              savedSettings = savedSettings.copyWith(preloadCount: count);
+              settingsChanges.add(savedSettings);
+              await advance();
+              expect(bloc.state.preloadCount, count);
+              expect(bloc.state.currentPage, position);
+              expect(bloc.state.preloadWindow.visible, visible);
+              expect(bloc.state.preloadWindow.targets, expectedPages(count));
+              expect(bloc.state.preloadWindow.addresses, links);
+              expect(htmlPages, initialCalls,
+                  reason: 'Crossing the tier must reuse loaded/pending links');
+              expect(linkFinished, false);
+            }
+            heldLink.complete(GalleryImage(
+                index: heldPage,
+                pageUrl: 'page',
+                imageUrl: 'https://example.test/$heldPage.png',
+                width: 600,
+                height: 900));
+            await advance();
+            expect(linkFinished, true);
+            expect(await pendingLink, true);
+            await finishDownloads();
+            expect(bloc.state.preloadWindow.visible, visible);
+            expect(bloc.state.currentPage, position);
+            expect(imagePages.toSet(), containsAll(expectedPages(3)));
+            expect(imagePages.toSet().difference(startedBeforeShrink),
+                everyElement(isIn(expectedPages(3))),
+                reason: 'Only already-started outer images may finish');
+            expect(htmlPages, initialCalls);
+            expect(tester.takeException(), isNull);
+            return;
+          }
           var focus = start;
           if (mode != 2 &&
               start == 10 &&
@@ -465,6 +543,11 @@ void main() {
             FlutterError.onError = previousErrorHandler;
             ReaderReentryCache.shared.clear();
             await GetIt.I.reset();
+            // flutter_cache_manager 3.3.x dispose only closes the repository;
+            // it does not cancel CacheStore's one-shot 10-second cleanup timer.
+            // Let that housekeeping finish before closing/deleting test storage.
+            await tester.pump(const Duration(seconds: 11));
+            await advance();
             final disposal = EhImageCacheManager.instance.dispose();
             var disposed = false;
             disposal.whenComplete(() => disposed = true);

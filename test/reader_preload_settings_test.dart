@@ -82,6 +82,41 @@ void main() {
   });
 
   for (final locale in ['zh', 'en']) {
+    testWidgets('both entry selectors save every count and restore ($locale)',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repo = SettingsRepository(await storage());
+      final bloc = SettingsBloc(repo,
+          initialState: SettingsBloc.readSaved(repo).copyWith(locale: locale));
+      addTearDown(bloc.close);
+      await tester.pumpWidget(BlocProvider.value(
+          value: bloc,
+          child: const MaterialApp(
+              home: Scaffold(
+                  appBar: null,
+                  body: Column(children: [
+                    ReaderPreloadSetting(),
+                    ReaderPreloadSetting(toolbar: true),
+                  ])))));
+      for (final entry in ['reader-preload-count', 'reader-preload-button']) {
+        for (final n in [2, 3, 4, 5, 1]) {
+          await tester.tap(find.byKey(ValueKey(entry)));
+          await tester.pumpAndSettle();
+          final option = find.byKey(ValueKey('reader-preload-option-$n'));
+          await tester.ensureVisible(option);
+          await tester.tap(option);
+          await tester.pumpAndSettle();
+          expect(bloc.state.preloadCount, n);
+          expect(repo.getReaderPreloadCount(), n);
+          SharedPreferences.resetStatic();
+          final restored =
+              SettingsBloc.readSaved(SettingsRepository(await storage()));
+          expect(restored.preloadCount, n);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    });
+
     testWidgets('both entries share saved page/group count ($locale)',
         (tester) async {
       SharedPreferences.setMockInitialValues({});

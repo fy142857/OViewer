@@ -35,11 +35,11 @@ class MemoryImageCache extends Fake implements ReaderImageCache {
   Future<void> remove(String url) async => entries.remove(url);
 }
 
-Future<Uint8List> makePng() async {
+Future<Uint8List> makePng({int width = 1, int height = 1}) async {
   final recorder = ui.PictureRecorder();
   ui.Canvas(recorder).drawColor(const ui.Color(0xff336699), ui.BlendMode.src);
   final picture = recorder.endRecording();
-  final pixel = await picture.toImage(1, 1);
+  final pixel = await picture.toImage(width, height);
   final data = (await pixel.toByteData(format: ui.ImageByteFormat.png))!;
   final png = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   pixel.dispose();

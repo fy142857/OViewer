@@ -1,0 +1,314 @@
+{
+  "date": "2026-11-01",
+  "purpose": "Functional acceptance, not a new parameter comparison",
+  "production_source": "d5be11a9bed9dc2fea3914b946fdc985d20404ae",
+  "device": "Huawei VOG-AL10 Android 10",
+  "sdk": "Flutter 3.13.9",
+  "build": "Profile; isolated preload_bench package; no READER_ADDRESS_LEAD override",
+  "cases": 12,
+  "turns": 48,
+  "timeouts": 0,
+  "apk_sha256": "a1c82813f675a7f0235fe473309ce4062c5a2113f74791c666e598f59b97f88d",
+  "records_sha256": "b9fe33894eaa097db50f040d767f02ceb8428ad9aa3c392aed7303dc085da131",
+  "plan_match": true,
+  "empty_cache_and_native_policy_verified": true,
+  "cleanup": {
+    "package_removed": true,
+    "reverse_removed": true,
+    "fixture_stopped": true,
+    "stay_on_before": 7,
+    "stay_on_after": 7
+  },
+  "by_count": {
+    "3": {
+      "stage": "functional_acceptance",
+      "overall": {
+        "2": {
+          "cases": 6,
+          "turns": 24,
+          "mean_wait_ms": 2.74,
+          "total_wait_ms": 65.69,
+          "median_wait_ms": 2.26,
+          "p95_wait_ms": 5.02,
+          "median_display_ms": 191.87,
+          "p95_display_ms": 209.84,
+          "waits_over_100ms": 0,
+          "timeouts": 0,
+          "link_misses": 0,
+          "file_misses": 0,
+          "median_entry_ms": 1034.15,
+          "html_requests": 140,
+          "image_requests": 100,
+          "response_bytes": 19925732
+        }
+      },
+      "cohorts": {
+        "('functional', 3, 0, False, 350, False)": {
+          "2": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 2.66,
+            "total_wait_ms": 10.63,
+            "median_wait_ms": 2.11,
+            "p95_wait_ms": 4.33,
+            "median_display_ms": 192.77,
+            "p95_display_ms": 198.47,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 828.9,
+            "html_requests": 15,
+            "image_requests": 11,
+            "response_bytes": 2189072
+          }
+        },
+        "('functional', 3, 0, True, 350, False)": {
+          "2": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 1.88,
+            "total_wait_ms": 7.5,
+            "median_wait_ms": 1.91,
+            "p95_wait_ms": 1.95,
+            "median_display_ms": 195.23,
+            "p95_display_ms": 199.84,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 1093.71,
+            "html_requests": 30,
+            "image_requests": 22,
+            "response_bytes": 4366862
+          }
+        },
+        "('functional', 3, 1, False, 350, True)": {
+          "2": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 3.43,
+            "total_wait_ms": 13.71,
+            "median_wait_ms": 3.18,
+            "p95_wait_ms": 5.02,
+            "median_display_ms": 192.48,
+            "p95_display_ms": 196.62,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 888.7,
+            "html_requests": 15,
+            "image_requests": 11,
+            "response_bytes": 2189072
+          }
+        },
+        "('functional', 3, 1, True, 350, True)": {
+          "2": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 3.09,
+            "total_wait_ms": 12.35,
+            "median_wait_ms": 2.65,
+            "p95_wait_ms": 4.58,
+            "median_display_ms": 191.62,
+            "p95_display_ms": 198.62,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 1135.15,
+            "html_requests": 30,
+            "image_requests": 20,
+            "response_bytes": 4015862
+          }
+        },
+        "('functional', 3, 2, False, 350, False)": {
+          "2": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 1.83,
+            "total_wait_ms": 7.32,
+            "median_wait_ms": 1.61,
+            "p95_wait_ms": 2.73,
+            "median_display_ms": 189.94,
+            "p95_display_ms": 209.84,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 974.59,
+            "html_requests": 16,
+            "image_requests": 12,
+            "response_bytes": 2381058
+          }
+        },
+        "('functional', 3, 2, True, 350, False)": {
+          "2": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 3.54,
+            "total_wait_ms": 14.18,
+            "median_wait_ms": 2.71,
+            "p95_wait_ms": 7.03,
+            "median_display_ms": 187.54,
+            "p95_display_ms": 214.97,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 1425.8,
+            "html_requests": 34,
+            "image_requests": 24,
+            "response_bytes": 4783806
+          }
+        }
+      }
+    },
+    "4": {
+      "stage": "functional_acceptance",
+      "overall": {
+        "1": {
+          "cases": 6,
+          "turns": 24,
+          "mean_wait_ms": 2.79,
+          "total_wait_ms": 67.0,
+          "median_wait_ms": 2.54,
+          "p95_wait_ms": 4.65,
+          "median_display_ms": 193.59,
+          "p95_display_ms": 201.0,
+          "waits_over_100ms": 0,
+          "timeouts": 0,
+          "link_misses": 0,
+          "file_misses": 0,
+          "median_entry_ms": 1028.65,
+          "html_requests": 140,
+          "image_requests": 104,
+          "response_bytes": 20627732
+        }
+      },
+      "cohorts": {
+        "('functional', 4, 0, False, 350, False)": {
+          "1": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 2.33,
+            "total_wait_ms": 9.32,
+            "median_wait_ms": 2.39,
+            "p95_wait_ms": 2.52,
+            "median_display_ms": 190.07,
+            "p95_display_ms": 194.36,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 890.18,
+            "html_requests": 15,
+            "image_requests": 13,
+            "response_bytes": 2540072
+          }
+        },
+        "('functional', 4, 0, True, 350, False)": {
+          "1": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 3.82,
+            "total_wait_ms": 15.27,
+            "median_wait_ms": 3.84,
+            "p95_wait_ms": 5.17,
+            "median_display_ms": 194.45,
+            "p95_display_ms": 199.59,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 1060.36,
+            "html_requests": 30,
+            "image_requests": 20,
+            "response_bytes": 4015862
+          }
+        },
+        "('functional', 4, 1, False, 350, True)": {
+          "1": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 3.19,
+            "total_wait_ms": 12.77,
+            "median_wait_ms": 3.16,
+            "p95_wait_ms": 4.13,
+            "median_display_ms": 192.05,
+            "p95_display_ms": 196.98,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 895.05,
+            "html_requests": 15,
+            "image_requests": 13,
+            "response_bytes": 2540072
+          }
+        },
+        "('functional', 4, 1, True, 350, True)": {
+          "1": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 2.57,
+            "total_wait_ms": 10.27,
+            "median_wait_ms": 2.78,
+            "p95_wait_ms": 2.85,
+            "median_display_ms": 195.77,
+            "p95_display_ms": 198.95,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 1060.44,
+            "html_requests": 30,
+            "image_requests": 20,
+            "response_bytes": 4015862
+          }
+        },
+        "('functional', 4, 2, False, 350, False)": {
+          "1": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 2.53,
+            "total_wait_ms": 10.11,
+            "median_wait_ms": 2.69,
+            "p95_wait_ms": 3.32,
+            "median_display_ms": 198.17,
+            "p95_display_ms": 202.1,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 996.94,
+            "html_requests": 16,
+            "image_requests": 14,
+            "response_bytes": 2732058
+          }
+        },
+        "('functional', 4, 2, True, 350, False)": {
+          "1": {
+            "cases": 1,
+            "turns": 4,
+            "mean_wait_ms": 2.31,
+            "total_wait_ms": 9.25,
+            "median_wait_ms": 1.81,
+            "p95_wait_ms": 3.86,
+            "median_display_ms": 189.26,
+            "p95_display_ms": 193.91,
+            "waits_over_100ms": 0,
+            "timeouts": 0,
+            "link_misses": 0,
+            "file_misses": 0,
+            "median_entry_ms": 1487.89,
+            "html_requests": 34,
+            "image_requests": 24,
+            "response_bytes": 4783806
+          }
+        }
+      }
+    }
+  }
+}
