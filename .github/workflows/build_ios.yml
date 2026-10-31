@@ -23,9 +23,9 @@ permissions:
 
 jobs:
   build-ios:
-    # macos-13 is no longer available on GitHub-hosted runners. macos-14
-    # provides Xcode 15.4, which supports this project's iOS 12+ target.
-    runs-on: macos-14
+    # macos-14 is retiring. Validate Xcode 16.0 on macos-15 while retaining
+    # the project's iOS 12 deployment target; device compatibility needs testing.
+    runs-on: macos-15
     env:
       GH_TOKEN: ${{ github.token }}
       CANDIDATE_ID: ${{ inputs.candidate_id }}
@@ -56,7 +56,7 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '15.4'
+          xcode-version: '16.0'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
