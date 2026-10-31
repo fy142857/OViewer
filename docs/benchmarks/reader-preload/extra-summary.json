@@ -1,0 +1,85 @@
+{
+  "stage": "existing_scheduler_extra",
+  "overall": {
+    "3": {
+      "cases": 3,
+      "turns": 48,
+      "mean_wait_ms": 17.66,
+      "total_wait_ms": 847.73,
+      "median_wait_ms": 3.81,
+      "p95_wait_ms": 99.42,
+      "median_display_ms": 196.76,
+      "p95_display_ms": 294.7,
+      "waits_over_100ms": 2,
+      "timeouts": 0,
+      "link_misses": 0,
+      "file_misses": 15,
+      "median_entry_ms": 1854.47,
+      "html_requests": 145,
+      "image_requests": 106,
+      "response_bytes": 21038700
+    }
+  },
+  "cohorts": {
+    "('balanced', 3, 0, True, 350, False)": {
+      "3": {
+        "cases": 1,
+        "turns": 16,
+        "mean_wait_ms": 23.63,
+        "total_wait_ms": 378.03,
+        "median_wait_ms": 2.96,
+        "p95_wait_ms": 231.08,
+        "median_display_ms": 197.54,
+        "p95_display_ms": 448.02,
+        "waits_over_100ms": 1,
+        "timeouts": 0,
+        "link_misses": 0,
+        "file_misses": 7,
+        "median_entry_ms": 1220.55,
+        "html_requests": 58,
+        "image_requests": 42,
+        "response_bytes": 8344162
+      }
+    },
+    "('slow_links', 3, 0, False, 350, False)": {
+      "3": {
+        "cases": 1,
+        "turns": 16,
+        "mean_wait_ms": 3.83,
+        "total_wait_ms": 61.24,
+        "median_wait_ms": 4.04,
+        "p95_wait_ms": 6.02,
+        "median_display_ms": 196.36,
+        "p95_display_ms": 201.17,
+        "waits_over_100ms": 0,
+        "timeouts": 0,
+        "link_misses": 0,
+        "file_misses": 0,
+        "median_entry_ms": 1854.47,
+        "html_requests": 29,
+        "image_requests": 22,
+        "response_bytes": 4350376
+      }
+    },
+    "('slow_links', 3, 0, True, 350, False)": {
+      "3": {
+        "cases": 1,
+        "turns": 16,
+        "mean_wait_ms": 25.53,
+        "total_wait_ms": 408.46,
+        "median_wait_ms": 3.55,
+        "p95_wait_ms": 165.25,
+        "median_display_ms": 196.93,
+        "p95_display_ms": 359.4,
+        "waits_over_100ms": 1,
+        "timeouts": 0,
+        "link_misses": 0,
+        "file_misses": 8,
+        "median_entry_ms": 1993.93,
+        "html_requests": 58,
+        "image_requests": 42,
+        "response_bytes": 8344162
+      }
+    }
+  }
+}

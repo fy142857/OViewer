@@ -1,4 +1,5 @@
 import 'package:oviewer/models/reader_page_layout.dart';
+import 'package:oviewer/models/reader_preload_window.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:oviewer/models/reader_page_resource.dart';
@@ -457,16 +458,18 @@ void main() {
                 imageUrl: 'https://example.org/image.png'));
       }
       bloc.add(const LoadReaderImages(gid: 42, token: 'token'));
-      await waitFor(
-          (s) => s.loadedImages.length == 4 && s.loadingIndices.isEmpty);
+      final radius = 1 + ReaderPreloadWindow.addressLeadForCount(1);
+      await waitFor((s) =>
+          s.loadedImages.length == radius + 1 && s.loadingIndices.isEmpty);
       // A subsequent event drains all earlier load completions/preload events.
       bloc.add(ToggleReaderUI());
       await waitFor((s) => s.showUI);
-      expect(bloc.state.loadedImages.keys, unorderedEquals([0, 1, 2, 3]));
+      expect(bloc.state.loadedImages.keys,
+          unorderedEquals([for (var page = 0; page <= radius; page++) page]));
       bloc.add(const PageChanged(10));
-      await waitFor(
-          (s) => s.loadedImages.containsKey(13) && s.loadingIndices.isEmpty);
-      expect(bloc.state.loadedImages.containsKey(14), isFalse);
+      await waitFor((s) =>
+          s.loadedImages.containsKey(10 + radius) && s.loadingIndices.isEmpty);
+      expect(bloc.state.loadedImages.containsKey(11 + radius), isFalse);
       bloc.add(const ChangeReadingMode(2));
       await waitFor((s) => s.readingMode == 2);
       bloc.add(const ReaderViewportChanged(

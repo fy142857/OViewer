@@ -1,0 +1,81 @@
+{
+  "stage": "existing_scheduler_guard",
+  "overall": {
+    "1": {
+      "cases": 2,
+      "turns": 32,
+      "mean_wait_ms": 15.28,
+      "total_wait_ms": 488.86,
+      "median_wait_ms": 2.91,
+      "p95_wait_ms": 107.02,
+      "median_display_ms": 196.28,
+      "p95_display_ms": 301.4,
+      "waits_over_100ms": 2,
+      "timeouts": 0,
+      "link_misses": 0,
+      "file_misses": 12,
+      "median_entry_ms": 2044.32,
+      "html_requests": 116,
+      "image_requests": 84,
+      "response_bytes": 16688324
+    },
+    "2": {
+      "cases": 2,
+      "turns": 32,
+      "mean_wait_ms": 31.94,
+      "total_wait_ms": 1022.01,
+      "median_wait_ms": 3.11,
+      "p95_wait_ms": 150.11,
+      "median_display_ms": 196.28,
+      "p95_display_ms": 347.37,
+      "waits_over_100ms": 4,
+      "timeouts": 0,
+      "link_misses": 0,
+      "file_misses": 11,
+      "median_entry_ms": 2107.29,
+      "html_requests": 124,
+      "image_requests": 84,
+      "response_bytes": 16820212
+    }
+  },
+  "cohorts": {
+    "('slow_links', 5, 0, True, 350, False)": {
+      "1": {
+        "cases": 2,
+        "turns": 32,
+        "mean_wait_ms": 15.28,
+        "total_wait_ms": 488.86,
+        "median_wait_ms": 2.91,
+        "p95_wait_ms": 107.02,
+        "median_display_ms": 196.28,
+        "p95_display_ms": 301.4,
+        "waits_over_100ms": 2,
+        "timeouts": 0,
+        "link_misses": 0,
+        "file_misses": 12,
+        "median_entry_ms": 2044.32,
+        "html_requests": 116,
+        "image_requests": 84,
+        "response_bytes": 16688324
+      },
+      "2": {
+        "cases": 2,
+        "turns": 32,
+        "mean_wait_ms": 31.94,
+        "total_wait_ms": 1022.01,
+        "median_wait_ms": 3.11,
+        "p95_wait_ms": 150.11,
+        "median_display_ms": 196.28,
+        "p95_display_ms": 347.37,
+        "waits_over_100ms": 4,
+        "timeouts": 0,
+        "link_misses": 0,
+        "file_misses": 11,
+        "median_entry_ms": 2107.29,
+        "html_requests": 124,
+        "image_requests": 84,
+        "response_bytes": 16820212
+      }
+    }
+  }
+}

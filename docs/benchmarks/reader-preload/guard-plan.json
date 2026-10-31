@@ -1,0 +1,36 @@
+[
+  {
+    "profile": "slow_links",
+    "html_ms": 1200,
+    "image_ms": 60,
+    "kbps": 2048,
+    "n": 5,
+    "mode": 0,
+    "double": true,
+    "backward": false,
+    "pace_ms": 350,
+    "turns": 16,
+    "repeat": 3,
+    "warmup_ms": 2000,
+    "stage": "existing_scheduler_guard",
+    "scheduler": "existing",
+    "driver_revision": 2
+  },
+  {
+    "profile": "slow_links",
+    "html_ms": 1200,
+    "image_ms": 60,
+    "kbps": 2048,
+    "n": 5,
+    "mode": 0,
+    "double": true,
+    "backward": false,
+    "pace_ms": 350,
+    "turns": 16,
+    "repeat": 4,
+    "warmup_ms": 2000,
+    "stage": "existing_scheduler_guard",
+    "scheduler": "existing",
+    "driver_revision": 2
+  }
+]

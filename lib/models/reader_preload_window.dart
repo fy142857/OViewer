@@ -2,8 +2,22 @@ import 'reader_page_layout.dart';
 
 /// Original page indices, regardless of direction or presentation layout.
 class ReaderPreloadWindow {
+  // Build-time override is used by the isolated device benchmark, never a
+  // second user preference. The unit follows the current page/spread layout.
+  static const _addressLeadOverride =
+      int.fromEnvironment('READER_ADDRESS_LEAD', defaultValue: -1);
+
+  static int addressLeadForCount(int count) {
+    if (_addressLeadOverride >= 0) return _addressLeadOverride.clamp(0, 4);
+    // Larger image windows already provide enough time for link requests.
+    // See READER_PRELOAD_VALIDATION.md for the measured 1/2/3-group comparison.
+    return count.clamp(1, 5) <= 3 ? 2 : 1;
+  }
+
   ReaderPreloadWindow(ReaderSpreads spreads, int currentPage, int count,
-      {Set<int> visiblePages = const {}, bool expandAroundVisible = true}) {
+      {Set<int> visiblePages = const {},
+      bool expandAroundVisible = true,
+      int? addressLead}) {
     if (spreads.totalPages <= 0) return;
     final visibleSpreads = visiblePages
         .where((p) => p >= 0 && p < spreads.totalPages)
@@ -30,14 +44,16 @@ class ReaderPreloadWindow {
       }
     }
     targets.addAll([...visible, ...neighbours]);
-    final first = visible.first;
-    final last = visible.last;
     addresses.addAll(targets);
-    // Keep the inexpensive address look-ahead even when only one image/group
-    // is requested. A group can contain two original pages.
-    for (var distance = 1; distance <= 3; distance++) {
-      for (final page in [last + distance, first - distance]) {
-        if (page >= 0 && page < spreads.totalPages) addresses.add(page);
+    final lead = addressLead ?? addressLeadForCount(count);
+    for (var distance = 1; distance <= lead.clamp(0, 4); distance++) {
+      for (final group in [
+        lastGroup + count.clamp(1, 5) + distance,
+        firstGroup - count.clamp(1, 5) - distance
+      ]) {
+        if (group >= 0 && group < spreads.count) {
+          addresses.addAll(spreads.pages(group));
+        }
       }
     }
   }

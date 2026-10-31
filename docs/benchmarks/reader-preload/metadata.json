@@ -1,0 +1,70 @@
+{
+  "device": "Huawei VOG-AL10 / Android 10",
+  "flutter": "3.13.9",
+  "dart": "3.1.5",
+  "build_mode": "Profile arm64",
+  "base_commit": "16ce71de3060427df75ea5fb7404022f54048be4",
+  "cases": 89,
+  "turns": 1392,
+  "timeouts": 0,
+  "measurements_sha256": "92915927c4fdb205e9cbf2b1e17f81dd5a92f602b162a5d43f36431bb01859e9",
+  "apk_sha256": {
+    "preload-existing-lead0.apk": "b680a531ac10bd7f185bf02b3fea8fff27eaad189fe63c8b0fa8c3a18be2d55d",
+    "preload-existing-lead1.apk": "d3f282ee8b84d0ebeeeacec10520f788799ab701e2d4021647e7cbf6d7dc1dfd",
+    "preload-existing-lead2.apk": "93f0472e7b9e7f60c2b7a1ec97a2e3ea8668ab5df1081ead21ae38fe9e9643af",
+    "preload-existing-lead3.apk": "c478ecaf2aaf38996eaabf554fcb9296c26770df3b632a9284804bfa01fc2905",
+    "preload-shipping-default.apk": "87f255f6af5b95adc2d92a2807763f71fec0506d63263ee6cc8b3b335d1e83b6",
+    "preload-final-policy.apk": "a1c82813f675a7f0235fe473309ce4062c5a2113f74791c666e598f59b97f88d"
+  },
+  "policy_check_cases": 5,
+  "policy_check_turns": 25,
+  "policy": {
+    "1": {
+      "image_each_side": 1,
+      "link_each_side": 3
+    },
+    "2": {
+      "image_each_side": 2,
+      "link_each_side": 4
+    },
+    "3": {
+      "image_each_side": 3,
+      "link_each_side": 5
+    },
+    "4": {
+      "image_each_side": 4,
+      "link_each_side": 5
+    },
+    "5": {
+      "image_each_side": 5,
+      "link_each_side": 6
+    }
+  },
+  "apk_roles": {
+    "preload-shipping-default.apk": "Constant-2 candidate used only for N=5 regression checks; not the final default.",
+    "preload-final-policy.apk": "Final count-dependent policy, no READER_ADDRESS_LEAD override."
+  },
+  "production_source_sha256": {
+    "lib/models/reader_preload_window.dart": "f70e77ef5689993881366833df6a850210f12e0f571761485032defc042f9a7d",
+    "lib/blocs/reader/reader_bloc.dart": "a053f02425a14edc06ea52f5fc4b4431b628a1a426a19b64d9e7182feaf00586",
+    "lib/screens/reader/reader_screen.dart": "2ba798789dc4efc758e274bb3661194d38a81daafa3cd94f4dbf1f67fc02a09c",
+    "lib/core/network/reader_preload_controller.dart": "46863b75f5e9966c3adba28e48656f3986fae6691dd49914749b53a8231a57cc"
+  },
+  "source_hash_encoding": "UTF-8 with LF-normalized newlines",
+  "validation": {
+    "flutter": "3.16.0",
+    "flutter_tests": 1122,
+    "python_tests": 56,
+    "analyzer_new_errors_warnings": 0,
+    "benchmark_driver_analyzer_issues": 0,
+    "full_link_window_widget_scenarios": 58
+  },
+  "cleanup": {
+    "test_package_removed": true,
+    "reverse_8765_removed": true,
+    "fixture_stopped": true,
+    "stay_awake_before": 7,
+    "stay_awake_after": 7
+  },
+  "policy_unit": "Pages in single-page layout; complete two-page spreads in double-page layout."
+}

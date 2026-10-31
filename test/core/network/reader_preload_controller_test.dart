@@ -43,7 +43,7 @@ void main() {
     expect(controller.permits(11, 0), true);
   });
   for (final layout in ReaderPageLayout.values) {
-    for (final n in [1, 3, 5]) {
+    for (final n in [1, 2, 3, 4, 5]) {
       for (final total in [0, 1, 19, 50]) {
         test('window $layout N=$n total=$total preserves bounds and metadata',
             () {
@@ -57,12 +57,16 @@ void main() {
                 ((group + n + 1) * spreads.pagesPerSpread).clamp(0, total);
             expect(window.targets, {for (var p = first; p < last; p++) p});
             expect(window.addresses, containsAll(window.targets));
-            expect(
-                window.addresses,
-                containsAll([
-                  for (var p = page - 3; p <= page + 3; p++)
-                    if (p >= 0 && p < total) p,
-                ]));
+            final radius = n + ReaderPreloadWindow.addressLeadForCount(n);
+            expect(window.addresses, {
+              for (var p = ((group - radius) * spreads.pagesPerSpread)
+                      .clamp(0, total);
+                  p <
+                      ((group + radius + 1) * spreads.pagesPerSpread)
+                          .clamp(0, total);
+                  p++)
+                p,
+            });
             expect(window.neighbours.toSet().length, window.neighbours.length);
           }
           if (total == 0)
@@ -79,6 +83,39 @@ void main() {
     expect(window.visible, {10, 11, 12, 13, 14, 15});
     expect(window.targets, {for (var p = 4; p <= 21; p++) p});
     expect(window.neighbours, [16, 17, 8, 9, 18, 19, 6, 7, 20, 21, 4, 5]);
+  });
+
+  test('link lead follows groups without enlarging the image window', () {
+    for (final lead in [0, 1, 2, 3, 4]) {
+      final single = ReaderPreloadWindow(
+          const ReaderSpreads(100, ReaderPageLayout.single), 20, 3,
+          addressLead: lead);
+      expect(single.targets, {for (var p = 17; p <= 23; p++) p});
+      expect(
+          single.addresses, {for (var p = 17 - lead; p <= 23 + lead; p++) p});
+      final paired = ReaderPreloadWindow(
+          const ReaderSpreads(100, ReaderPageLayout.doublePage), 20, 3,
+          addressLead: lead);
+      expect(paired.targets, {for (var p = 14; p <= 27; p++) p});
+      expect(paired.addresses,
+          {for (var p = 14 - 2 * lead; p <= 27 + 2 * lead; p++) p});
+    }
+  });
+
+  test(
+      'larger image windows retain link headroom without unnecessary expansion',
+      () {
+    for (final layout in ReaderPageLayout.values) {
+      final spreads = ReaderSpreads(100, layout);
+      final small = ReaderPreloadWindow(spreads, 40, 3);
+      final large = ReaderPreloadWindow(spreads, 40, 4);
+      expect(small.addresses, large.addresses);
+      expect(small.targets.length, lessThan(large.targets.length));
+      expect(small.addresses.difference(small.targets).length,
+          4 * spreads.pagesPerSpread);
+      expect(large.addresses.difference(large.targets).length,
+          2 * spreads.pagesPerSpread);
+    }
   });
 
   ReaderPreloadWindow window(int page, int n, {Set<int> visible = const {}}) =>

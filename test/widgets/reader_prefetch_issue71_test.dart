@@ -288,8 +288,7 @@ void main() {
           expect(
               htmlPages.toSet(),
               containsAll([
-                for (var page = start - 3; page <= start + 3; page++)
-                  if (page >= 0 && page < total) page,
+                ...bloc.state.preloadWindow.addresses,
               ]));
           expect(htmlPages.length, htmlPages.toSet().length);
           debugPrint('issue71 $scenario HTML=$htmlPages imageGET=$imagePages');
