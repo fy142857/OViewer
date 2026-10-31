@@ -1,6 +1,6 @@
 name: Build iOS IPA
 
-run-name: "ios / ${{ inputs.candidate_id || github.event.pull_request.number }} / slow:${{ github.event_name == 'pull_request' && 'auto' || (inputs.skip_reader_prefetch_tests && 'skip' || 'run') }}"
+run-name: "${{ inputs.benchmark_tests && format('benchmark round {0} / ', inputs.benchmark_round) || '' }}ios / ${{ inputs.candidate_id || github.event.pull_request.number }} / slow:${{ github.event_name == 'pull_request' && 'auto' || (inputs.skip_reader_prefetch_tests && 'skip' || 'run') }}"
 
 on:
   pull_request:
@@ -11,6 +11,15 @@ on:
       - 'LICENSE*'
   workflow_dispatch:
     inputs:
+      benchmark_tests:
+        description: 'Experimental test-only concurrency comparison'
+        default: false
+        type: boolean
+      benchmark_round:
+        description: 'Experiment round'
+        default: '1'
+        type: choice
+        options: ['1', '2', '3']
       candidate_id:
         description: 'Registered candidate, for example 1.0.1+2'
         required: true
@@ -31,6 +40,7 @@ permissions:
 
 jobs:
   build-ios:
+    if: ${{ !inputs.benchmark_tests }}
     # macos-14 is retiring. Validate Xcode 16.4 on macos-15 while retaining
     # the project's iOS 12 deployment target; device compatibility needs testing.
     runs-on: macos-15
@@ -180,4 +190,74 @@ jobs:
           overwrite: true
           path: build-metadata.json
           if-no-files-found: error
+          retention-days: 30
+
+  test-benchmark:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark_tests }}
+    name: benchmark round ${{ inputs.benchmark_round }} / concurrency ${{ matrix.concurrency }}
+    runs-on: macos-15
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        concurrency: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: subject
+    steps:
+      - name: Checkout experimental harness
+        uses: actions/checkout@v4
+        with:
+          path: benchmark-harness
+          sparse-checkout: scripts/benchmark_flutter_tests.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Checkout frozen candidate 139
+        uses: actions/checkout@v4
+        with:
+          ref: dbf940b36996169f0817a3b45480d0f50cc3ec6e
+          path: subject
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test Pod deployment target guard
+        run: ruby scripts/tests/ios_deployment_target_guard_test.rb
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+      - name: Setup Flutter
+        id: flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+          channel: 'stable'
+          cache: true
+      - name: Flutter doctor
+        run: flutter doctor -v
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Verify vendored WebView against official archive
+        run: python -m scripts.verify_webview_vendor --download-upstream --check-resolution
+      - name: Generate drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Verify version rules
+        run: python -m unittest discover -s scripts/tests -v
+      - name: Analyze against reviewed baseline
+        run: python -m scripts.versioning.analyze
+      - name: Measure Flutter tests
+        env:
+          FLUTTER_CACHE_HIT: ${{ steps.flutter.outputs.CACHE-HIT }}
+          PUB_CACHE_HIT: ${{ steps.flutter.outputs.PUB-CACHE-HIT }}
+          BENCHMARK_ROUND: ${{ inputs.benchmark_round }}
+          TEST_CONCURRENCY: ${{ matrix.concurrency }}
+        run: python ../benchmark-harness/scripts/benchmark_flutter_tests.py --round "$BENCHMARK_ROUND" --concurrency "$TEST_CONCURRENCY"
+      - name: Upload benchmark diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-r${{ inputs.benchmark_round }}-c${{ matrix.concurrency }}
+          path: subject/reports/
+          if-no-files-found: warn
           retention-days: 30
