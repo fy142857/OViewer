@@ -80,6 +80,12 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Verify vendored WebView against official archive
+        run: python -m scripts.verify_webview_vendor --download-upstream --check-resolution
+
+      - name: Test Pod deployment target guard
+        run: ruby scripts/tests/ios_deployment_target_guard_test.rb
+
       - name: Generate drift code
         run: dart run build_runner build --delete-conflicting-outputs
 
@@ -104,6 +110,22 @@ jobs:
             -derivedDataPath build/ios/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO
+
+      - name: Verify iOS deployment declarations
+        if: github.event_name == 'workflow_dispatch'
+        run: >-
+          python -m scripts.verify_ios_minimum
+          --app build/ios/DerivedData/Build/Products/Release-iphoneos/Runner.app
+          --report build/ios/ios-compatibility.json
+
+      - name: Upload iOS compatibility report
+        if: always() && github.event_name == 'workflow_dispatch' && hashFiles('build/ios/ios-compatibility.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-compatibility
+          path: build/ios/ios-compatibility.json
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Create unsigned IPA
         if: github.event_name == 'workflow_dispatch'

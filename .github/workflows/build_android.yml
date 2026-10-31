@@ -83,6 +83,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Verify vendored WebView against official archive
+        run: python -m scripts.verify_webview_vendor --download-upstream --check-resolution
+
       - name: Generate drift code
         run: dart run build_runner build --delete-conflicting-outputs
 

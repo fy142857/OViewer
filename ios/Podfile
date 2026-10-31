@@ -1,4 +1,4 @@
-# iOS 12.0 deployment target - compatible with Xcode 15+.
+# Preserve the iOS 12 target; Xcode 16 runtime compatibility needs device testing.
 platform :ios, '12.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
@@ -34,10 +34,15 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
-# Keep every pod aligned with the app's iOS 12.0 deployment target.
+require_relative 'deployment_target_guard'
+
+# Reject higher Pod requirements before normalizing older targets to iOS 12.
 post_install do |installer|
+  OViewerDeploymentTarget.verify_specs!(installer.pod_targets)
   installer.pods_project.targets.each do |target|
+    OViewerDeploymentTarget.verify_target!(target)
     flutter_additional_ios_build_settings(target)
+    OViewerDeploymentTarget.verify_target!(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
     end

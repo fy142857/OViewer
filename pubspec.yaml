@@ -48,8 +48,9 @@ dependencies:
   shimmer: ^3.0.0
   flutter_slidable: ^3.0.1
 
-  # WebView (Login) - MUST stay on 5.x for iOS 11
-  flutter_inappwebview: ^5.8.0
+  # Xcode 16 backport retaining Flutter 3.13/3.16 and the iOS 12 target.
+  flutter_inappwebview:
+    path: third_party/flutter_inappwebview
 
   # Utils
   intl: '>=0.18.1'

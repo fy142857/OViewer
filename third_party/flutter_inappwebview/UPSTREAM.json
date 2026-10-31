@@ -1,0 +1,1086 @@
+{
+  "archive_sha256": "d198297060d116b94048301ee6749cd2e7d03c1f2689783f52d210a6b7aba350",
+  "archive_url": "https://pub.dev/api/archives/flutter_inappwebview-5.8.0.tar.gz",
+  "files": {
+    "CHANGELOG.md": {
+      "patched_sha256": "dc8c70c09eb3b4dfd34eda15fc277ff23fe7281440e6ecf33e1ae74e031305ab",
+      "upstream_sha256": "dc8c70c09eb3b4dfd34eda15fc277ff23fe7281440e6ecf33e1ae74e031305ab"
+    },
+    "LICENSE": {
+      "patched_sha256": "e229a96b4dce00b1ac6e7beaf05e75ec38e7017fc75916ccc866027fee0a2913",
+      "upstream_sha256": "e229a96b4dce00b1ac6e7beaf05e75ec38e7017fc75916ccc866027fee0a2913"
+    },
+    "README.md": {
+      "patched_sha256": "6e66f95fb06b5ac8f708d6fbe051c6954507532f9a3594d845b60d4805e3efbe",
+      "upstream_sha256": "6e66f95fb06b5ac8f708d6fbe051c6954507532f9a3594d845b60d4805e3efbe"
+    },
+    "android/build.gradle": {
+      "patched_sha256": "0463e73c256da5b5b46d8f6dbb32814972962482187428f5791e35fcf3d9138b",
+      "upstream_sha256": "0463e73c256da5b5b46d8f6dbb32814972962482187428f5791e35fcf3d9138b"
+    },
+    "android/gradle.properties": {
+      "patched_sha256": "b1e114bf6dc9c036895d0909014ffc9f6e8fe30cce98c109786f49bb3d29bcf4",
+      "upstream_sha256": "b1e114bf6dc9c036895d0909014ffc9f6e8fe30cce98c109786f49bb3d29bcf4"
+    },
+    "android/proguard-rules.pro": {
+      "patched_sha256": "8dc5dc018e93e1a0421a0c94729256d39173ed4a1a53de5f2e371704309ffad0",
+      "upstream_sha256": "8dc5dc018e93e1a0421a0c94729256d39173ed4a1a53de5f2e371704309ffad0"
+    },
+    "android/settings.gradle": {
+      "patched_sha256": "d211d2ad606c963bb50387c5ad434b6ad8f32120c5dab89b8ae604934c62f587",
+      "upstream_sha256": "d211d2ad606c963bb50387c5ad434b6ad8f32120c5dab89b8ae604934c62f587"
+    },
+    "android/src/main/AndroidManifest.xml": {
+      "patched_sha256": "7044f4266fd5f0c324ba4ae4406fda45d2f5630900a661e0277012b72c1c17d0",
+      "upstream_sha256": "7044f4266fd5f0c324ba4ae4406fda45d2f5630900a661e0277012b72c1c17d0"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/FlutterWebViewFactory.java": {
+      "patched_sha256": "31bca3f8c728177e122667fc163daea87a33019fa4b90f7cd362e6cb0f1e7542",
+      "upstream_sha256": "31bca3f8c728177e122667fc163daea87a33019fa4b90f7cd362e6cb0f1e7542"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/InAppWebViewFileProvider.java": {
+      "patched_sha256": "f48c218914b63a2f329f2e5ace8436101a5c80c7fbbd67441bf14724da84f44a",
+      "upstream_sha256": "f48c218914b63a2f329f2e5ace8436101a5c80c7fbbd67441bf14724da84f44a"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/InAppWebViewFlutterPlugin.java": {
+      "patched_sha256": "d6a7f395fd2173ee8d1371f59f976c98806e3dad92b36420020374e06858c88e",
+      "upstream_sha256": "d6a7f395fd2173ee8d1371f59f976c98806e3dad92b36420020374e06858c88e"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/InAppWebViewMethodHandler.java": {
+      "patched_sha256": "e6b0805e17387562142672fef869910a1ef3764b3cd568efa21cb4aa12474fa6",
+      "upstream_sha256": "e6b0805e17387562142672fef869910a1ef3764b3cd568efa21cb4aa12474fa6"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/InAppWebViewStatic.java": {
+      "patched_sha256": "f03ba2f79b8c1374fafd561c889f2a8e51d229535a4211d796a826b9b048c971",
+      "upstream_sha256": "f03ba2f79b8c1374fafd561c889f2a8e51d229535a4211d796a826b9b048c971"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/JavaScriptBridgeInterface.java": {
+      "patched_sha256": "fd96533b467195a1a0d572df7a7a5ab413dc0047c6403ca459bd3c211356850b",
+      "upstream_sha256": "fd96533b467195a1a0d572df7a7a5ab413dc0047c6403ca459bd3c211356850b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/MyCookieManager.java": {
+      "patched_sha256": "e091c01d178b8de1cde38460e7e5608acc4d9a79ddaf63e96d41ff1811bb1292",
+      "upstream_sha256": "e091c01d178b8de1cde38460e7e5608acc4d9a79ddaf63e96d41ff1811bb1292"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/MyWebStorage.java": {
+      "patched_sha256": "795d078a878f354890fe1ec7d6cd84a2a48a5aaf1a32ff7e26bea01c5d65ca4f",
+      "upstream_sha256": "795d078a878f354890fe1ec7d6cd84a2a48a5aaf1a32ff7e26bea01c5d65ca4f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/Options.java": {
+      "patched_sha256": "d17c2e9affa05fc51a2dd8671c1343bed720211405cb3f78dd84b28917ec2759",
+      "upstream_sha256": "d17c2e9affa05fc51a2dd8671c1343bed720211405cb3f78dd84b28917ec2759"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/PlatformUtil.java": {
+      "patched_sha256": "3c2b0e8d875237c19d040c20fb05efef6c0191394f452f27634cb28e53de6350",
+      "upstream_sha256": "3c2b0e8d875237c19d040c20fb05efef6c0191394f452f27634cb28e53de6350"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/RequestPermissionHandler.java": {
+      "patched_sha256": "c0199089fc0557d5c0f3632d366147821bfc5d04d38f404118517534c8aa2dba",
+      "upstream_sha256": "c0199089fc0557d5c0f3632d366147821bfc5d04d38f404118517534c8aa2dba"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/ServiceWorkerManager.java": {
+      "patched_sha256": "8a8f1bd79043e01ecac0060bffbc6aed7d14477df9fae7d5825858f2ef26e617",
+      "upstream_sha256": "8a8f1bd79043e01ecac0060bffbc6aed7d14477df9fae7d5825858f2ef26e617"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/Util.java": {
+      "patched_sha256": "c4b4c0b6582666c52c3ff11015254ea7dd0b52d965561bf76e6199e0cb05307d",
+      "upstream_sha256": "c4b4c0b6582666c52c3ff11015254ea7dd0b52d965561bf76e6199e0cb05307d"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/WebViewFeatureManager.java": {
+      "patched_sha256": "556eb744d4d7953ba17aafea5063ca8503b1e0f74ea6611c72ac027c5dce4544",
+      "upstream_sha256": "556eb744d4d7953ba17aafea5063ca8503b1e0f74ea6611c72ac027c5dce4544"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/ActionBroadcastReceiver.java": {
+      "patched_sha256": "c5f351a097504aab5eeca7e3b34f73f17b54e91c3a22b97039fac833d5d22ce4",
+      "upstream_sha256": "c5f351a097504aab5eeca7e3b34f73f17b54e91c3a22b97039fac833d5d22ce4"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/ChromeCustomTabsActivity.java": {
+      "patched_sha256": "b5ce252aa5d0b6f9e73e938747c278bae31afa110e3f3148aea11718d1553693",
+      "upstream_sha256": "b5ce252aa5d0b6f9e73e938747c278bae31afa110e3f3148aea11718d1553693"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/ChromeCustomTabsActivitySingleInstance.java": {
+      "patched_sha256": "8ccccb952cfc497889c7c2ab4fdab297a2f1fe39c71b852f25aaedff4a12603c",
+      "upstream_sha256": "8ccccb952cfc497889c7c2ab4fdab297a2f1fe39c71b852f25aaedff4a12603c"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/ChromeCustomTabsOptions.java": {
+      "patched_sha256": "a8d0eef691c2c9bc4ce95c546ce9a1576565a2640919f88f6671db14f5903112",
+      "upstream_sha256": "a8d0eef691c2c9bc4ce95c546ce9a1576565a2640919f88f6671db14f5903112"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/ChromeSafariBrowserManager.java": {
+      "patched_sha256": "42d8f50a61e53ee14e09e752ae7e39a3d08afad86264bbd3c53297d737049a3b",
+      "upstream_sha256": "42d8f50a61e53ee14e09e752ae7e39a3d08afad86264bbd3c53297d737049a3b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/CustomTabActivityHelper.java": {
+      "patched_sha256": "d548ce664986fc0c6934a4a4905b9af03d14364fae47fabf5de0ee418aa82a13",
+      "upstream_sha256": "d548ce664986fc0c6934a4a4905b9af03d14364fae47fabf5de0ee418aa82a13"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/CustomTabsHelper.java": {
+      "patched_sha256": "a7d9f6ed9b605cc216f64a0468f92becf0c7f58d301ba2e6fee2fda329daf953",
+      "upstream_sha256": "a7d9f6ed9b605cc216f64a0468f92becf0c7f58d301ba2e6fee2fda329daf953"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/KeepAliveService.java": {
+      "patched_sha256": "beb5ac3e3270a3c0408a5e700b6dee0c28ad8980894bbc80723c6255f9b5172f",
+      "upstream_sha256": "beb5ac3e3270a3c0408a5e700b6dee0c28ad8980894bbc80723c6255f9b5172f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/ServiceConnection.java": {
+      "patched_sha256": "bebc49ec4c83649bfafa2c238d5ec06c2f0921ee088ec52ae579d73fc1c87861",
+      "upstream_sha256": "bebc49ec4c83649bfafa2c238d5ec06c2f0921ee088ec52ae579d73fc1c87861"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/ServiceConnectionCallback.java": {
+      "patched_sha256": "22caf574cd019779660311b3fb0277b28efaee5feecfac08459eaecb6792683a",
+      "upstream_sha256": "22caf574cd019779660311b3fb0277b28efaee5feecfac08459eaecb6792683a"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/TrustedWebActivity.java": {
+      "patched_sha256": "28881c9e8d1433e374a75fbeffe583013d798fdebfbbc75a92b67a9ffce464fd",
+      "upstream_sha256": "28881c9e8d1433e374a75fbeffe583013d798fdebfbbc75a92b67a9ffce464fd"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/chrome_custom_tabs/TrustedWebActivitySingleInstance.java": {
+      "patched_sha256": "b0e2fb1e2405fe470921a3328d077656ba30d01c0b8d6ff6776f35062ab8dd46",
+      "upstream_sha256": "b0e2fb1e2405fe470921a3328d077656ba30d01c0b8d6ff6776f35062ab8dd46"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/content_blocker/ContentBlocker.java": {
+      "patched_sha256": "ea1f3526a1ca56deafb014358d6445346763027e367eb782fd771f3beae13cbd",
+      "upstream_sha256": "ea1f3526a1ca56deafb014358d6445346763027e367eb782fd771f3beae13cbd"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/content_blocker/ContentBlockerAction.java": {
+      "patched_sha256": "ee2b2479f127a6fd2560e897cb9b87dd3ec1cf6ada9b9c1cdeb3b5e0332a2c61",
+      "upstream_sha256": "ee2b2479f127a6fd2560e897cb9b87dd3ec1cf6ada9b9c1cdeb3b5e0332a2c61"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/content_blocker/ContentBlockerActionType.java": {
+      "patched_sha256": "caa90493fa74f0220a84e1cd3b41e1a8642a177e9cf2d6e02f42677977f021b4",
+      "upstream_sha256": "caa90493fa74f0220a84e1cd3b41e1a8642a177e9cf2d6e02f42677977f021b4"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/content_blocker/ContentBlockerHandler.java": {
+      "patched_sha256": "1700dfa3c81ae3fe7edbb6a8b03ff943f4d25d8c33484718db713b41c1e57d34",
+      "upstream_sha256": "1700dfa3c81ae3fe7edbb6a8b03ff943f4d25d8c33484718db713b41c1e57d34"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/content_blocker/ContentBlockerTrigger.java": {
+      "patched_sha256": "c6872e2b7e47227c7ca575cebf12d43e95a6c5507b41e780760b3a07f6b1250c",
+      "upstream_sha256": "c6872e2b7e47227c7ca575cebf12d43e95a6c5507b41e780760b3a07f6b1250c"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/content_blocker/ContentBlockerTriggerResourceType.java": {
+      "patched_sha256": "31efc26d784e3b10e2c08d19d267e7d79665a8c903ef8708ca1df30715454e88",
+      "upstream_sha256": "31efc26d784e3b10e2c08d19d267e7d79665a8c903ef8708ca1df30715454e88"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/credential_database/CredentialDatabase.java": {
+      "patched_sha256": "203c1136e4a8fe033ccdd9aa79eaf2105e5127e99acefa4a2c67442cc8f3583b",
+      "upstream_sha256": "203c1136e4a8fe033ccdd9aa79eaf2105e5127e99acefa4a2c67442cc8f3583b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/credential_database/CredentialDatabaseHandler.java": {
+      "patched_sha256": "aeac1eceaa70629c1d1a4f782baf3e4df8eec7364372e3d808baa6ed26ea3a59",
+      "upstream_sha256": "aeac1eceaa70629c1d1a4f782baf3e4df8eec7364372e3d808baa6ed26ea3a59"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/credential_database/CredentialDatabaseHelper.java": {
+      "patched_sha256": "03cca0254fecad9fe486dec1ffeaac91a97a8e875756cd8eff605f34df25ad7b",
+      "upstream_sha256": "03cca0254fecad9fe486dec1ffeaac91a97a8e875756cd8eff605f34df25ad7b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/credential_database/URLCredentialContract.java": {
+      "patched_sha256": "496523587b9058f0d5f14e0d861ecb653edc1ff8432daf47330fa1567524c0cd",
+      "upstream_sha256": "496523587b9058f0d5f14e0d861ecb653edc1ff8432daf47330fa1567524c0cd"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/credential_database/URLCredentialDao.java": {
+      "patched_sha256": "e380829d0b9b29eabba0a19fce210d24769237a0e63ec001d984359cbb54810d",
+      "upstream_sha256": "e380829d0b9b29eabba0a19fce210d24769237a0e63ec001d984359cbb54810d"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/credential_database/URLProtectionSpaceContract.java": {
+      "patched_sha256": "3716dd61a7775848364b0083f28f8884b5345c776b97594fa294d997487b9de2",
+      "upstream_sha256": "3716dd61a7775848364b0083f28f8884b5345c776b97594fa294d997487b9de2"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/credential_database/URLProtectionSpaceDao.java": {
+      "patched_sha256": "ad619764e39bef4531cf8771750023f1eb172807e3d3598fb4a900a89f635055",
+      "upstream_sha256": "ad619764e39bef4531cf8771750023f1eb172807e3d3598fb4a900a89f635055"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/headless_in_app_webview/HeadlessInAppWebView.java": {
+      "patched_sha256": "4d1bfe533fbc5ef64020e63127b2d8ccfeff073541d1ba440dd5ec9ad86a56b7",
+      "upstream_sha256": "4d1bfe533fbc5ef64020e63127b2d8ccfeff073541d1ba440dd5ec9ad86a56b7"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/headless_in_app_webview/HeadlessInAppWebViewManager.java": {
+      "patched_sha256": "e71fcb8d6eab7a00004dd3438e8a7330a7b4c96f14bb065078f8795b682a89a4",
+      "upstream_sha256": "e71fcb8d6eab7a00004dd3438e8a7330a7b4c96f14bb065078f8795b682a89a4"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_browser/ActivityResultListener.java": {
+      "patched_sha256": "29bdad6e465ae415180e9191d9d8d5dedf27f42adf6bd644e60356cde390bec6",
+      "upstream_sha256": "29bdad6e465ae415180e9191d9d8d5dedf27f42adf6bd644e60356cde390bec6"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_browser/InAppBrowserActivity.java": {
+      "patched_sha256": "89aeac36865d85c7dff4bb1db1abc2ed55b70a648b544f454672b050145248a4",
+      "upstream_sha256": "89aeac36865d85c7dff4bb1db1abc2ed55b70a648b544f454672b050145248a4"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_browser/InAppBrowserDelegate.java": {
+      "patched_sha256": "7822b90454b425be922486348c98e532f447ef3ada897c0a130bb33623e35393",
+      "upstream_sha256": "7822b90454b425be922486348c98e532f447ef3ada897c0a130bb33623e35393"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_browser/InAppBrowserManager.java": {
+      "patched_sha256": "8433d7f94f6a9f07835417ce0c67f7ba72f4af4c83e8eda33898e5258340ee81",
+      "upstream_sha256": "8433d7f94f6a9f07835417ce0c67f7ba72f4af4c83e8eda33898e5258340ee81"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_browser/InAppBrowserOptions.java": {
+      "patched_sha256": "3efa8b811da14b0b61a0d2a5f7b16fa58932fe203908b4ac6e40dfbd91310c3f",
+      "upstream_sha256": "3efa8b811da14b0b61a0d2a5f7b16fa58932fe203908b4ac6e40dfbd91310c3f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/ContextMenuOptions.java": {
+      "patched_sha256": "922f13eb0e4af404d6eaa018ef2dc2063b2f965ae704a0bf23147b48f3497a28",
+      "upstream_sha256": "922f13eb0e4af404d6eaa018ef2dc2063b2f965ae704a0bf23147b48f3497a28"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/DisplayListenerProxy.java": {
+      "patched_sha256": "ee46960966c70797c0aab01be4fa2a91610efc7952be2d3089e86a5db6c1b969",
+      "upstream_sha256": "ee46960966c70797c0aab01be4fa2a91610efc7952be2d3089e86a5db6c1b969"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/FlutterWebView.java": {
+      "patched_sha256": "c51a8c7d61c67a3e79d3df94da72821b8ac01210a71c9443134f71fe541e5462",
+      "upstream_sha256": "c51a8c7d61c67a3e79d3df94da72821b8ac01210a71c9443134f71fe541e5462"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/InAppWebView.java": {
+      "patched_sha256": "89bab5d84bb4daebea5ec8d8c66f12bf579c20ccf342143dd4ffa7621c1cb5e8",
+      "upstream_sha256": "89bab5d84bb4daebea5ec8d8c66f12bf579c20ccf342143dd4ffa7621c1cb5e8"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/InAppWebViewChromeClient.java": {
+      "patched_sha256": "63cdd28929cf646350b72fd6e9047aac2158d16e725d40a0a80b0fb7f4f6bb80",
+      "upstream_sha256": "63cdd28929cf646350b72fd6e9047aac2158d16e725d40a0a80b0fb7f4f6bb80"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/InAppWebViewClient.java": {
+      "patched_sha256": "8797dad33a05940daed10b327c486bbc1b61ebea901114281d79e52b0ce21eda",
+      "upstream_sha256": "8797dad33a05940daed10b327c486bbc1b61ebea901114281d79e52b0ce21eda"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/InAppWebViewOptions.java": {
+      "patched_sha256": "3ccbfdfd28442443c8eba02a55aac0ab990ff88eb8d9c43d1a129950ac6958d9",
+      "upstream_sha256": "3ccbfdfd28442443c8eba02a55aac0ab990ff88eb8d9c43d1a129950ac6958d9"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/InAppWebViewRenderProcessClient.java": {
+      "patched_sha256": "159c05825816f1a9fed3b7b9bb186afd167d59bf9d466a580f6d3cca1783acb1",
+      "upstream_sha256": "159c05825816f1a9fed3b7b9bb186afd167d59bf9d466a580f6d3cca1783acb1"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/InputAwareWebView.java": {
+      "patched_sha256": "fb466fb61464c37744fd39ffbdfdf9acb2484834069b4098c25ee1da8cd61b5b",
+      "upstream_sha256": "fb466fb61464c37744fd39ffbdfdf9acb2484834069b4098c25ee1da8cd61b5b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/in_app_webview/ThreadedInputConnectionProxyAdapterView.java": {
+      "patched_sha256": "49087cc77bc51e0d8fcea95b5084baa3b2b9e3d7f678a8fe336b20fceb800e57",
+      "upstream_sha256": "49087cc77bc51e0d8fcea95b5084baa3b2b9e3d7f678a8fe336b20fceb800e57"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/ConsoleLogJS.java": {
+      "patched_sha256": "3667048a027263fe306ef92d0ad6a03b74aa883e85bf6fc2fbf75dbe6f2cb35e",
+      "upstream_sha256": "3667048a027263fe306ef92d0ad6a03b74aa883e85bf6fc2fbf75dbe6f2cb35e"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/InterceptAjaxRequestJS.java": {
+      "patched_sha256": "07a81b8113040af7c4ced2d97ac8167567650b049a84ab78c056373b2c592f1b",
+      "upstream_sha256": "07a81b8113040af7c4ced2d97ac8167567650b049a84ab78c056373b2c592f1b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/InterceptFetchRequestJS.java": {
+      "patched_sha256": "c8312f7eaf7d14604a90c996b5f7a93e31c30ecc2a929d15371b24f93a884269",
+      "upstream_sha256": "c8312f7eaf7d14604a90c996b5f7a93e31c30ecc2a929d15371b24f93a884269"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/JavaScriptBridgeJS.java": {
+      "patched_sha256": "a6d7edae202c2def4db3834b03d214d592a719a36e6afdbfe44f6ab200c72ecf",
+      "upstream_sha256": "a6d7edae202c2def4db3834b03d214d592a719a36e6afdbfe44f6ab200c72ecf"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/OnLoadResourceJS.java": {
+      "patched_sha256": "610aa6189a09c15822a08de175c7254dfcc50bb386eccd5b78cbcb89da5c408c",
+      "upstream_sha256": "610aa6189a09c15822a08de175c7254dfcc50bb386eccd5b78cbcb89da5c408c"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/OnWindowBlurEventJS.java": {
+      "patched_sha256": "c4825bb37c60b6b2a67b1970cbd10020498862195b7ba28e2fe1bf91f47edc91",
+      "upstream_sha256": "c4825bb37c60b6b2a67b1970cbd10020498862195b7ba28e2fe1bf91f47edc91"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/OnWindowFocusEventJS.java": {
+      "patched_sha256": "d5bd413ad0ea1ff24a3ba585ccf378ff97bb2c9229b9888397e7ca6d9f2c325c",
+      "upstream_sha256": "d5bd413ad0ea1ff24a3ba585ccf378ff97bb2c9229b9888397e7ca6d9f2c325c"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/PluginScriptsUtil.java": {
+      "patched_sha256": "8e42ff0dfb25b64ae20f064b106408d419245ef664aa1d0655d27d3e44e84130",
+      "upstream_sha256": "8e42ff0dfb25b64ae20f064b106408d419245ef664aa1d0655d27d3e44e84130"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/PrintJS.java": {
+      "patched_sha256": "b2e615336da2382dd15eb594532e47949b672aeb1f05c34bd9773e8900095a6f",
+      "upstream_sha256": "b2e615336da2382dd15eb594532e47949b672aeb1f05c34bd9773e8900095a6f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/plugin_scripts_js/PromisePolyfillJS.java": {
+      "patched_sha256": "66e1ac2b8cec3caaf7ac6fff30bc82f210033b1dd982168393e53f5ee1af7c6f",
+      "upstream_sha256": "66e1ac2b8cec3caaf7ac6fff30bc82f210033b1dd982168393e53f5ee1af7c6f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/pull_to_refresh/PullToRefreshLayout.java": {
+      "patched_sha256": "c33581d50e034f89b0d8111179c5747b14a899170549396a6ea58e1ae67b22e1",
+      "upstream_sha256": "c33581d50e034f89b0d8111179c5747b14a899170549396a6ea58e1ae67b22e1"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/pull_to_refresh/PullToRefreshOptions.java": {
+      "patched_sha256": "48af725c3a3819fe2015fcf671dae37cc2f08f441be1e1a715f7a5d87421e683",
+      "upstream_sha256": "48af725c3a3819fe2015fcf671dae37cc2f08f441be1e1a715f7a5d87421e683"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/ClientCertChallenge.java": {
+      "patched_sha256": "e1570452cd12324ffc8e4c943593a71ed2ec8d26c10bea1d639a2b82681f1c2b",
+      "upstream_sha256": "e1570452cd12324ffc8e4c943593a71ed2ec8d26c10bea1d639a2b82681f1c2b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/ContentWorld.java": {
+      "patched_sha256": "bb3987f47f8c48957bc9481825e3d20d050a682efe11fdf387497d5f30e00aeb",
+      "upstream_sha256": "bb3987f47f8c48957bc9481825e3d20d050a682efe11fdf387497d5f30e00aeb"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/CreateWindowAction.java": {
+      "patched_sha256": "19b5884113d1d94d8d32d1719b9dd6276bc6f6b8116bb3cecba0719c1917d67b",
+      "upstream_sha256": "19b5884113d1d94d8d32d1719b9dd6276bc6f6b8116bb3cecba0719c1917d67b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/CustomTabsActionButton.java": {
+      "patched_sha256": "75a914c69e65f66d6219c91744d4b6d6beb42a91f2e14dc2325bd9d5efa7116f",
+      "upstream_sha256": "75a914c69e65f66d6219c91744d4b6d6beb42a91f2e14dc2325bd9d5efa7116f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/CustomTabsMenuItem.java": {
+      "patched_sha256": "834cec7485e7e61e6d3965a9d30bd76803e6e60d84f36c28f9b8e823fdcd5a7f",
+      "upstream_sha256": "834cec7485e7e61e6d3965a9d30bd76803e6e60d84f36c28f9b8e823fdcd5a7f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/DownloadStartRequest.java": {
+      "patched_sha256": "97899fb681698d4d9421d0760c1176fc515eab187750525c912c68237db60368",
+      "upstream_sha256": "97899fb681698d4d9421d0760c1176fc515eab187750525c912c68237db60368"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/HitTestResult.java": {
+      "patched_sha256": "bc3101a716aa2f2d77f39da2ad2324fbbe7b36a2cda3b084ee48968c840a70b3",
+      "upstream_sha256": "bc3101a716aa2f2d77f39da2ad2324fbbe7b36a2cda3b084ee48968c840a70b3"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/HttpAuthenticationChallenge.java": {
+      "patched_sha256": "1627e7fe6085b4dbca7d50246c36f0b03eb64d21f3929983b24059cfd7a041af",
+      "upstream_sha256": "1627e7fe6085b4dbca7d50246c36f0b03eb64d21f3929983b24059cfd7a041af"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/InAppWebViewInterface.java": {
+      "patched_sha256": "8131923edbeb5d359b32013bc9b9fbadbd515b587ce8861780c0643f706821d4",
+      "upstream_sha256": "8131923edbeb5d359b32013bc9b9fbadbd515b587ce8861780c0643f706821d4"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/NavigationAction.java": {
+      "patched_sha256": "52645aac624d8c75071217bbd80e0b37eef33cc87d4708c08de542a6a39f487b",
+      "upstream_sha256": "52645aac624d8c75071217bbd80e0b37eef33cc87d4708c08de542a6a39f487b"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/NavigationActionPolicy.java": {
+      "patched_sha256": "66936d4394c718a3869782b6e655edd9c80f8a8312dc6bb0dfe86a0f65a6ffd0",
+      "upstream_sha256": "66936d4394c718a3869782b6e655edd9c80f8a8312dc6bb0dfe86a0f65a6ffd0"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/PlatformWebView.java": {
+      "patched_sha256": "50e5104228174323300e27efa629cfc180965705ad0f1d1f5503e91cedccadf5",
+      "upstream_sha256": "50e5104228174323300e27efa629cfc180965705ad0f1d1f5503e91cedccadf5"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/PluginScript.java": {
+      "patched_sha256": "73ccf624969acb188a4186a74a18338c8ec3f09d33ab673e752a1b86a2b1044f",
+      "upstream_sha256": "73ccf624969acb188a4186a74a18338c8ec3f09d33ab673e752a1b86a2b1044f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/PreferredContentModeOptionType.java": {
+      "patched_sha256": "075922b6a315b9c140f93574e1f183099d17cfa58e7a70e8760395912f9a01ef",
+      "upstream_sha256": "075922b6a315b9c140f93574e1f183099d17cfa58e7a70e8760395912f9a01ef"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/ServerTrustChallenge.java": {
+      "patched_sha256": "ee77c7826d9e1e72d6b6792f7c98e1d7eae82538d90416051684c8f00fc7dc15",
+      "upstream_sha256": "ee77c7826d9e1e72d6b6792f7c98e1d7eae82538d90416051684c8f00fc7dc15"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/Size2D.java": {
+      "patched_sha256": "37c09ba269ebe124c8be509b037b50a995ede6233ec63aac081620e78e4fa949",
+      "upstream_sha256": "37c09ba269ebe124c8be509b037b50a995ede6233ec63aac081620e78e4fa949"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/SslCertificateExt.java": {
+      "patched_sha256": "fa6d76514a69260555b81d85b69cc1a4e51f6114f83d050083f57399d7a066a6",
+      "upstream_sha256": "fa6d76514a69260555b81d85b69cc1a4e51f6114f83d050083f57399d7a066a6"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/SslErrorExt.java": {
+      "patched_sha256": "c264a72afccb832b74ae4d096ed0119bd481bb592eefc38a7355e8b82f2c30c2",
+      "upstream_sha256": "c264a72afccb832b74ae4d096ed0119bd481bb592eefc38a7355e8b82f2c30c2"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/URLAuthenticationChallenge.java": {
+      "patched_sha256": "00c48983cc6db4240b239549bf8b91b64450d5f23d585df2e7d55fc1fb500c4f",
+      "upstream_sha256": "00c48983cc6db4240b239549bf8b91b64450d5f23d585df2e7d55fc1fb500c4f"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/URLCredential.java": {
+      "patched_sha256": "abad791b5a0f9354214a8c42162a210d57f71d4cb0dd242baf2843b1861678ae",
+      "upstream_sha256": "abad791b5a0f9354214a8c42162a210d57f71d4cb0dd242baf2843b1861678ae"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/URLProtectionSpace.java": {
+      "patched_sha256": "ecae4ad89c629a337ccf918f1e01d0f86f9a915ffdea75352be0f80ca3738ea0",
+      "upstream_sha256": "ecae4ad89c629a337ccf918f1e01d0f86f9a915ffdea75352be0f80ca3738ea0"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/URLRequest.java": {
+      "patched_sha256": "3ea5622a0977afc8c4bb79dc5c512c8472d9c526b269fe9596996193a1eea372",
+      "upstream_sha256": "3ea5622a0977afc8c4bb79dc5c512c8472d9c526b269fe9596996193a1eea372"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/UserContentController.java": {
+      "patched_sha256": "3cb645054b246b1ae9a94e65a154650144b03edbf28d7146db4b6f5b41f0e458",
+      "upstream_sha256": "3cb645054b246b1ae9a94e65a154650144b03edbf28d7146db4b6f5b41f0e458"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/UserScript.java": {
+      "patched_sha256": "adae5d7b9646fd0105e4464e0b77bae11496f635c99f1d8c0280719c1367365d",
+      "upstream_sha256": "adae5d7b9646fd0105e4464e0b77bae11496f635c99f1d8c0280719c1367365d"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/UserScriptInjectionTime.java": {
+      "patched_sha256": "f4e4d81d53e1ab136162a676cbf3f19003d2e2dab3d0b4e6ceded7ab03a57a47",
+      "upstream_sha256": "f4e4d81d53e1ab136162a676cbf3f19003d2e2dab3d0b4e6ceded7ab03a57a47"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/WebMessage.java": {
+      "patched_sha256": "62e0728fc26bbecf8d5ef24990cae88fdac9e4c8a953fa283142ee45836f97fb",
+      "upstream_sha256": "62e0728fc26bbecf8d5ef24990cae88fdac9e4c8a953fa283142ee45836f97fb"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/WebMessageChannel.java": {
+      "patched_sha256": "743f62c87e64b6bb7a0ca80826e0f8e6e490118f80b91fa27931b3e10eb74e79",
+      "upstream_sha256": "743f62c87e64b6bb7a0ca80826e0f8e6e490118f80b91fa27931b3e10eb74e79"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/WebMessageListener.java": {
+      "patched_sha256": "f91feaaa91f7ca17182d223b2ba7d0e237bf54e5e6acae0ec2991344ac280196",
+      "upstream_sha256": "f91feaaa91f7ca17182d223b2ba7d0e237bf54e5e6acae0ec2991344ac280196"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/WebMessagePort.java": {
+      "patched_sha256": "04c903f05ae296c7c22c23a3fd012663f4dc6a7be0554264f5f78dcdbc1a2bbe",
+      "upstream_sha256": "04c903f05ae296c7c22c23a3fd012663f4dc6a7be0554264f5f78dcdbc1a2bbe"
+    },
+    "android/src/main/java/com/pichillilorenzo/flutter_inappwebview/types/WebViewImplementation.java": {
+      "patched_sha256": "330f69e4c8d9487ed01e9668a2f990691010e6c394d23fe178567e841125d255",
+      "upstream_sha256": "330f69e4c8d9487ed01e9668a2f990691010e6c394d23fe178567e841125d255"
+    },
+    "android/src/main/res/drawable/floating_action_mode_shape.xml": {
+      "patched_sha256": "8301d1926adc851fe6177b1e58379ab01abd1ac72a7b01d3700256f43c78164d",
+      "upstream_sha256": "8301d1926adc851fe6177b1e58379ab01abd1ac72a7b01d3700256f43c78164d"
+    },
+    "android/src/main/res/layout/activity_web_view.xml": {
+      "patched_sha256": "5377b3bfeded9dd17e7f27b8adfe7ec71b6d131cd98a15e40278165dd6677b9c",
+      "upstream_sha256": "5377b3bfeded9dd17e7f27b8adfe7ec71b6d131cd98a15e40278165dd6677b9c"
+    },
+    "android/src/main/res/layout/chrome_custom_tabs_layout.xml": {
+      "patched_sha256": "cc59318226f540d6aad2c2f876dcb9a7acf799f541f067b482911e05f210fe9e",
+      "upstream_sha256": "cc59318226f540d6aad2c2f876dcb9a7acf799f541f067b482911e05f210fe9e"
+    },
+    "android/src/main/res/layout/floating_action_mode.xml": {
+      "patched_sha256": "4cba60331fc986b5c38e7a3339530b4e3f8dd08ba191b421a149fd0eddea965d",
+      "upstream_sha256": "4cba60331fc986b5c38e7a3339530b4e3f8dd08ba191b421a149fd0eddea965d"
+    },
+    "android/src/main/res/layout/floating_action_mode_item.xml": {
+      "patched_sha256": "3f0802a931600b8a749234bd367e17ab0d908b0730403c267d0d460742cbcd45",
+      "upstream_sha256": "3f0802a931600b8a749234bd367e17ab0d908b0730403c267d0d460742cbcd45"
+    },
+    "android/src/main/res/menu/menu_main.xml": {
+      "patched_sha256": "7ccfe7f35e6ee07c85565824633a83bc88133720ee8b25c0db5819304cc21128",
+      "upstream_sha256": "7ccfe7f35e6ee07c85565824633a83bc88133720ee8b25c0db5819304cc21128"
+    },
+    "android/src/main/res/values/strings.xml": {
+      "patched_sha256": "1040351f2da7f6066ecc9e425db969e17374fe4b1613c5c970653a4a83ef57a4",
+      "upstream_sha256": "1040351f2da7f6066ecc9e425db969e17374fe4b1613c5c970653a4a83ef57a4"
+    },
+    "android/src/main/res/values/styles.xml": {
+      "patched_sha256": "235affca3d1c5f13f406bd7297841a9031e34deeefbcfa2becbb76da2dfc10e4",
+      "upstream_sha256": "235affca3d1c5f13f406bd7297841a9031e34deeefbcfa2becbb76da2dfc10e4"
+    },
+    "android/src/main/res/xml/provider_paths.xml": {
+      "patched_sha256": "59c68856abd339b71ed9661736808ada87c0ba7cb4dd7d95fca4e87d708b9314",
+      "upstream_sha256": "59c68856abd339b71ed9661736808ada87c0ba7cb4dd7d95fca4e87d708b9314"
+    },
+    "ios/Classes/ContextMenuOptions.swift": {
+      "patched_sha256": "8dd772f3a915e3e2ff26ae717c050103412d39daa507b49028c5386a2f9c1983",
+      "upstream_sha256": "8dd772f3a915e3e2ff26ae717c050103412d39daa507b49028c5386a2f9c1983"
+    },
+    "ios/Classes/CredentialDatabase.swift": {
+      "patched_sha256": "26282348872cd3223e0a675d98fb33e78065fe881ce80c95c964f5337424582f",
+      "upstream_sha256": "26282348872cd3223e0a675d98fb33e78065fe881ce80c95c964f5337424582f"
+    },
+    "ios/Classes/CustomeSchemeHandler.swift": {
+      "patched_sha256": "b2a5073f77551bb444af622773d8b4b3c0028090807c696eec10c4e213b110b9",
+      "upstream_sha256": "b2a5073f77551bb444af622773d8b4b3c0028090807c696eec10c4e213b110b9"
+    },
+    "ios/Classes/FlutterMethodCallDelegate.swift": {
+      "patched_sha256": "ba9ff0bff249d29c13746a023fc9f3214175040fcd124e50de97629decc5c48d",
+      "upstream_sha256": "ba9ff0bff249d29c13746a023fc9f3214175040fcd124e50de97629decc5c48d"
+    },
+    "ios/Classes/HeadlessInAppWebView/HeadlessInAppWebView.swift": {
+      "patched_sha256": "9e019c8097b7563d467c7cbc5e20213e171050fac25e7903fa7fcbb093234991",
+      "upstream_sha256": "9e019c8097b7563d467c7cbc5e20213e171050fac25e7903fa7fcbb093234991"
+    },
+    "ios/Classes/HeadlessInAppWebView/HeadlessInAppWebViewManager.swift": {
+      "patched_sha256": "28e8d51beefdf525e17890efd106bc3f65aeca447dd281060eb44be25b66ed99",
+      "upstream_sha256": "28e8d51beefdf525e17890efd106bc3f65aeca447dd281060eb44be25b66ed99"
+    },
+    "ios/Classes/HttpAuthenticationChallenge.swift": {
+      "patched_sha256": "a7d2f64f80ba17e5a55439a280c8f168a0c939b5cf6e2c0c7e0aa02bfda3eaa9",
+      "upstream_sha256": "a7d2f64f80ba17e5a55439a280c8f168a0c939b5cf6e2c0c7e0aa02bfda3eaa9"
+    },
+    "ios/Classes/InAppBrowser/InAppBrowserDelegate.swift": {
+      "patched_sha256": "3e5580bb61b8de3799747ba23e0314c5955649ab492e6d698ae706dfe2649b41",
+      "upstream_sha256": "3e5580bb61b8de3799747ba23e0314c5955649ab492e6d698ae706dfe2649b41"
+    },
+    "ios/Classes/InAppBrowser/InAppBrowserManager.swift": {
+      "patched_sha256": "cb802e284a4ff81d746292f373b362a0c1a5cb6bf9d4072792dfe9228591b4d9",
+      "upstream_sha256": "cb802e284a4ff81d746292f373b362a0c1a5cb6bf9d4072792dfe9228591b4d9"
+    },
+    "ios/Classes/InAppBrowser/InAppBrowserNavigationController.swift": {
+      "patched_sha256": "22a7d905decdadd3eb705ddfdd563222472984c6de3c10817ce368c82df79294",
+      "upstream_sha256": "22a7d905decdadd3eb705ddfdd563222472984c6de3c10817ce368c82df79294"
+    },
+    "ios/Classes/InAppBrowser/InAppBrowserOptions.swift": {
+      "patched_sha256": "c2e29a6889aee6901c178d7fba5c92ed951b191d0db61fd086903eb0a603dd88",
+      "upstream_sha256": "c2e29a6889aee6901c178d7fba5c92ed951b191d0db61fd086903eb0a603dd88"
+    },
+    "ios/Classes/InAppBrowser/InAppBrowserWebViewController.swift": {
+      "patched_sha256": "85665cda817dd3e983bb168e45072371f1fac6ca16275f8f98aa95a02f23dba2",
+      "upstream_sha256": "85665cda817dd3e983bb168e45072371f1fac6ca16275f8f98aa95a02f23dba2"
+    },
+    "ios/Classes/InAppWebView/FlutterWebViewController.swift": {
+      "patched_sha256": "33180b0183772a4ddd980230caa90f9d6f9053cd164768275110e720307c70c2",
+      "upstream_sha256": "33180b0183772a4ddd980230caa90f9d6f9053cd164768275110e720307c70c2"
+    },
+    "ios/Classes/InAppWebView/FlutterWebViewFactory.swift": {
+      "patched_sha256": "cd088464706dfded04a345e4c9c6343a136db2dd97741bfd90413fc6f16cfb70",
+      "upstream_sha256": "cd088464706dfded04a345e4c9c6343a136db2dd97741bfd90413fc6f16cfb70"
+    },
+    "ios/Classes/InAppWebView/InAppWebView.swift": {
+      "patched_sha256": "c10c1bf7a30672046ba246461dec345f71746e929d8266102d5a471c0aa24d38",
+      "upstream_sha256": "5989bcacd49f0ae8a85c48f2a009540e5717d269db942e11dbe683d37e841738"
+    },
+    "ios/Classes/InAppWebView/InAppWebViewOptions.swift": {
+      "patched_sha256": "d04afc828ed5389a748fa92b4987fb7a53b1f44f5071ecfdf47dc02df4ae82bc",
+      "upstream_sha256": "d04afc828ed5389a748fa92b4987fb7a53b1f44f5071ecfdf47dc02df4ae82bc"
+    },
+    "ios/Classes/InAppWebViewFlutterPlugin.h": {
+      "patched_sha256": "084b05616cccad729f1528fcf57cc3c9590e4fa5a99736fb6c45648a0b8d3269",
+      "upstream_sha256": "084b05616cccad729f1528fcf57cc3c9590e4fa5a99736fb6c45648a0b8d3269"
+    },
+    "ios/Classes/InAppWebViewFlutterPlugin.m": {
+      "patched_sha256": "dabc077ef54adba818fb70be568b866f3e95dd69246d8ea67d058cdb634b3d54",
+      "upstream_sha256": "dabc077ef54adba818fb70be568b866f3e95dd69246d8ea67d058cdb634b3d54"
+    },
+    "ios/Classes/InAppWebViewMethodHandler.swift": {
+      "patched_sha256": "c0ec88b490f5168fa0c7575cf480a06627650b76e0bc4b20bb3f877fe2151543",
+      "upstream_sha256": "c0ec88b490f5168fa0c7575cf480a06627650b76e0bc4b20bb3f877fe2151543"
+    },
+    "ios/Classes/InAppWebViewStatic.swift": {
+      "patched_sha256": "7355990cdb0e6b19e4d1d322285c0cc09550bc1d07f6008a822882bae3aa30b3",
+      "upstream_sha256": "7355990cdb0e6b19e4d1d322285c0cc09550bc1d07f6008a822882bae3aa30b3"
+    },
+    "ios/Classes/LeakAvoider.swift": {
+      "patched_sha256": "af4c9a976596c2c71831db744eaacba2e9556ad6d6c24d93333b0103fce6ba5d",
+      "upstream_sha256": "af4c9a976596c2c71831db744eaacba2e9556ad6d6c24d93333b0103fce6ba5d"
+    },
+    "ios/Classes/MyCookieManager.swift": {
+      "patched_sha256": "c88d526a82f1b051a7d53364ef5d16f2da2aad595c7d436e60d36b9f68cdcb75",
+      "upstream_sha256": "c88d526a82f1b051a7d53364ef5d16f2da2aad595c7d436e60d36b9f68cdcb75"
+    },
+    "ios/Classes/MyWebStorageManager.swift": {
+      "patched_sha256": "6c85c6920dceea63b3284f42663ecbade532a76080f455982965f52f5438f733",
+      "upstream_sha256": "6c85c6920dceea63b3284f42663ecbade532a76080f455982965f52f5438f733"
+    },
+    "ios/Classes/Options.swift": {
+      "patched_sha256": "c470ab0f7ab577ca990440ebecdc6eca0ac95e3b38ca1c5f710d981bd51868f4",
+      "upstream_sha256": "c470ab0f7ab577ca990440ebecdc6eca0ac95e3b38ca1c5f710d981bd51868f4"
+    },
+    "ios/Classes/PlatformUtil.swift": {
+      "patched_sha256": "94be1ca408a0e4f9c72dac9e1a596d6e383f93862316d578bf67e00b360f9def",
+      "upstream_sha256": "94be1ca408a0e4f9c72dac9e1a596d6e383f93862316d578bf67e00b360f9def"
+    },
+    "ios/Classes/PluginScriptsJS/CallAsyncJavaScriptBelowIOS14WrapperJS.swift": {
+      "patched_sha256": "097cc501dc161a0c7f45875cd7215ed3bb495146f7df82fc180b4361a4b99c03",
+      "upstream_sha256": "097cc501dc161a0c7f45875cd7215ed3bb495146f7df82fc180b4361a4b99c03"
+    },
+    "ios/Classes/PluginScriptsJS/ConsoleLogJS.swift": {
+      "patched_sha256": "1cf80867f9cbf5d366bc2a18678db27a393c4aa2b3ba2246fc36288e3478ea15",
+      "upstream_sha256": "1cf80867f9cbf5d366bc2a18678db27a393c4aa2b3ba2246fc36288e3478ea15"
+    },
+    "ios/Classes/PluginScriptsJS/EnableViewportScaleJS.swift": {
+      "patched_sha256": "52ce4f9351228a8cc3be8a7b3f152ef2909095fb0857d57ca7fb1293ffc69220",
+      "upstream_sha256": "52ce4f9351228a8cc3be8a7b3f152ef2909095fb0857d57ca7fb1293ffc69220"
+    },
+    "ios/Classes/PluginScriptsJS/FindElementsAtPointJS.swift": {
+      "patched_sha256": "21f457a665c4ef34dd1512eb5b53246cd7657cb35b61a0fb4c9131b4089256f1",
+      "upstream_sha256": "21f457a665c4ef34dd1512eb5b53246cd7657cb35b61a0fb4c9131b4089256f1"
+    },
+    "ios/Classes/PluginScriptsJS/FindTextHighlightJS.swift": {
+      "patched_sha256": "4c10c29923724953595269d417bf2380c1267662a52d70961d7c785f581830d0",
+      "upstream_sha256": "4c10c29923724953595269d417bf2380c1267662a52d70961d7c785f581830d0"
+    },
+    "ios/Classes/PluginScriptsJS/InterceptAjaxRequestJS.swift": {
+      "patched_sha256": "bd53e9e71f036cbc2d6d1285410beec4eb662f3c090f4a78c7b54031bf3c5920",
+      "upstream_sha256": "bd53e9e71f036cbc2d6d1285410beec4eb662f3c090f4a78c7b54031bf3c5920"
+    },
+    "ios/Classes/PluginScriptsJS/InterceptFetchRequestJS.swift": {
+      "patched_sha256": "f6a0d110e8a7ad5c4970d38a0635e184ceac055c825ded3917d52c31be803485",
+      "upstream_sha256": "f6a0d110e8a7ad5c4970d38a0635e184ceac055c825ded3917d52c31be803485"
+    },
+    "ios/Classes/PluginScriptsJS/JavaScriptBridgeJS.swift": {
+      "patched_sha256": "bb170c3514de7dadd64b79b8978d83428989fc6a0d3b0869a559a8cc3c0152f3",
+      "upstream_sha256": "bb170c3514de7dadd64b79b8978d83428989fc6a0d3b0869a559a8cc3c0152f3"
+    },
+    "ios/Classes/PluginScriptsJS/LastTouchedAnchorOrImageJS.swift": {
+      "patched_sha256": "0fed36c25144f68763328744aa830ad5fe0ea5d4e8592d6820c22afc310734eb",
+      "upstream_sha256": "0fed36c25144f68763328744aa830ad5fe0ea5d4e8592d6820c22afc310734eb"
+    },
+    "ios/Classes/PluginScriptsJS/OnLoadResourceJS.swift": {
+      "patched_sha256": "90a662ea3a27301dc0a0acc59e48d3024710c3ae26ac5cc28f2065ec79784a56",
+      "upstream_sha256": "90a662ea3a27301dc0a0acc59e48d3024710c3ae26ac5cc28f2065ec79784a56"
+    },
+    "ios/Classes/PluginScriptsJS/OnWindowBlurEventJS.swift": {
+      "patched_sha256": "fb170c43050c440571a055fab16aa459776e19babea2ed06b8ec26f54bebf206",
+      "upstream_sha256": "fb170c43050c440571a055fab16aa459776e19babea2ed06b8ec26f54bebf206"
+    },
+    "ios/Classes/PluginScriptsJS/OnWindowFocusEventJS.swift": {
+      "patched_sha256": "3740d2f547e78fd72065399508a25572c75fa7cd87c729bd31b42f078aee0165",
+      "upstream_sha256": "3740d2f547e78fd72065399508a25572c75fa7cd87c729bd31b42f078aee0165"
+    },
+    "ios/Classes/PluginScriptsJS/OriginalViewPortMetaTagContentJS.swift": {
+      "patched_sha256": "69d34496fceca39d710bb55bb8769378ca0ba2464ffab5cc8801316713d07ec2",
+      "upstream_sha256": "69d34496fceca39d710bb55bb8769378ca0ba2464ffab5cc8801316713d07ec2"
+    },
+    "ios/Classes/PluginScriptsJS/PluginScriptsUtil.swift": {
+      "patched_sha256": "83d15a559016be1e63463f1d329a30a8351db7274ae31a2d7a14b7f36f7a2d90",
+      "upstream_sha256": "83d15a559016be1e63463f1d329a30a8351db7274ae31a2d7a14b7f36f7a2d90"
+    },
+    "ios/Classes/PluginScriptsJS/PrintJS.swift": {
+      "patched_sha256": "7c7ff170e8a2f651a3d2d037e501b285e6e2596fe9ef7445b2a2b6f3ff07acef",
+      "upstream_sha256": "7c7ff170e8a2f651a3d2d037e501b285e6e2596fe9ef7445b2a2b6f3ff07acef"
+    },
+    "ios/Classes/PluginScriptsJS/PromisePolyfillJS.swift": {
+      "patched_sha256": "60d377648fc5b6710d24dc067dd0f61beea12153c8df364e26a1e44c25fe46ca",
+      "upstream_sha256": "60d377648fc5b6710d24dc067dd0f61beea12153c8df364e26a1e44c25fe46ca"
+    },
+    "ios/Classes/PluginScriptsJS/SupportZoomJS.swift": {
+      "patched_sha256": "049fec8bf2199a72406e9644c885598f20fa951aa36a65871cf991bdce2a5c94",
+      "upstream_sha256": "049fec8bf2199a72406e9644c885598f20fa951aa36a65871cf991bdce2a5c94"
+    },
+    "ios/Classes/PluginScriptsJS/WebMessageChannelJS.swift": {
+      "patched_sha256": "ea56e32f8d381ac9aba1ef0f42d4acb43521bfe9022810d5a52102fb817e955f",
+      "upstream_sha256": "ea56e32f8d381ac9aba1ef0f42d4acb43521bfe9022810d5a52102fb817e955f"
+    },
+    "ios/Classes/PluginScriptsJS/WebMessageListenerJS.swift": {
+      "patched_sha256": "4e38a8ea98c57afb1458c19f72d1e6b729d9f94fc36ce35c18225a67f9ed41b5",
+      "upstream_sha256": "4e38a8ea98c57afb1458c19f72d1e6b729d9f94fc36ce35c18225a67f9ed41b5"
+    },
+    "ios/Classes/PluginScriptsJS/WindowIdJS.swift": {
+      "patched_sha256": "65e8bf0d971119ea51c6545f6ed7523405e1373f8e0b22553f93358bae2a2e1a",
+      "upstream_sha256": "65e8bf0d971119ea51c6545f6ed7523405e1373f8e0b22553f93358bae2a2e1a"
+    },
+    "ios/Classes/PullToRefresh/PullToRefreshControl.swift": {
+      "patched_sha256": "b15be9800e4aa991f7a7d1d8be0b74d4522659d2e3791d3a4011c0b2e978ecce",
+      "upstream_sha256": "b15be9800e4aa991f7a7d1d8be0b74d4522659d2e3791d3a4011c0b2e978ecce"
+    },
+    "ios/Classes/PullToRefresh/PullToRefreshDelegate.swift": {
+      "patched_sha256": "d1723a05b2357e2edb39a1e8a5b5a1bd71b6249e48e858723a5e79b19eb5b8b9",
+      "upstream_sha256": "d1723a05b2357e2edb39a1e8a5b5a1bd71b6249e48e858723a5e79b19eb5b8b9"
+    },
+    "ios/Classes/PullToRefresh/PullToRefreshOptions.swift": {
+      "patched_sha256": "65a97b6674016a460d67e597969e77b352717bc64cce86d21f50ce864ecd8ba7",
+      "upstream_sha256": "65a97b6674016a460d67e597969e77b352717bc64cce86d21f50ce864ecd8ba7"
+    },
+    "ios/Classes/SafariViewController/ChromeSafariBrowserManager.swift": {
+      "patched_sha256": "d24eccfd473b92dfebad1e59f783342a66579dbb23c13bd2c9761fd788c2c837",
+      "upstream_sha256": "d24eccfd473b92dfebad1e59f783342a66579dbb23c13bd2c9761fd788c2c837"
+    },
+    "ios/Classes/SafariViewController/SafariBrowserOptions.swift": {
+      "patched_sha256": "3e8295ae196fbb89db9b466f3a0fa8357a6cf50b36dcfe167a90ea3cf1b9fcb7",
+      "upstream_sha256": "3e8295ae196fbb89db9b466f3a0fa8357a6cf50b36dcfe167a90ea3cf1b9fcb7"
+    },
+    "ios/Classes/SafariViewController/SafariViewController.swift": {
+      "patched_sha256": "d6ee36eb0400efd833da7cbe374f90f75dfc8e3f78e8b98ecbcf8c1e0664c931",
+      "upstream_sha256": "d6ee36eb0400efd833da7cbe374f90f75dfc8e3f78e8b98ecbcf8c1e0664c931"
+    },
+    "ios/Classes/SwiftFlutterPlugin.swift": {
+      "patched_sha256": "3e0988b6435d0fe6a455fd8fa1f1e5da0cbc0465f89f65553fd66d2451c3cb1f",
+      "upstream_sha256": "3e0988b6435d0fe6a455fd8fa1f1e5da0cbc0465f89f65553fd66d2451c3cb1f"
+    },
+    "ios/Classes/Types/ClientCertChallenge.swift": {
+      "patched_sha256": "8240ba46084a13e303a608e44a667fc239fe659f1aa86dee9d620329fb273a18",
+      "upstream_sha256": "8240ba46084a13e303a608e44a667fc239fe659f1aa86dee9d620329fb273a18"
+    },
+    "ios/Classes/Types/DownloadStartRequest.swift": {
+      "patched_sha256": "06d658fce18dc792ee49d97f14c2241c0608fe24ae2514e215ca36de0babccf5",
+      "upstream_sha256": "06d658fce18dc792ee49d97f14c2241c0608fe24ae2514e215ca36de0babccf5"
+    },
+    "ios/Classes/Types/HitTestResult.swift": {
+      "patched_sha256": "d0f8c880bf644fe1cbfc44d4e8e19633c5285ea4977f9561f19f20885730fbc3",
+      "upstream_sha256": "d0f8c880bf644fe1cbfc44d4e8e19633c5285ea4977f9561f19f20885730fbc3"
+    },
+    "ios/Classes/Types/NSAttributedString.swift": {
+      "patched_sha256": "842eb403622896ece0dae07525c4237bfce168a763482766c4cdea0f20b51f54",
+      "upstream_sha256": "842eb403622896ece0dae07525c4237bfce168a763482766c4cdea0f20b51f54"
+    },
+    "ios/Classes/Types/PluginScript.swift": {
+      "patched_sha256": "e535549953fb5270c47c5b59182c589d9550d5e1bcba962744fc315b051cb6c1",
+      "upstream_sha256": "e535549953fb5270c47c5b59182c589d9550d5e1bcba962744fc315b051cb6c1"
+    },
+    "ios/Classes/Types/SecCertificate.swift": {
+      "patched_sha256": "2ff89c3243d13c04e73a782f013016eaea694ec72fc5069ab9625c627a7c0f30",
+      "upstream_sha256": "2ff89c3243d13c04e73a782f013016eaea694ec72fc5069ab9625c627a7c0f30"
+    },
+    "ios/Classes/Types/ServerTrustChallenge.swift": {
+      "patched_sha256": "179963e1e9ae8c68794e4049cba0ed0d27e3ae22bd876142e6f3ddf47576d193",
+      "upstream_sha256": "179963e1e9ae8c68794e4049cba0ed0d27e3ae22bd876142e6f3ddf47576d193"
+    },
+    "ios/Classes/Types/Size2D.swift": {
+      "patched_sha256": "61a4f6b62d02a4f2b9556d714434612042ca050c4943f5739ce49ebc62b802dd",
+      "upstream_sha256": "61a4f6b62d02a4f2b9556d714434612042ca050c4943f5739ce49ebc62b802dd"
+    },
+    "ios/Classes/Types/SslCertificate.swift": {
+      "patched_sha256": "e398c7970e7155731715571bcfe89b802118fb75d611b86892beb455ec0f005c",
+      "upstream_sha256": "e398c7970e7155731715571bcfe89b802118fb75d611b86892beb455ec0f005c"
+    },
+    "ios/Classes/Types/SslError.swift": {
+      "patched_sha256": "cefa3cfe73fa12bb9980b6776b61644ed15c1d0c6631d397ad269578ec4da496",
+      "upstream_sha256": "cefa3cfe73fa12bb9980b6776b61644ed15c1d0c6631d397ad269578ec4da496"
+    },
+    "ios/Classes/Types/UIColor.swift": {
+      "patched_sha256": "9bc2075f92412d6087b987047c5a4b838236a5888557fde89b0c443e3838042c",
+      "upstream_sha256": "9bc2075f92412d6087b987047c5a4b838236a5888557fde89b0c443e3838042c"
+    },
+    "ios/Classes/Types/URLAuthenticationChallenge.swift": {
+      "patched_sha256": "a0e5efcef3d770b9de5ec7b92f311047d1dac4e2134f6873f20711a6e6f574ca",
+      "upstream_sha256": "a0e5efcef3d770b9de5ec7b92f311047d1dac4e2134f6873f20711a6e6f574ca"
+    },
+    "ios/Classes/Types/URLCredential.swift": {
+      "patched_sha256": "a29d49489d71948f15f39e53a0e14c439240d23edff2d1605599c5f885a4cd47",
+      "upstream_sha256": "a29d49489d71948f15f39e53a0e14c439240d23edff2d1605599c5f885a4cd47"
+    },
+    "ios/Classes/Types/URLProtectionSpace.swift": {
+      "patched_sha256": "e9da56b1bab830b7c4b993d2af659824b48233be7ae959b18c2c6140acf931f6",
+      "upstream_sha256": "e9da56b1bab830b7c4b993d2af659824b48233be7ae959b18c2c6140acf931f6"
+    },
+    "ios/Classes/Types/URLRequest.swift": {
+      "patched_sha256": "dd4a44bcbd29356a5c18f657e0dd088f23456f079a6565c7aae32c597f3adb52",
+      "upstream_sha256": "dd4a44bcbd29356a5c18f657e0dd088f23456f079a6565c7aae32c597f3adb52"
+    },
+    "ios/Classes/Types/URLResponse.swift": {
+      "patched_sha256": "3fcb7b91c8f3dfca41e037152a434b67171db129f4d64f3c16bb8e2209eff2e5",
+      "upstream_sha256": "3fcb7b91c8f3dfca41e037152a434b67171db129f4d64f3c16bb8e2209eff2e5"
+    },
+    "ios/Classes/Types/UserScript.swift": {
+      "patched_sha256": "ef6877f67a704f11144e19e80112ac24f74cf6cdc6988819f59b3329027baa27",
+      "upstream_sha256": "ef6877f67a704f11144e19e80112ac24f74cf6cdc6988819f59b3329027baa27"
+    },
+    "ios/Classes/Types/WKContentWorld.swift": {
+      "patched_sha256": "09607cd701b9d69b438d3a6391c8c8acb0afdf39450498102c7b4a0a886ca59b",
+      "upstream_sha256": "09607cd701b9d69b438d3a6391c8c8acb0afdf39450498102c7b4a0a886ca59b"
+    },
+    "ios/Classes/Types/WKFrameInfo.swift": {
+      "patched_sha256": "7a48513db6b6773e108e86f91694073056fa6cd0c285e449436bd4660a1e5f4a",
+      "upstream_sha256": "7a48513db6b6773e108e86f91694073056fa6cd0c285e449436bd4660a1e5f4a"
+    },
+    "ios/Classes/Types/WKNavigationAction.swift": {
+      "patched_sha256": "6d9be0ce1563fcb8693dc09a2fd7b85967dea70d1e0e23c828ab25403ad1e3ef",
+      "upstream_sha256": "6d9be0ce1563fcb8693dc09a2fd7b85967dea70d1e0e23c828ab25403ad1e3ef"
+    },
+    "ios/Classes/Types/WKNavigationResponse.swift": {
+      "patched_sha256": "d68d0ae0f5c9711db021579bd5e1a5ea6685a084846ad4f21c9f533e1714287b",
+      "upstream_sha256": "d68d0ae0f5c9711db021579bd5e1a5ea6685a084846ad4f21c9f533e1714287b"
+    },
+    "ios/Classes/Types/WKSecurityOrigin.swift": {
+      "patched_sha256": "dc20d31449c953924f94190418d2dbebe69db768acc37516576d869e2edabb60",
+      "upstream_sha256": "dc20d31449c953924f94190418d2dbebe69db768acc37516576d869e2edabb60"
+    },
+    "ios/Classes/Types/WKUserContentController.swift": {
+      "patched_sha256": "ef401df48db1e6e482943b1dda4cca0b5ce68277956b71c37823451729f7004d",
+      "upstream_sha256": "ef401df48db1e6e482943b1dda4cca0b5ce68277956b71c37823451729f7004d"
+    },
+    "ios/Classes/Types/WKWindowFeatures.swift": {
+      "patched_sha256": "4d367ebc6da60418b491fa288afbe49eb5fcfe89e7510458946e8131d8c817ec",
+      "upstream_sha256": "4d367ebc6da60418b491fa288afbe49eb5fcfe89e7510458946e8131d8c817ec"
+    },
+    "ios/Classes/Types/WebMessage.swift": {
+      "patched_sha256": "e85db95b6d6d9c9f72ddf593376b18becdf74a4440c91a2f4fbf5aee74aae8c7",
+      "upstream_sha256": "e85db95b6d6d9c9f72ddf593376b18becdf74a4440c91a2f4fbf5aee74aae8c7"
+    },
+    "ios/Classes/Types/WebMessageChannel.swift": {
+      "patched_sha256": "66625f02d77da646bb46823944e4ecc88d28fa2b9cfb1d1de3eb9c79e25ce55d",
+      "upstream_sha256": "66625f02d77da646bb46823944e4ecc88d28fa2b9cfb1d1de3eb9c79e25ce55d"
+    },
+    "ios/Classes/Types/WebMessageListener.swift": {
+      "patched_sha256": "d67c7fa62a70ff3bc1bce65e0cb1480f4d2906011249090e130e4d53dfe66545",
+      "upstream_sha256": "d67c7fa62a70ff3bc1bce65e0cb1480f4d2906011249090e130e4d53dfe66545"
+    },
+    "ios/Classes/Types/WebMessagePort.swift": {
+      "patched_sha256": "15b4655bd17e400265b986eb94e910c7df4f054d8c884ed5fc114555ccda4a01",
+      "upstream_sha256": "15b4655bd17e400265b986eb94e910c7df4f054d8c884ed5fc114555ccda4a01"
+    },
+    "ios/Classes/Types/WebViewTransport.swift": {
+      "patched_sha256": "02486cc3293d99f08ffb5616f592057b6687dc0d1ae748dc8d559014659aaf99",
+      "upstream_sha256": "02486cc3293d99f08ffb5616f592057b6687dc0d1ae748dc8d559014659aaf99"
+    },
+    "ios/Classes/Util.swift": {
+      "patched_sha256": "b32b66e61fcd67fcd20274fde273e0481b59c22d4f602fa9f3e183f2064d65b2",
+      "upstream_sha256": "b32b66e61fcd67fcd20274fde273e0481b59c22d4f602fa9f3e183f2064d65b2"
+    },
+    "ios/Classes/WKProcessPoolManager.swift": {
+      "patched_sha256": "4a6706c93b6b54a47a8a7536de8e7fbf1167a5aa094aed5799dfe6b47282b05b",
+      "upstream_sha256": "4a6706c93b6b54a47a8a7536de8e7fbf1167a5aa094aed5799dfe6b47282b05b"
+    },
+    "ios/Storyboards/WebView.storyboard": {
+      "patched_sha256": "f53a90a9d08fff24cb7a271765f6cbbc92f41cb2e9affd0e0fbfc29e25a8ca54",
+      "upstream_sha256": "f53a90a9d08fff24cb7a271765f6cbbc92f41cb2e9affd0e0fbfc29e25a8ca54"
+    },
+    "ios/flutter_inappwebview.podspec": {
+      "patched_sha256": "b0693c175c542389d88567c4be208f05be7a942004573c1434cd21ce5d5eea8c",
+      "upstream_sha256": "b0693c175c542389d88567c4be208f05be7a942004573c1434cd21ce5d5eea8c"
+    },
+    "lib/assets/t_rex_runner/t-rex.css": {
+      "patched_sha256": "2e563220bd855e11f230dc27a0d6f2fd5b839a2996f86edc8025aab45e6fa5c3",
+      "upstream_sha256": "2e563220bd855e11f230dc27a0d6f2fd5b839a2996f86edc8025aab45e6fa5c3"
+    },
+    "lib/assets/t_rex_runner/t-rex.html": {
+      "patched_sha256": "dc72cfc1f1d2a5013bb9de34f8cacf5e26e542d7d713fcbe09b865b4aaca6ddf",
+      "upstream_sha256": "dc72cfc1f1d2a5013bb9de34f8cacf5e26e542d7d713fcbe09b865b4aaca6ddf"
+    },
+    "lib/flutter_inappwebview.dart": {
+      "patched_sha256": "006ec856644278c4eab0fe07ddc4efff12b37bbcdc3abdd2f2d04d198f0fe765",
+      "upstream_sha256": "006ec856644278c4eab0fe07ddc4efff12b37bbcdc3abdd2f2d04d198f0fe765"
+    },
+    "lib/src/android/main.dart": {
+      "patched_sha256": "f605b1bb0c0ff30a996e0be98764cfecd837513a0039e5a610d1eefac4d01d32",
+      "upstream_sha256": "f605b1bb0c0ff30a996e0be98764cfecd837513a0039e5a610d1eefac4d01d32"
+    },
+    "lib/src/android/service_worker_controller.dart": {
+      "patched_sha256": "3f02d2e08180aa5dadc260a3e858be8fb6609b8b41c094cba79d929e2fc52055",
+      "upstream_sha256": "3f02d2e08180aa5dadc260a3e858be8fb6609b8b41c094cba79d929e2fc52055"
+    },
+    "lib/src/android/webview_feature.dart": {
+      "patched_sha256": "dbff42262d052ef69798044dec9ec72dc8a91aa0ba9ba777fbf78dc399cb241f",
+      "upstream_sha256": "dbff42262d052ef69798044dec9ec72dc8a91aa0ba9ba777fbf78dc399cb241f"
+    },
+    "lib/src/chrome_safari_browser/android/chrome_custom_tabs_options.dart": {
+      "patched_sha256": "cb5503da0751952e44b2f8f583bf7442f38b228da143121269e35aaed003723a",
+      "upstream_sha256": "cb5503da0751952e44b2f8f583bf7442f38b228da143121269e35aaed003723a"
+    },
+    "lib/src/chrome_safari_browser/android/main.dart": {
+      "patched_sha256": "6665fc055f41e5a7d53c3c41487bdb2bdb5e46b2c7216cf27837833b79b5ed81",
+      "upstream_sha256": "6665fc055f41e5a7d53c3c41487bdb2bdb5e46b2c7216cf27837833b79b5ed81"
+    },
+    "lib/src/chrome_safari_browser/chrome_safari_browser.dart": {
+      "patched_sha256": "ede3d4c0430b437092da0a46223db1f38e524d3866aea2e19578eb3ff3536003",
+      "upstream_sha256": "ede3d4c0430b437092da0a46223db1f38e524d3866aea2e19578eb3ff3536003"
+    },
+    "lib/src/chrome_safari_browser/chrome_safari_browser_options.dart": {
+      "patched_sha256": "44e6d6a2bbee9b13367fec3b53656cce6b52c72b441b84a8cac92494e1dcb755",
+      "upstream_sha256": "44e6d6a2bbee9b13367fec3b53656cce6b52c72b441b84a8cac92494e1dcb755"
+    },
+    "lib/src/chrome_safari_browser/ios/main.dart": {
+      "patched_sha256": "b50f1860e684daf3c81c31e45b856a2d5c035b0dcff0f0cf800f961e2f9f5922",
+      "upstream_sha256": "b50f1860e684daf3c81c31e45b856a2d5c035b0dcff0f0cf800f961e2f9f5922"
+    },
+    "lib/src/chrome_safari_browser/ios/safari_options.dart": {
+      "patched_sha256": "d5d910780f8fb1d583470797943ce1f7c4fc018e738d96b138522d9b71519e8c",
+      "upstream_sha256": "d5d910780f8fb1d583470797943ce1f7c4fc018e738d96b138522d9b71519e8c"
+    },
+    "lib/src/chrome_safari_browser/main.dart": {
+      "patched_sha256": "6630d790fcb1ba5e74972a5164333c0e17cb3522c566d0d18d023383f8388677",
+      "upstream_sha256": "6630d790fcb1ba5e74972a5164333c0e17cb3522c566d0d18d023383f8388677"
+    },
+    "lib/src/content_blocker.dart": {
+      "patched_sha256": "b930498b2fa8960e09e6a3bbc892a506c7884bd2f4ec7d92abdae530529a6f64",
+      "upstream_sha256": "b930498b2fa8960e09e6a3bbc892a506c7884bd2f4ec7d92abdae530529a6f64"
+    },
+    "lib/src/context_menu.dart": {
+      "patched_sha256": "161f0d79fdf67c6a366a64a8310a7f6c60c80d06d0b14e29306bbf4eb3a5b293",
+      "upstream_sha256": "161f0d79fdf67c6a366a64a8310a7f6c60c80d06d0b14e29306bbf4eb3a5b293"
+    },
+    "lib/src/cookie_manager.dart": {
+      "patched_sha256": "7f680df8ae8f9988abbdb03b3ab5797071a5057eea3b9f9ca1df0e715c3a9dcb",
+      "upstream_sha256": "7f680df8ae8f9988abbdb03b3ab5797071a5057eea3b9f9ca1df0e715c3a9dcb"
+    },
+    "lib/src/http_auth_credentials_database.dart": {
+      "patched_sha256": "5ea5186e7b05e907fca9115f9e2ac4416743e3421e76403477c0d4e8dcd83f93",
+      "upstream_sha256": "5ea5186e7b05e907fca9115f9e2ac4416743e3421e76403477c0d4e8dcd83f93"
+    },
+    "lib/src/in_app_browser/android/in_app_browser_options.dart": {
+      "patched_sha256": "aecf0bd8bd754c56d5e9335de02ddbf44d0bf9f52c48597c0e11043445796c56",
+      "upstream_sha256": "aecf0bd8bd754c56d5e9335de02ddbf44d0bf9f52c48597c0e11043445796c56"
+    },
+    "lib/src/in_app_browser/android/main.dart": {
+      "patched_sha256": "a75ee4e7c70c13be9c2b2b3f7a89094648b7fbd825ff1fe9f00d052c102d9ea9",
+      "upstream_sha256": "a75ee4e7c70c13be9c2b2b3f7a89094648b7fbd825ff1fe9f00d052c102d9ea9"
+    },
+    "lib/src/in_app_browser/in_app_browser.dart": {
+      "patched_sha256": "699219f8bc823d992f17bbb546a019f3458e77d96ab530e0927890a57d0256b4",
+      "upstream_sha256": "699219f8bc823d992f17bbb546a019f3458e77d96ab530e0927890a57d0256b4"
+    },
+    "lib/src/in_app_browser/in_app_browser_options.dart": {
+      "patched_sha256": "847590463bf6debbc29cf62b6df478847adbfb2cd470c0f8e19e42cabcfe9b7c",
+      "upstream_sha256": "847590463bf6debbc29cf62b6df478847adbfb2cd470c0f8e19e42cabcfe9b7c"
+    },
+    "lib/src/in_app_browser/ios/in_app_browser_options.dart": {
+      "patched_sha256": "30b69f7e7892dcf70337583b4736eab74a706640a9eb5a321a6a9461a8313aab",
+      "upstream_sha256": "30b69f7e7892dcf70337583b4736eab74a706640a9eb5a321a6a9461a8313aab"
+    },
+    "lib/src/in_app_browser/ios/main.dart": {
+      "patched_sha256": "a75ee4e7c70c13be9c2b2b3f7a89094648b7fbd825ff1fe9f00d052c102d9ea9",
+      "upstream_sha256": "a75ee4e7c70c13be9c2b2b3f7a89094648b7fbd825ff1fe9f00d052c102d9ea9"
+    },
+    "lib/src/in_app_browser/main.dart": {
+      "patched_sha256": "457ce7dba687641ab218821ab6f9d64ec9f7416b13da34f08c168e0d48b91f6d",
+      "upstream_sha256": "457ce7dba687641ab218821ab6f9d64ec9f7416b13da34f08c168e0d48b91f6d"
+    },
+    "lib/src/in_app_localhost_server.dart": {
+      "patched_sha256": "e0b5b1d44e3083efa028396c0e61c6e8ccbacb1f6a2da51c0a6be4cc72577620",
+      "upstream_sha256": "e0b5b1d44e3083efa028396c0e61c6e8ccbacb1f6a2da51c0a6be4cc72577620"
+    },
+    "lib/src/in_app_webview/_static_channel.dart": {
+      "patched_sha256": "70eebf59a846f78c2ec3410bfe97e22ff7b82962c3670b7e3bb440768bcbce62",
+      "upstream_sha256": "70eebf59a846f78c2ec3410bfe97e22ff7b82962c3670b7e3bb440768bcbce62"
+    },
+    "lib/src/in_app_webview/android/in_app_webview_controller.dart": {
+      "patched_sha256": "13652efabdf1d1002a2ce835924036b0d97bd636009467d5ccb44f47f06d9b8c",
+      "upstream_sha256": "13652efabdf1d1002a2ce835924036b0d97bd636009467d5ccb44f47f06d9b8c"
+    },
+    "lib/src/in_app_webview/android/in_app_webview_options.dart": {
+      "patched_sha256": "8390973fb183cca65ee872d1b1e9e8e027bd1f8638af291a4c0205a58437ae91",
+      "upstream_sha256": "8390973fb183cca65ee872d1b1e9e8e027bd1f8638af291a4c0205a58437ae91"
+    },
+    "lib/src/in_app_webview/android/main.dart": {
+      "patched_sha256": "fd33fe88c57d7db65b93a86697617fe009802c3ce072054c7d064ae7fcad8f4c",
+      "upstream_sha256": "fd33fe88c57d7db65b93a86697617fe009802c3ce072054c7d064ae7fcad8f4c"
+    },
+    "lib/src/in_app_webview/headless_in_app_webview.dart": {
+      "patched_sha256": "c2e3cd3e92c0a824992b8405986b65dc55b9940a0d400b28f7e66f6f4224fa01",
+      "upstream_sha256": "c2e3cd3e92c0a824992b8405986b65dc55b9940a0d400b28f7e66f6f4224fa01"
+    },
+    "lib/src/in_app_webview/in_app_webview.dart": {
+      "patched_sha256": "8d5fb0b82800a50137b95ebca5fc04f32a9e3dea8c3ed2eabd405131c4d4d965",
+      "upstream_sha256": "8d5fb0b82800a50137b95ebca5fc04f32a9e3dea8c3ed2eabd405131c4d4d965"
+    },
+    "lib/src/in_app_webview/in_app_webview_controller.dart": {
+      "patched_sha256": "6610e4883bbf0a13bd4c4d35a72e6369ae12048a482325cad93d26c260837540",
+      "upstream_sha256": "6610e4883bbf0a13bd4c4d35a72e6369ae12048a482325cad93d26c260837540"
+    },
+    "lib/src/in_app_webview/in_app_webview_options.dart": {
+      "patched_sha256": "319e8875467210df09561ff7c28041dd8b664eee54e7a7c3cd3b920d3491db73",
+      "upstream_sha256": "319e8875467210df09561ff7c28041dd8b664eee54e7a7c3cd3b920d3491db73"
+    },
+    "lib/src/in_app_webview/ios/in_app_webview_controller.dart": {
+      "patched_sha256": "861ff223945244529ceb91fbecf8fdec6ec56a9aa87bdce091e3b0f9074ce23b",
+      "upstream_sha256": "861ff223945244529ceb91fbecf8fdec6ec56a9aa87bdce091e3b0f9074ce23b"
+    },
+    "lib/src/in_app_webview/ios/in_app_webview_options.dart": {
+      "patched_sha256": "7d8be26f99d333cf19e46c9ab8b30a6c8f0adc354762aaa356ec741acafc5206",
+      "upstream_sha256": "7d8be26f99d333cf19e46c9ab8b30a6c8f0adc354762aaa356ec741acafc5206"
+    },
+    "lib/src/in_app_webview/ios/main.dart": {
+      "patched_sha256": "fd33fe88c57d7db65b93a86697617fe009802c3ce072054c7d064ae7fcad8f4c",
+      "upstream_sha256": "fd33fe88c57d7db65b93a86697617fe009802c3ce072054c7d064ae7fcad8f4c"
+    },
+    "lib/src/in_app_webview/main.dart": {
+      "patched_sha256": "725e6649b36b0c7e2cf07646425341b4064015afcd212031b0d2f39c19df51d0",
+      "upstream_sha256": "725e6649b36b0c7e2cf07646425341b4064015afcd212031b0d2f39c19df51d0"
+    },
+    "lib/src/in_app_webview/webview.dart": {
+      "patched_sha256": "7881b04bb52dc73155ad3709842c62edcc744617d042fcff9f696f9f6fb9f304",
+      "upstream_sha256": "7881b04bb52dc73155ad3709842c62edcc744617d042fcff9f696f9f6fb9f304"
+    },
+    "lib/src/ios/main.dart": {
+      "patched_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "upstream_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    "lib/src/main.dart": {
+      "patched_sha256": "9ee0638ba3a9e1d261e906c3b7a3fb2389b8a168b5cdf34c08dff383155d48f1",
+      "upstream_sha256": "9ee0638ba3a9e1d261e906c3b7a3fb2389b8a168b5cdf34c08dff383155d48f1"
+    },
+    "lib/src/mime_type_resolver.dart": {
+      "patched_sha256": "759defc90df9000cf978412db344997fcf57f6ab28aa17d922d65dfc9df3815c",
+      "upstream_sha256": "759defc90df9000cf978412db344997fcf57f6ab28aa17d922d65dfc9df3815c"
+    },
+    "lib/src/platform_util.dart": {
+      "patched_sha256": "ef849f3146d438542054ba88550f4e5a350726c3b42c3165bf8ffcbc911dcb3e",
+      "upstream_sha256": "ef849f3146d438542054ba88550f4e5a350726c3b42c3165bf8ffcbc911dcb3e"
+    },
+    "lib/src/pull_to_refresh/main.dart": {
+      "patched_sha256": "9fb27098fa77649c06969438359e864d3b7cb8f9061fa43858dcf10550725c4f",
+      "upstream_sha256": "9fb27098fa77649c06969438359e864d3b7cb8f9061fa43858dcf10550725c4f"
+    },
+    "lib/src/pull_to_refresh/pull_to_refresh_controller.dart": {
+      "patched_sha256": "274409664b0df0cb2a546ce2d154c6fe474c75af18da99fbc10ef6f3a699580c",
+      "upstream_sha256": "274409664b0df0cb2a546ce2d154c6fe474c75af18da99fbc10ef6f3a699580c"
+    },
+    "lib/src/pull_to_refresh/pull_to_refresh_options.dart": {
+      "patched_sha256": "f80c82c3ba138dc1d201ba337a3ee642afcc352cebb249b2c2034335d808dfab",
+      "upstream_sha256": "f80c82c3ba138dc1d201ba337a3ee642afcc352cebb249b2c2034335d808dfab"
+    },
+    "lib/src/types.dart": {
+      "patched_sha256": "3bc0388a46d84ad54ed392026fe9057b4e967c92eea77aae65d678f750f176af",
+      "upstream_sha256": "3bc0388a46d84ad54ed392026fe9057b4e967c92eea77aae65d678f750f176af"
+    },
+    "lib/src/util.dart": {
+      "patched_sha256": "1a5f564de66e9a630d426baaaad17b471f924c3fe08026f5df8b73e90b716333",
+      "upstream_sha256": "1a5f564de66e9a630d426baaaad17b471f924c3fe08026f5df8b73e90b716333"
+    },
+    "lib/src/web_message/main.dart": {
+      "patched_sha256": "1c896993513f89f426f887efd97f8863dc6693b739942b7f2756dfbc50ba97fc",
+      "upstream_sha256": "1c896993513f89f426f887efd97f8863dc6693b739942b7f2756dfbc50ba97fc"
+    },
+    "lib/src/web_message/web_message_channel.dart": {
+      "patched_sha256": "5c332c6af22b283a8e1aa1d99af8508bcac7565dca90874322424b2d8a1a3ffe",
+      "upstream_sha256": "5c332c6af22b283a8e1aa1d99af8508bcac7565dca90874322424b2d8a1a3ffe"
+    },
+    "lib/src/web_message/web_message_listener.dart": {
+      "patched_sha256": "f1eaf3fd07f498eb969719e083a67c0198207ecfa7dabe5a126fa55592a9e091",
+      "upstream_sha256": "f1eaf3fd07f498eb969719e083a67c0198207ecfa7dabe5a126fa55592a9e091"
+    },
+    "lib/src/web_storage/_static_channel.dart": {
+      "patched_sha256": "4abcb31f703706e444fb7db1a800b115297c5906fe3a1ca8c4d0498adf265b5f",
+      "upstream_sha256": "4abcb31f703706e444fb7db1a800b115297c5906fe3a1ca8c4d0498adf265b5f"
+    },
+    "lib/src/web_storage/android/main.dart": {
+      "patched_sha256": "735918665fdd2f417ba5b3bed97de9f755e8b89808db41d7a6589c878f72401d",
+      "upstream_sha256": "735918665fdd2f417ba5b3bed97de9f755e8b89808db41d7a6589c878f72401d"
+    },
+    "lib/src/web_storage/android/web_storage_manager.dart": {
+      "patched_sha256": "dda95d966031f58ecd15b94dac5ed1fd6f39ef2641eb77dbbb3b083ade5c6210",
+      "upstream_sha256": "dda95d966031f58ecd15b94dac5ed1fd6f39ef2641eb77dbbb3b083ade5c6210"
+    },
+    "lib/src/web_storage/ios/main.dart": {
+      "patched_sha256": "735918665fdd2f417ba5b3bed97de9f755e8b89808db41d7a6589c878f72401d",
+      "upstream_sha256": "735918665fdd2f417ba5b3bed97de9f755e8b89808db41d7a6589c878f72401d"
+    },
+    "lib/src/web_storage/ios/web_storage_manager.dart": {
+      "patched_sha256": "d5f8d44e967cb6e98d9cb144bcd995a3df0ba9285fd2b6ef3638c3cdf716c1fd",
+      "upstream_sha256": "d5f8d44e967cb6e98d9cb144bcd995a3df0ba9285fd2b6ef3638c3cdf716c1fd"
+    },
+    "lib/src/web_storage/main.dart": {
+      "patched_sha256": "eea7bdfc4a62157738f39acd61c4015a2807241757ce448c2a935cacb9cb7365",
+      "upstream_sha256": "eea7bdfc4a62157738f39acd61c4015a2807241757ce448c2a935cacb9cb7365"
+    },
+    "lib/src/web_storage/web_storage.dart": {
+      "patched_sha256": "2fbb0afef1e4c6ed1f2c31c5d27d443d28108f7bdd9c510f5dbc4d68bd4de490",
+      "upstream_sha256": "2fbb0afef1e4c6ed1f2c31c5d27d443d28108f7bdd9c510f5dbc4d68bd4de490"
+    },
+    "lib/src/web_storage/web_storage_manager.dart": {
+      "patched_sha256": "c5e70778744996abb2948daaf0bef65a5a8a70df094643eef3583852980d76e1",
+      "upstream_sha256": "c5e70778744996abb2948daaf0bef65a5a8a70df094643eef3583852980d76e1"
+    },
+    "lib/src/x509_certificate/asn1_decoder.dart": {
+      "patched_sha256": "8940a63b198c284b3888e7c828dd5ef33f62bde667f75188e0e571700ae7d9b7",
+      "upstream_sha256": "8940a63b198c284b3888e7c828dd5ef33f62bde667f75188e0e571700ae7d9b7"
+    },
+    "lib/src/x509_certificate/asn1_der_encoder.dart": {
+      "patched_sha256": "a89144c6a224fb3b692859f173095463f01c64f8889b534e20f4b088001a3a31",
+      "upstream_sha256": "a89144c6a224fb3b692859f173095463f01c64f8889b534e20f4b088001a3a31"
+    },
+    "lib/src/x509_certificate/asn1_distinguished_names.dart": {
+      "patched_sha256": "cd5a2cfd44b7dbaa7aaa721f55d4645f3672c6b4cc313842d07ea1b370b08b0c",
+      "upstream_sha256": "cd5a2cfd44b7dbaa7aaa721f55d4645f3672c6b4cc313842d07ea1b370b08b0c"
+    },
+    "lib/src/x509_certificate/asn1_identifier.dart": {
+      "patched_sha256": "7376d3e3ab018863495e2e5f18563ba4f9c3e7e7eae1e863d7dd7b9f7fc90241",
+      "upstream_sha256": "7376d3e3ab018863495e2e5f18563ba4f9c3e7e7eae1e863d7dd7b9f7fc90241"
+    },
+    "lib/src/x509_certificate/asn1_object.dart": {
+      "patched_sha256": "f67c3e330579283b6a5f1a688afc7e792e9725496d7b7b59fd33ab9b2b0ef1ac",
+      "upstream_sha256": "f67c3e330579283b6a5f1a688afc7e792e9725496d7b7b59fd33ab9b2b0ef1ac"
+    },
+    "lib/src/x509_certificate/key_usage.dart": {
+      "patched_sha256": "047b307c2ebf93a375d48707c71e942a0a0a3ab4a70ea4aaed024b9d10116d7c",
+      "upstream_sha256": "047b307c2ebf93a375d48707c71e942a0a0a3ab4a70ea4aaed024b9d10116d7c"
+    },
+    "lib/src/x509_certificate/main.dart": {
+      "patched_sha256": "2fd971ce52a44f760b2a8998c5b0c74db0bc6d8cca6a9732f85495166cbdedcf",
+      "upstream_sha256": "2fd971ce52a44f760b2a8998c5b0c74db0bc6d8cca6a9732f85495166cbdedcf"
+    },
+    "lib/src/x509_certificate/oid.dart": {
+      "patched_sha256": "54421e2c0d194008cbb5c1920928f381d9b406c0be2b1c9007392c3f5c50e9a1",
+      "upstream_sha256": "54421e2c0d194008cbb5c1920928f381d9b406c0be2b1c9007392c3f5c50e9a1"
+    },
+    "lib/src/x509_certificate/x509_certificate.dart": {
+      "patched_sha256": "900e5ce8a7df5bc8ec067b64133e3cb7d126c0b0110d5a6b6e6970ea56ae48f5",
+      "upstream_sha256": "900e5ce8a7df5bc8ec067b64133e3cb7d126c0b0110d5a6b6e6970ea56ae48f5"
+    },
+    "lib/src/x509_certificate/x509_extension.dart": {
+      "patched_sha256": "a6687723e21116845467a4f656c7fe612c1223c7bfe65da2fc2a51ddc8160b48",
+      "upstream_sha256": "a6687723e21116845467a4f656c7fe612c1223c7bfe65da2fc2a51ddc8160b48"
+    },
+    "lib/src/x509_certificate/x509_public_key.dart": {
+      "patched_sha256": "4ab25db930438e8eb1bfb1b1f78d30bec3508b51b70975276872e40986af61fa",
+      "upstream_sha256": "4ab25db930438e8eb1bfb1b1f78d30bec3508b51b70975276872e40986af61fa"
+    },
+    "pubspec.yaml": {
+      "patched_sha256": "f1951ec8f8e947051d6c589f133e8ff24cfaed9ac2c38823dfc295903d1926e4",
+      "upstream_sha256": "44e55e86242a9c455570f6ef9e389d0b82d8fc303c789bb2ec89e8d6bad227c9"
+    }
+  }
+}
