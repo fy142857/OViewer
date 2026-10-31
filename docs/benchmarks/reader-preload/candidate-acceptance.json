@@ -1,0 +1,42 @@
+{
+  "candidate_id": "1.11.1+130",
+  "build_sha": "f13aff9639100846bfdd96514a37ffb475b86d28",
+  "source_sha": "282f2c947f84ed7bb869641a82345e6158cbcc90",
+  "android_run_id": 41229085685,
+  "android_result": "success",
+  "apk_sha256": "b25875a2366c1ede2b32a1802d7094dd695e40cc44673ada16ea2ee48d7ba928",
+  "signing_cert_sha256": "a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4",
+  "device": "VOG-AL10 Android 10",
+  "upgraded_from": "1.11.0+119",
+  "installed_version": "1.11.1+130",
+  "install_result": "Success",
+  "preserved_preferences": [
+    "theme",
+    "language",
+    "gallery display"
+  ],
+  "numeric_options": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "selected_counts": [
+    2,
+    3,
+    4,
+    5,
+    3,
+    1
+  ],
+  "restart_persisted_count": 3,
+  "restored_count": 1,
+  "initial_am_start_wait_ms": 52934,
+  "foreground_retry_required": true,
+  "subsequent_force_stop_relaunch_and_settings_ui": "passed",
+  "ios_run_id": 41229091555,
+  "ios_result": "cancelled before any step: macOS 14 scheduled brownout",
+  "ios_device_acceptance": "pending; no USB iPad connected",
+  "ios_disposition": "User confirmed retaining iOS 12 and deferring the iOS build environment repair; Android acceptance completes this iteration."
+}
