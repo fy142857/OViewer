@@ -167,4 +167,14 @@ VOG-AL10 已从 **1.11.0+119 覆盖安装到 1.11.1+130**。主题、语言及�
 
 [iOS 运行 41229091555](https://github.com/fy142857/OViewer/actions/runs/41229091555) 在启动任何步骤之前被取消。检查注释明确指出 macOS 14 runner 的计划停机；这不是应用编译通过，也未生成 IPA。[官方时间表](https://github.com/actions/runner-images/issues/13518) 显示本次窗口在北京时间 11 月 1 日 08:00 结束，macOS 14 镜像于 11 月 2 日全面退役。
 
-当前工作流使用 Xcode 15.4、最低 iOS 12。[Apple 的工具链支持表](https://developer.apple.com/xcode/system-requirements) 将 Xcode 16 的官方部署范围列为 iOS 15 起。用户已确认本轮**保留 iOS 12，将 iOS 构建标记为待修复，先完成 Android 验收**。因此构建机、Xcode 和最低系统版本保持现状；iOS 构建环境修复及设备安装验收留待后续，不以 Android 或组件测试结果代替。本轮未发布正式 Release。
+候选 130 验收时工作流使用 Xcode 15.4、最低 iOS 12。[Apple 的工具链支持表](https://developer.apple.com/xcode/system-requirements) 将 Xcode 16 的官方部署范围列为 iOS 15 起。用户当时确认**保留 iOS 12，将 iOS 构建标记为待修复，先完成 Android 验收**。该轮未修改构建机、Xcode 和最低系统版本；iOS 构建环境修复及设备安装验收留待后续，不以 Android 或组件测试结果代替。该轮未发布正式 Release。
+
+### 后续指定工具链尝试（2026-11-01）
+
+用户随后指定将 iOS 工作流改为 **macos-15 + Xcode 16.0**，保持最低 iOS 12 并监听构建。已修改 `.github/workflows/build_ios.yml`；`ios/Podfile`、Runner 工程的三个部署配置以及 `ios/Flutter/AppFrameworkInfo.plist` 均维持 `12.0`，应用代码、Flutter 版本和依赖锁文件未修改。
+
+- [候选 131 / iOS 41232164429](https://github.com/fy142857/OViewer/actions/runs/41232164429)：Xcode 16.0 选择成功，1142 项测试通过；原生构建目标解析失败，提示缺少 iOS 18.0 平台。此处 18.0 指构建平台组件，不是应用最低运行版本。
+- [候选 132 / iOS 41233225586](https://github.com/fy142857/OViewer/actions/runs/41233225586)：增加 `xcodebuild -downloadPlatform iOS` 后，平台安装返回 `Unable to connect to simulator`。
+- [候选 133 / iOS 41233420046](https://github.com/fy142857/OViewer/actions/runs/41233420046)：增加 `sudo xcodebuild -runFirstLaunch` 和 `xcrun simctl list runtimes` 后，平台准备通过；静态分析、脚本测试及 **1142 项 Flutter 测试通过**，随后实际原生编译失败。
+
+最终阻塞位于 `flutter_inappwebview 5.8.0` 的 `InAppWebView.swift`：第 1226 行 `evaluateJavaScript` 覆写报 `method does not override any method from its superclass`，多处调用报 `ambiguous use of 'evaluateJavaScript(_:completionHandler:)'`。需要后续处理该插件与 Xcode 16 / WebKit SDK 的 Swift 接口兼容问题。本次未升级插件或提高最低系统版本，未生成 IPA，也没有 iOS 12 真机通过结论。
