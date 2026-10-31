@@ -16,6 +16,7 @@ from .build import candidate_by_id, certificate, file_digest, inspect_package
 from .github import GitHub, json_text
 from .prepare import stable_release
 from .rules import CANDIDATE_PATH, CORRECTIONS_PATH, CHANGE_LEVELS, IMPACTS, Git, VersionError, load_corrections, package_version, version_tuple
+from .test_policy import run_title, validate_scope
 
 FILENAMES = {"android": "app-release.apk", "ios": "OViewer.ipa"}
 RELEASE_FILENAMES = {"android": "OViewer.apk", "ios": "OViewer.ipa"}
@@ -62,7 +63,13 @@ def read_build(api, platform, run_id, folder):
     destination.write_bytes(artifact(api, artifacts, filename))
     for key, value in file_digest(destination).items():
         require(metadata.get(key) == value, f"{platform} artifact {key} mismatch")
-    require(run.get("display_title") == f"{platform} / {metadata['candidate_id']}", "Run title does not identify the candidate")
+    scope = metadata.get('test_scope')
+    if scope is not None:
+        validate_scope(scope)
+        require(scope['head_sha'] == metadata.get('source_sha'), 'Test scope source mismatch')
+    # Old records remain readable, but cannot masquerade as new scope-labelled runs.
+    expected_title = run_title(platform, metadata['candidate_id'], scope['mode'] if scope else None)
+    require(run.get("display_title") == expected_title, "Run title does not identify the candidate/test scope")
     package = inspect_package(destination, platform, os.environ.get("ANDROID_SIGNING_CERT_SHA256"))
     for key, value in package.items():
         require(metadata.get(key) == value, f"{platform} installed package {key} disagrees with metadata")
@@ -155,6 +162,14 @@ def release_notes(candidate, android, ios):
             f"### 校验\n\n- APK SHA-256: `{android['sha256']}`\n- IPA SHA-256: `{ios['sha256']}`\n"
             f"- Android 证书 SHA-256: `{android['signing_cert_sha256']}`\n\n"
             "### 安装说明\n\nAndroid 使用固定正式签名，相同签名版本可覆盖安装。\n\niOS 为未签名 IPA，需自行签名安装。")
+    if any(item.get('test_scope') for item in (android, ios)):
+        coverage = []
+        for platform, item in (('Android', android), ('iOS', ios)):
+            scope = item.get('test_scope')
+            description = ('未记录（历史产物）' if scope is None else
+                           '包含慢测试' if scope['mode'] == 'run' else '跳过 reader_prefetch_slow，其余测试照常执行')
+            coverage.append(f'- {platform}: {description}')
+        sections.append('### 测试范围\n\n' + '\n'.join(coverage))
     return "\n\n".join(sections) + "\n"
 
 

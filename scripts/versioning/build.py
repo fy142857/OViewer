@@ -14,6 +14,7 @@ from pathlib import Path
 from .github import GitHub, json_text
 from .prepare import Ledger
 from .rules import CANDIDATE_PATH, Git, VersionError, package_version
+from .test_policy import SCOPE_PATH, validate_scope
 
 
 def candidate_by_id(api: GitHub, candidate_id: str) -> dict:
@@ -95,13 +96,20 @@ def file_digest(path: Path) -> dict:
     return {"filename": path.name, "size": path.stat().st_size, "sha256": digest.hexdigest()}
 
 
-def metadata(candidate: dict, path: Path, platform: str, run_id: int, attempt: int, expected_certificate=None) -> dict:
+def metadata(candidate: dict, path: Path, platform: str, run_id: int, attempt: int, expected_certificate=None,
+             test_scope: dict | None = None) -> dict:
     package = inspect_package(path, platform, expected_certificate)
     if (package["version"], package["build_number"]) != (candidate["version"], candidate["build_number"]):
         raise VersionError("Built package version does not match candidate")
-    return {"schema": 1, "candidate_id": candidate["candidate_id"], "platform": platform,
+    record = {"schema": 1, "candidate_id": candidate["candidate_id"], "platform": platform,
             "build_sha": candidate["build_sha"], "source_sha": candidate["source_sha"],
             "run_id": run_id, "run_attempt": attempt, **package, **file_digest(path)}
+    if test_scope is not None:
+        validate_scope(test_scope)
+        if test_scope['head_sha'] != candidate['source_sha']:
+            raise VersionError('Test scope belongs to another candidate source')
+        record['test_scope'] = test_scope
+    return record
 
 
 def main():
@@ -121,7 +129,8 @@ def main():
     if args.command == "metadata":
         if not args.file or not args.platform:
             parser.error("metadata requires --file and --platform")
-        record = metadata(candidate, args.file, args.platform, int(os.environ["GITHUB_RUN_ID"]), int(os.environ["GITHUB_RUN_ATTEMPT"]), os.environ.get("ANDROID_SIGNING_CERT_SHA256"))
+        scope = json.loads(SCOPE_PATH.read_text(encoding='utf-8')) if SCOPE_PATH.exists() else None
+        record = metadata(candidate, args.file, args.platform, int(os.environ["GITHUB_RUN_ID"]), int(os.environ["GITHUB_RUN_ATTEMPT"]), os.environ.get("ANDROID_SIGNING_CERT_SHA256"), scope)
         Path("build-metadata.json").write_text(json_text(record), encoding="utf-8")
         print(json_text(record))
 

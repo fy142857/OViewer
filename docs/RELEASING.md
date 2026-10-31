@@ -18,7 +18,9 @@
 
 构建失败时可重跑该运行，或手动运行对应构建工作流并填写已登记的 `candidate_id`。同一个候选不会重新编号；有代码修改则提交新的候选。
 
-两端构建工作流提供试构建选项 `skip_reader_prefetch_tests`，默认关闭。显式开启时，仅排除标记为 `reader_prefetch_slow` 的 64 个阅读器预读组合场景；快速策略、设置及其他阅读器测试仍执行。自动候选构建和 PR 检查保持全量测试。本地对应命令为 `flutter test --no-pub --reporter expanded --exclude-tags reader_prefetch_slow`。启用此选项的验收记录必须注明缩减的测试范围，不能描述为全量测试通过。
+两端构建保留 `skip_reader_prefetch_tests`（“跳过慢测试”）开关，手动默认关闭；自动候选和 PR 根据提交中的 `Slow-Tests: run|skip`、`Slow-Tests-Reason` 判断，详见[统一测试规则](VERSION_MANAGEMENT.md#按改动选择测试与跳过慢测试)。开启时只排除 `reader_prefetch_slow`，快速策略、设置及其他回归仍执行。自动分发直接传递决定，不再取消全量任务后重跑。手动运行时内部 `test_scope` 输入留空即可。
+
+分发命令支持 `python -m scripts.versioning.dispatch --candidate <候选ID> --branch dev --slow-tests auto`；显式改为 `run` 或 `skip` 可覆盖自动选择。复用按候选、平台及测试范围匹配；历史没有范围的任务不会满足新的范围请求。新运行标题如 `ios / 1.11.1+138 / slow:skip`，候选编号与安装包名称不变。
 
 ## 候选与台账
 
@@ -93,13 +95,19 @@ iOS 仍提供未签名 IPA，部署目标为 iOS 12；需自行签名安装。�
 
 ## 验证命令
 
-提交前使用与 Android/iOS Actions 一致的 Flutter **3.16.0** 验证。切换本地 SDK 后，先用目标 SDK 执行 `flutter pub get`，再执行下列检查；仅更换 `flutter test --no-pub` 的可执行文件可能仍通过 `.dart_tool/package_config.json` 引用旧 SDK，造成与 CI 不一致的测试结果。临时切换 SDK 产生的锁文件变化应单独核对，不要作为无关依赖升级提交。
+本地按实际改动选择必要检查，不要求每次执行以下全部命令。运行 Flutter 验证时使用与 Actions 一致的 **3.16.0**；切换本地 SDK 后，先用目标 SDK 执行 `flutter pub get`。仅更换 `flutter test --no-pub` 的可执行文件可能仍通过 `.dart_tool/package_config.json` 引用旧 SDK。临时 SDK 切换的锁文件变化须核对并恢复，不能作为无关依赖升级提交。
 
 ```text
 python -m unittest discover -s scripts/tests -v
 python -m scripts.versioning.analyze
-flutter test --no-pub
+flutter test --no-pub test/<受影响的测试文件>.dart
+flutter test --no-pub --reporter expanded --exclude-tags reader_prefetch_slow
+flutter test --no-pub --reporter expanded --tags reader_prefetch_slow
 ```
+
+需要整套回归时运行 `flutter test --no-pub --reporter expanded`。只改文案、布局或 CI 时，AI 根据行为影响选择对应验证；涉及预加载、缓存、网络调度或阅读行为时调用相关测试。正式发布也不强制补跑全量，需如实记录本次运行、跳过和复用的范围。
+
+提交后可以只读检查某个提交范围的自动选择：`python -m scripts.versioning.test_policy range --base <基线SHA> --head HEAD`。有效提交中还必须保留 `Change-Kind` 和 `Change-Reason`，并附 `Slow-Tests` 与 `Slow-Tests-Reason`。没有慢测试声明时 CI 默认包含慢测试，非法声明报错。
 
 静态分析基线位于 `scripts/versioning/analysis-baseline.json`，目前保留已有提示；新增错误和警告会使构建失败。更新基线必须人工审阅，不应在 CI 自动接受新诊断。
 

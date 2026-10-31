@@ -753,6 +753,6 @@ end
 - 评分 / 评论交互
 - 多站点切换（E-Hentai / ExHentai）
 - UI 动画打磨 & 适配不同屏幕尺寸
-- 全面测试（单元测试 + Widget 测试）
+- 按改动影响选择单元测试与 Widget 回归；慢测试及 AI 开发规则以 [版本管理文档](docs/VERSION_MANAGEMENT.md#按改动选择测试与跳过慢测试) 为准，非必要不改阅读器、预加载、缓存或网络调度
 - 性能 profiling & 优化（特别是 iOS 11 旧设备）
 - 文档 & README 完善

@@ -153,6 +153,8 @@ test/                            # Unit and widget regression tests
 
 ## Feedback and contributions
 
+Developers and AI assistants should follow the [change-based test policy](VERSION_MANAGEMENT.md#按改动选择测试与跳过慢测试) and [build/test commands](RELEASING.md#验证命令). Avoid unrelated changes to reader behavior, preloading, caching, or network scheduling; select tests based on actual impact. A release does not automatically require a full test run.
+
 Found a problem or have a feature suggestion? Please open an [Issue](https://github.com/fy142857/OViewer/issues). Pull requests are also welcome.
 
 When reporting a problem, include the app version, device and OS version, and steps to reproduce it. Hide sensitive information such as account details and Cookies in screenshots.

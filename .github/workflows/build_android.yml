@@ -1,6 +1,6 @@
 name: Build Android APK
 
-run-name: "android / ${{ inputs.candidate_id || github.event.pull_request.number }}"
+run-name: "android / ${{ inputs.candidate_id || github.event.pull_request.number }} / slow:${{ github.event_name == 'pull_request' && 'auto' || (inputs.skip_reader_prefetch_tests && 'skip' || 'run') }}"
 
 on:
   pull_request:
@@ -20,9 +20,13 @@ on:
         default: false
         type: boolean
       skip_reader_prefetch_tests:
-        description: 'Trial build only: omit the 64 slow reader prefetch scenarios'
+        description: '跳过慢测试（阅读器预读组合场景；其他测试仍运行）'
         default: false
         type: boolean
+      test_scope:
+        description: '自动分发携带的测试判断；手动构建留空'
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -38,6 +42,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -58,6 +64,15 @@ jobs:
       - name: Verify candidate source and version
         if: github.event_name == 'workflow_dispatch'
         run: python -m scripts.versioning.build verify --candidate "$CANDIDATE_ID"
+
+      - name: Resolve test scope
+        id: test_scope
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SKIP_READER_PREFETCH_TESTS: ${{ inputs.skip_reader_prefetch_tests }}
+          DISPATCHED_TEST_SCOPE: ${{ inputs.test_scope }}
+        run: python -m scripts.versioning.test_policy workflow
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -101,10 +116,10 @@ jobs:
 
       - name: Flutter tests
         env:
-          SKIP_READER_PREFETCH_TESTS: ${{ inputs.skip_reader_prefetch_tests }}
+          SKIP_READER_PREFETCH_TESTS: ${{ steps.test_scope.outputs.skip_slow }}
         run: |
           if [[ "$SKIP_READER_PREFETCH_TESTS" == "true" ]]; then
-            echo "::notice::Trial build: excluding 64 reader_prefetch_slow scenarios; other tests remain enabled."
+            echo "::notice::Selected scope excludes reader_prefetch_slow; all other Flutter tests remain enabled."
             flutter test --no-pub --reporter expanded --exclude-tags reader_prefetch_slow
           else
             flutter test --no-pub --reporter expanded

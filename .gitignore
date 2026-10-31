@@ -33,6 +33,7 @@ Thumbs.db
 .pub-cache/
 .pub/
 /build/
+/test-scope.json
 pubspec.overrides.yaml
 
 # Symbolication related
