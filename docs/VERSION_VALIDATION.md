@@ -73,3 +73,17 @@ a447d18c3eb7db00cbac4418ef505facf5d2d408ee64311817050ea25977a1e2
 本次真机验证覆盖上述 Android 10 设备，不代表所有 Android 型号均已实测。本地 iOS 工具的自动回归与真实下载已通过，但本次未连接 USB iPad，未进行真实签名及安装。Windows 本地 Gradle 前置任务校验因无法建立 loopback 连接而未执行到签名检查；正式签名包构建及包内证书核验已在 GitHub Linux runner 成功完成。
 
 草稿恢复、附件冲突、重复发布等会写入 GitHub 的场景已用隔离测试覆盖；版本管理实施阶段没有创建公开 Release 或修改 v1.0.0。后续签名替换是用户另行明确授权的发布操作。
+
+## 按改动影响选择慢测试（2026-11-01）
+
+规则以 [版本管理文档](VERSION_MANAGEMENT.md#按改动选择测试与跳过慢测试) 为准。候选 **1.11.1+138** 的源提交为 `8ba3c160b6b169a8a1e65bcd655bc84818bcab94`，构建提交为 `77b41d279591414c449024cb9bc61860daa38e75`。
+
+- 91 项脚本测试通过，包含新增的 25 项策略、真实 Git 范围、PR、多提交与合并处理、显式覆盖、复用以及新旧发布元数据兼容用例。验证了跳过慢测试的产物可读取，不增加正式发布全量测试门槛。
+- 本次只调整 CI、版本工具和文档，没有修改应用的阅读器、预加载、缓存或网络调度代码。提交声明 `Slow-Tests: skip`，自动解析基线为已成功的候选 137 构建提交 `7b17b6ac9060085458f9437845fc96cf0330c3e1`。
+- [候选准备 41247910267](https://github.com/fy142857/OViewer/actions/runs/41247910267) 自动分发两个带 `slow:skip` 标记的运行，没有取消任务或手动重跑。同候选再次执行分发逻辑时，只读探针确认复用原运行，没有尝试写请求。
+- [Android 41247951855](https://github.com/fy142857/OViewer/actions/runs/41247951855)、[iOS 41247953472](https://github.com/fy142857/OViewer/actions/runs/41247953472) 均构建成功，各通过 1,078 项 Flutter 回归；按声明排除当时 64 个 `reader_prefetch_slow` 场景，并非全量测试通过。各有 157 条既有静态诊断，无新增错误或警告。
+- 下载的 APK / IPA 通过实际版本、大小、SHA-256、候选来源及 Android 正式签名核验；两份 `test_scope` 均为 `mode=skip`、`source=commits`，基线、源码 SHA 和理由一致。新运行名称与元数据匹配。
+- iOS 继续使用 Xcode 16.4，IPA 主应用最低版本为 12.0；28 个二进制的最低版本均不高于 12.0，下载产物检查与 CI 报告一致。没有进行 iOS 12 真机安装验证，也未执行正式发布。
+- 本机 Git 忽略的 iOS 监听、下载工具已兼容新标题后缀和范围元数据，79 项本地工具回归通过；修改前已备份到忽略的构建目录，没有修改账号、签名或设备状态。这些本机工具继续不纳入仓库分发。
+
+机器可读证据：[产物与测试范围](benchmarks/test-selection/1.11.1+138/acceptance.json)、[自动执行及复用记录](benchmarks/test-selection/1.11.1+138/execution.json)、[iOS 最低版本](benchmarks/test-selection/1.11.1+138/minimum-os.json)。

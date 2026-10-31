@@ -1,0 +1,62 @@
+{
+  "candidate_id": "1.11.1+138",
+  "build_sha": "77b41d279591414c449024cb9bc61860daa38e75",
+  "android": {
+    "build_number": 138,
+    "build_sha": "77b41d279591414c449024cb9bc61860daa38e75",
+    "candidate_id": "1.11.1+138",
+    "filename": "OViewer.apk",
+    "platform": "android",
+    "run_attempt": 1,
+    "run_id": 41247951855,
+    "schema": 1,
+    "sha256": "a237289f21d5225488924e310bc0896b74435d0fd766ff1dfea7e5aab8c279be",
+    "signing_cert_sha256": "a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4",
+    "size": 30704934,
+    "source_sha": "8ba3c160b6b169a8a1e65bcd655bc84818bcab94",
+    "test_scope": {
+      "base_sha": "7b17b6ac9060085458f9437845fc96cf0330c3e1",
+      "head_sha": "8ba3c160b6b169a8a1e65bcd655bc84818bcab94",
+      "mode": "skip",
+      "reason": "8ba3c160 skip: 仅修改 CI、版本脚本和开发文档，已验证策略解析、分发复用及发布兼容性；未改变阅读器、预加载、缓存或应用网络调度行为。",
+      "schema": 1,
+      "source": "commits"
+    },
+    "version": "1.11.1",
+    "artifact_filename": "app-release.apk"
+  },
+  "ios": {
+    "build_number": 138,
+    "build_sha": "77b41d279591414c449024cb9bc61860daa38e75",
+    "candidate_id": "1.11.1+138",
+    "filename": "OViewer.ipa",
+    "platform": "ios",
+    "run_attempt": 1,
+    "run_id": 41247953472,
+    "schema": 1,
+    "sha256": "76c683bd7de699a672a15dbd44c1b0ae4212396cc097edd468a67743c1e42e42",
+    "size": 26923953,
+    "source_sha": "8ba3c160b6b169a8a1e65bcd655bc84818bcab94",
+    "test_scope": {
+      "base_sha": "7b17b6ac9060085458f9437845fc96cf0330c3e1",
+      "head_sha": "8ba3c160b6b169a8a1e65bcd655bc84818bcab94",
+      "mode": "skip",
+      "reason": "8ba3c160 skip: 仅修改 CI、版本脚本和开发文档，已验证策略解析、分发复用及发布兼容性；未改变阅读器、预加载、缓存或应用网络调度行为。",
+      "schema": 1,
+      "source": "commits"
+    },
+    "version": "1.11.1"
+  },
+  "ios_binary_count": 28,
+  "ios_bundle_count": 11,
+  "minimum_os_passed": true,
+  "ios12_device_test": "not_performed",
+  "verification_scope": {
+    "flutter_tests_per_platform": 1078,
+    "slow_tag_excluded": "reader_prefetch_slow",
+    "full_suite_verified": false,
+    "script_tests": 91,
+    "local_ios_tool_tests": 79,
+    "formal_release_performed": false
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "candidate_id": "1.11.1+138",
+  "prepare_run_id": 41247910267,
+  "manual_dispatch_or_cancellation": false,
+  "runs": [
+    {
+      "id": 41247953472,
+      "title": "ios / 1.11.1+138 / slow:skip",
+      "conclusion": "success",
+      "head_sha": "77b41d279591414c449024cb9bc61860daa38e75"
+    },
+    {
+      "id": 41247951855,
+      "title": "android / 1.11.1+138 / slow:skip",
+      "conclusion": "success",
+      "head_sha": "77b41d279591414c449024cb9bc61860daa38e75"
+    }
+  ],
+  "read_only_reuse_probe": {
+    "writes_allowed": false,
+    "reused_run_ids": [
+      41247951855,
+      41247953472
+    ]
+  },
+  "checks": {
+    "script_tests": 91,
+    "flutter_tests_per_platform": 1078,
+    "excluded_slow_tag": "reader_prefetch_slow",
+    "local_ios_tool_tests": 79
+  },
+  "log_evidence": [
+    {
+      "platform": "ios",
+      "lines": [
+        "2026-10-31T22:23:29.2011710Z 4 runs, 9 assertions, 0 failures, 0 errors, 0 skips",
+        "2026-10-31T22:25:28.3403230Z Ran 91 tests in 5.070s",
+        "2026-10-31T22:25:52.7360230Z Analyzer: 157 diagnostics; no new errors or warnings.",
+        "2026-10-31T22:25:52.9093090Z ##[notice]Selected scope excludes reader_prefetch_slow; all other Flutter tests remain enabled.",
+        "2026-10-31T22:29:22.2547850Z 03:12 +1078: All tests passed!",
+        "2026-10-31T22:32:39.7075680Z ** BUILD SUCCEEDED **"
+      ]
+    },
+    {
+      "platform": "android",
+      "lines": [
+        "2026-10-31T22:25:05.7122562Z Ran 91 tests in 0.770s",
+        "2026-10-31T22:25:23.9193036Z Analyzer: 157 diagnostics; no new errors or warnings.",
+        "2026-10-31T22:25:23.9425549Z ##[notice]Selected scope excludes reader_prefetch_slow; all other Flutter tests remain enabled.",
+        "2026-10-31T22:27:30.9823201Z 01:53 +1078: All tests passed!"
+      ]
+    }
+  ]
+}
