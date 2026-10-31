@@ -62,7 +62,10 @@ jobs:
         # macos-15 no longer preinstalls the iOS 18.0 platform required by
         # Xcode 16.0, even for generic device builds (runner-images#12758).
         # This installs build support; the deployment target remains iOS 12.
-        run: xcodebuild -downloadPlatform iOS
+        run: |
+          sudo xcodebuild -runFirstLaunch
+          xcrun simctl list runtimes
+          xcodebuild -downloadPlatform iOS
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
