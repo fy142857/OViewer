@@ -2,7 +2,7 @@
 
 ## 约束及适用范围
 
-本轮保留本地 Flutter 3.13.9、CI Flutter 3.16.0、`macos-15`、Xcode 16.0，以及应用的 iOS 12.0 部署目标。采用仓库内 WebView 5.8 修补版，不升级 Flutter、数据库、Android 构建工具或 WebView 主版本。
+候选 135 的修补验收使用本地 Flutter 3.13.9、CI Flutter 3.16.0、`macos-15`、Xcode 16.0，以及应用的 iOS 12.0 部署目标。采用仓库内 WebView 5.8 修补版，不升级 Flutter、数据库、Android 构建工具或 WebView 主版本。后续 Xcode 16.4 对照结果单独记录如下。
 
 Apple 官方不支持使用 Xcode 16 面向 iOS 12 部署。以下“最低版本通过”仅证明配置与 Mach-O 声明，不代表 Apple 官方支持，也不能代替 iOS 12 真机运行验收。参见 [Apple DTS 说明](https://developer.apple.com/forums/thread/783390)。
 
@@ -27,7 +27,7 @@ python -m scripts.verify_ios_minimum --app build/ios/DerivedData/Build/Products/
 
 Ruby 检查需要 CocoaPods / Xcodeproj，在 macOS CI 上运行。Windows 本地不以 mock 测试冒充原生 Swift 编译验证。旧 Xcode 条件分支没有本轮原生编译环境。
 
-## 本轮状态
+## Xcode 16.0 验收（候选 135）
 
 | 项目 | 状态与证据 |
 | --- | --- |
@@ -50,6 +50,40 @@ Ruby 检查需要 CocoaPods / Xcodeproj，在 macOS CI 上运行。Windows 本�
 候选 135 构建提交：`1d7ac858c2561d8f2924ae6d1e70d5bb2a0178d9`。APK SHA-256：`b2acccba24f91aab71bfbce7177d84e378dc0012afd7f1dc1bd8102406067e40`；正式签名证书 SHA-256：`a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4`。
 
 IPA SHA-256：`51e5909c2ad8f675b3859a2b78663b4b1b0bdfd1eaf9d1deb5257bb5708c7cf5`。实际 Mach-O 最低版本包含 7.0、11.0、12.0，均未超过应用要求的 12.0；检查同时覆盖嵌入的 Swift 动态库。
+
+## Xcode 16.4 对照构建（候选 136）
+
+2026-11-01 按维护者要求将工作流固定到 Xcode 16.4，保留 Flutter 3.16.0、全部测试、仓库内 WebView 5.8 修补版及 iOS 12.0 部署要求。使用镜像预装的 iOS 18.5 平台，保留初始化与组件清单输出，移除 `xcodebuild -downloadPlatform iOS`。
+
+候选构建提交：`318b0ee9da7fb517d03cf87d86f3503a57519975`。候选准备首次在分发阶段未读到就绪记录；核对实时台账与源码一致后，重试同一准备运行成功，沿用 136，没有重新分配版本号。
+
+| 项目 | 状态 |
+| --- | --- |
+| Xcode 16.4 选择、预装平台初始化 | 通过；初始化 49 秒，对比候选 135 的平台安装 227 秒减少 178 秒 |
+| 脚本测试、静态检查 | 双端各 66 项脚本测试通过；各 157 条既有诊断，无新增错误或警告；macOS Pod 检查 4 项 / 9 个断言通过 |
+| Flutter 全量测试 | Android / iOS CI 各 1,142 项通过，包含预加载组合场景 |
+| 原生构建 | Android APK 和 Xcode 16.4 未签名 IPA 均构建成功 |
+| 安装包验收 | 下载产物的候选提交、版本和 SHA-256 全部匹配；APK 正式签名匹配 |
+| iOS 最低版本声明 | 下载 IPA 的 28 个二进制、11 个应用／框架目录与 CI 报告一致；主应用 12.0，所有设备切片均不高于 12.0 |
+| iOS 12 真机 | 未验收，不能沿用二进制声明检查代替 |
+
+构建：[iOS 136](https://github.com/fy142857/OViewer/actions/runs/41243120077)、[Android 136](https://github.com/fy142857/OViewer/actions/runs/41243113182)。
+
+归档：[双端产物验收](benchmarks/ios-compatibility/1.11.1+136/acceptance.json)、[最低版本声明报告](benchmarks/ios-compatibility/1.11.1+136/minimum-os.json)、[步骤耗时对比](benchmarks/ios-compatibility/1.11.1+136/timings.json)。
+
+APK SHA-256：`05b0fac7e699ed5ad52f75d50e6ae04dadd90029b364d982ba1acee701ea7244`。IPA SHA-256：`a1c8dc970fcc8f901620ac7eabd5991c2f28d85caf9579b20cc1b6e32cfc9907`。Android 正式签名证书与候选 135 相同。
+
+| iOS 构建阶段 | Xcode 16.0 / 135 | Xcode 16.4 / 136 |
+| --- | --- | --- |
+| 作业总耗时 | 20 分 51 秒 | 15 分 49 秒 |
+| 平台准备 | 3 分 47 秒（含下载） | 49 秒（预装平台） |
+| Flutter doctor | 60 秒 | 19 秒 |
+| 获取依赖 | 25 秒 | 4 秒 |
+| 代码生成 | 78 秒 | 54 秒 |
+| Flutter 测试 | 9 分 42 秒 | 9 分 38 秒 |
+| iOS 原生构建 | 3 分 11 秒 | 2 分 28 秒 |
+
+本次作业比候选 135 减少 5 分 02 秒，约 24%。该对比不含候选准备重试、排队和本地下载验收；两次运行的环境负载与缓存可能不同，不能将全部差异归因于编译器版本。平台准备减少 178 秒，完整测试的耗时基本相同。本轮没有调整 doctor 或测试执行策略，也未配置运行时缓存。
 
 ## iOS 12 发布前真机清单
 

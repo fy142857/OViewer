@@ -1,0 +1,38 @@
+{
+  "candidate_id": "1.11.1+136",
+  "build_sha": "318b0ee9da7fb517d03cf87d86f3503a57519975",
+  "android": {
+    "build_number": 136,
+    "build_sha": "318b0ee9da7fb517d03cf87d86f3503a57519975",
+    "candidate_id": "1.11.1+136",
+    "filename": "OViewer.apk",
+    "platform": "android",
+    "run_attempt": 1,
+    "run_id": 41243113182,
+    "schema": 1,
+    "sha256": "05b0fac7e699ed5ad52f75d50e6ae04dadd90029b364d982ba1acee701ea7244",
+    "signing_cert_sha256": "a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4",
+    "size": 30704937,
+    "source_sha": "762b6e99c33079f39a0cd71b5d602ab8df54c17b",
+    "version": "1.11.1",
+    "artifact_filename": "app-release.apk"
+  },
+  "ios": {
+    "build_number": 136,
+    "build_sha": "318b0ee9da7fb517d03cf87d86f3503a57519975",
+    "candidate_id": "1.11.1+136",
+    "filename": "OViewer.ipa",
+    "platform": "ios",
+    "run_attempt": 1,
+    "run_id": 41243120077,
+    "schema": 1,
+    "sha256": "a1c8dc970fcc8f901620ac7eabd5991c2f28d85caf9579b20cc1b6e32cfc9907",
+    "size": 26923952,
+    "source_sha": "762b6e99c33079f39a0cd71b5d602ab8df54c17b",
+    "version": "1.11.1"
+  },
+  "ios_binary_count": 28,
+  "ios_bundle_count": 11,
+  "minimum_os_passed": true,
+  "ios12_device_test": "not_performed"
+}

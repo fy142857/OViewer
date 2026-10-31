@@ -1,0 +1,311 @@
+{
+  "note": "Job wall time excludes candidate preparation, queueing, and local artifact verification. These are two runs, not a controlled hardware benchmark.",
+  "baseline": {
+    "run_id": 41239619832,
+    "xcode": "16.0",
+    "started_at": "2026-10-31T20:35:32Z",
+    "completed_at": "2026-10-31T20:56:23Z",
+    "total_seconds": 1251,
+    "steps": [
+      {
+        "name": "Set up job",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Run actions/setup-python@v5",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Resolve registered candidate",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout exact candidate",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify candidate source and version",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Test Pod deployment target guard",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Setup Xcode",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Install iOS platform for selected Xcode",
+        "seconds": 227,
+        "conclusion": "success"
+      },
+      {
+        "name": "Setup Flutter",
+        "seconds": 33,
+        "conclusion": "success"
+      },
+      {
+        "name": "Flutter doctor",
+        "seconds": 60,
+        "conclusion": "success"
+      },
+      {
+        "name": "Get dependencies",
+        "seconds": 25,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify vendored WebView against official archive",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Generate drift code",
+        "seconds": 78,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify version rules",
+        "seconds": 3,
+        "conclusion": "success"
+      },
+      {
+        "name": "Analyze against reviewed baseline",
+        "seconds": 15,
+        "conclusion": "success"
+      },
+      {
+        "name": "Flutter tests",
+        "seconds": 582,
+        "conclusion": "success"
+      },
+      {
+        "name": "Build iOS (no codesign)",
+        "seconds": 191,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify iOS deployment declarations",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload iOS compatibility report",
+        "seconds": 3,
+        "conclusion": "success"
+      },
+      {
+        "name": "Create unsigned IPA",
+        "seconds": 3,
+        "conclusion": "success"
+      },
+      {
+        "name": "Inspect package and write build metadata",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload IPA artifact",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload build metadata",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Setup Flutter",
+        "seconds": 10,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout exact candidate",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Run actions/setup-python@v5",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Complete job",
+        "seconds": 3,
+        "conclusion": "success"
+      }
+    ]
+  },
+  "candidate": {
+    "run_id": 41243120077,
+    "xcode": "16.4",
+    "started_at": "2026-10-31T21:20:26Z",
+    "completed_at": "2026-10-31T21:36:15Z",
+    "total_seconds": 949,
+    "steps": [
+      {
+        "name": "Set up job",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Run actions/setup-python@v5",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Resolve registered candidate",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Checkout exact candidate",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify candidate source and version",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Test Pod deployment target guard",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Setup Xcode",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Initialize preinstalled iOS platform",
+        "seconds": 49,
+        "conclusion": "success"
+      },
+      {
+        "name": "Setup Flutter",
+        "seconds": 40,
+        "conclusion": "success"
+      },
+      {
+        "name": "Flutter doctor",
+        "seconds": 19,
+        "conclusion": "success"
+      },
+      {
+        "name": "Get dependencies",
+        "seconds": 4,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify vendored WebView against official archive",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Generate drift code",
+        "seconds": 54,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify version rules",
+        "seconds": 3,
+        "conclusion": "success"
+      },
+      {
+        "name": "Analyze against reviewed baseline",
+        "seconds": 20,
+        "conclusion": "success"
+      },
+      {
+        "name": "Flutter tests",
+        "seconds": 578,
+        "conclusion": "success"
+      },
+      {
+        "name": "Build iOS (no codesign)",
+        "seconds": 148,
+        "conclusion": "success"
+      },
+      {
+        "name": "Verify iOS deployment declarations",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload iOS compatibility report",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Create unsigned IPA",
+        "seconds": 3,
+        "conclusion": "success"
+      },
+      {
+        "name": "Inspect package and write build metadata",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload IPA artifact",
+        "seconds": 2,
+        "conclusion": "success"
+      },
+      {
+        "name": "Upload build metadata",
+        "seconds": 3,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Setup Flutter",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout exact candidate",
+        "seconds": 1,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Run actions/setup-python@v5",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Post Checkout",
+        "seconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "name": "Complete job",
+        "seconds": 8,
+        "conclusion": "success"
+      }
+    ]
+  }
+}
