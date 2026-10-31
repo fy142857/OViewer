@@ -17,7 +17,7 @@ module OViewerDeploymentTarget
   def self.verify_specs!(pod_targets)
     pod_targets.each do |target|
       target.specs.each do |spec|
-        verify!(spec.consumer(:ios).deployment_target, "Pod #{spec.name}")
+        verify!(spec.deployment_target(:ios), "Pod #{spec.name}")
       end
     end
   end

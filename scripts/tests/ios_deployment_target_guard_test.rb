@@ -34,6 +34,11 @@ class DeploymentTargetGuardTest < Minitest::Test
     assert_raises(RuntimeError) { OViewerDeploymentTarget.verify_specs!([target]) }
     spec.ios.deployment_target = '12.0'
     OViewerDeploymentTarget.verify_specs!([target])
+    child = spec.subspec('Child') {}
+    inherited_target = Struct.new(:specs).new([child])
+    OViewerDeploymentTarget.verify_specs!([inherited_target])
+    spec.ios.deployment_target = '13.0'
+    assert_raises(RuntimeError) { OViewerDeploymentTarget.verify_specs!([inherited_target]) }
   end
 
   def test_conditional_xcconfig_requirement
