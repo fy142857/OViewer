@@ -639,6 +639,13 @@ class _ReaderViewState extends State<_ReaderView> {
   }
 
   // ---- Horizontal PageView Reader (LR / RL) ----
+  // PhotoView's loading/error builders bypass its normal image gesture layer.
+  Widget _horizontalPlaceholder(Widget child) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _toggleUI,
+        child: SizedBox.expand(child: child),
+      );
+
   void _preloadChanged() {
     if (_preloadRebuildQueued || !mounted || widget.requests.isCancelled)
       return;
@@ -1052,8 +1059,8 @@ class _ReaderViewState extends State<_ReaderView> {
                     initialScale: PhotoViewComputedScale.contained,
                     minScale: PhotoViewComputedScale.contained,
                     maxScale: PhotoViewComputedScale.covered * 3,
-                    errorBuilder: (_, __, ___) =>
-                        _offlineMissing(index, damaged: true));
+                    errorBuilder: (_, __, ___) => _horizontalPlaceholder(
+                        _offlineMissing(index, damaged: true)));
               }
               final image = state.loadedImages[index];
               if (!_onlineAllowed(state, index) ||
@@ -1074,10 +1081,13 @@ class _ReaderViewState extends State<_ReaderView> {
                 initialScale: PhotoViewComputedScale.contained,
                 minScale: PhotoViewComputedScale.contained,
                 maxScale: PhotoViewComputedScale.covered * 3,
-                errorBuilder: (_, error, ___) => error is ReaderLocalCacheMiss
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.white))
-                    : _decodedImageError(state, index),
+                errorBuilder: (_, error, ___) {
+                  final placeholder = error is ReaderLocalCacheMiss
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white))
+                      : _decodedImageError(state, index);
+                  return _horizontalPlaceholder(placeholder);
+                },
               );
             },
             onPageChanged: (spread) {
@@ -1092,9 +1102,9 @@ class _ReaderViewState extends State<_ReaderView> {
                 context.read<ReaderBloc>().add(PageChanged(page));
               }
             },
-            loadingBuilder: (_, __) => const Center(
+            loadingBuilder: (_, __) => _horizontalPlaceholder(const Center(
               child: CircularProgressIndicator(color: Colors.white),
-            ),
+            )),
           ));
     });
   }
