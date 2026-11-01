@@ -111,9 +111,9 @@ jobs:
         run: |
           if [[ "$SKIP_READER_PREFETCH_TESTS" == "true" ]]; then
             echo "::notice::Selected scope excludes reader_prefetch_slow; all other Flutter tests remain enabled."
-            flutter test --no-pub --reporter expanded --exclude-tags reader_prefetch_slow
+            flutter test --no-pub --reporter expanded --concurrency=3 --exclude-tags reader_prefetch_slow
           else
-            flutter test --no-pub --reporter expanded
+            flutter test --no-pub --reporter expanded --concurrency=3
           fi
 
       - name: Build iOS (no codesign)

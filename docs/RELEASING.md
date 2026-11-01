@@ -16,6 +16,8 @@
 
 构建结果位于 **Build Android APK** 和 **Build iOS IPA**。运行标题带候选 ID；两个安装包名称仍为 `app-release.apk`、`OViewer.ipa`。`build-metadata` 是校验信息，不是安装包。
 
+iOS 工作流中的 Flutter 测试固定使用 `--concurrency=3`，适用于候选、手动构建及 PR，以及包含或跳过慢测试的两种范围。并发按测试文件执行；原有慢测试选择规则保持不变。采用依据与实测波动见 [iOS 测试并发对照](IOS_TEST_CONCURRENCY_BENCHMARK.md)。
+
 构建失败时可重跑该运行，或手动运行对应构建工作流并填写已登记的 `candidate_id`。同一个候选不会重新编号；有代码修改则提交新的候选。
 
 两端构建保留 `skip_reader_prefetch_tests`（“跳过慢测试”）开关，手动默认关闭；自动候选和 PR 根据提交中的 `Slow-Tests: run|skip`、`Slow-Tests-Reason` 判断，详见[统一测试规则](VERSION_MANAGEMENT.md#按改动选择测试与跳过慢测试)。开启时只排除 `reader_prefetch_slow`，快速策略、设置及其他回归仍执行。自动分发直接传递决定，不再取消全量任务后重跑。手动运行时内部 `test_scope` 输入留空即可。
