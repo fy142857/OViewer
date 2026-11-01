@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.11.1",
   "branch": "dev",
-  "build_number": 142,
-  "candidate_id": "1.11.2+142",
-  "fingerprint": "9befe7ad72a46531f4a6fa11a16f6d7d01d82d5a3cfbc3ea27ca87eff8c99115",
-  "notes": "### 新增\n\n### 修复\n\n- 横向与反向阅读在图片加载、等待首帧及错误占位期间也可点击显示或隐藏阅读工具栏与系统状态栏，保持重试按钮和翻页手势正常（#73）。\n\n### 变更\n\n### 已知限制",
+  "build_number": 143,
+  "candidate_id": "1.11.2+143",
+  "fingerprint": "314415cd370623bcae8f8dbd135a9211962f5978f33e82cc422fe601aa27264b",
+  "notes": "### 新增\n\n### 修复\n\n- 横向与反向阅读在图片加载、等待首帧及错误占位期间也可点击显示或隐藏阅读工具栏与系统状态栏，保持重试按钮和翻页手势正常（#73）。\n\n### 变更\n\n- 设置页放大并加粗分组标题，缩小设置项名称与说明文字，突出内容层级。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "90b738bee82b1249a8ee872a02d07933a49e659a",
+  "source_sha": "498c9ab1c0428c7390c76195433a39eaf2d901cc",
   "summary": [
     {
       "change_kind": "maintenance",
@@ -36,6 +36,16 @@
       "sha": "90b738bee82b1249a8ee872a02d07933a49e659a",
       "subject": "ci(android): run Flutter test files with concurrency three",
       "type": "chore",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "enhancement",
+      "classification_reason": "放大并加粗设置页分组标题，统一缩小设置项名称与说明文字，改善视觉层级。",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "498c9ab1c0428c7390c76195433a39eaf2d901cc",
+      "subject": "fix(settings): clarify typography hierarchy",
+      "type": "fix",
       "version_impact": "patch"
     }
   ],
