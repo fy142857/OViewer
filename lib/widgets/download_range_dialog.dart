@@ -27,6 +27,10 @@ class _DownloadRangeDialogState extends State<DownloadRangeDialog> {
   void _validate() {
     setState(() {
       _error = null;
+      if (!_all && _input.text.trim().isEmpty) {
+        _selection = null;
+        return;
+      }
       try {
         _selection = _all
             ? const DownloadRange.all()
@@ -47,6 +51,8 @@ class _DownloadRangeDialogState extends State<DownloadRangeDialog> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final labelColor = _error == null ? colors.onSurfaceVariant : colors.error;
     return AlertDialog(
       title: Text(s.startDownloadConfirm),
       scrollable: true,
@@ -81,8 +87,19 @@ class _DownloadRangeDialogState extends State<DownloadRangeDialog> {
                   controller: _input,
                   keyboardType: TextInputType.text,
                   decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       labelText: s.downloadCustomRange,
+                      labelStyle: TextStyle(color: labelColor),
+                      floatingLabelStyle: TextStyle(color: labelColor),
                       hintText: '1-20,35,50-60',
+                      helperText: _input.text.trim().isEmpty
+                          ? s.downloadRangeError(
+                              'range_empty', widget.totalPages)
+                          : null,
+                      helperStyle: TextStyle(color: colors.onSurfaceVariant),
+                      helperMaxLines: 3,
                       errorMaxLines: 3,
                       errorText: _error == null
                           ? null
