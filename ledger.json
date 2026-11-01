@@ -8669,8 +8669,123 @@
         }
       ],
       "version": "1.12.0"
+    },
+    {
+      "base_tag": "v1.11.1",
+      "branch": "dev",
+      "build_number": 149,
+      "build_sha": "a1c7818088ef813f374c82e067af9f4e5d25927d",
+      "candidate_id": "1.12.0+149",
+      "fingerprint": "64d07eb3258a93bd547e6b0c3be55d72f1dc8755a5578250fa1fd0b7703d39ae",
+      "notes": "### 新增\n\n- 下载确认支持自定义多段页码，默认下载全部；同书重复下载合并范围并补充缺页，进度按所选范围显示。\n- 所有离线任务采用本地优先阅读，缺页或损坏时尝试普通阅读缓存及联网加载，失败可重试；保留原书页码与现有预加载策略，临时阅读不扩大永久下载范围。\n\n### 修复\n\n- 修复 Windows 项目与 Pub 缓存分处不同盘符时，插件 Kotlin 增量编译报 `different roots` 的问题。\n\n- 横向与反向阅读在图片加载、等待首帧及错误占位期间也可点击显示或隐藏阅读工具栏与系统状态栏，保持重试按钮和翻页手势正常（#73）。\n\n### 变更\n\n- 下载自定义范围输入框更紧凑，空白提示使用常态文字色，仅无效输入显示红色校验提示。\n\n- 部分下载只准备所选范围涉及的目录分页，追加范围和阅读缺页时按需获取其余目录；已验证的目录可在暂停或重启后复用。\n\n- 设置页放大并加粗分组标题，缩小设置项名称与说明文字，突出内容层级。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "0accde1d57c0efaf12bf6c6d2124b51aa8427567",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "按维护者选择将 iOS 工作流的 Flutter 测试并发固定为 3，保留既有测试范围选择，不改变应用功能。",
+          "classification_source": "commit-trailers",
+          "original_type": "ci",
+          "sha": "4dc6fcb71ebcadd34897856e6e1cba0555d2e701",
+          "subject": "ci(ios): run Flutter test files with concurrency three",
+          "type": "chore",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复横向阅读图片加载及错误占位时无法点击显隐工具栏和系统状态栏的问题，保持现有阅读与图片请求行为。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "44a29b1f740400c33a581c12bbf152d3e9a68683",
+          "subject": "fix(reader): keep controls reachable while horizontal images load",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "按用户要求将 Android 完整与筛选测试的文件并发数固定为 3，与 iOS 配置一致，并更新开发文档。",
+          "classification_source": "commit-trailers",
+          "original_type": "ci",
+          "sha": "90b738bee82b1249a8ee872a02d07933a49e659a",
+          "subject": "ci(android): run Flutter test files with concurrency three",
+          "type": "chore",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "放大并加粗设置页分组标题，统一缩小设置项名称与说明文字，改善视觉层级。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "498c9ab1c0428c7390c76195433a39eaf2d901cc",
+          "subject": "fix(settings): clarify typography hierarchy",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "feature",
+          "classification_reason": "新增多段页码离线下载、同书范围合并和缺页联网阅读能力，保留原书页码并区分普通阅读缓存与永久下载。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "18b9a439377ec7ab6b7d563e2f73f5c381aa6b87",
+          "subject": "feat(download): support page ranges and local-first reading",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "后台补齐当前网络图片后，切换方向或单双页布局时结束旧画面保留，重新优先本地文件。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "1e7a660b8673cc72f230923a1e3b2b9fa913c07f",
+          "subject": "fix(reader): prefer local files after presentation changes",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "重复下载已完成任务时校验真实文件，详情页数变化时重新验证目录，并保持普通在线阅读刷新时清除旧缩略图索引的行为。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "c499cbfb50eb7ac70145e674f50a01f9cc622fbc",
+          "subject": "fix(download): revalidate completed targets and refreshed indexes",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复 Windows 项目与 Pub 插件缓存位于不同盘符时的 Kotlin 增量编译路径异常，仅对跨根子项目禁用增量编译。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "3edb86547bf31077b5b266f18b2cdd4f16d55853",
+          "subject": "fix(android): disable incremental Kotlin compilation across filesystem roots",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "performance",
+          "classification_reason": "部分下载按所选范围准备目录，持久缓存分页信息与有效条目，追加范围及阅读缺页时按需补取，减少首轮目录请求和等待。",
+          "classification_source": "commit-trailers",
+          "original_type": "perf",
+          "sha": "6341e1609be9324c595215fe8b083eb0f76c1363",
+          "subject": "perf(download): prepare only selected directory parts",
+          "type": "perf",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "缩小自定义下载范围输入框，将空白提示与正常标签恢复为常态文字色，仅无效输入显示红色；按用户要求更新默认不监听构建的开发约定。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "0accde1d57c0efaf12bf6c6d2124b51aa8427567",
+          "subject": "fix(download): compact range input and show errors only for invalid content",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.12.0"
     }
   ],
-  "last_build_number": 148,
+  "last_build_number": 149,
   "schema": 1
 }
