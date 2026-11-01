@@ -452,7 +452,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         loadedImages: {...state.loadedImages}
           ..removeWhere((p, _) => stale.contains(p)),
         cacheOnlyPages: {...state.cacheOnlyPages}..removeAll(stale),
-        thumbnails: {...state.thumbnails, ...index.thumbnails},
+        thumbnails: state.offlineBook == null
+            ? Map.of(index.thumbnails)
+            : {...state.thumbnails, ...index.thumbnails},
         totalPages: state.offlineBook?.record.totalPages ?? index.totalPages,
         currentPage: state.currentPage.clamp(0,
             (state.offlineBook?.record.totalPages ?? index.totalPages) - 1)));

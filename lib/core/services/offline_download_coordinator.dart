@@ -98,22 +98,31 @@ class OfflineDownloadCoordinator {
     if (key.source != network.source)
       throw const OfflineFailure('source_changed');
     final existing = await repository.get(key.id);
-    if (!range.validFor(existing?.record.indexReady == true
-        ? existing!.record.totalPages : totalPages)) {
+    final target = existing == null ? range : existing.range.union(range);
+    if (!target.validFor(totalPages)) {
       throw const OfflineFailure('range_invalid');
     }
+    final countChanged = existing != null && existing.record.totalPages != totalPages;
     if (existing != null &&
-        existing.range.union(range).toStorage() != existing.record.downloadRange) {
+        (target.toStorage() != existing.record.downloadRange || countChanged)) {
       final job = _jobs[key.id];
       await pause(key.id);
       if (job != null) await job.drained.future;
       _resumeContexts.remove(key.id);
+      if (countChanged) {
+        await repository.requireFreshIndex(key.id);
+      }
     }
     if (_closed || _deleting.contains(key.id) || key.source != network.source ||
         epoch != _epoch || session != network.session) {
       throw const OfflineFailure('cancelled');
     }
     final book = await repository.create(key, title, totalPages, range: range);
+    // An explicit download request also checks files that disappeared after
+    // completion. Resume reuses the index and only fetches invalid target pages.
+    if (book.complete) {
+      await repository.setStatus(book.id, OfflineStatus.paused);
+    }
     if (_closed || _deleting.contains(key.id) || epoch != _epoch ||
         session != network.session) throw const OfflineFailure('cancelled');
     await resume(book.id);

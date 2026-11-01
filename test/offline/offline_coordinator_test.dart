@@ -285,6 +285,30 @@ void main() {
     expect((await repo.get(id))!.range.label, '1, 3');
     expect(network.calls.keys.toSet(), {'42/0', '42/2'});
   });
+  test('repeating a completed partial download repairs a missing file only', () async {
+    final range = DownloadRange.parse('1,3', 3);
+    final id = await coordinator.enqueue(key, 'Book', 3, range: range);
+    await until(() async => (await repo.get(id))!.complete);
+    final missing = (await repo.get(id))!.pages[2];
+    await (await files.file(missing.relativePath!)).delete();
+    await coordinator.enqueue(key, 'Book', 3, range: range);
+    await until(() => network.calls['42/2'] == 2);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.calls, {'42/0': 1, '42/2': 2});
+    expect((await repo.get(id))!.targetPages, 2);
+  });
+  test('new detail page count refreshes the index before adding newly available pages', () async {
+    final id = await coordinator.enqueue(key, 'Book', 3,
+        range: DownloadRange.parse('1', 3));
+    await until(() async => (await repo.get(id))!.complete);
+    network.total = 5;
+    await coordinator.enqueue(key, 'Book', 5, range: DownloadRange.parse('5', 5));
+    await until(() async => (await repo.get(id))!.complete);
+    expect((await repo.get(id))!.record.totalPages, 5);
+    expect((await repo.get(id))!.range.label, '1, 5');
+    expect(network.calls, {'42/0': 1, '42/4': 1});
+    expect(network.indexed, [42, 42]);
+  });
   test('shrinking fresh index pauses a range instead of silently truncating it', () async {
     network.total = 3;
     final id = await coordinator.enqueue(key, 'Book', 8,

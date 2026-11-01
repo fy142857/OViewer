@@ -337,6 +337,27 @@ void main() {
       verify(() => gallery.invalidateReaderIndex(42, 'token', 0)).called(1);
       expect(bloc.state.status, ReaderStatus.ready);
     });
+    test('online index refresh removes stale thumbnail entries', () async {
+      var indexes = 0;
+      when(() => gallery.fetchReaderIndexPage(42, 'token',
+          cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
+        final total = indexes++ == 0 ? 3 : 1;
+        return ReaderIndexPage(totalPages: total, indexPage: 0,
+            indexPageCount: 1, pageSize: total, thumbnails: {
+              for (var i = 0; i < total; i++)
+                i: ThumbnailInfo(pageToken: 'page', pageIndex: i, thumbUrl: '')
+            });
+      });
+      when(() => gallery.fetchImageWithNl('page', 42, 0, 'alternate',
+          cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async =>
+              const GalleryImage(index: 0, pageUrl: '', imageUrl: ''));
+      bloc.add(const LoadReaderImages(gid: 42, token: 'token', initialPage: 0));
+      await waitFor((s) => s.loadedImages.containsKey(0));
+      expect(bloc.state.thumbnails.keys.toSet(), {0, 1, 2});
+      bloc.add(const RetryImageAtIndex(0));
+      await waitFor((s) => s.totalPages == 1 && !s.loadingIndices.contains(0));
+      expect(bloc.state.thumbnails.keys.toSet(), {0});
+    });
 
     test('reload interrupts loading metadata and ignores late old results',
         () async {

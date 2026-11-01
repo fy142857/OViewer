@@ -165,8 +165,7 @@ class OfflineRepository {
           throw const OfflineFailure('cancelled');
         }
         final target = existing == null ? range : existing.range.union(range);
-        if (!target.validFor(existing?.record.indexReady == true
-            ? existing!.record.totalPages : totalPages)) {
+        if (!target.validFor(totalPages)) {
           throw const OfflineFailure('range_invalid');
         }
         await db.into(db.offlineGalleries).insert(
@@ -211,6 +210,9 @@ class OfflineRepository {
           {required bool Function() current}) =>
       _serial(() async {
         if (!current()) throw const OfflineFailure('cancelled');
+        if (total <= 0) {
+          throw const OfflineFailure('invalid_index');
+        }
         final book = await get(id);
         if (book == null || !book.range.validFor(total)) {
           throw const OfflineFailure('range_invalid');
