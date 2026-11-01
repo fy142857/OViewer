@@ -1551,6 +1551,12 @@ class $OfflineGalleriesTable extends OfflineGalleries
   late final GeneratedColumn<int> totalPages = GeneratedColumn<int>(
       'total_pages', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _downloadRangeMeta =
+      const VerificationMeta('downloadRange');
+  @override
+  late final GeneratedColumn<String> downloadRange = GeneratedColumn<String>(
+      'download_range', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -1621,6 +1627,7 @@ class $OfflineGalleriesTable extends OfflineGalleries
         token,
         title,
         totalPages,
+        downloadRange,
         status,
         reason,
         createdAt,
@@ -1674,6 +1681,12 @@ class $OfflineGalleriesTable extends OfflineGalleries
               data['total_pages']!, _totalPagesMeta));
     } else if (isInserting) {
       context.missing(_totalPagesMeta);
+    }
+    if (data.containsKey('download_range')) {
+      context.handle(
+          _downloadRangeMeta,
+          downloadRange.isAcceptableOrUnknown(
+              data['download_range']!, _downloadRangeMeta));
     }
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
@@ -1738,6 +1751,8 @@ class $OfflineGalleriesTable extends OfflineGalleries
           .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
       totalPages: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}total_pages'])!,
+      downloadRange: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}download_range']),
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       reason: attachedDatabase.typeMapping
@@ -1770,6 +1785,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
   final String token;
   final String title;
   final int totalPages;
+  final String? downloadRange;
   final String status;
   final String? reason;
   final DateTime createdAt;
@@ -1785,6 +1801,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       required this.token,
       required this.title,
       required this.totalPages,
+      this.downloadRange,
       required this.status,
       this.reason,
       required this.createdAt,
@@ -1804,6 +1821,9 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
     map['token'] = Variable<String>(token);
     map['title'] = Variable<String>(title);
     map['total_pages'] = Variable<int>(totalPages);
+    if (!nullToAbsent || downloadRange != null) {
+      map['download_range'] = Variable<String>(downloadRange);
+    }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || reason != null) {
       map['reason'] = Variable<String>(reason);
@@ -1828,6 +1848,9 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       token: Value(token),
       title: Value(title),
       totalPages: Value(totalPages),
+      downloadRange: downloadRange == null && nullToAbsent
+          ? const Value.absent()
+          : Value(downloadRange),
       status: Value(status),
       reason:
           reason == null && nullToAbsent ? const Value.absent() : Value(reason),
@@ -1852,6 +1875,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       token: serializer.fromJson<String>(json['token']),
       title: serializer.fromJson<String>(json['title']),
       totalPages: serializer.fromJson<int>(json['totalPages']),
+      downloadRange: serializer.fromJson<String?>(json['downloadRange']),
       status: serializer.fromJson<String>(json['status']),
       reason: serializer.fromJson<String?>(json['reason']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1872,6 +1896,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       'token': serializer.toJson<String>(token),
       'title': serializer.toJson<String>(title),
       'totalPages': serializer.toJson<int>(totalPages),
+      'downloadRange': serializer.toJson<String?>(downloadRange),
       'status': serializer.toJson<String>(status),
       'reason': serializer.toJson<String?>(reason),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1890,6 +1915,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           String? token,
           String? title,
           int? totalPages,
+          Value<String?> downloadRange = const Value.absent(),
           String? status,
           Value<String?> reason = const Value.absent(),
           DateTime? createdAt,
@@ -1905,6 +1931,8 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
         token: token ?? this.token,
         title: title ?? this.title,
         totalPages: totalPages ?? this.totalPages,
+        downloadRange:
+            downloadRange.present ? downloadRange.value : this.downloadRange,
         status: status ?? this.status,
         reason: reason.present ? reason.value : this.reason,
         createdAt: createdAt ?? this.createdAt,
@@ -1923,6 +1951,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           ..write('token: $token, ')
           ..write('title: $title, ')
           ..write('totalPages: $totalPages, ')
+          ..write('downloadRange: $downloadRange, ')
           ..write('status: $status, ')
           ..write('reason: $reason, ')
           ..write('createdAt: $createdAt, ')
@@ -1943,6 +1972,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       token,
       title,
       totalPages,
+      downloadRange,
       status,
       reason,
       createdAt,
@@ -1961,6 +1991,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           other.token == this.token &&
           other.title == this.title &&
           other.totalPages == this.totalPages &&
+          other.downloadRange == this.downloadRange &&
           other.status == this.status &&
           other.reason == this.reason &&
           other.createdAt == this.createdAt &&
@@ -1978,6 +2009,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
   final Value<String> token;
   final Value<String> title;
   final Value<int> totalPages;
+  final Value<String?> downloadRange;
   final Value<String> status;
   final Value<String?> reason;
   final Value<DateTime> createdAt;
@@ -1994,6 +2026,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     this.token = const Value.absent(),
     this.title = const Value.absent(),
     this.totalPages = const Value.absent(),
+    this.downloadRange = const Value.absent(),
     this.status = const Value.absent(),
     this.reason = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2011,6 +2044,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     required String token,
     required String title,
     required int totalPages,
+    this.downloadRange = const Value.absent(),
     this.status = const Value.absent(),
     this.reason = const Value.absent(),
     required DateTime createdAt,
@@ -2033,6 +2067,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     Expression<String>? token,
     Expression<String>? title,
     Expression<int>? totalPages,
+    Expression<String>? downloadRange,
     Expression<String>? status,
     Expression<String>? reason,
     Expression<DateTime>? createdAt,
@@ -2050,6 +2085,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       if (token != null) 'token': token,
       if (title != null) 'title': title,
       if (totalPages != null) 'total_pages': totalPages,
+      if (downloadRange != null) 'download_range': downloadRange,
       if (status != null) 'status': status,
       if (reason != null) 'reason': reason,
       if (createdAt != null) 'created_at': createdAt,
@@ -2069,6 +2105,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       Value<String>? token,
       Value<String>? title,
       Value<int>? totalPages,
+      Value<String?>? downloadRange,
       Value<String>? status,
       Value<String?>? reason,
       Value<DateTime>? createdAt,
@@ -2085,6 +2122,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       token: token ?? this.token,
       title: title ?? this.title,
       totalPages: totalPages ?? this.totalPages,
+      downloadRange: downloadRange ?? this.downloadRange,
       status: status ?? this.status,
       reason: reason ?? this.reason,
       createdAt: createdAt ?? this.createdAt,
@@ -2117,6 +2155,9 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     }
     if (totalPages.present) {
       map['total_pages'] = Variable<int>(totalPages.value);
+    }
+    if (downloadRange.present) {
+      map['download_range'] = Variable<String>(downloadRange.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -2157,6 +2198,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
           ..write('token: $token, ')
           ..write('title: $title, ')
           ..write('totalPages: $totalPages, ')
+          ..write('downloadRange: $downloadRange, ')
           ..write('status: $status, ')
           ..write('reason: $reason, ')
           ..write('createdAt: $createdAt, ')

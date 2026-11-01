@@ -37,15 +37,15 @@ void main() {
         when(() => coordinator.changes).thenAnswer((_) => changes.stream);
         when(() => coordinator.resumingIds).thenAnswer((_) => Set.of(resuming));
         when(() => repo.all()).thenAnswer((_) async => tasks);
-        when(() => coordinator.resume('book-eh')).thenAnswer((_) {
-          resuming = {'book-eh'};
+        when(() => coordinator.resume(book().id)).thenAnswer((_) {
+          resuming = {book().id};
           return gate.future.whenComplete(() => resuming = {});
         });
-        when(() => coordinator.pause('book-eh')).thenAnswer((_) async {
+        when(() => coordinator.pause(book().id)).thenAnswer((_) async {
           resuming = {};
           gate.complete();
         });
-        when(() => coordinator.delete('book-eh')).thenAnswer((_) async {
+        when (() => coordinator.delete(book().id)).thenAnswer((_) async {
           tasks = [];
           resuming = {};
           gate.complete();
@@ -68,7 +68,7 @@ void main() {
         final button = find.widgetWithText(TextButton, label);
         expect(button, findsOneWidget);
         expect(tester.widget<TextButton>(button).onPressed, isNull);
-        verify(() => coordinator.resume('book-eh')).called(1);
+        verify(() => coordinator.resume(book().id)).called(1);
         if (action == 'pause') {
           await tester.tap(find.text(locale == 'zh' ? '暂停' : 'Pause'));
         } else if (action == 'delete') {

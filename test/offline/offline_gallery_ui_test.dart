@@ -12,6 +12,7 @@ import 'package:oviewer/core/storage/database.dart';
 import 'package:oviewer/core/theme/app_theme.dart';
 import 'package:oviewer/models/gallery_preview.dart';
 import 'package:oviewer/models/offline_book.dart';
+import 'package:oviewer/models/gallery_source.dart';
 import 'package:oviewer/screens/download/download_screen.dart';
 import 'package:oviewer/widgets/gallery_status_icons.dart';
 
@@ -27,7 +28,7 @@ OfflineBook book(
     OfflineBook(
         OfflineGallery(
             indexNeedsRefresh: false,
-            id: 'book-$source',
+            id: OfflineKey(GallerySource.parse(source) ?? GallerySource.eh, 42, token).id,
             source: source,
             gid: 42,
             token: token,
@@ -42,7 +43,7 @@ OfflineBook book(
             pages,
             (i) => OfflinePage(
                 verificationVersion: 0,
-                bookId: 'book-$source',
+                bookId: OfflineKey(GallerySource.parse(source) ?? GallerySource.eh, 42, token).id,
                 pageIndex: i,
                 pageToken: 'page-$i',
                 bytes: 100,
@@ -178,7 +179,7 @@ void main() {
       await tester.tapAt(Offset(card.right - 8, card.top + 12));
       await tester.pumpAndSettle();
       expect(opened!.name, '/reader');
-      expect((opened!.arguments as Map)['offlineId'], 'book-eh');
+      expect((opened!.arguments as Map)['offlineId'], book().id);
       expect(tester.takeException(), isNull);
     });
   }
@@ -201,7 +202,21 @@ void main() {
     expect(opened, isNull);
     await tester.tap(find.text('Offline gallery'));
     await tester.pumpAndSettle();
-    expect((opened!.arguments as Map)['offlineId'], 'book-eh');
+    expect((opened!.arguments as Map)['offlineId'], book().id);
+  });
+  testWidgets('indexed task with no local images can open the hybrid reader', (tester) async {
+    final original = book(status: 'paused');
+    final pending = OfflineBook(original.record,
+        original.pages.map((p) => p.copyWith(status: 'pending', bytes: 0)));
+    state = DownloadState(status: DownloadListStatus.loaded, tasks: [pending]);
+    RouteSettings? opened;
+    await boot(tester, const DownloadScreen(), route: (route) {
+      opened = route;
+      return MaterialPageRoute(builder: (_) => const Scaffold(body: Text('Reader')));
+    });
+    await tester.tap(find.text('Offline gallery'));
+    await tester.pumpAndSettle();
+    expect((opened!.arguments as Map)['offlineId'], pending.id);
   });
   for (final entry in [
     book(pages: 0, status: 'paused'),

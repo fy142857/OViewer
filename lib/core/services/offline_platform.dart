@@ -72,8 +72,8 @@ class OfflinePlatform with WidgetsBindingObserver {
       final books = (await coordinator.repository.all()).where(
           (b) => const ['preparing', 'downloading'].contains(b.record.status));
       await channel.invokeMethod<void>('progress', {
-        'pages': books.fold<int>(0, (n, b) => n + b.completedPages),
-        'total': books.fold<int>(0, (n, b) => n + b.record.totalPages),
+        'pages': books.fold<int>(0, (n, b) => n + b.completedTargetPages),
+        'total': books.fold<int>(0, (n, b) => n + b.targetPages),
         'active': coordinator.activeGalleries,
         'language': language(),
       });

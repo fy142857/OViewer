@@ -119,7 +119,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: book.source != null &&
-                                book.completedPages > 0 &&
+                                (book.completedPages > 0 || book.hasCompleteIndex) &&
                                 book.status != OfflineStatus.deleting
                             ? () => _read(book)
                             : null,
@@ -164,19 +164,24 @@ class _DownloadScreenState extends State<DownloadScreen> {
                                                     overflow:
                                                         TextOverflow.ellipsis),
                                                 Text(
-                                                    '${book.source?.shortName ?? s.offlineSourceRequired} · ${resuming ? s.offlineResuming : s.offlineStatus(book.record.status)}'),
+                                                    '${book.source?.shortName ?? s.offlineSourceRequired} · ${resuming ? s.offlineResuming : book.complete && !book.allPagesComplete ? s.downloadRangeCompleted : s.offlineStatus(book.record.status)}'),
                                                 Text(
-                                                    '${book.completedPages}/${book.record.totalPages} · ${(book.bytes / 1048576).toStringAsFixed(1)} MB'),
+                                                    '${book.completedTargetPages}/${book.targetPages} · ${(book.bytes / 1048576).toStringAsFixed(1)} MB'),
+                                                if (!book.range.isAll)
+                                                  Text(s.downloadRangeSummary(
+                                                      book.range.label, book.record.totalPages),
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis),
                                               ])),
                                         ]),
                                     if (book.status !=
                                         OfflineStatus.completed) ...[
                                       const SizedBox(height: 8),
                                       LinearProgressIndicator(
-                                          value: book.record.totalPages <= 0
+                                          value: book.targetPages <= 0
                                               ? 0
-                                              : book.completedPages /
-                                                  book.record.totalPages),
+                                              : book.completedTargetPages /
+                                                  book.targetPages),
                                     ],
                                     if (book.record.reason != null)
                                       Padding(

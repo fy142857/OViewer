@@ -17,6 +17,7 @@ import 'package:oviewer/models/gallery_source.dart';
 import 'package:oviewer/models/gallery_image.dart';
 import 'package:oviewer/models/reader_index_page.dart';
 import 'package:oviewer/models/offline_book.dart';
+import 'package:oviewer/models/download_range.dart';
 import 'package:oviewer/repositories/offline_repository.dart';
 import 'offline_storage_test.dart' show sqliteForTests;
 
@@ -227,6 +228,95 @@ void main() {
     await directory.delete(recursive: true);
   });
   const key = OfflineKey(GallerySource.eh, 42, 'abc');
+  test('partial range completes and repeated selections only fetch missing pages', () async {
+    network.total = 8;
+    final id = await coordinator.enqueue(key, 'Book', 8,
+        range: DownloadRange.parse('3-4,7', 8));
+    await until(() async => (await repo.get(id))!.complete);
+    final first = (await repo.get(id))!;
+    expect(first.targetPages, 3);
+    expect(first.completedTargetPages, 3);
+    expect(first.allPagesComplete, false);
+    expect(first.record.everCompleted, false);
+    expect(first.record.lastReadPage, 2);
+    expect(first.hasCompleteIndex, true);
+    expect(network.calls.keys.toSet(), {'42/2', '42/3', '42/6'});
+    await repo.saveProgress(id, 5);
+    await Future.wait([
+      coordinator.enqueue(key, 'Book', 8, range: DownloadRange.parse('1,3', 8)),
+      coordinator.enqueue(key, 'Book', 8, range: DownloadRange.parse('8', 8)),
+    ]);
+    await until(() async => (await repo.get(id))!.complete);
+    expect((await repo.get(id))!.range.label, '1, 3-4, 7-8');
+    expect((await repo.get(id))!.record.lastReadPage, 5);
+    for (final page in ['42/2', '42/3', '42/6']) {
+      expect(network.calls[page], 1, reason: 'durable pages must not redownload');
+    }
+    final callsBeforeAll = Map.of(network.calls);
+    await coordinator.enqueue(key, 'Book', 8);
+    await until(() async => (await repo.get(id))!.complete);
+    expect((await repo.get(id))!.allPagesComplete, true);
+    expect((await repo.get(id))!.record.everCompleted, true);
+    expect(network.calls.length, 8);
+    for (final page in callsBeforeAll.keys) {
+      expect(network.calls[page], callsBeforeAll[page]);
+    }
+  });
+  test('expanding an active range drains old work and retains the union', () async {
+    network.total = 6;
+    network.hold = true;
+    final id = await coordinator.enqueue(key, 'Book', 6,
+        range: DownloadRange.parse('2', 6));
+    await until(() => network.calls.isNotEmpty);
+    await coordinator.enqueue(key, 'Book', 6,
+        range: DownloadRange.parse('4-5', 6));
+    network.release();
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.calls.keys.toSet(), {'42/1', '42/3', '42/4'});
+    expect((await repo.get(id))!.targetPages, 3);
+    expect(coordinator.activePages, 0);
+  });
+  test('repair outside the target adds only that page', () async {
+    final id = await coordinator.enqueue(key, 'Book', 3,
+        range: DownloadRange.parse('1', 3));
+    await until(() async => (await repo.get(id))!.complete);
+    await coordinator.repair(id, 2);
+    await until(() async => (await repo.get(id))!.complete);
+    expect((await repo.get(id))!.range.label, '1, 3');
+    expect(network.calls.keys.toSet(), {'42/0', '42/2'});
+  });
+  test('shrinking fresh index pauses a range instead of silently truncating it', () async {
+    network.total = 3;
+    final id = await coordinator.enqueue(key, 'Book', 8,
+        range: DownloadRange.parse('6-8', 8));
+    await until(() async => (await repo.get(id))!.record.reason == 'range_invalid');
+    expect((await repo.get(id))!.status, OfflineStatus.paused);
+    expect(network.calls, isEmpty);
+    expect((await repo.get(id))!.range.label, '6-8');
+    await coordinator.enqueue(key, 'Book', 3);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.calls.length, 3);
+  });
+  test('delete wins against queued range additions and cannot resurrect a task', () async {
+    network.total = 6;
+    network.hold = true;
+    final id = await coordinator.enqueue(key, 'Book', 6,
+        range: DownloadRange.parse('1', 6));
+    await until(() => network.calls.isNotEmpty);
+    final adding = coordinator.enqueue(key, 'Book', 6,
+        range: DownloadRange.parse('3', 6));
+    final addingAgain = coordinator.enqueue(key, 'Book', 6,
+        range: DownloadRange.parse('5', 6));
+    final completed = Future.wait([
+      adding.then<void>((_) {}, onError: (Object e) => expect(e, isA<OfflineFailure>())),
+      addingAgain.then<void>((_) {}, onError: (Object e) => expect(e, isA<OfflineFailure>())),
+    ]);
+    await coordinator.delete(id);
+    await completed;
+    expect(await repo.get(id), isNull);
+    expect(await files.size(), 0);
+    expect(network.calls.keys, ['42/0']);
+  });
   test(
       'complete means every page is decoded and durable; duplicate starts share one worker',
       () async {

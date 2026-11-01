@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../../models/gallery_source.dart';
+import '../../models/download_range.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class DownloadEvent extends Equatable {
@@ -17,6 +18,7 @@ class StartDownload extends DownloadEvent {
   final String thumbUrl;
   final int totalPages;
   final GallerySource? source;
+  final DownloadRange range;
   final Completer<void>? completer;
 
   const StartDownload({
@@ -26,11 +28,12 @@ class StartDownload extends DownloadEvent {
     required this.thumbUrl,
     required this.totalPages,
     this.source,
+    this.range = const DownloadRange.all(),
     this.completer,
   });
 
   @override
-  List<Object?> get props => [gid];
+  List<Object?> get props => [gid, token, source, range.toStorage()];
 }
 
 class PauseDownload extends DownloadEvent {

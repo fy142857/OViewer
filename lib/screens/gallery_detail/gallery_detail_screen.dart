@@ -1,4 +1,6 @@
 import '../../models/offline_book.dart';
+import '../../models/download_range.dart';
+import '../../widgets/download_range_dialog.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -362,27 +364,15 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
               IconButton.outlined(
                 key: const ValueKey('download-gallery'),
                 onPressed: () async {
-                  final confirmed = await showDialog<bool>(
+                  final range = await showDialog<DownloadRange>(
                     context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(s.startDownloadConfirm),
-                      content: Text(
-                          '${detail.title}\n\n${s.offlineDownloadFrom(detail.source?.label ?? s.offlineSourceRequired, detail.fileCount)}'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text(s.cancel),
-                        ),
-                        FilledButton(
-                          onPressed: detail.source == null
-                              ? null
-                              : () => Navigator.pop(ctx, true),
-                          child: Text(s.download),
-                        ),
-                      ],
-                    ),
+                    builder: (ctx) => DownloadRangeDialog(
+                        title: detail.title,
+                        source: detail.source?.label ?? s.offlineSourceRequired,
+                        totalPages: detail.fileCount,
+                        enabled: detail.source != null),
                   );
-                  if (confirmed != true || !context.mounted) return;
+                  if (range == null || !context.mounted) return;
                   final completion = Completer<void>();
                   context.read<DownloadBloc>().add(StartDownload(
                         source: detail.source,
@@ -392,6 +382,7 @@ class _GalleryDetailViewState extends State<_GalleryDetailView> {
                         title: detail.title,
                         thumbUrl: detail.thumbUrl,
                         totalPages: detail.fileCount,
+                        range: range,
                       ));
                   try {
                     await completion.future;

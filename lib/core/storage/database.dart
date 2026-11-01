@@ -69,6 +69,7 @@ class OfflineGalleries extends Table {
   TextColumn get token => text()();
   TextColumn get title => text()();
   IntColumn get totalPages => integer()();
+  TextColumn get downloadRange => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('paused'))();
   TextColumn get reason => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -115,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -134,6 +135,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(
                 offlinePages, offlinePages.verifiedModifiedMicros);
             await m.addColumn(offlinePages, offlinePages.verifiedChangedMicros);
+          }
+          if (from >= 3 && from < 5) {
+            await m.addColumn(offlineGalleries, offlineGalleries.downloadRange);
           }
         },
       );

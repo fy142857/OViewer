@@ -2,6 +2,15 @@ import '../../models/reader_page_layout.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/reader_page_resource.dart';
 import '../../models/offline_book.dart';
+import '../../core/storage/database.dart';
+
+class ReaderLocalPageFailed extends ReaderEvent {
+  final OfflinePage page;
+  final int attempt;
+  const ReaderLocalPageFailed(this.page, this.attempt);
+  @override
+  List<Object?> get props => [page, attempt];
+}
 
 class OfflineReaderChanged extends ReaderEvent {
   final OfflineBook? book;

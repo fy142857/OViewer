@@ -24,6 +24,8 @@ import 'package:oviewer/core/parser/gallery_detail_parser.dart';
 import 'package:oviewer/core/storage/database.dart';
 import 'package:oviewer/core/storage/offline_files.dart';
 import 'package:oviewer/core/storage/offline_entry_read.dart';
+import 'package:oviewer/core/storage/reader_index_cache.dart';
+import 'package:oviewer/core/storage/reader_reentry_cache.dart';
 import 'package:oviewer/core/router/app_router.dart';
 import 'package:oviewer/core/router/route_observer.dart';
 import 'package:oviewer/models/gallery_source.dart';
@@ -76,6 +78,7 @@ void main() {
   late Settings settings;
   late SettingsBlocMock settingsBloc;
   setUp(() async {
+    ReaderReentryCache.shared.clear();
     directory =
         await Directory.systemTemp.createTemp('oviewer-offline-reader-');
     db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -101,6 +104,7 @@ void main() {
     await repository.savePage(book.id, 0, saved, current: () => true);
     book = (await repository.get(book.id))!;
     gallery = Gallery();
+    when(() => gallery.readerIndexCache).thenReturn(ReaderIndexCache());
     settings = Settings();
     settingsBloc = SettingsBlocMock();
     final history = History();
@@ -165,7 +169,8 @@ void main() {
         find.byType(ScrollablePositionedList), const Offset(0, 300));
     await settleOffline(tester);
     expect(bloc.state.currentPage, lessThan(4));
-    verifyZeroInteractions(gallery);
+    verifyNever(() => gallery.fetchImage('p0', 42, 0,
+        cancelToken: any(named: 'cancelToken')));
     await tester.pumpWidget(const SizedBox.shrink());
     await tester
         .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
@@ -180,6 +185,13 @@ void main() {
           .thenReturn(ReaderPageLayout.single);
       when(() => settings.getReaderSpreadAlignment())
           .thenReturn(ReaderSpreadAlignment.width);
+      await tester.runAsync(() async {
+        final first = book.pages.first;
+        final bytes = await repository.files.read(first.relativePath!, first.bytes, first.sha256!);
+        final second = await repository.files.write(book.id, 1, Stream.value(bytes), current: () => true);
+        await repository.savePage(book.id, 1, second, current: () => true);
+        book = (await repository.get(book.id))!;
+      });
       await tester.runAsync(() async {
         await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
             value: settingsBloc,
@@ -322,7 +334,8 @@ void main() {
       expect(tester.getSize(find.byKey(const ValueKey('reader-page-4'))).width,
           800);
       expect(tester.takeException(), isNull);
-      verifyZeroInteractions(gallery);
+      verifyNever(() => gallery.fetchImage('p0', 42, 0,
+          cancelToken: any(named: 'cancelToken')));
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 30)));
@@ -470,7 +483,8 @@ void main() {
         current: () => true);
     await until(() => bloc.state.totalPages == 3);
     expect(bloc.state.thumbnails.length, 3);
-    verifyZeroInteractions(gallery);
+    expect(bloc.state.failedIndices, isNotEmpty,
+        reason: 'missing local pages now attempt online loading');
     await bloc.close();
   });
   testWidgets(
@@ -744,7 +758,7 @@ void main() {
     }
   });
   testWidgets(
-      'explicit missing offline page stays local and exposes repair action',
+      'missing offline page attempts network and exposes retry and repair actions',
       (tester) async {
     await tester.runAsync(() async {
       await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
@@ -755,13 +769,14 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await settleOffline(tester);
-    expect(find.text('Not cached yet'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
     await settleOffline(tester);
-    await tester.tap(find.text('Page actions'));
+    await tester.longPress(find.byType(PhotoViewGallery));
     await settleOffline(tester);
     expect(find.text('Read again'), findsOneWidget);
     expect(find.text('Repair cache (online)'), findsOneWidget);
-    verifyZeroInteractions(gallery);
+    verify(() => gallery.fetchReaderIndexPage(42, 'abc',
+        cancelToken: any(named: 'cancelToken'))).called(1);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester
         .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));

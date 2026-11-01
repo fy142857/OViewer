@@ -12,6 +12,7 @@ import '../../core/network/reader_index_session.dart';
 import '../../core/network/reader_request_controller.dart';
 import '../../models/gallery_image.dart';
 import '../../models/offline_book.dart';
+import '../../models/gallery_source.dart';
 import '../../repositories/offline_repository.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 import 'reader_event.dart';
@@ -33,6 +34,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   bool _starting = false;
   final _pageWaiters = <int, List<Completer<bool>>>{};
   ReaderGalleryKey get galleryKey => (_site, state.gid, state.token);
+  bool get networkAllowed => _active && imageScope.isCurrent &&
+      (state.offlineBook == null || state.offlineBook!.source == GallerySource.current);
 
   static ReaderState _initial(SettingsRepository settings,
       ReaderReentryCache cache, LoadReaderImages? request) {
@@ -116,6 +119,19 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         // book. File reads still verify their bytes; a later change can retry.
       });
     }
+    on<ReaderLocalPageFailed>((event, emit) async {
+      final page = event.page.pageIndex;
+      if (!_active || state.localPage(page) != event.page ||
+          (state.imageAttempts[page] ?? 0) != event.attempt) return;
+      state.readyResources[page]?.releaseMemory();
+      emit(state.copyWith(
+          unavailableLocalPages: {...state.unavailableLocalPages, page},
+          imageAttempts: {...state.imageAttempts, page: event.attempt + 1},
+          readyResources: {...state.readyResources}..remove(page)));
+      // Invalidate in the background without delaying the visible network fallback.
+      unawaited(offlineRepository?.invalidateRead(event.page).catchError((Object _) {}));
+      if (state.preloadWindow.addresses.contains(page)) add(LoadImageAtIndex(page));
+    });
     on<OfflineReaderChanged>((event, emit) {
       if (state.offlineBook == null) return;
       if (event.book == null || event.book!.status == OfflineStatus.deleting) {
@@ -129,11 +145,24 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         final changed = {...oldPages.keys, ...newPages.keys}
             .where((page) => oldPages[page] != newPages[page])
             .toSet();
-        for (final page in changed) {
+        final arrived = changed.where((page) =>
+            newPages[page]?.status == 'completed' &&
+            newPages[page]?.relativePath != null).toSet();
+        final retained = {...state.retainedNetworkPages,
+          ...arrived.where((page) => state.loadedImages.containsKey(page) &&
+              state.readyResources.containsKey(page) && state.preloadWindow.visible.contains(page))};
+        final invalidated = changed.difference(retained);
+        for (final page in invalidated) {
           state.readyResources[page]?.releaseMemory();
         }
         emit(state.copyWith(
             offlineBook: book,
+            retainedNetworkPages: retained,
+            unavailableLocalPages: {...state.unavailableLocalPages}
+              ..removeWhere((page) => changed.contains(page) &&
+                  newPages[page]?.status == 'completed'),
+            loadingIndices: {...state.loadingIndices}..removeAll(arrived),
+            failedIndices: {...state.failedIndices}..removeAll(arrived),
             totalPages: book.record.totalPages,
             currentPage: state.currentPage.clamp(0, book.record.totalPages - 1),
             thumbnails: {
@@ -141,12 +170,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                 i: ThumbnailInfo(pageToken: '', pageIndex: i, thumbUrl: '')
             },
             readyResources: {...state.readyResources}
-              ..removeWhere((page, _) => changed.contains(page)),
+              ..removeWhere((page, _) => invalidated.contains(page)),
             imageAttempts: {
               ...state.imageAttempts,
-              for (final page in changed)
+              for (final page in invalidated)
                 page: (state.imageAttempts[page] ?? 0) + 1
             }));
+        _loadVisiblePages();
+        _preloadAdjacent();
       }
     });
     _cacheGeneration = _reentry.generation;
@@ -184,13 +215,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     on<PageChanged>(_onPageChanged);
     on<ReaderViewportChanged>((event, emit) {
       if (!_active ||
-          state.offlineBook != null ||
           state.status != ReaderStatus.ready ||
           event.mode != state.readingMode ||
           event.layout != state.pageLayout ||
           event.pages.isEmpty ||
           setEquals(event.pages, state.visiblePages)) return;
-      emit(state.copyWith(visiblePages: event.pages));
+      emit(state.copyWith(visiblePages: event.pages,
+          retainedNetworkPages: state.retainedNetworkPages.intersection(event.pages)));
       _prioritize();
       _loadVisiblePages();
       _preloadAdjacent();
@@ -258,14 +289,15 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     });
   }
 
-  bool get _active => !_requests.isCancelled && !isClosed;
+  bool get _active => !_requests.isCancelled && !isClosed &&
+      state.status != ReaderStatus.deleted;
 
   /// Shares an existing address request with the foreground or another waiter.
   Future<bool> ensureImageAtIndex(int page) {
+    if (state.localPage(page) != null) return Future.value(true);
     if (!_active ||
         !imageScope.isCurrent ||
-        _index?.isActive != true ||
-        state.offlineBook != null) return Future.value(false);
+        (_index?.isActive != true && state.offlineBook == null)) return Future.value(false);
     if (!state.loadingIndices.contains(page)) {
       if (state.loadedImages.containsKey(page)) return Future.value(true);
       if (state.failedIndices.contains(page)) return Future.value(false);
@@ -300,6 +332,16 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     if (!_active || _starting) return;
     if (state.offlineBook != null) {
       _saveProgress(state.currentPage);
+      final snapshot = networkAllowed ? _reentry.get(galleryKey) : null;
+      if (snapshot != null && snapshot.metadata.totalPages == state.totalPages) {
+        _index = ReaderIndexSession(_galleryRepo, _requests, state.gid, state.token);
+        _index!.seed(snapshot.metadata, snapshot.thumbnails);
+        emit(state.copyWith(
+            loadedImages: snapshot.pages.map((i, p) => MapEntry(i, p.image)),
+            cacheOnlyPages: snapshot.pages.keys.toSet()));
+      }
+      _loadVisiblePages();
+      _preloadAdjacent();
       return;
     }
     if (_restored && event.gid == state.gid && event.token == state.token) {
@@ -370,7 +412,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   Future<void> _onLoadImageAtIndex(
       LoadImageAtIndex event, Emitter<ReaderState> emit) async {
-    if (state.offlineBook != null) return;
+    if (state.localPage(event.index) != null) return;
     if (event.speculative &&
         !state.preloadWindow.addresses.contains(event.index)) return;
     if (state.loadedImages.containsKey(event.index) ||
@@ -383,7 +425,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   Future<void> _onRetryImageAtIndex(
       RetryImageAtIndex event, Emitter<ReaderState> emit) async {
-    if (state.offlineBook != null) {
+    if (state.localPage(event.index) != null) {
       state.readyResources[event.index]?.releaseMemory();
       emit(state.copyWith(imageAttempts: {
         ...state.imageAttempts,
@@ -405,14 +447,22 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         loadedImages: {...state.loadedImages}
           ..removeWhere((p, _) => stale.contains(p)),
         cacheOnlyPages: {...state.cacheOnlyPages}..removeAll(stale),
-        thumbnails: Map.of(index.thumbnails),
-        totalPages: index.totalPages,
-        currentPage: state.currentPage.clamp(0, index.totalPages - 1)));
+        thumbnails: {...state.thumbnails, ...index.thumbnails},
+        totalPages: state.offlineBook?.record.totalPages ?? index.totalPages,
+        currentPage: state.currentPage.clamp(0,
+            (state.offlineBook?.record.totalPages ?? index.totalPages) - 1)));
   }
 
   Future<void> _loadImage(int page, Emitter<ReaderState> emit,
       {bool retry = false}) async {
-    final index = _index;
+    if (state.localPage(page) != null) return;
+    if (!networkAllowed) {
+      if (_active) emit(state.copyWith(failedIndices: {...state.failedIndices, page}));
+      _finishPageWaiters(page);
+      return;
+    }
+    final index = _index ?? (state.offlineBook == null ? null
+        : _index = ReaderIndexSession(_galleryRepo, _requests, state.gid, state.token));
     if (!_active ||
         index == null ||
         !index.isActive ||
@@ -425,6 +475,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         retry ? _requests.restartPage(page) : _requests.forPage(page);
     bool current() =>
         _active &&
+        networkAllowed &&
+        state.localPage(page) == null &&
         identical(index, _index) &&
         index.isActive &&
         !pageRequests.isCancelled;
@@ -486,9 +538,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         emit(state.copyWith(failedIndices: {...state.failedIndices, page}));
       }
     } finally {
-      if (current()) {
+      if (_active && identical(index, _index) && !pageRequests.isCancelled) {
         emit(state.copyWith(
-            loadingIndices: {...state.loadingIndices}..remove(page)));
+            loadingIndices: {...state.loadingIndices}..remove(page),
+            failedIndices: !networkAllowed || !index.isActive
+                ? {...state.failedIndices, page} : state.failedIndices));
       }
       _finishPageWaiters(page);
     }
@@ -498,7 +552,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       LoadThumbnailAtIndex event, Emitter<ReaderState> emit) async {
     final index = _index;
     final page = event.index;
-    if (!_active ||
+    if (!networkAllowed ||
+        state.offlineBook != null ||
         index == null ||
         !index.isActive ||
         page < 0 ||
@@ -528,11 +583,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   void _loadVisiblePages() {
-    if (!_active ||
-        state.status != ReaderStatus.ready ||
-        state.offlineBook != null) return;
+    if (!_active || state.status != ReaderStatus.ready) return;
     for (final page in state.preloadWindow.visible) {
-      if (!state.loadedImages.containsKey(page) &&
+      if (state.localPage(page) == null && !state.loadedImages.containsKey(page) &&
           !state.loadingIndices.contains(page) &&
           !state.failedIndices.contains(page)) {
         add(LoadImageAtIndex(page));
@@ -541,12 +594,12 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 
   void _preloadAdjacent() {
-    if (state.offlineBook != null) return;
     if (!_active) return;
     if (state.status != ReaderStatus.ready) return;
     for (final neighbour in state.preloadWindow.addresses) {
       if (neighbour >= 0 &&
           neighbour < state.totalPages &&
+          state.localPage(neighbour) == null &&
           !state.loadedImages.containsKey(neighbour) &&
           !state.loadingIndices.contains(neighbour) &&
           !state.failedIndices.contains(neighbour)) {
@@ -564,11 +617,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final visible = state.readingMode == 2 && state.visiblePages.contains(page)
         ? state.visiblePages
         : <int>{};
-    emit(state.copyWith(currentPage: page, visiblePages: visible));
+    emit(state.copyWith(currentPage: page, visiblePages: visible,
+        retainedNetworkPages: state.retainedNetworkPages.intersection(
+            visible.isEmpty ? state.spreads.containing(page).toSet() : visible)));
     _prioritize();
     _loadVisiblePages();
     if (state.offlineBook != null) {
       _saveProgress(page);
+      _preloadAdjacent();
       return;
     }
     _reentry.focus(galleryKey, page);

@@ -11,6 +11,7 @@ import 'package:oviewer/core/storage/database.dart';
 import 'package:oviewer/core/storage/offline_files.dart';
 import 'package:oviewer/models/gallery_source.dart';
 import 'package:oviewer/models/offline_book.dart';
+import 'package:oviewer/models/download_range.dart';
 import 'package:oviewer/repositories/offline_repository.dart';
 
 void sqliteForTests() {
@@ -47,6 +48,21 @@ void main() {
     await directory.delete(recursive: true);
   });
   const key = OfflineKey(GallerySource.eh, 42, 'abc');
+  test('range merges preserve original page numbering and progress', () async {
+    final book = await repository.create(key, 'Book', 10,
+        range: DownloadRange.parse('4-5', 10));
+    expect(book.record.lastReadPage, 3);
+    expect(book.record.totalPages, 10);
+    await repository.saveProgress(book.id, 8);
+    await Future.wait([
+      repository.create(key, 'Book', 10, range: DownloadRange.parse('1-2', 10)),
+      repository.create(key, 'Book', 10, range: DownloadRange.parse('8-9', 10)),
+    ]);
+    final merged = (await repository.get(book.id))!;
+    expect(merged.range.label, '1-2, 4-5, 8-9');
+    expect(merged.record.lastReadPage, 8);
+    expect(merged.targetPages, 6);
+  });
   for (final format in ['png', 'jpeg', 'gif', 'webp']) {
     test('$format keeps original binary bytes and validates before exposing',
         () async {

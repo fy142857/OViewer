@@ -44,7 +44,7 @@ class DownloadBloc extends Bloc<DownloadEvent, DownloadState> {
         await coordinator.enqueue(
             OfflineKey(event.source!, event.gid, event.token),
             event.title,
-            event.totalPages);
+            event.totalPages, range: event.range);
         event.completer?.complete();
         add(LoadDownloads());
       } catch (error) {

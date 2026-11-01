@@ -29,7 +29,8 @@ class ReaderPageMenu extends StatelessWidget {
                         SimpleDialogOption(
                             key: const ValueKey('repair-offline-page'),
                             onPressed: () => Navigator.pop(context, 'repair'),
-                            child: Text(s.offlineRepair)),
+                            child: Text(state.offlineBook!.range.contains(page)
+                                ? s.offlineRepair : s.offlineAddPage)),
                       if (state.readyResources[page] != null)
                         SimpleDialogOption(
                             key: const ValueKey('save-page'),

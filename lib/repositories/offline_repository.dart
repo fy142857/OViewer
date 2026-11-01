@@ -10,6 +10,7 @@ import '../core/storage/database.dart';
 import '../core/storage/offline_files.dart';
 import '../models/gallery_source.dart';
 import '../models/offline_book.dart';
+import '../models/download_range.dart';
 
 class OfflineRepository {
   final AppDatabase db;
@@ -83,9 +84,7 @@ class OfflineRepository {
           });
           final complete = record.status == 'completed' &&
               !damaged &&
-              OfflineBook(record, savedPages).hasCompleteIndex &&
-              savedPages.where((p) => p.status == 'completed').length ==
-                  record.totalPages;
+              OfflineBook(record, savedPages).targetComplete;
           if (!complete) {
             await _status(
                 record.id,
@@ -147,18 +146,29 @@ class OfflineRepository {
       ..where((t) =>
           t.gid.equals(gid) &
           t.token.equals(token) &
-          t.everCompleted.equals(true) &
           t.indexReady.equals(true) &
           t.status.equals('deleting').not());
     if (source != null) query.where((t) => t.source.equals(source.name));
-    return Future.wait((await query.get())
+    final books = await Future.wait((await query.get())
         .map((r) async => OfflineBook(r, await pages(r.id))));
+    return books.where((b) => b.record.everCompleted || b.completedPages > 0)
+        .toList();
   }
 
-  Future<OfflineBook> create(OfflineKey key, String title, int totalPages) =>
+  Future<OfflineBook> create(OfflineKey key, String title, int totalPages,
+          {DownloadRange range = const DownloadRange.all()}) =>
       _serial(() async {
         if (key.gid <= 0 || key.token.isEmpty || totalPages <= 0)
           throw const OfflineFailure('invalid_index');
+        final existing = await get(key.id);
+        if (existing?.status == OfflineStatus.deleting) {
+          throw const OfflineFailure('cancelled');
+        }
+        final target = existing == null ? range : existing.range.union(range);
+        if (!target.validFor(existing?.record.indexReady == true
+            ? existing!.record.totalPages : totalPages)) {
+          throw const OfflineFailure('range_invalid');
+        }
         await db.into(db.offlineGalleries).insert(
             OfflineGalleriesCompanion.insert(
                 id: key.id,
@@ -167,20 +177,32 @@ class OfflineRepository {
                 token: key.token,
                 title: title,
                 totalPages: totalPages,
+                downloadRange: Value(target.toStorage()),
+                lastReadPage: Value(target.firstPage),
                 createdAt: DateTime.now(),
                 status: const Value('paused')),
             mode: InsertMode.insertOrIgnore);
+        if (existing != null &&
+            existing.record.downloadRange != target.toStorage()) {
+          await (db.update(db.offlineGalleries)..where((t) => t.id.equals(key.id)))
+              .write(OfflineGalleriesCompanion(
+                  downloadRange: Value(target.toStorage()),
+                  status: const Value('paused'), reason: const Value(null)));
+        }
         return (await get(key.id))!;
       });
 
-  Future<void> _status(String id, OfflineStatus status, String? reason) =>
-      (db.update(db.offlineGalleries)..where((t) => t.id.equals(id))).write(
+  Future<void> _status(String id, OfflineStatus status, String? reason) async {
+    final fullyCached = status == OfflineStatus.completed &&
+        (await get(id))?.allPagesComplete == true;
+    await (db.update(db.offlineGalleries)..where((t) => t.id.equals(id))).write(
           OfflineGalleriesCompanion(
-              everCompleted: status == OfflineStatus.completed
+              everCompleted: fullyCached
                   ? const Value(true)
                   : const Value.absent(),
               status: Value(status.name),
               reason: Value(reason)));
+  }
   Future<void> setStatus(String id, OfflineStatus status, {String? reason}) =>
       _serial(() => _status(id, status, reason));
 
@@ -189,6 +211,10 @@ class OfflineRepository {
           {required bool Function() current}) =>
       _serial(() async {
         if (!current()) throw const OfflineFailure('cancelled');
+        final book = await get(id);
+        if (book == null || !book.range.validFor(total)) {
+          throw const OfflineFailure('range_invalid');
+        }
         final indexed = <int, ThumbnailInfo>{};
         for (final thumb in thumbnails) {
           final previous = indexed[thumb.pageIndex];
@@ -368,6 +394,17 @@ class OfflineRepository {
               verifiedChangedMicros: const Value(null)));
   Future<void> failPage(String id, int index, String reason) =>
       _serial(() => _invalidate(id, index, reason));
+  /// Do not invalidate a newer file saved while a reader was decoding an old one.
+  Future<void> invalidateRead(OfflinePage failed) => _serial(() async {
+    final book = await get(failed.bookId);
+    if (book == null || book.status == OfflineStatus.deleting) return;
+    final current = book.pages.where((p) => p.pageIndex == failed.pageIndex);
+    if (current.isEmpty || current.first != failed) return;
+    await _invalidate(failed.bookId, failed.pageIndex, 'damaged_file');
+    if (book.status == OfflineStatus.completed) {
+      await _status(book.id, OfflineStatus.paused, 'damaged_file');
+    }
+  });
   Future<void> saveProgress(String id, int index) => _serial(() async {
         await (db.update(db.offlineGalleries)..where((t) => t.id.equals(id)))
             .write(OfflineGalleriesCompanion(lastReadPage: Value(index)));

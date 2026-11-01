@@ -10,6 +10,7 @@ import 'package:oviewer/core/services/offline_download_coordinator.dart';
 import 'package:oviewer/core/storage/database.dart';
 import 'package:oviewer/models/gallery_source.dart';
 import 'package:oviewer/models/offline_book.dart';
+import 'package:oviewer/models/download_range.dart';
 import 'package:oviewer/repositories/offline_repository.dart';
 import 'offline_storage_test.dart' show sqliteForTests;
 import 'offline_coordinator_test.dart'
@@ -291,8 +292,27 @@ void main() {
     expect(await files.size(), 0);
   });
 
+  test('completed partial target survives restart and remains discoverable', () async {
+    await coordinator.enqueue(key, 'Partial book', 3,
+        range: DownloadRange.parse('2', 3));
+    await until(() async => (await repo.get(key.id))!.complete);
+    await repo.saveProgress(key.id, 2);
+    final originalCalls = Map.of(network.calls);
+    await restart();
+    await coordinator.initialize();
+    final restored = (await repo.get(key.id))!;
+    expect(restored.complete, true);
+    expect(restored.allPagesComplete, false);
+    expect(restored.record.everCompleted, false);
+    expect(restored.range.label, '2');
+    expect(restored.record.lastReadPage, 2);
+    expect((await repo.matching(42, 'abc', source: GallerySource.eh)).single.id, key.id);
+    await coordinator.resume(key.id);
+    expect(network.calls, originalCalls);
+  });
+  for (final version in [3, 4]) {
   test(
-      'v3 database migration preserves files and progress and verifies legacy evidence once',
+      'v$version database migration preserves files and progress and verifies legacy evidence once',
       () async {
     await close();
     final legacy = sqlite.sqlite3.open(databaseFile.path);
@@ -309,6 +329,13 @@ CREATE TABLE offline_pages (book_id TEXT NOT NULL REFERENCES offline_galleries(i
  sha256 TEXT, status TEXT NOT NULL DEFAULT 'pending', error TEXT, PRIMARY KEY (book_id, page_index));
 PRAGMA user_version = 3;
 """);
+    if (version == 4) {
+      legacy.execute('ALTER TABLE offline_galleries ADD COLUMN index_needs_refresh INTEGER NOT NULL DEFAULT 0');
+      legacy.execute('ALTER TABLE offline_pages ADD COLUMN verification_version INTEGER NOT NULL DEFAULT 0');
+      legacy.execute('ALTER TABLE offline_pages ADD COLUMN verified_modified_micros INTEGER');
+      legacy.execute('ALTER TABLE offline_pages ADD COLUMN verified_changed_micros INTEGER');
+      legacy.execute('PRAGMA user_version = 4');
+    }
     final saved = await files.write(key.id, 0, Stream.value(network.png),
         current: () => true);
     legacy.execute(
@@ -334,11 +361,12 @@ PRAGMA user_version = 3;
     expect(files.hashes, 1);
     expect((await repo.get(key.id))!.record.lastReadPage, 1);
     expect((await repo.get(key.id))!.record.title, 'Old book');
+    expect((await repo.get(key.id))!.range.isAll, true);
     expect((await repo.pages(key.id)).first.relativePath, saved.relativePath);
     expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .read<int>('user_version'),
-        4);
+        5);
     await restart();
     await coordinator.resume(key.id);
     await until(() async => (await repo.get(key.id))!.complete);
@@ -346,4 +374,5 @@ PRAGMA user_version = 3;
     expect(network.indexed, isEmpty);
     expect(network.calls['42/0'], isNull);
   });
+  }
 }

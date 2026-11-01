@@ -4,12 +4,17 @@ import 'package:equatable/equatable.dart';
 import '../../models/gallery_image.dart';
 import '../../models/reader_page_resource.dart';
 import '../../models/offline_book.dart';
+import '../../core/storage/database.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 
 enum ReaderStatus { initial, loading, ready, contentWarning, error, deleted }
 
 class ReaderState extends Equatable {
   final OfflineBook? offlineBook;
+  final Set<int> unavailableLocalPages;
+  // Keep a decoded online frame until it leaves the viewport when a download
+  // finishes underneath it. The next presentation will prefer the local file.
+  final Set<int> retainedNetworkPages;
   final ReaderStatus status;
   final int gid;
   final String token;
@@ -34,6 +39,8 @@ class ReaderState extends Equatable {
 
   const ReaderState({
     this.offlineBook,
+    this.unavailableLocalPages = const {},
+    this.retainedNetworkPages = const {},
     this.status = ReaderStatus.initial,
     this.gid = 0,
     this.token = '',
@@ -63,9 +70,18 @@ class ReaderState extends Equatable {
           visiblePages: visiblePages, expandAroundVisible: readingMode == 2);
 
   GalleryImage? get currentImage => loadedImages[currentPage];
+  OfflinePage? localPage(int index) {
+    if (unavailableLocalPages.contains(index) || retainedNetworkPages.contains(index)) return null;
+    final pages = offlineBook?.pages.where((p) => p.pageIndex == index &&
+        p.status == 'completed' && p.relativePath != null && p.sha256 != null &&
+        p.bytes > 0);
+    return pages == null || pages.isEmpty ? null : pages.first;
+  }
 
   ReaderState copyWith({
     OfflineBook? offlineBook,
+    Set<int>? unavailableLocalPages,
+    Set<int>? retainedNetworkPages,
     ReaderStatus? status,
     int? gid,
     String? token,
@@ -90,6 +106,8 @@ class ReaderState extends Equatable {
   }) {
     return ReaderState(
       offlineBook: offlineBook ?? this.offlineBook,
+      unavailableLocalPages: unavailableLocalPages ?? this.unavailableLocalPages,
+      retainedNetworkPages: retainedNetworkPages ?? this.retainedNetworkPages,
       status: status ?? this.status,
       gid: gid ?? this.gid,
       token: token ?? this.token,
@@ -117,6 +135,8 @@ class ReaderState extends Equatable {
   @override
   List<Object?> get props => [
         offlineBook,
+        unavailableLocalPages,
+        retainedNetworkPages,
         status,
         gid,
         token,

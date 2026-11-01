@@ -349,7 +349,7 @@ class _ReaderViewState extends State<_ReaderView> {
       {required bool horizontal, double? alignedHeight}) {
     ImageProvider? provider;
     Widget? placeholder;
-    if (state.offlineBook != null) {
+    if (state.localPage(page) != null) {
       provider = _offlineProvider(state, page);
       if (provider == null) placeholder = _offlineMissing(page);
     } else {
@@ -395,8 +395,8 @@ class _ReaderViewState extends State<_ReaderView> {
         });
       },
       loadingHeight: horizontal || alignedHeight != null ? null : loadingHeight,
-      errorBuilder: (_, error, ___) => bounded(state.offlineBook != null
-          ? _offlineMissing(page, damaged: true)
+      errorBuilder: (_, error, ___) => bounded(provider is OfflineImageProvider
+          ? _pendingImage(state, page)
           : error is ReaderLocalCacheMiss
               ? const Center(
                   child: CircularProgressIndicator(color: Colors.white))
@@ -668,9 +668,9 @@ class _ReaderViewState extends State<_ReaderView> {
   }
 
   void _syncPreload(ReaderState state) {
-    if (state.status == ReaderStatus.ready && state.offlineBook == null) {
+    if (state.status == ReaderStatus.ready) {
       if (!context.read<ReaderBloc>().imageScope.isCurrent) {
-        widget.requests.cancel();
+        if (state.offlineBook == null) widget.requests.cancel();
         return;
       }
       _preload.update(state.preloadWindow, state.imageAttempts);
@@ -678,8 +678,7 @@ class _ReaderViewState extends State<_ReaderView> {
   }
 
   void _reportVisible(ReaderState state, Set<int> pages) {
-    if (state.offlineBook != null ||
-        pages.isEmpty ||
+    if (pages.isEmpty ||
         setEquals(pages, state.visiblePages) ||
         widget.requests.isCancelled) return;
     context
@@ -694,6 +693,7 @@ class _ReaderViewState extends State<_ReaderView> {
 
   Future<bool?> _preloadImage(int page, int attempt) async {
     final bloc = context.read<ReaderBloc>();
+    if (bloc.state.localPage(page) != null) return true;
     final available = await bloc.ensureImageAtIndex(page);
     if (!mounted ||
         !bloc.imageScope.isCurrent ||
@@ -744,27 +744,29 @@ class _ReaderViewState extends State<_ReaderView> {
 
   OfflineImageProvider? _offlineProvider(ReaderState state, int index,
       {bool thumbnail = false}) {
-    final matching = state.offlineBook!.pages.where((p) =>
-        p.pageIndex == index &&
-        p.status == 'completed' &&
-        p.relativePath != null &&
-        p.sha256 != null);
-    if (matching.isEmpty) {
+    final localPage = state.localPage(index);
+    if (localPage == null) {
       if (index == _entryPage) _releaseEntryPriority();
       return null;
     }
     final provider = OfflineImageProvider(
-        GetIt.I<OfflineRepository>().files, matching.first,
+        GetIt.I<OfflineRepository>().files, localPage,
         session: widget.requests,
         prepared:
-            !thumbnail && widget.initialRead?.matches(matching.first) == true
+            !thumbnail && widget.initialRead?.matches(localPage) == true
                 ? widget.initialRead
                 : null,
         isCurrent: () => mounted && !widget.requests.isCancelled,
         beforeLoad: (index == _entryPage && !thumbnail)
             ? null
             : () => _entryImageReady.future,
-        onLoadError: index == _entryPage ? _releaseEntryPriority : null,
+        onLoadError: () {
+          if (index == _entryPage) _releaseEntryPriority();
+          if (mounted && !widget.requests.isCancelled) {
+            context.read<ReaderBloc>().add(ReaderLocalPageFailed(
+                localPage, state.imageAttempts[index] ?? 0));
+          }
+        },
         onPhase: thumbnail ? null : (phase) => widget.diagnostics?.mark(phase),
         onImageReady: thumbnail
             ? null
@@ -987,6 +989,13 @@ class _ReaderViewState extends State<_ReaderView> {
           children: [
             const Icon(Icons.broken_image, color: Colors.white54, size: 48),
             const SizedBox(height: 8),
+            if (context.read<ReaderBloc>().state.offlineBook != null &&
+                !context.read<ReaderBloc>().networkAllowed)
+              Text(S.of(context).offlineError(
+                  context.read<ReaderBloc>().imageScope.isCurrent
+                      ? 'source_changed' : 'session_changed'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70)),
             TextButton(
               onPressed: () =>
                   context.read<ReaderBloc>().add(RetryImageAtIndex(index)),
@@ -998,6 +1007,12 @@ class _ReaderViewState extends State<_ReaderView> {
       );
 
   Widget _pendingImage(ReaderState state, int index) {
+    if (index == _entryPage && state.localPage(index) == null) {
+      _releaseEntryPriority();
+    }
+    if (state.offlineBook != null && !state.preloadWindow.targets.contains(index)) {
+      return _offlineMissing(index);
+    }
     if (state.failedIndices.contains(index) ||
         _preload.failed(index, state.imageAttempts[index] ?? 0))
       return _imageError(index);
@@ -1046,7 +1061,7 @@ class _ReaderViewState extends State<_ReaderView> {
                   maxScale: 3.0,
                 );
               }
-              if (state.offlineBook != null) {
+              if (state.localPage(index) != null) {
                 final provider = _offlineProvider(state, index);
                 if (provider == null)
                   return PhotoViewGalleryPageOptions.customChild(
@@ -1060,7 +1075,7 @@ class _ReaderViewState extends State<_ReaderView> {
                     minScale: PhotoViewComputedScale.contained,
                     maxScale: PhotoViewComputedScale.covered * 3,
                     errorBuilder: (_, __, ___) => _horizontalPlaceholder(
-                        _offlineMissing(index, damaged: true)));
+                        _pendingImage(state, index)));
               }
               final image = state.loadedImages[index];
               if (!_onlineAllowed(state, index) ||
@@ -1140,7 +1155,7 @@ class _ReaderViewState extends State<_ReaderView> {
                   return _spreadRow(state, index,
                       horizontal: false, viewport: viewport);
                 }
-                if (state.offlineBook != null) {
+                if (state.localPage(index) != null) {
                   final provider = _offlineProvider(state, index);
                   return _pageSurface(
                       index,
@@ -1152,7 +1167,7 @@ class _ReaderViewState extends State<_ReaderView> {
                               errorBuilder: (_, __, ___) => SizedBox(
                                   height: 300,
                                   child:
-                                      _offlineMissing(index, damaged: true))));
+                                      _pendingImage(state, index))));
                 }
                 final image = state.loadedImages[index];
                 if (!_onlineAllowed(state, index) ||

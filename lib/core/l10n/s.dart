@@ -21,6 +21,24 @@ class S {
       ? '下载来源：$source\n共 $pages 页'
       : 'Download source: $source\n$pages pages';
   String get offlineCached => _zh ? '已缓存' : 'Cached offline';
+  String get downloadAllPages => _zh ? '全部' : 'All pages';
+  String get downloadCustomRange => _zh ? '自定义范围' : 'Custom range';
+  String downloadSelectedPages(int pages) => _zh ? '已选择 $pages 页' : '$pages pages selected';
+  String get downloadRangeMergeHint => _zh
+      ? '支持多段页码，如 1-20,35,50-60。已有任务将合并范围，仅补充缺页，不删除已缓存内容。'
+      : 'Use ranges such as 1-20,35,50-60. Existing tasks merge ranges and download missing pages without deleting cached files.';
+  String get downloadRangeCompleted => _zh ? '所选范围已完成' : 'Selected range completed';
+  String downloadRangeSummary(String range, int total) => _zh
+      ? '范围：$range · 全书 $total 页' : 'Range: $range · $total pages in gallery';
+  String downloadRangeError(String code, int total) {
+    switch (code) {
+      case 'range_empty': return _zh ? '请输入下载页码' : 'Enter pages to download';
+      case 'range_bounds': return _zh ? '页码必须在 1–$total 之间' : 'Pages must be between 1 and $total';
+      case 'range_order': return _zh ? '起始页不能大于结束页' : 'Start page must not exceed end page';
+      default: return _zh ? '请输入页码或区间，用逗号分隔' : 'Enter pages or ranges separated by commas';
+    }
+  }
+  String get offlineAddPage => _zh ? '加入离线下载（联网）' : 'Add to offline download (online)';
   String get offlineNotCached => _zh ? '尚未缓存' : 'Not cached yet';
   String get offlineReload => _zh ? '重新读取' : 'Read again';
   String get offlineRepair => _zh ? '修复缓存（联网）' : 'Repair cache (online)';
@@ -87,6 +105,10 @@ class S {
       'invalid_index': [
         '漫画目录不完整，请重新验证来源',
         'Gallery index is incomplete. Verify the source'
+      ],
+      'range_invalid': [
+        '下载范围超出当前页数，请在详情页重新选择全部下载',
+        'Download range exceeds the current page count. Select all pages in gallery details'
       ],
       'pages_failed': [
         '部分页面未完成，可重试补下',

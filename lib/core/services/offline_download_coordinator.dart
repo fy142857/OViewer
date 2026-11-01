@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../models/offline_book.dart';
+import '../../models/download_range.dart';
 import '../../models/gallery_source.dart';
 import '../../repositories/offline_repository.dart';
 import '../network/api_exception.dart';
@@ -20,6 +21,8 @@ class OfflineDownloadCoordinator {
   final Future<void> Function(Duration) delay;
   final _jobs = <String, _OfflineJob>{};
   final _pendingStarts = <String, Future<void>>{};
+  final _pendingEnqueues = <String, Future<void>>{};
+  final _deleteGenerations = <String, int>{};
   final _pendingPauses = <String, Future<void>>{};
   final _revisions = <String, int>{};
   final _resumeContexts = <String, _ResumeContext>{};
@@ -60,13 +63,60 @@ class OfflineDownloadCoordinator {
 
   Future<void> initialize() => repository.initialize();
 
-  Future<String> enqueue(OfflineKey key, String title, int totalPages) async {
+  Future<String> enqueue(OfflineKey key, String title, int totalPages,
+      {DownloadRange range = const DownloadRange.all()}) async {
+    await _updateTarget(key.id, () => _enqueue(key, title, totalPages, range));
+    return key.id;
+  }
+
+  Future<void> _updateTarget(String id, Future<void> Function() action) async {
+    final previous = _pendingEnqueues[id] ?? Future<void>.value();
+    final epoch = _epoch;
+    final revision = _deleteGenerations[id] ?? 0;
+    final operation = previous.catchError((Object _) {}).then((_) async {
+      if (_closed || _deleting.contains(id) || epoch != _epoch ||
+          revision != (_deleteGenerations[id] ?? 0)) {
+        throw const OfflineFailure('cancelled');
+      }
+      await action();
+    });
+    _pendingEnqueues[id] = operation;
+    try {
+      await operation;
+    } finally {
+      if (identical(_pendingEnqueues[id], operation)) {
+        _pendingEnqueues.remove(id);
+      }
+    }
+  }
+
+  Future<void> _enqueue(OfflineKey key, String title, int totalPages,
+      DownloadRange range) async {
+    final epoch = _epoch;
+    final session = network.session;
     await initialize();
     if (key.source != network.source)
       throw const OfflineFailure('source_changed');
-    final book = await repository.create(key, title, totalPages);
+    final existing = await repository.get(key.id);
+    if (!range.validFor(existing?.record.indexReady == true
+        ? existing!.record.totalPages : totalPages)) {
+      throw const OfflineFailure('range_invalid');
+    }
+    if (existing != null &&
+        existing.range.union(range).toStorage() != existing.record.downloadRange) {
+      final job = _jobs[key.id];
+      await pause(key.id);
+      if (job != null) await job.drained.future;
+      _resumeContexts.remove(key.id);
+    }
+    if (_closed || _deleting.contains(key.id) || key.source != network.source ||
+        epoch != _epoch || session != network.session) {
+      throw const OfflineFailure('cancelled');
+    }
+    final book = await repository.create(key, title, totalPages, range: range);
+    if (_closed || _deleting.contains(key.id) || epoch != _epoch ||
+        session != network.session) throw const OfflineFailure('cancelled');
     await resume(book.id);
-    return book.id;
   }
 
   Future<void> confirmLegacy(String id, GallerySource source) async {
@@ -261,10 +311,7 @@ class OfflineDownloadCoordinator {
         }
         final latest = await repository.get(job.book.id);
         if (!_current(job)) continue;
-        final complete = latest != null &&
-            latest.record.indexReady &&
-            latest.record.totalPages > 0 &&
-            latest.completedPages == latest.record.totalPages;
+        final complete = latest?.targetComplete == true;
         await repository.setStatus(job.book.id,
             complete ? OfflineStatus.completed : OfflineStatus.failed,
             reason: complete ? null : 'pages_failed');
@@ -305,7 +352,8 @@ class OfflineDownloadCoordinator {
       }
       job.reusedIndex = warm;
       final preparedContext = context;
-      final pages = warm ? job.book.pages : await repository.pages(job.book.id);
+      final pages = (warm ? job.book.pages : await repository.pages(job.book.id))
+          .where((page) => job.book.range.contains(page.pageIndex)).toList();
       if (!_current(job)) return;
       job.resumeContext = preparedContext;
       if (warm) {
@@ -535,7 +583,8 @@ class OfflineDownloadCoordinator {
     for (final request in job.requests) {
       request.cancel();
     }
-    await repository.setStatus(job.book.id, OfflineStatus.failed,
+    await repository.setStatus(job.book.id,
+        reason == 'range_invalid' ? OfflineStatus.paused : OfflineStatus.failed,
         reason: reason);
     _notify(immediate: true);
   }
@@ -613,9 +662,11 @@ class OfflineDownloadCoordinator {
 
   Future<void> delete(String id) async {
     if (!_deleting.add(id)) return;
+    _deleteGenerations[id] = (_deleteGenerations[id] ?? 0) + 1;
     try {
       _resumeContexts.remove(id);
       await pause(id);
+      await _pendingEnqueues[id]?.catchError((Object _) {});
       final job = _jobs[id];
       if (job != null) await job.drained.future;
       await repository.setStatus(id, OfflineStatus.deleting);
@@ -626,9 +677,12 @@ class OfflineDownloadCoordinator {
     }
   }
 
-  Future<void> repair(String id, int page) async {
+  Future<void> repair(String id, int page) => _updateTarget(id, () => _repair(id, page));
+
+  Future<void> _repair(String id, int page) async {
     final book = await repository.get(id);
     if (book == null) return;
+    if (page < 0 || page >= book.record.totalPages) throw const OfflineFailure('range_invalid');
     if (book.source == null) throw const OfflineFailure('source_required');
     if (book.source != network.source)
       throw const OfflineFailure('source_changed');
@@ -637,13 +691,17 @@ class OfflineDownloadCoordinator {
     await pause(id);
     final job = _jobs[id];
     if (job != null) await job.drained.future;
-    if (epoch != _epoch ||
+    if (_deleting.contains(id) || _closed || epoch != _epoch ||
         session != network.session ||
         book.source != network.source) {
       throw const OfflineFailure('session_changed');
     }
     _resumeContexts[id]?.verified.remove(page);
     await repository.failPage(id, page, 'repair');
+    if (!book.range.contains(page)) {
+      await repository.create(book.key!, book.record.title, book.record.totalPages,
+          range: DownloadRange.parse('${page + 1}', book.record.totalPages));
+    }
     await repository.setStatus(id, OfflineStatus.paused);
     await resume(id);
   }

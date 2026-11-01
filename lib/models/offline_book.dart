@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../core/storage/database.dart';
 import 'gallery_source.dart';
+import 'download_range.dart';
 
 enum OfflineStatus {
   queued,
@@ -37,6 +38,13 @@ class OfflineBook {
       source == null ? null : OfflineKey(source!, record.gid, record.token);
   OfflineStatus get status => OfflineStatus.parse(record.status);
   int get completedPages => pages.where((p) => p.status == 'completed').length;
+  late final DownloadRange range = DownloadRange.fromStorage(record.downloadRange);
+  int get targetPages => range.count(record.totalPages);
+  int get completedTargetPages => pages
+      .where((p) => range.contains(p.pageIndex) && p.status == 'completed').length;
+  bool get targetComplete => hasCompleteIndex &&
+      range.validFor(record.totalPages) && completedTargetPages == targetPages;
+  bool get allPagesComplete => hasCompleteIndex && completedPages == record.totalPages;
   int get bytes => pages.fold(0, (n, p) => n + p.bytes);
   bool get hasCompleteIndex =>
       key?.id == id &&
@@ -49,9 +57,7 @@ class OfflineBook {
           entry.value.pageToken.isNotEmpty);
   bool get complete =>
       status == OfflineStatus.completed &&
-      record.indexReady &&
-      record.totalPages > 0 &&
-      completedPages == record.totalPages;
+      targetComplete;
 }
 
 class OfflineFailure implements Exception {

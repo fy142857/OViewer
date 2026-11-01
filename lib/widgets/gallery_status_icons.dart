@@ -22,13 +22,16 @@ class GalleryStatusIcons extends StatelessWidget {
             : bloc.state.useExHentai
                 ? GallerySource.ex
                 : GallerySource.eh);
-    final cached = context.select<DownloadBloc?, bool>((bloc) =>
-        bloc?.state.tasks.any((book) =>
+    final cacheState = context.select<DownloadBloc?, int>((bloc) {
+      final matches = bloc?.state.tasks.where((book) =>
             book.source == source &&
             book.record.gid == gallery.gid &&
             book.record.token == gallery.token &&
-            book.complete) ??
-        false);
+            book.complete);
+      if (matches == null || matches.isEmpty) return 0;
+      return matches.any((book) => book.allPagesComplete) ? 2 : 1;
+    });
+    final cached = cacheState > 0;
     Widget badge(IconData icon, Color color, {String? label}) {
       Widget child = Icon(icon, size: decorated ? 16 : 14, color: color);
       if (decorated) {
@@ -43,7 +46,8 @@ class GalleryStatusIcons extends StatelessWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       if (cached)
         badge(Icons.offline_pin, Colors.green,
-            label: S.of(context).offlineCached),
+            label: cacheState == 2 ? S.of(context).offlineCached
+                : S.of(context).downloadRangeCompleted),
       if (cached && gallery.isFavorited) const SizedBox(width: 4),
       if (gallery.isFavorited) badge(Icons.favorite, Colors.red),
     ]);
