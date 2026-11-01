@@ -8189,8 +8189,63 @@
         }
       ],
       "version": "1.11.2"
+    },
+    {
+      "base_tag": "v1.11.1",
+      "branch": "dev",
+      "build_number": 143,
+      "build_sha": "ea093b9a78257ae19fafdb93495e339a1728f133",
+      "candidate_id": "1.11.2+143",
+      "fingerprint": "314415cd370623bcae8f8dbd135a9211962f5978f33e82cc422fe601aa27264b",
+      "notes": "### 新增\n\n### 修复\n\n- 横向与反向阅读在图片加载、等待首帧及错误占位期间也可点击显示或隐藏阅读工具栏与系统状态栏，保持重试按钮和翻页手势正常（#73）。\n\n### 变更\n\n- 设置页放大并加粗分组标题，缩小设置项名称与说明文字，突出内容层级。\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "498c9ab1c0428c7390c76195433a39eaf2d901cc",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "按维护者选择将 iOS 工作流的 Flutter 测试并发固定为 3，保留既有测试范围选择，不改变应用功能。",
+          "classification_source": "commit-trailers",
+          "original_type": "ci",
+          "sha": "4dc6fcb71ebcadd34897856e6e1cba0555d2e701",
+          "subject": "ci(ios): run Flutter test files with concurrency three",
+          "type": "chore",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复横向阅读图片加载及错误占位时无法点击显隐工具栏和系统状态栏的问题，保持现有阅读与图片请求行为。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "44a29b1f740400c33a581c12bbf152d3e9a68683",
+          "subject": "fix(reader): keep controls reachable while horizontal images load",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "按用户要求将 Android 完整与筛选测试的文件并发数固定为 3，与 iOS 配置一致，并更新开发文档。",
+          "classification_source": "commit-trailers",
+          "original_type": "ci",
+          "sha": "90b738bee82b1249a8ee872a02d07933a49e659a",
+          "subject": "ci(android): run Flutter test files with concurrency three",
+          "type": "chore",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "enhancement",
+          "classification_reason": "放大并加粗设置页分组标题，统一缩小设置项名称与说明文字，改善视觉层级。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "498c9ab1c0428c7390c76195433a39eaf2d901cc",
+          "subject": "fix(settings): clarify typography hierarchy",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.11.2"
     }
   ],
-  "last_build_number": 142,
+  "last_build_number": 143,
   "schema": 1
 }
