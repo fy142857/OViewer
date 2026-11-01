@@ -1557,6 +1557,12 @@ class $OfflineGalleriesTable extends OfflineGalleries
   late final GeneratedColumn<String> downloadRange = GeneratedColumn<String>(
       'download_range', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _indexPageSizeMeta =
+      const VerificationMeta('indexPageSize');
+  @override
+  late final GeneratedColumn<int> indexPageSize = GeneratedColumn<int>(
+      'index_page_size', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -1628,6 +1634,7 @@ class $OfflineGalleriesTable extends OfflineGalleries
         title,
         totalPages,
         downloadRange,
+        indexPageSize,
         status,
         reason,
         createdAt,
@@ -1687,6 +1694,12 @@ class $OfflineGalleriesTable extends OfflineGalleries
           _downloadRangeMeta,
           downloadRange.isAcceptableOrUnknown(
               data['download_range']!, _downloadRangeMeta));
+    }
+    if (data.containsKey('index_page_size')) {
+      context.handle(
+          _indexPageSizeMeta,
+          indexPageSize.isAcceptableOrUnknown(
+              data['index_page_size']!, _indexPageSizeMeta));
     }
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
@@ -1753,6 +1766,8 @@ class $OfflineGalleriesTable extends OfflineGalleries
           .read(DriftSqlType.int, data['${effectivePrefix}total_pages'])!,
       downloadRange: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}download_range']),
+      indexPageSize: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}index_page_size']),
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       reason: attachedDatabase.typeMapping
@@ -1786,6 +1801,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
   final String title;
   final int totalPages;
   final String? downloadRange;
+  final int? indexPageSize;
   final String status;
   final String? reason;
   final DateTime createdAt;
@@ -1802,6 +1818,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       required this.title,
       required this.totalPages,
       this.downloadRange,
+      this.indexPageSize,
       required this.status,
       this.reason,
       required this.createdAt,
@@ -1823,6 +1840,9 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
     map['total_pages'] = Variable<int>(totalPages);
     if (!nullToAbsent || downloadRange != null) {
       map['download_range'] = Variable<String>(downloadRange);
+    }
+    if (!nullToAbsent || indexPageSize != null) {
+      map['index_page_size'] = Variable<int>(indexPageSize);
     }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || reason != null) {
@@ -1851,6 +1871,9 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       downloadRange: downloadRange == null && nullToAbsent
           ? const Value.absent()
           : Value(downloadRange),
+      indexPageSize: indexPageSize == null && nullToAbsent
+          ? const Value.absent()
+          : Value(indexPageSize),
       status: Value(status),
       reason:
           reason == null && nullToAbsent ? const Value.absent() : Value(reason),
@@ -1876,6 +1899,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       title: serializer.fromJson<String>(json['title']),
       totalPages: serializer.fromJson<int>(json['totalPages']),
       downloadRange: serializer.fromJson<String?>(json['downloadRange']),
+      indexPageSize: serializer.fromJson<int?>(json['indexPageSize']),
       status: serializer.fromJson<String>(json['status']),
       reason: serializer.fromJson<String?>(json['reason']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1897,6 +1921,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       'title': serializer.toJson<String>(title),
       'totalPages': serializer.toJson<int>(totalPages),
       'downloadRange': serializer.toJson<String?>(downloadRange),
+      'indexPageSize': serializer.toJson<int?>(indexPageSize),
       'status': serializer.toJson<String>(status),
       'reason': serializer.toJson<String?>(reason),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1916,6 +1941,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           String? title,
           int? totalPages,
           Value<String?> downloadRange = const Value.absent(),
+          Value<int?> indexPageSize = const Value.absent(),
           String? status,
           Value<String?> reason = const Value.absent(),
           DateTime? createdAt,
@@ -1933,6 +1959,8 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
         totalPages: totalPages ?? this.totalPages,
         downloadRange:
             downloadRange.present ? downloadRange.value : this.downloadRange,
+        indexPageSize:
+            indexPageSize.present ? indexPageSize.value : this.indexPageSize,
         status: status ?? this.status,
         reason: reason.present ? reason.value : this.reason,
         createdAt: createdAt ?? this.createdAt,
@@ -1952,6 +1980,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           ..write('title: $title, ')
           ..write('totalPages: $totalPages, ')
           ..write('downloadRange: $downloadRange, ')
+          ..write('indexPageSize: $indexPageSize, ')
           ..write('status: $status, ')
           ..write('reason: $reason, ')
           ..write('createdAt: $createdAt, ')
@@ -1973,6 +2002,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
       title,
       totalPages,
       downloadRange,
+      indexPageSize,
       status,
       reason,
       createdAt,
@@ -1992,6 +2022,7 @@ class OfflineGallery extends DataClass implements Insertable<OfflineGallery> {
           other.title == this.title &&
           other.totalPages == this.totalPages &&
           other.downloadRange == this.downloadRange &&
+          other.indexPageSize == this.indexPageSize &&
           other.status == this.status &&
           other.reason == this.reason &&
           other.createdAt == this.createdAt &&
@@ -2010,6 +2041,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
   final Value<String> title;
   final Value<int> totalPages;
   final Value<String?> downloadRange;
+  final Value<int?> indexPageSize;
   final Value<String> status;
   final Value<String?> reason;
   final Value<DateTime> createdAt;
@@ -2027,6 +2059,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     this.title = const Value.absent(),
     this.totalPages = const Value.absent(),
     this.downloadRange = const Value.absent(),
+    this.indexPageSize = const Value.absent(),
     this.status = const Value.absent(),
     this.reason = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2045,6 +2078,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     required String title,
     required int totalPages,
     this.downloadRange = const Value.absent(),
+    this.indexPageSize = const Value.absent(),
     this.status = const Value.absent(),
     this.reason = const Value.absent(),
     required DateTime createdAt,
@@ -2068,6 +2102,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     Expression<String>? title,
     Expression<int>? totalPages,
     Expression<String>? downloadRange,
+    Expression<int>? indexPageSize,
     Expression<String>? status,
     Expression<String>? reason,
     Expression<DateTime>? createdAt,
@@ -2086,6 +2121,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       if (title != null) 'title': title,
       if (totalPages != null) 'total_pages': totalPages,
       if (downloadRange != null) 'download_range': downloadRange,
+      if (indexPageSize != null) 'index_page_size': indexPageSize,
       if (status != null) 'status': status,
       if (reason != null) 'reason': reason,
       if (createdAt != null) 'created_at': createdAt,
@@ -2106,6 +2142,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       Value<String>? title,
       Value<int>? totalPages,
       Value<String?>? downloadRange,
+      Value<int?>? indexPageSize,
       Value<String>? status,
       Value<String?>? reason,
       Value<DateTime>? createdAt,
@@ -2123,6 +2160,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
       title: title ?? this.title,
       totalPages: totalPages ?? this.totalPages,
       downloadRange: downloadRange ?? this.downloadRange,
+      indexPageSize: indexPageSize ?? this.indexPageSize,
       status: status ?? this.status,
       reason: reason ?? this.reason,
       createdAt: createdAt ?? this.createdAt,
@@ -2158,6 +2196,9 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
     }
     if (downloadRange.present) {
       map['download_range'] = Variable<String>(downloadRange.value);
+    }
+    if (indexPageSize.present) {
+      map['index_page_size'] = Variable<int>(indexPageSize.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -2199,6 +2240,7 @@ class OfflineGalleriesCompanion extends UpdateCompanion<OfflineGallery> {
           ..write('title: $title, ')
           ..write('totalPages: $totalPages, ')
           ..write('downloadRange: $downloadRange, ')
+          ..write('indexPageSize: $indexPageSize, ')
           ..write('status: $status, ')
           ..write('reason: $reason, ')
           ..write('createdAt: $createdAt, ')
@@ -2239,6 +2281,15 @@ class $OfflinePagesTable extends OfflinePages
   late final GeneratedColumn<String> pageToken = GeneratedColumn<String>(
       'page_token', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _indexStaleMeta =
+      const VerificationMeta('indexStale');
+  @override
+  late final GeneratedColumn<bool> indexStale = GeneratedColumn<bool>(
+      'index_stale', aliasedName, true,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("index_stale" IN (0, 1))'));
   static const VerificationMeta _relativePathMeta =
       const VerificationMeta('relativePath');
   @override
@@ -2299,6 +2350,7 @@ class $OfflinePagesTable extends OfflinePages
         bookId,
         pageIndex,
         pageToken,
+        indexStale,
         relativePath,
         format,
         bytes,
@@ -2336,6 +2388,12 @@ class $OfflinePagesTable extends OfflinePages
           pageToken.isAcceptableOrUnknown(data['page_token']!, _pageTokenMeta));
     } else if (isInserting) {
       context.missing(_pageTokenMeta);
+    }
+    if (data.containsKey('index_stale')) {
+      context.handle(
+          _indexStaleMeta,
+          indexStale.isAcceptableOrUnknown(
+              data['index_stale']!, _indexStaleMeta));
     }
     if (data.containsKey('relative_path')) {
       context.handle(
@@ -2396,6 +2454,8 @@ class $OfflinePagesTable extends OfflinePages
           .read(DriftSqlType.int, data['${effectivePrefix}page_index'])!,
       pageToken: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}page_token'])!,
+      indexStale: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}index_stale']),
       relativePath: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}relative_path']),
       format: attachedDatabase.typeMapping
@@ -2427,6 +2487,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
   final String bookId;
   final int pageIndex;
   final String pageToken;
+  final bool? indexStale;
   final String? relativePath;
   final String? format;
   final int bytes;
@@ -2440,6 +2501,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       {required this.bookId,
       required this.pageIndex,
       required this.pageToken,
+      this.indexStale,
       this.relativePath,
       this.format,
       required this.bytes,
@@ -2455,6 +2517,9 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
     map['book_id'] = Variable<String>(bookId);
     map['page_index'] = Variable<int>(pageIndex);
     map['page_token'] = Variable<String>(pageToken);
+    if (!nullToAbsent || indexStale != null) {
+      map['index_stale'] = Variable<bool>(indexStale);
+    }
     if (!nullToAbsent || relativePath != null) {
       map['relative_path'] = Variable<String>(relativePath);
     }
@@ -2484,6 +2549,9 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       bookId: Value(bookId),
       pageIndex: Value(pageIndex),
       pageToken: Value(pageToken),
+      indexStale: indexStale == null && nullToAbsent
+          ? const Value.absent()
+          : Value(indexStale),
       relativePath: relativePath == null && nullToAbsent
           ? const Value.absent()
           : Value(relativePath),
@@ -2512,6 +2580,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       bookId: serializer.fromJson<String>(json['bookId']),
       pageIndex: serializer.fromJson<int>(json['pageIndex']),
       pageToken: serializer.fromJson<String>(json['pageToken']),
+      indexStale: serializer.fromJson<bool?>(json['indexStale']),
       relativePath: serializer.fromJson<String?>(json['relativePath']),
       format: serializer.fromJson<String?>(json['format']),
       bytes: serializer.fromJson<int>(json['bytes']),
@@ -2533,6 +2602,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       'bookId': serializer.toJson<String>(bookId),
       'pageIndex': serializer.toJson<int>(pageIndex),
       'pageToken': serializer.toJson<String>(pageToken),
+      'indexStale': serializer.toJson<bool?>(indexStale),
       'relativePath': serializer.toJson<String?>(relativePath),
       'format': serializer.toJson<String?>(format),
       'bytes': serializer.toJson<int>(bytes),
@@ -2549,6 +2619,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
           {String? bookId,
           int? pageIndex,
           String? pageToken,
+          Value<bool?> indexStale = const Value.absent(),
           Value<String?> relativePath = const Value.absent(),
           Value<String?> format = const Value.absent(),
           int? bytes,
@@ -2562,6 +2633,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
         bookId: bookId ?? this.bookId,
         pageIndex: pageIndex ?? this.pageIndex,
         pageToken: pageToken ?? this.pageToken,
+        indexStale: indexStale.present ? indexStale.value : this.indexStale,
         relativePath:
             relativePath.present ? relativePath.value : this.relativePath,
         format: format.present ? format.value : this.format,
@@ -2583,6 +2655,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
           ..write('bookId: $bookId, ')
           ..write('pageIndex: $pageIndex, ')
           ..write('pageToken: $pageToken, ')
+          ..write('indexStale: $indexStale, ')
           ..write('relativePath: $relativePath, ')
           ..write('format: $format, ')
           ..write('bytes: $bytes, ')
@@ -2601,6 +2674,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
       bookId,
       pageIndex,
       pageToken,
+      indexStale,
       relativePath,
       format,
       bytes,
@@ -2617,6 +2691,7 @@ class OfflinePage extends DataClass implements Insertable<OfflinePage> {
           other.bookId == this.bookId &&
           other.pageIndex == this.pageIndex &&
           other.pageToken == this.pageToken &&
+          other.indexStale == this.indexStale &&
           other.relativePath == this.relativePath &&
           other.format == this.format &&
           other.bytes == this.bytes &&
@@ -2632,6 +2707,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
   final Value<String> bookId;
   final Value<int> pageIndex;
   final Value<String> pageToken;
+  final Value<bool?> indexStale;
   final Value<String?> relativePath;
   final Value<String?> format;
   final Value<int> bytes;
@@ -2646,6 +2722,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     this.bookId = const Value.absent(),
     this.pageIndex = const Value.absent(),
     this.pageToken = const Value.absent(),
+    this.indexStale = const Value.absent(),
     this.relativePath = const Value.absent(),
     this.format = const Value.absent(),
     this.bytes = const Value.absent(),
@@ -2661,6 +2738,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     required String bookId,
     required int pageIndex,
     required String pageToken,
+    this.indexStale = const Value.absent(),
     this.relativePath = const Value.absent(),
     this.format = const Value.absent(),
     this.bytes = const Value.absent(),
@@ -2678,6 +2756,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     Expression<String>? bookId,
     Expression<int>? pageIndex,
     Expression<String>? pageToken,
+    Expression<bool>? indexStale,
     Expression<String>? relativePath,
     Expression<String>? format,
     Expression<int>? bytes,
@@ -2693,6 +2772,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
       if (bookId != null) 'book_id': bookId,
       if (pageIndex != null) 'page_index': pageIndex,
       if (pageToken != null) 'page_token': pageToken,
+      if (indexStale != null) 'index_stale': indexStale,
       if (relativePath != null) 'relative_path': relativePath,
       if (format != null) 'format': format,
       if (bytes != null) 'bytes': bytes,
@@ -2713,6 +2793,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
       {Value<String>? bookId,
       Value<int>? pageIndex,
       Value<String>? pageToken,
+      Value<bool?>? indexStale,
       Value<String?>? relativePath,
       Value<String?>? format,
       Value<int>? bytes,
@@ -2727,6 +2808,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
       bookId: bookId ?? this.bookId,
       pageIndex: pageIndex ?? this.pageIndex,
       pageToken: pageToken ?? this.pageToken,
+      indexStale: indexStale ?? this.indexStale,
       relativePath: relativePath ?? this.relativePath,
       format: format ?? this.format,
       bytes: bytes ?? this.bytes,
@@ -2753,6 +2835,9 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
     }
     if (pageToken.present) {
       map['page_token'] = Variable<String>(pageToken.value);
+    }
+    if (indexStale.present) {
+      map['index_stale'] = Variable<bool>(indexStale.value);
     }
     if (relativePath.present) {
       map['relative_path'] = Variable<String>(relativePath.value);
@@ -2795,6 +2880,7 @@ class OfflinePagesCompanion extends UpdateCompanion<OfflinePage> {
           ..write('bookId: $bookId, ')
           ..write('pageIndex: $pageIndex, ')
           ..write('pageToken: $pageToken, ')
+          ..write('indexStale: $indexStale, ')
           ..write('relativePath: $relativePath, ')
           ..write('format: $format, ')
           ..write('bytes: $bytes, ')

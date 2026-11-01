@@ -11,6 +11,7 @@ import '../core/storage/offline_files.dart';
 import '../models/gallery_source.dart';
 import '../models/offline_book.dart';
 import '../models/download_range.dart';
+import '../models/reader_index_page.dart';
 
 class OfflineRepository {
   final AppDatabase db;
@@ -205,7 +206,7 @@ class OfflineRepository {
   Future<void> setStatus(String id, OfflineStatus status, {String? reason}) =>
       _serial(() => _status(id, status, reason));
 
-  /// The complete index must be known before any page can be declared complete.
+  /// Full-index compatibility path for legacy imports and existing callers.
   Future<void> putIndex(String id, int total, List<ThumbnailInfo> thumbnails,
           {required bool Function() current}) =>
       _serial(() async {
@@ -248,7 +249,7 @@ class OfflineRepository {
             final unchanged =
                 old != null && old.pageToken == entry.value.pageToken;
             await db.into(db.offlinePages).insert(unchanged
-                ? old
+                ? old.copyWith(indexStale: const Value(false))
                 : OfflinePagesCompanion.insert(
                     bookId: id,
                     pageIndex: entry.key,
@@ -257,6 +258,8 @@ class OfflineRepository {
           await (db.update(db.offlineGalleries)..where((t) => t.id.equals(id)))
               .write(OfflineGalleriesCompanion(
                   totalPages: Value(total),
+                  indexPageSize: book.record.totalPages == total
+                      ? const Value.absent() : const Value(null),
                   indexReady: const Value(true),
                   indexNeedsRefresh: const Value(false)));
         });
@@ -264,6 +267,74 @@ class OfflineRepository {
           await files.remove(path);
         }
       });
+
+  /// Persist one complete directory part; unrequested parts remain absent.
+  /// A fresh header invalidates old tokens without discarding their local files.
+  Future<void> mergeIndexPage(String id, ReaderIndexPage part,
+      {bool reset = false, required bool Function() current}) => _serial(() async {
+    if (!current()) throw const OfflineFailure('cancelled');
+    final total = part.totalPages;
+    final size = part.pageSize;
+    if (total <= 0 || size <= 0 || part.indexPage < 0 ||
+        part.indexPageCount != (total + size - 1) ~/ size ||
+        part.indexPage >= part.indexPageCount || (reset && part.indexPage != 0)) {
+      throw const OfflineFailure('invalid_index');
+    }
+    final start = part.indexPage * size;
+    final end = (start + size).clamp(0, total);
+    if (part.thumbnails.length != end - start ||
+        !Iterable.generate(end - start, (i) => start + i).every((i) =>
+            part.thumbnails[i]?.pageIndex == i &&
+            part.thumbnails[i]!.pageToken.isNotEmpty)) {
+      throw const OfflineFailure('invalid_index');
+    }
+    final book = await get(id);
+    if (book == null || book.status == OfflineStatus.deleting) {
+      throw const OfflineFailure('cancelled');
+    }
+    if (!book.range.validFor(total)) throw const OfflineFailure('range_invalid');
+    if (!reset && (!book.hasIndexMetadata || book.record.indexNeedsRefresh ||
+        book.record.totalPages != total || book.record.indexPageSize != size)) {
+      throw const OfflineFailure('index_changed');
+    }
+    final oldPages = {for (final page in book.pages) page.pageIndex: page};
+    final obsolete = <String>[];
+    await db.transaction(() async {
+      if (!current()) throw const OfflineFailure('cancelled');
+      if (reset) {
+        await (db.update(db.offlinePages)..where((t) => t.bookId.equals(id)))
+            .write(const OfflinePagesCompanion(indexStale: Value(true)));
+        for (final page in book.pages.where((p) => p.pageIndex >= total)) {
+          if (page.relativePath != null) obsolete.add(page.relativePath!);
+        }
+        await (db.delete(db.offlinePages)..where((t) =>
+            t.bookId.equals(id) & t.pageIndex.isBiggerOrEqualValue(total))).go();
+      }
+      for (final thumb in part.thumbnails.values) {
+        final old = oldPages[thumb.pageIndex];
+        final unchanged = old != null && old.pageToken == thumb.pageToken;
+        if (!unchanged && old?.relativePath != null) obsolete.add(old!.relativePath!);
+        if (unchanged) {
+          await db.into(db.offlinePages).insertOnConflictUpdate(
+              old.copyWith(indexStale: const Value(false)));
+        } else {
+          await (db.delete(db.offlinePages)..where((t) =>
+              t.bookId.equals(id) & t.pageIndex.equals(thumb.pageIndex))).go();
+          await db.into(db.offlinePages).insert(OfflinePagesCompanion.insert(
+              bookId: id, pageIndex: thumb.pageIndex, pageToken: thumb.pageToken,
+              indexStale: const Value(false)));
+        }
+      }
+      await (db.update(db.offlineGalleries)..where((t) => t.id.equals(id)))
+          .write(OfflineGalleriesCompanion(totalPages: Value(total),
+              indexPageSize: Value(size), indexReady: const Value(true),
+              indexNeedsRefresh: const Value(false),
+              status: book.status == OfflineStatus.completed
+                  ? const Value('paused') : const Value.absent()));
+      if (!current()) throw const OfflineFailure('cancelled');
+    });
+    for (final path in obsolete) { await files.remove(path); }
+  });
 
   static const verificationVersion = 1;
 
@@ -347,7 +418,7 @@ class OfflineRepository {
           final page = await (db.select(db.offlinePages)
                 ..where((t) => t.bookId.equals(id) & t.pageIndex.equals(index)))
               .getSingleOrNull();
-          if (page == null) {
+          if (page == null || page.indexStale == true) {
             await files.remove(file.relativePath);
             throw const OfflineFailure('cancelled');
           }

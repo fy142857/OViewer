@@ -74,6 +74,23 @@ class DownloadRange {
   int count(int total) => _intervals == null
       ? total
       : _intervals!.fold(0, (n, r) => n + r.$2 - r.$1 + 1);
+
+  /// Directory parts touched by this range, without expanding every image page.
+  List<int> indexParts(int total, int pageSize) {
+    if (!validFor(total) || pageSize <= 0) {
+      throw ArgumentError('Invalid index pagination');
+    }
+    final parts = <int>{};
+    for (final interval in _intervals ?? [(0, total - 1)]) {
+      for (var part = interval.$1 ~/ pageSize;
+          part <= interval.$2 ~/ pageSize;
+          part++) {
+        parts.add(part);
+      }
+    }
+    return parts.toList()..sort();
+  }
+
   DownloadRange union(DownloadRange other) => isAll || other.isAll
       ? const DownloadRange.all()
       : DownloadRange._normalized([..._intervals!, ...other._intervals!]);

@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../core/storage/reader_reentry_cache.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:drift/drift.dart' show Value;
 import '../../repositories/gallery_repository.dart';
 import '../../repositories/history_repository.dart';
 import '../../repositories/settings_repository.dart';
@@ -13,6 +14,7 @@ import '../../core/network/reader_request_controller.dart';
 import '../../models/gallery_image.dart';
 import '../../models/offline_book.dart';
 import '../../models/gallery_source.dart';
+import '../../models/reader_index_page.dart';
 import '../../repositories/offline_repository.dart';
 import '../../core/parser/gallery_detail_parser.dart';
 import 'reader_event.dart';
@@ -36,6 +38,26 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderGalleryKey get galleryKey => (_site, state.gid, state.token);
   bool get networkAllowed => _active && imageScope.isCurrent &&
       (state.offlineBook == null || state.offlineBook!.source == GallerySource.current);
+
+  ReaderIndexSession _offlineIndexSession() {
+    final index = ReaderIndexSession(_galleryRepo, _requests, state.gid, state.token);
+    final book = state.offlineBook!;
+    final size = book.record.indexPageSize;
+    if (book.hasIndexMetadata && !book.record.indexNeedsRefresh &&
+        size != null && size > 0) {
+      final known = {
+        for (final page in book.pages)
+          if (book.indexedPages.contains(page.pageIndex))
+            page.pageIndex: ThumbnailInfo(pageToken: page.pageToken,
+                pageIndex: page.pageIndex, thumbUrl: ''),
+      };
+      index.seed(ReaderIndexPage(totalPages: book.record.totalPages,
+          indexPage: 0, pageSize: size,
+          indexPageCount: (book.record.totalPages + size - 1) ~/ size,
+          thumbnails: known), known);
+    }
+    return index;
+  }
 
   static ReaderState _initial(SettingsRepository settings,
       ReaderReentryCache cache, LoadReaderImages? request) {
@@ -143,7 +165,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         };
         final newPages = {for (final page in book.pages) page.pageIndex: page};
         final changed = {...oldPages.keys, ...newPages.keys}
-            .where((page) => oldPages[page] != newPages[page])
+            .where((page) => oldPages[page]?.copyWith(
+                indexStale: Value(newPages[page]?.indexStale)) != newPages[page])
             .toSet();
         final arrived = changed.where((page) =>
             newPages[page]?.status == 'completed' &&
@@ -469,7 +492,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       return;
     }
     final index = _index ?? (state.offlineBook == null ? null
-        : _index = ReaderIndexSession(_galleryRepo, _requests, state.gid, state.token));
+        : _index = _offlineIndexSession());
     if (!_active ||
         index == null ||
         !index.isActive ||

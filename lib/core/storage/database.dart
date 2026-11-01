@@ -70,6 +70,7 @@ class OfflineGalleries extends Table {
   TextColumn get title => text()();
   IntColumn get totalPages => integer()();
   TextColumn get downloadRange => text().nullable()();
+  IntColumn get indexPageSize => integer().nullable()();
   TextColumn get status => text().withDefault(const Constant('paused'))();
   TextColumn get reason => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -88,6 +89,7 @@ class OfflinePages extends Table {
   TextColumn get bookId => text().references(OfflineGalleries, #id)();
   IntColumn get pageIndex => integer()();
   TextColumn get pageToken => text()();
+  BoolColumn get indexStale => boolean().nullable()();
   TextColumn get relativePath => text().nullable()();
   TextColumn get format => text().nullable()();
   IntColumn get bytes => integer().withDefault(const Constant(0))();
@@ -116,7 +118,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -138,6 +140,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from >= 3 && from < 5) {
             await m.addColumn(offlineGalleries, offlineGalleries.downloadRange);
+          }
+          if (from >= 3 && from < 6) {
+            await m.addColumn(offlineGalleries, offlineGalleries.indexPageSize);
+            await m.addColumn(offlinePages, offlinePages.indexStale);
           }
         },
       );

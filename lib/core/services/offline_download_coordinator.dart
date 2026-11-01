@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../models/offline_book.dart';
 import '../../models/download_range.dart';
+import '../../models/reader_index_page.dart';
 import '../../models/gallery_source.dart';
 import '../../repositories/offline_repository.dart';
 import '../network/api_exception.dart';
@@ -345,7 +346,7 @@ class OfflineDownloadCoordinator {
         context = null;
       if (context == null &&
           !job.forceFreshIndex &&
-          job.book.hasCompleteIndex &&
+          job.book.hasTargetIndex &&
           !job.book.record.indexNeedsRefresh) {
         context = _ResumeContext(job.book, job.session);
         _resumeContexts[job.book.id] = context;
@@ -359,10 +360,11 @@ class OfflineDownloadCoordinator {
         if (!_current(job) || indexed == null) return;
         context = _ResumeContext(indexed, job.session);
       }
-      job.reusedIndex = warm;
+      job.reusedIndex = warm || job.reusedIndex;
       final preparedContext = context;
       final pages = (warm ? job.book.pages : await repository.pages(job.book.id))
-          .where((page) => job.book.range.contains(page.pageIndex)).toList();
+          .where((page) => job.book.range.contains(page.pageIndex) &&
+              page.indexStale != true).toList();
       if (!_current(job)) return;
       job.resumeContext = preparedContext;
       if (warm) {
@@ -421,28 +423,68 @@ class OfflineDownloadCoordinator {
 
   Future<void> _prepareIndex(
       _OfflineJob job, ReaderRequestController request) async {
-    final first = await network.index(job.book.key!, 0, request);
-    if (!_current(job)) return;
-    final thumbs = List<ThumbnailInfo>.of(first.thumbnails.values);
-    for (var page = 1; page < first.indexPageCount; page++) {
-      final next = await network.index(job.book.key!, page, request);
-      if (!_current(job)) return;
-      if (next.totalPages != first.totalPages ||
-          next.pageSize != first.pageSize) {
-        throw const OfflineFailure('invalid_index');
+    // Correct a changed server pagination once, never scan preceding parts.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var book = await repository.get(job.book.id);
+      if (!_current(job) || book == null) return;
+      final refresh = attempt > 0 || job.forceFreshIndex ||
+          book.record.indexNeedsRefresh || !book.hasIndexMetadata ||
+          (book.record.indexPageSize ?? 0) <= 0;
+      job.reusedIndex = !refresh && book.indexedPages.any(book.range.contains);
+      if (refresh) {
+        final first = await network.index(job.book.key!, 0, request);
+        if (!_current(job)) return;
+        await repository.mergeIndexPage(book.id, first, reset: true,
+            current: () => _current(job));
+        book = (await repository.get(book.id))!;
       }
-      thumbs.addAll(next.thumbnails.values);
+      final size = book.record.indexPageSize!;
+      var changed = false;
+      for (final part in book.range.indexParts(book.record.totalPages, size)) {
+        if (!_current(job)) return;
+        if (book.hasIndexPart(part, size)) continue;
+        late final ReaderIndexPage next;
+        try {
+          next = await network.index(job.book.key!, part, request);
+        } catch (error) {
+          if (error is FormatException || error is ApiException && error.statusCode == 404) {
+            changed = true;
+            break;
+          }
+          rethrow;
+        }
+        if (!_current(job)) return;
+        if (next.totalPages != book.record.totalPages || next.pageSize != size) {
+          changed = true;
+          break;
+        }
+        if (next.indexPage != part) throw const OfflineFailure('invalid_index');
+        await repository.mergeIndexPage(book.id, next, current: () => _current(job));
+      }
+      if (!changed) {
+        final indexed = (await repository.get(job.book.id))!;
+        if (!indexed.hasTargetIndex) throw const OfflineFailure('invalid_index');
+        if (job.book.record.legacyGid != null) {
+          await _importLegacy(job, indexed);
+        }
+        return;
+      }
+      await repository.requireFreshIndex(job.book.id);
     }
-    await repository.putIndex(job.book.id, first.totalPages, thumbs,
-        current: () => _current(job));
-    if (job.book.record.legacyGid != null) {
+    throw const OfflineFailure('invalid_index');
+  }
+
+  Future<void> _importLegacy(_OfflineJob job, OfflineBook indexed) async {
+    if (indexed.hasCompleteIndex) {
       final old = (await repository.all()).where((b) =>
           b.source == null &&
           b.record.gid == job.book.record.legacyGid &&
           b.record.token == job.book.record.token);
       if (old.isNotEmpty)
         await repository.importLegacy(
-            old.first, job.book.key!, first.totalPages, thumbs,
+            old.first, job.book.key!, indexed.record.totalPages,
+            [for (final page in indexed.pages) ThumbnailInfo(
+              pageToken: page.pageToken, pageIndex: page.pageIndex, thumbUrl: '')],
             current: () => _current(job));
     }
   }
@@ -780,19 +822,23 @@ class _ResumeContext {
   final GallerySource? source;
   final Object? session;
   final Map<int, String> tokens;
+  final int totalPages;
   final verified = <int, OfflineFileStamp>{};
   _ResumeContext(OfflineBook book, this.session)
       : source = book.source,
+        totalPages = book.record.totalPages,
         tokens = {
-          for (final page in book.pages) page.pageIndex: page.pageToken
+          for (final page in book.pages)
+            if (page.indexStale != true) page.pageIndex: page.pageToken
         };
 
   bool matches(OfflineBook book, Object? session) =>
       source == book.source &&
       this.session == session &&
-      book.hasCompleteIndex &&
+      book.hasTargetIndex &&
       !book.record.indexNeedsRefresh &&
-      book.record.totalPages == tokens.length &&
-      book.pages.length == tokens.length &&
-      book.pages.every((page) => tokens[page.pageIndex] == page.pageToken);
+      book.record.totalPages == totalPages &&
+      book.pages.where((p) => p.indexStale != true).length == tokens.length &&
+      book.pages.where((p) => p.indexStale != true)
+          .every((page) => tokens[page.pageIndex] == page.pageToken);
 }

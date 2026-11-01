@@ -310,7 +310,24 @@ void main() {
     await coordinator.resume(key.id);
     expect(network.calls, originalCalls);
   });
-  for (final version in [3, 4]) {
+  test('sparse directory survives restart and extending target fetches only missing part', () async {
+    network.total = 200;
+    network.pageSize = 20;
+    await coordinator.enqueue(key, 'Book', 200, range: DownloadRange.parse('85', 200));
+    await until(() async => (await repo.get(key.id))!.complete);
+    expect(network.indexParts, [0, 4]);
+    await restart();
+    await coordinator.initialize();
+    final restored = (await repo.get(key.id))!;
+    expect(restored.complete, true);
+    expect(restored.hasCompleteIndex, false);
+    expect(restored.pages.length, 40);
+    await coordinator.enqueue(key, 'Book', 200, range: DownloadRange.parse('145', 200));
+    await until(() async => (await repo.get(key.id))!.complete);
+    expect(network.indexParts, [0, 4, 7]);
+    expect(network.calls, {'42/84': 1, '42/144': 1});
+  });
+  for (final version in [3, 4, 5]) {
   test(
       'v$version database migration preserves files and progress and verifies legacy evidence once',
       () async {
@@ -329,12 +346,16 @@ CREATE TABLE offline_pages (book_id TEXT NOT NULL REFERENCES offline_galleries(i
  sha256 TEXT, status TEXT NOT NULL DEFAULT 'pending', error TEXT, PRIMARY KEY (book_id, page_index));
 PRAGMA user_version = 3;
 """);
-    if (version == 4) {
+    if (version >= 4) {
       legacy.execute('ALTER TABLE offline_galleries ADD COLUMN index_needs_refresh INTEGER NOT NULL DEFAULT 0');
       legacy.execute('ALTER TABLE offline_pages ADD COLUMN verification_version INTEGER NOT NULL DEFAULT 0');
       legacy.execute('ALTER TABLE offline_pages ADD COLUMN verified_modified_micros INTEGER');
       legacy.execute('ALTER TABLE offline_pages ADD COLUMN verified_changed_micros INTEGER');
       legacy.execute('PRAGMA user_version = 4');
+    }
+    if (version >= 5) {
+      legacy.execute('ALTER TABLE offline_galleries ADD COLUMN download_range TEXT');
+      legacy.execute('PRAGMA user_version = 5');
     }
     final saved = await files.write(key.id, 0, Stream.value(network.png),
         current: () => true);
@@ -366,7 +387,7 @@ PRAGMA user_version = 3;
     expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .read<int>('user_version'),
-        5);
+        6);
     await restart();
     await coordinator.resume(key.id);
     await until(() async => (await repo.get(key.id))!.complete);

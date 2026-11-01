@@ -211,6 +211,41 @@ void main() {
     verifyNever(() => gallery.fetchReaderIndexPage(42, 'abc',
         cancelToken: any(named: 'cancelToken')));
   });
+  test('sparse local directory seeds known pages and fetches only the requested missing part', () async {
+    final sparse = OfflineBook(book.record.copyWith(indexPageSize: const Value(10)),
+        book.pages.where((p) => p.pageIndex < 10 || (p.pageIndex >= 20 && p.pageIndex < 30)));
+    final parts = <int>[];
+    for (var part = 0; part < 5; part++) {
+      when(() => gallery.fetchReaderIndexPage(42, 'abc', page: part,
+          cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
+        parts.add(part);
+        return ReaderIndexPage(totalPages: 50, indexPage: part,
+            indexPageCount: 5, pageSize: 10, thumbnails: {
+              for (var i = part * 10; i < (part + 1) * 10; i++)
+                i: ThumbnailInfo(pageToken: 'p$i', pageIndex: i, thumbUrl: '')
+            });
+      });
+    }
+    // Start safely inside the cached part so link prefetch does not cross its edge.
+    final bloc = start(local: OfflineBook(sparse.record.copyWith(lastReadPage: 25), sparse.pages));
+    await until(() => bloc.state.loadedImages.containsKey(25));
+    expect(parts, isEmpty);
+    bloc.add(const PageChanged(45));
+    await until(() => bloc.state.loadedImages.containsKey(45));
+    expect(parts, [4]);
+    expect(bloc.state.totalPages, 50);
+    expect(bloc.state.offlineBook!.pages.length, 20);
+    expect(bloc.state.offlineBook!.range.label, '21');
+  });
+  test('stale local directory entries are not used to resolve online pages',
+      () async {
+    final sparse = OfflineBook(book.record.copyWith(indexPageSize: const Value(50)),
+        book.pages.map((p) => p.copyWith(indexStale: const Value(true))));
+    final bloc = start(local: sparse);
+    await until(() => bloc.state.loadedImages.isNotEmpty);
+    verify(() => gallery.fetchReaderIndexPage(42, 'abc',
+        cancelToken: any(named: 'cancelToken'))).called(1);
+  });
   test('late network result after session change does not replace a local page',
       () async {
     gate = Completer<GalleryImage>();
@@ -223,6 +258,19 @@ void main() {
     expect(bloc.state.loadedImages, isEmpty);
     expect(bloc.state.failedIndices, isNotEmpty);
     expect(bloc.state.localPage(20), isNotNull);
+  });
+  test('directory freshness updates do not invalidate decoded local resources', () async {
+    final bloc = start();
+    final resource = ReaderPageResource(() async => null, fallback: Uint8List.fromList([1, 2, 3]));
+    bloc.add(ReaderImageReady(20, 0, resource));
+    await until(() => bloc.state.readyResources.containsKey(20));
+    final refreshed = OfflineBook(book.record, book.pages.map((p) =>
+        p.copyWith(indexStale: const Value(false))));
+    bloc.add(OfflineReaderChanged(refreshed));
+    await until(() => bloc.state.offlineBook == refreshed);
+    expect(identical(bloc.state.readyResources[20], resource), true);
+    expect(bloc.state.imageAttempts[20] ?? 0, 0);
+    expect(await resource.snapshot(), [1, 2, 3]);
   });
   test('download arrival retains an already decoded visible network page',
       () async {

@@ -119,7 +119,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: book.source != null &&
-                                (book.completedPages > 0 || book.hasCompleteIndex) &&
+                                (book.completedPages > 0 || book.hasTargetIndex) &&
                                 book.status != OfflineStatus.deleting
                             ? () => _read(book)
                             : null,

@@ -35,6 +35,9 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   int imageCalls = 0;
   final invalidTokens = <String>{};
   int total = 3;
+  int? pageSize;
+  final indexParts = <int>[];
+  final partGates = <int, Completer<void>>{};
   int active = 0;
   int peak = 0;
   final Map<String, int> calls = {};
@@ -54,7 +57,8 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
   Future<ReaderIndexPage> index(
       OfflineKey key, int page, ReaderRequestController requests) async {
     indexed.add(key.gid);
-    final gate = indexGate;
+    indexParts.add(page);
+    final gate = partGates[page] ?? indexGate;
     if (gate != null) {
       requests.onCancel(() {
         if (!gate.isCompleted) gate.complete();
@@ -62,13 +66,14 @@ class ControlledOfflineNetwork extends OfflineDownloadNetwork {
       await gate.future;
       if (requests.isCancelled) throw const OfflineFailure('cancelled');
     }
+    final size = pageSize ?? total;
     return ReaderIndexPage(
         totalPages: total,
-        indexPage: 0,
-        indexPageCount: 1,
-        pageSize: total,
+        indexPage: page,
+        indexPageCount: (total + size - 1) ~/ size,
+        pageSize: size,
         thumbnails: {
-          for (var i = 0; i < total; i++)
+          for (var i = page * size; i < ((page + 1) * size).clamp(0, total); i++)
             i: ThumbnailInfo(pageToken: 'p$i', pageIndex: i, thumbUrl: '')
         });
   }
@@ -228,6 +233,90 @@ void main() {
     await directory.delete(recursive: true);
   });
   const key = OfflineKey(GallerySource.eh, 42, 'abc');
+  test('partial download fetches only header and selected directory parts', () async {
+    network.total = 1000;
+    network.pageSize = 20;
+    final id = await coordinator.enqueue(key, 'Book', 1000,
+        range: DownloadRange.parse('401-402,810', 1000));
+    await until(() async => (await repo.get(id))!.complete);
+    final book = (await repo.get(id))!;
+    expect(network.indexParts, [0, 20, 40]);
+    expect(network.calls.keys.toSet(), {'42/400', '42/401', '42/809'});
+    expect(book.pages.length, 60);
+    expect(book.record.indexPageSize, 20);
+    expect(book.hasCompleteIndex, false);
+    expect(book.hasTargetIndex, true);
+    expect(book.targetComplete, true);
+    expect(book.record.lastReadPage, 400);
+    await coordinator.enqueue(key, 'Book', 1000,
+        range: DownloadRange.parse('415', 1000));
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexParts, [0, 20, 40], reason: 'same-part selection reuses cached directory');
+    await coordinator.enqueue(key, 'Book', 1000,
+        range: DownloadRange.parse('601', 1000));
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexParts, [0, 20, 40, 30]);
+    expect(network.calls.values, everyElement(1));
+  });
+  test('pause during directory preparation preserves validated parts for resume', () async {
+    network.total = 100;
+    network.pageSize = 20;
+    network.partGates[4] = Completer<void>();
+    final id = await coordinator.enqueue(key, 'Book', 100,
+        range: DownloadRange.parse('41,81', 100));
+    await until(() => network.indexParts.contains(4));
+    await coordinator.pause(id);
+    expect((await repo.get(id))!.hasIndexPart(2, 20), true);
+    expect((await repo.get(id))!.hasTargetIndex, false);
+    network.partGates.clear();
+    await coordinator.resume(id);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexParts, [0, 2, 4, 4]);
+    expect(network.calls.keys.toSet(), {'42/40', '42/80'});
+  });
+  test('expanding a sparse task to all fetches only remaining parts', () async {
+    network.total = 65;
+    network.pageSize = 20;
+    final id = await coordinator.enqueue(key, 'Book', 65,
+        range: DownloadRange.parse('45', 65));
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexParts, [0, 2]);
+    await coordinator.enqueue(key, 'Book', 65);
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexParts, [0, 2, 1, 3]);
+    expect((await repo.get(id))!.hasCompleteIndex, true);
+    expect((await repo.get(id))!.allPagesComplete, true);
+    expect(network.calls.values, everyElement(1));
+  });
+  test('pagination changes refetch header once and recalculate selected parts', () async {
+    network.total = 100;
+    network.pageSize = 20;
+    final id = await coordinator.enqueue(key, 'Book', 100,
+        range: DownloadRange.parse('45', 100));
+    await until(() async => (await repo.get(id))!.complete);
+    network.pageSize = 10;
+    await coordinator.enqueue(key, 'Book', 100,
+        range: DownloadRange.parse('81', 100));
+    await until(() async => (await repo.get(id))!.complete);
+    expect(network.indexParts, [0, 2, 4, 0, 4, 8]);
+    expect(network.calls, {'42/44': 1, '42/80': 1});
+    expect((await repo.get(id))!.record.indexPageSize, 10);
+  });
+  test('stale cached tokens during extension refresh only selected parts once', () async {
+    network.total = 1000;
+    network.pageSize = 20;
+    final id = await coordinator.enqueue(key, 'Book', 1000,
+        range: DownloadRange.parse('401', 1000));
+    await until(() async => (await repo.get(id))!.complete);
+    final old = (await repo.pages(id)).firstWhere((p) => p.pageIndex == 400);
+    await (await files.file(old.relativePath!)).delete();
+    network.invalidTokens.add('p400');
+    await coordinator.enqueue(key, 'Book', 1000,
+        range: DownloadRange.parse('601', 1000));
+    await until(() async => (await repo.get(id))!.status == OfflineStatus.failed);
+    expect(network.indexParts, [0, 20, 30, 0, 20, 30]);
+    expect(network.calls['42/600'], 1);
+  });
   test('partial range completes and repeated selections only fetch missing pages', () async {
     network.total = 8;
     final id = await coordinator.enqueue(key, 'Book', 8,

@@ -2,6 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oviewer/models/download_range.dart';
 
 void main() {
+  test('directory parts are deduplicated at boundaries without scanning gaps', () {
+    expect(DownloadRange.parse('20-21,40,401-402', 1000).indexParts(1000, 20), [0, 1, 20]);
+    expect(const DownloadRange.all().indexParts(45, 20), [0, 1, 2]);
+    expect(() => DownloadRange.parse('100', 100).indexParts(50, 20), throwsArgumentError);
+  });
   test('normalizes multiple ranges, duplicates and Chinese commas', () {
     final range = DownloadRange.parse(' 8-10， 2, 1-3, 7, 3-5 ', 10);
     expect(range.label, '1-5, 7-10');

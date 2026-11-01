@@ -12,6 +12,7 @@ import 'package:oviewer/core/storage/offline_files.dart';
 import 'package:oviewer/models/gallery_source.dart';
 import 'package:oviewer/models/offline_book.dart';
 import 'package:oviewer/models/download_range.dart';
+import 'package:oviewer/models/reader_index_page.dart';
 import 'package:oviewer/repositories/offline_repository.dart';
 
 void sqliteForTests() {
@@ -48,6 +49,51 @@ void main() {
     await directory.delete(recursive: true);
   });
   const key = OfflineKey(GallerySource.eh, 42, 'abc');
+  ReaderIndexPage directoryPart(int part, {String prefix = 'p', bool incomplete = false}) =>
+      ReaderIndexPage(totalPages: 100, indexPage: part, indexPageCount: 5,
+          pageSize: 20, thumbnails: {
+            for (var i = part * 20; i < (part + 1) * 20 - (incomplete ? 1 : 0); i++)
+              i: ThumbnailInfo(pageToken: '$prefix$i', pageIndex: i, thumbUrl: '')
+          });
+  test('sparse directory rejects incomplete and cancelled parts without claiming completion', () async {
+    final book = await repository.create(key, 'Book', 100,
+        range: DownloadRange.parse('45', 100));
+    await repository.mergeIndexPage(book.id, directoryPart(0), reset: true, current: () => true);
+    expect((await repository.get(book.id))!.hasTargetIndex, false);
+    await expectLater(repository.mergeIndexPage(book.id, directoryPart(2, incomplete: true),
+        current: () => true), throwsA(isA<OfflineFailure>()));
+    await expectLater(repository.mergeIndexPage(book.id, directoryPart(2),
+        current: () => false), throwsA(isA<OfflineFailure>()));
+    expect((await repository.pages(book.id)).length, 20);
+    expect((await repository.get(book.id))!.targetComplete, false);
+  });
+  test('fresh sparse index preserves file bytes until token validation and clears changed records', () async {
+    final book = await repository.create(key, 'Book', 100,
+        range: DownloadRange.parse('45', 100));
+    await repository.mergeIndexPage(book.id, directoryPart(0), reset: true, current: () => true);
+    await repository.mergeIndexPage(book.id, directoryPart(2), current: () => true);
+    final file = await files.write(book.id, 44,
+        Stream.value(base64Decode(fixtures['png'])), current: () => true);
+    await repository.savePage(book.id, 44, file, current: () => true);
+    await repository.setStatus(book.id, OfflineStatus.completed);
+    expect((await repository.get(book.id))!.complete, true);
+    await repository.mergeIndexPage(book.id, directoryPart(0), reset: true, current: () => true);
+    var updated = (await repository.get(book.id))!;
+    expect(updated.hasTargetIndex, false);
+    expect(updated.pages.firstWhere((p) => p.pageIndex == 44).relativePath, file.relativePath);
+    expect(await (await files.file(file.relativePath)).exists(), true);
+    await repository.mergeIndexPage(book.id, directoryPart(2), current: () => true);
+    updated = (await repository.get(book.id))!;
+    expect(updated.targetComplete, true);
+    expect(updated.pages.firstWhere((p) => p.pageIndex == 44).sha256, file.digest);
+    await repository.mergeIndexPage(book.id, directoryPart(2, prefix: 'new'), current: () => true);
+    final changed = (await repository.get(book.id))!.pages.firstWhere((p) => p.pageIndex == 44);
+    expect(changed.status, 'pending');
+    expect(changed.relativePath, isNull);
+    expect(changed.bytes, 0);
+    expect(changed.sha256, isNull);
+    expect(await (await files.file(file.relativePath)).exists(), false);
+  });
   test('range merges preserve original page numbering and progress', () async {
     final book = await repository.create(key, 'Book', 10,
         range: DownloadRange.parse('4-5', 10));
