@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.11.1",
   "branch": "dev",
-  "build_number": 141,
-  "candidate_id": "1.11.2+141",
-  "fingerprint": "bf123a01f9afcc0d03ce394cbd0986431a93fe4548b8b8e9d097ad57fbd712a1",
+  "build_number": 142,
+  "candidate_id": "1.11.2+142",
+  "fingerprint": "9befe7ad72a46531f4a6fa11a16f6d7d01d82d5a3cfbc3ea27ca87eff8c99115",
   "notes": "### 新增\n\n### 修复\n\n- 横向与反向阅读在图片加载、等待首帧及错误占位期间也可点击显示或隐藏阅读工具栏与系统状态栏，保持重试按钮和翻页手势正常（#73）。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "44a29b1f740400c33a581c12bbf152d3e9a68683",
+  "source_sha": "90b738bee82b1249a8ee872a02d07933a49e659a",
   "summary": [
     {
       "change_kind": "maintenance",
@@ -26,6 +26,16 @@
       "sha": "44a29b1f740400c33a581c12bbf152d3e9a68683",
       "subject": "fix(reader): keep controls reachable while horizontal images load",
       "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "maintenance",
+      "classification_reason": "按用户要求将 Android 完整与筛选测试的文件并发数固定为 3，与 iOS 配置一致，并更新开发文档。",
+      "classification_source": "commit-trailers",
+      "original_type": "ci",
+      "sha": "90b738bee82b1249a8ee872a02d07933a49e659a",
+      "subject": "ci(android): run Flutter test files with concurrency three",
+      "type": "chore",
       "version_impact": "patch"
     }
   ],
