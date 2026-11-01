@@ -46,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, state) {
           final s = S.of(context);
-          return ListView(
+          final settingsList = ListView(
             children: [
               // ---- Appearance ----
               _sectionHeader(s.appearance),
@@ -329,6 +329,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 32),
             ],
           );
+          return ListTileTheme.merge(
+            titleTextStyle:
+                Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14),
+            subtitleTextStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+            child: settingsList,
+          );
         },
       ),
     );
@@ -339,7 +348,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.primary,
             ),
       ),
