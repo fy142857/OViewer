@@ -52,7 +52,6 @@ class _DownloadRangeDialogState extends State<DownloadRangeDialog> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final colors = Theme.of(context).colorScheme;
-    final labelColor = _error == null ? colors.onSurfaceVariant : colors.error;
     return AlertDialog(
       title: Text(s.startDownloadConfirm),
       scrollable: true,
@@ -89,10 +88,7 @@ class _DownloadRangeDialogState extends State<DownloadRangeDialog> {
                   decoration: InputDecoration(
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      labelText: s.downloadCustomRange,
-                      labelStyle: TextStyle(color: labelColor),
-                      floatingLabelStyle: TextStyle(color: labelColor),
+                          horizontal: 12, vertical: 16),
                       hintText: '1-20,35,50-60',
                       helperText: _input.text.trim().isEmpty
                           ? s.downloadRangeError(

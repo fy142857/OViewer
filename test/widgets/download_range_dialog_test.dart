@@ -80,13 +80,37 @@ void main() {
           final prompt = s.downloadRangeError('range_empty', 100);
           expect(tester.widget<TextField>(input).decoration!.errorText, isNull);
           expect(renderedColor(prompt), colors.onSurfaceVariant);
-          expect(renderedColor(s.downloadCustomRange), colors.onSurfaceVariant);
+          expect(tester.widget<TextField>(input).decoration!.labelText, isNull);
+          expect(
+              find.descendant(
+                  of: input, matching: find.text(s.downloadCustomRange)),
+              findsNothing);
+          void expectVisibleExample() {
+            final hint = find.text('1-20,35,50-60');
+            expect(hint, findsOneWidget);
+            final opacity = find
+                .ancestor(of: hint, matching: find.byType(AnimatedOpacity))
+                .first;
+            expect(tester.widget<AnimatedOpacity>(opacity).opacity, 1);
+          }
+
+          expectVisibleExample();
           if (!large) {
-            expect(tester.getSize(input).height, lessThanOrEqualTo(80));
+            // Measure the field itself, excluding wrapped helper text.
+            final editable =
+                find.descendant(of: input, matching: find.byType(EditableText));
+            final height = InputDecorator.containerOf(tester.element(editable))!
+                .size
+                .height;
+            expect(height, inInclusiveRange(48, 64));
           }
           await tester.tap(input);
           await tester.pumpAndSettle();
-          expect(renderedColor(s.downloadCustomRange), colors.onSurfaceVariant);
+          expectVisibleExample();
+          expect(
+              find.descendant(
+                  of: input, matching: find.text(s.downloadCustomRange)),
+              findsNothing);
           await tester.enterText(input, '90-101');
           await tester.pumpAndSettle();
           expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
@@ -94,7 +118,6 @@ void main() {
               findsOneWidget);
           expect(renderedColor(s.downloadRangeError('range_bounds', 100)),
               colors.error);
-          expect(renderedColor(s.downloadCustomRange), colors.error);
           await tester.enterText(input, '1--2');
           await tester.pumpAndSettle();
           expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
@@ -105,11 +128,9 @@ void main() {
           expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
           expect(tester.widget<TextField>(input).decoration!.errorText, isNull);
           expect(renderedColor(prompt), colors.onSurfaceVariant);
-          expect(renderedColor(s.downloadCustomRange), colors.onSurfaceVariant);
           await tester.enterText(input, ' 1-5，3-8,20 ');
           await tester.pumpAndSettle();
           expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
-          expect(renderedColor(s.downloadCustomRange), colors.onSurfaceVariant);
           expect(tester.getRect(confirm).bottom, lessThanOrEqualTo(460));
           await tester.tap(confirm);
           await tester.pumpAndSettle();
