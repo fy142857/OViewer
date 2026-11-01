@@ -8084,8 +8084,33 @@
         }
       ],
       "version": "1.11.1"
+    },
+    {
+      "base_tag": "v1.11.1",
+      "branch": "dev",
+      "build_number": 140,
+      "build_sha": "ac14ebaf7fc036e962bd546bfd912dfbb5b35494",
+      "candidate_id": "1.11.2+140",
+      "fingerprint": "5157d3c1552e3f38015f90ce6c0edc33d3c5a36f0170bd8d0005aa8284a68cd9",
+      "notes": "### 新增\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "4dc6fcb71ebcadd34897856e6e1cba0555d2e701",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "按维护者选择将 iOS 工作流的 Flutter 测试并发固定为 3，保留既有测试范围选择，不改变应用功能。",
+          "classification_source": "commit-trailers",
+          "original_type": "ci",
+          "sha": "4dc6fcb71ebcadd34897856e6e1cba0555d2e701",
+          "subject": "ci(ios): run Flutter test files with concurrency three",
+          "type": "chore",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.11.2"
     }
   ],
-  "last_build_number": 139,
+  "last_build_number": 140,
   "schema": 1
 }
