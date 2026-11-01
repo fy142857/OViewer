@@ -80,6 +80,8 @@ python -m scripts.setup_android_signing --directory <仓库外的私密目录> -
 
 Debug APK 输出路径仍为 `build/app/outputs/flutter-apk/app-debug.apk`。Actions 的普通 Debug 验证构建同样使用新包名；正式版显示名称为 `OViewer`，包名 `com.oviewer.oviewer`、签名及发布产物名称保持不变。当前应用内更新提供正式版安装包，不能用于覆盖独立包名的 Debug 版；Debug 版应通过 `flutter run` 或重新安装相同 debug 签名的 APK 更新。
 
+Windows 上若项目与 Pub 缓存位于不同盘符，Kotlin 1.9 的增量编译可能报 `this and base files have different roots` 并触发编译回退。根 Android 构建脚本仅对跨盘插件项目设置 `kotlin.incremental=false`，不需要迁移 Pub 缓存或修改缓存中的插件源码；同盘项目及 Linux/macOS CI 保持原增量编译设置。无源码变更时 Gradle 的 UP-TO-DATE 判断仍有效。
+
 本地 `flutter run --release` 或 `flutter build apk --release` 可使用 `android/key.properties` 配置已有的正式签名：
 
 ```properties

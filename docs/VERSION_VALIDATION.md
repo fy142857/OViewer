@@ -1,5 +1,13 @@
 # 版本管理实施验收记录
 
+## Windows debug 跨盘 Kotlin 编译（2026-11-01）
+
+- 用户日志中 `package_info_plus` 源码位于 C 盘 Pub 缓存，Android 项目位于 D 盘，Kotlin 1.9.24 的增量缓存相对路径转换抛出 `this and base files have different roots`。日志片段未包含最终构建结论，异常也可能触发非增量回退而继续构建。
+- 在 Android 子项目求值前比较实际目录根，仅对跨根项目设置 `kotlin.incremental=false`；应用项目和同根项目保持原设置，不升级插件或移动 Pub 缓存。
+- Gradle 实际任务检查确认 `:app:compileDebugKotlin` 的 incremental 为 true，跨盘的 `:package_info_plus:compileDebugKotlin` 为 false。后者使用 `--rerun-tasks` 强制编译成功，未出现 daemon compilation failed / different roots；保留插件原有 API deprecated 警告。
+- 本机 Flutter 3.13 普通 debug APK 构建成功（约 15 秒）；随后 `flutter run --debug --no-pub --no-resident` 在 VOG AL10 上成功构建、安装并启动 `com.oviewer.oviewer.debug`，应用初始化日志正常。构建时仅为当前进程指定短 Java 套接字临时目录，规避执行环境已有的 loopback 路径限制。
+- 本次仅调整构建配置，未修改应用阅读、预加载、缓存或网络调度，慢测试选择为 `skip`；没有重复运行无关 Flutter 套件。
+
 ## Issue #75：部分下载与本地优先阅读（2026-11-01）
 
 - 下载确认默认全部，可输入多段页码；规范化区间并校验空值、格式、倒序和越界。重复下载串行合并范围，保留文件与阅读进度；运行中扩容等待旧请求收尾，删除及会话变化阻止迟到任务重新启动。

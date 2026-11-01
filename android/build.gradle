@@ -21,6 +21,14 @@ allprojects {
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
+    // Kotlin 1.9's relocatable incremental cache cannot relativize plugin
+    // sources on another Windows drive against the Android project directory.
+    // Set the supported project property before plugin evaluation. Projects
+    // on the same root (including Linux/macOS CI) keep incremental compilation.
+    if (project.projectDir.canonicalFile.toPath().root !=
+            rootProject.projectDir.canonicalFile.toPath().root) {
+        project.extensions.extraProperties.set('kotlin.incremental', 'false')
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')
