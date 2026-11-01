@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.11.1",
   "branch": "dev",
-  "build_number": 145,
-  "candidate_id": "1.12.0+145",
-  "fingerprint": "ce1f7f6e6df65da958f05a7f9575bb1034b4c70733c1791eb5d21def3bdc1f43",
+  "build_number": 146,
+  "candidate_id": "1.12.0+146",
+  "fingerprint": "0dac80fef8c15d14de019a0162ab0bc0d998a4a4fb487feee5a0a57c88a644aa",
   "notes": "### 新增\n\n- 下载确认支持自定义多段页码，默认下载全部；同书重复下载合并范围并补充缺页，进度按所选范围显示。\n- 所有离线任务采用本地优先阅读，缺页或损坏时尝试普通阅读缓存及联网加载，失败可重试；保留原书页码与现有预加载策略，临时阅读不扩大永久下载范围。\n\n### 修复\n\n- 横向与反向阅读在图片加载、等待首帧及错误占位期间也可点击显示或隐藏阅读工具栏与系统状态栏，保持重试按钮和翻页手势正常（#73）。\n\n### 变更\n\n- 设置页放大并加粗分组标题，缩小设置项名称与说明文字，突出内容层级。\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "1e7a660b8673cc72f230923a1e3b2b9fa913c07f",
+  "source_sha": "c499cbfb50eb7ac70145e674f50a01f9cc622fbc",
   "summary": [
     {
       "change_kind": "maintenance",
@@ -65,6 +65,16 @@
       "original_type": "fix",
       "sha": "1e7a660b8673cc72f230923a1e3b2b9fa913c07f",
       "subject": "fix(reader): prefer local files after presentation changes",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "重复下载已完成任务时校验真实文件，详情页数变化时重新验证目录，并保持普通在线阅读刷新时清除旧缩略图索引的行为。",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "c499cbfb50eb7ac70145e674f50a01f9cc622fbc",
+      "subject": "fix(download): revalidate completed targets and refreshed indexes",
       "type": "fix",
       "version_impact": "patch"
     }
