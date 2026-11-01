@@ -16,7 +16,7 @@
 
 构建结果位于 **Build Android APK** 和 **Build iOS IPA**。运行标题带候选 ID；两个安装包名称仍为 `app-release.apk`、`OViewer.ipa`。`build-metadata` 是校验信息，不是安装包。
 
-iOS 工作流中的 Flutter 测试固定使用 `--concurrency=3`，适用于候选、手动构建及 PR，以及包含或跳过慢测试的两种范围。并发按测试文件执行；原有慢测试选择规则保持不变。采用依据与实测波动见 [iOS 测试并发对照](IOS_TEST_CONCURRENCY_BENCHMARK.md)。
+Android 和 iOS 工作流中的 Flutter 测试均固定使用 `--concurrency=3`，适用于候选、手动构建及 PR，以及包含或跳过慢测试的两种范围。并发按测试文件执行；原有慢测试选择规则保持不变。iOS 的实测结果与波动见 [iOS 测试并发对照](IOS_TEST_CONCURRENCY_BENCHMARK.md)，该报告不代表 Android 的性能对照结果。
 
 构建失败时可重跑该运行，或手动运行对应构建工作流并填写已登记的 `candidate_id`。同一个候选不会重新编号；有代码修改则提交新的候选。
 
