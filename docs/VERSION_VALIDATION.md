@@ -10,6 +10,9 @@
 - 收尾审查补充了普通在线目录刷新清除旧缩略图索引、重复下载已完成任务时复核真实文件，以及详情页数变化后重新校验目录再扩展目标范围；127 项相关阅读、下载、存储及重启回归通过。
 - VOG AL10 真机独立测试包验收通过，入口为 `test_driver/partial_download_acceptance.dart`。使用真实生产组件、SQLite、文件校验、HTTP、图片解码和下载服务；仅将站点请求映射到本地 fixture。选择 `3-4,8` 时只持久保存 3 页；关闭 fixture 后本地页可读、缺页显示重试；恢复后第 6 页成功解码，永久范围仍为 3 页；追加第 1 页后再选全部，最终 12 页完成。日志以 `[issue75-acceptance] PASS` 收尾。
 - 上述真机断网场景由 fixture 返回失败模拟，不是对真实 EH/EX 服务或系统飞行模式的测试。没有进行 iOS 设备验收或正式发布；本机 Java 临时套接字路径限制通过仅针对构建进程的短目录参数解决。
+- 最终候选 **1.12.0+146**：源提交 `c499cbfb50eb7ac70145e674f50a01f9cc622fbc`，构建提交 `b87f14251967394f026a4884f466cd1c0a1d7dbd`。[候选准备](https://github.com/fy142857/OViewer/actions/runs/41273171264) 首次在分发时未读到 ready 台账记录，确认记录就绪后重跑成功，沿用 146 编号。
+- [Android 构建](https://github.com/fy142857/OViewer/actions/runs/41273287755) 与 [iOS 构建](https://github.com/fy142857/OViewer/actions/runs/41273288872) 均首次运行成功：各通过 **1,227 项 Flutter 测试及 91 项脚本测试**，包含全部预读慢场景，保留 157 条既有静态诊断，无新增错误或警告。Android 原生测试、APK 校验及上传成功；iOS 原生构建、iOS 12 部署声明检查、未签名 IPA 校验及上传成功。
+- 本地 Flutter 3.13 依赖环境已恢复，依赖锁文件没有升级；schema 5 的生成代码与 Flutter 3.16 生成结果 SHA-256 一致。修改及验收记录仅提交 `dev`，没有修改 `main` 或发布正式 Release。
 
 ## 已完成
 
