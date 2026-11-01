@@ -1,5 +1,15 @@
 # 版本管理实施验收记录
 
+## v1.12.0 正式发布（2026-11-01）
+
+- [正式 Release](https://github.com/fy142857/OViewer/releases/tag/v1.12.0) 已公开并设为最新版本，复用候选 `1.12.0+150` 的原始安装包；标签固定到 `473423e860f4b27f153ad8730b3e57f5eeb566e9`，没有重新编译或更改构建号。
+- [Android 构建](https://github.com/fy142857/OViewer/actions/runs/41282894819) 与 [iOS 构建](https://github.com/fy142857/OViewer/actions/runs/41282896047) 均首次成功，各通过 1,180 项 Flutter 测试及 91 项脚本测试，静态检查及平台、产物检查通过。两端按声明跳过 64 个 `reader_prefetch_slow` 场景；本轮发布没有补跑全量 Flutter 测试。核心按需目录改动此前在候选 148 完成包含慢场景的完整回归，后续改动仅调整下载弹窗布局和提示。
+- [main 晋升候选准备](https://github.com/fy142857/OViewer/actions/runs/41283581688)、[只读发布校验](https://github.com/fy142857/OViewer/actions/runs/41283598665) 和[正式发布](https://github.com/fy142857/OViewer/actions/runs/41283696131) 均成功；核验候选记录、包内版本、递增构建号、Android 正式签名、大小及 SHA-256，并下载上传后的附件检查。
+- 已公开 `OViewer.apk`、`OViewer.ipa`、`release-manifest.json`、`SHA256SUMS.txt`；发布后再次核对最新版本状态、标签、附件摘要、清单和校验文件一致。
+- APK SHA-256：`17e2fa4700a38c78268524959df1303209f51c1eb80654a4b46e7f6293c6052b`。
+- IPA SHA-256：`a4edc07edee6050e75ea049f38847bcc3d6c963eb1d1c9cc578f5c6b174bc6f6`。
+- iOS 为未签名 IPA，保留 iOS 12 部署声明；iOS 12 真机兼容性尚未验收，本轮未新增真机安装测试。仓库没有 v1.12.0 Milestone，无需关闭其他版本的 Milestone。
+
 ## 部分下载按需准备目录（2026-11-01）
 
 - 首次只请求目录首页及所选范围涉及的分页，未请求分页不创建空白索引记录。保存目录分页大小及已知条目的有效状态；同分页追加、暂停恢复和进程重启复用已有目录，跨分页追加只补取缺少的分页。选择全部时仍验证全部目标页目录。
