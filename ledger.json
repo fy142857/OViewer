@@ -8109,8 +8109,43 @@
         }
       ],
       "version": "1.11.2"
+    },
+    {
+      "base_tag": "v1.11.1",
+      "branch": "dev",
+      "build_number": 141,
+      "build_sha": "0dd84139d837b65ed44570bc49885be8f98612ca",
+      "candidate_id": "1.11.2+141",
+      "fingerprint": "bf123a01f9afcc0d03ce394cbd0986431a93fe4548b8b8e9d097ad57fbd712a1",
+      "notes": "### 新增\n\n### 修复\n\n- 横向与反向阅读在图片加载、等待首帧及错误占位期间也可点击显示或隐藏阅读工具栏与系统状态栏，保持重试按钮和翻页手势正常（#73）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "44a29b1f740400c33a581c12bbf152d3e9a68683",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "按维护者选择将 iOS 工作流的 Flutter 测试并发固定为 3，保留既有测试范围选择，不改变应用功能。",
+          "classification_source": "commit-trailers",
+          "original_type": "ci",
+          "sha": "4dc6fcb71ebcadd34897856e6e1cba0555d2e701",
+          "subject": "ci(ios): run Flutter test files with concurrency three",
+          "type": "chore",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复横向阅读图片加载及错误占位时无法点击显隐工具栏和系统状态栏的问题，保持现有阅读与图片请求行为。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "44a29b1f740400c33a581c12bbf152d3e9a68683",
+          "subject": "fix(reader): keep controls reachable while horizontal images load",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.11.2"
     }
   ],
-  "last_build_number": 140,
+  "last_build_number": 141,
   "schema": 1
 }
