@@ -1,0 +1,1773 @@
+{
+  "samples": [
+    {
+      "round": 1,
+      "concurrency": 1,
+      "run_id": 41253196906,
+      "job_id": 124690803766,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41253196906/job/124690803766",
+      "wall_seconds": 273.213874042,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 269820
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "",
+        "PUB_CACHE_HIT": ""
+      },
+      "max_rss_bytes": 1526317056,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:04:31.052815; combined: 0:04:31.052898.",
+        "Runtime for phase Compile: Wall-clock: 0:00:56.899196; combined: 0:00:56.899396.",
+        "Runtime for phase Run: Wall-clock: 0:03:31.277816; combined: 0:03:31.278156.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.008991; combined: 0:00:00.009050."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:53Z",
+          "completed_at": "2026-10-31T23:35:55Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:55Z",
+          "completed_at": "2026-10-31T23:35:57Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:57Z",
+          "completed_at": "2026-10-31T23:35:59Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:59Z",
+          "completed_at": "2026-10-31T23:35:59Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:59Z",
+          "completed_at": "2026-10-31T23:36:01Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:36:01Z",
+          "completed_at": "2026-10-31T23:36:01Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:36:01Z",
+          "completed_at": "2026-10-31T23:36:46Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:36:46Z",
+          "completed_at": "2026-10-31T23:38:26Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:26Z",
+          "completed_at": "2026-10-31T23:38:41Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:41Z",
+          "completed_at": "2026-10-31T23:38:42Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:42Z",
+          "completed_at": "2026-10-31T23:39:51Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:39:51Z",
+          "completed_at": "2026-10-31T23:39:57Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:39:57Z",
+          "completed_at": "2026-10-31T23:40:24Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:40:24Z",
+          "completed_at": "2026-10-31T23:44:59Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:44:59Z",
+          "completed_at": "2026-10-31T23:45:02Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:45:02Z",
+          "completed_at": "2026-10-31T23:45:21Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:45:21Z",
+          "completed_at": "2026-10-31T23:45:21Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:45:21Z",
+          "completed_at": "2026-10-31T23:45:21Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:45:21Z",
+          "completed_at": "2026-10-31T23:45:22Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:45:22Z",
+          "completed_at": "2026-10-31T23:45:23Z"
+        }
+      ],
+      "compile_wall_seconds": 56.899196,
+      "run_wall_seconds": 211.277816,
+      "cpu_user_seconds": 247.46,
+      "cpu_system_seconds": 41.02,
+      "swaps": 0
+    },
+    {
+      "round": 1,
+      "concurrency": 2,
+      "run_id": 41253196906,
+      "job_id": 124690803859,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41253196906/job/124690803859",
+      "wall_seconds": 150.78866920899998,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 148852
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "",
+        "PUB_CACHE_HIT": ""
+      },
+      "max_rss_bytes": 1469349888,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:02:29.579483; combined: 0:02:29.579504.",
+        "Runtime for phase Compile: Wall-clock: 0:00:44.544423; combined: 0:00:44.544675.",
+        "Runtime for phase Run: Wall-clock: 0:02:10.209906; combined: 0:03:32.797247.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.006155; combined: 0:00:00.006241."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:52Z",
+          "completed_at": "2026-10-31T23:35:54Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:54Z",
+          "completed_at": "2026-10-31T23:35:58Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:58Z",
+          "completed_at": "2026-10-31T23:35:59Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:59Z",
+          "completed_at": "2026-10-31T23:35:59Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:59Z",
+          "completed_at": "2026-10-31T23:36:01Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:36:01Z",
+          "completed_at": "2026-10-31T23:36:01Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:36:01Z",
+          "completed_at": "2026-10-31T23:36:40Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:36:40Z",
+          "completed_at": "2026-10-31T23:37:29Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:37:29Z",
+          "completed_at": "2026-10-31T23:37:40Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:37:40Z",
+          "completed_at": "2026-10-31T23:37:41Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:37:41Z",
+          "completed_at": "2026-10-31T23:38:33Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:33Z",
+          "completed_at": "2026-10-31T23:38:37Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:37Z",
+          "completed_at": "2026-10-31T23:38:59Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:59Z",
+          "completed_at": "2026-10-31T23:41:31Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:41:31Z",
+          "completed_at": "2026-10-31T23:41:33Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:41:33Z",
+          "completed_at": "2026-10-31T23:42:03Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:03Z",
+          "completed_at": "2026-10-31T23:42:03Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:03Z",
+          "completed_at": "2026-10-31T23:42:04Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:04Z",
+          "completed_at": "2026-10-31T23:42:05Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:05Z",
+          "completed_at": "2026-10-31T23:42:06Z"
+        }
+      ],
+      "compile_wall_seconds": 44.544423,
+      "run_wall_seconds": 130.209906,
+      "cpu_user_seconds": 218.99,
+      "cpu_system_seconds": 35.45,
+      "swaps": 0
+    },
+    {
+      "round": 1,
+      "concurrency": 3,
+      "run_id": 41253196906,
+      "job_id": 124690803907,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41253196906/job/124690803907",
+      "wall_seconds": 156.046086458,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 154298
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "",
+        "PUB_CACHE_HIT": ""
+      },
+      "max_rss_bytes": 1514340352,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:02:34.855709; combined: 0:02:34.855732.",
+        "Runtime for phase Compile: Wall-clock: 0:00:57.913655; combined: 0:00:57.913886.",
+        "Runtime for phase Run: Wall-clock: 0:02:17.600950; combined: 0:05:24.046550.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.009371; combined: 0:00:00.009459."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:53Z",
+          "completed_at": "2026-10-31T23:35:55Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:55Z",
+          "completed_at": "2026-10-31T23:35:57Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:57Z",
+          "completed_at": "2026-10-31T23:35:58Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:58Z",
+          "completed_at": "2026-10-31T23:35:58Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:58Z",
+          "completed_at": "2026-10-31T23:35:59Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:59Z",
+          "completed_at": "2026-10-31T23:35:59Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:35:59Z",
+          "completed_at": "2026-10-31T23:36:40Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:36:40Z",
+          "completed_at": "2026-10-31T23:37:21Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:37:21Z",
+          "completed_at": "2026-10-31T23:37:34Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:37:34Z",
+          "completed_at": "2026-10-31T23:37:35Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:37:35Z",
+          "completed_at": "2026-10-31T23:38:47Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:47Z",
+          "completed_at": "2026-10-31T23:38:53Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:38:53Z",
+          "completed_at": "2026-10-31T23:39:16Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:39:16Z",
+          "completed_at": "2026-10-31T23:41:53Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:41:53Z",
+          "completed_at": "2026-10-31T23:41:55Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:41:55Z",
+          "completed_at": "2026-10-31T23:42:16Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:16Z",
+          "completed_at": "2026-10-31T23:42:17Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:17Z",
+          "completed_at": "2026-10-31T23:42:17Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:17Z",
+          "completed_at": "2026-10-31T23:42:18Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:42:18Z",
+          "completed_at": "2026-10-31T23:42:19Z"
+        }
+      ],
+      "compile_wall_seconds": 57.913655,
+      "run_wall_seconds": 137.60095,
+      "cpu_user_seconds": 259.7,
+      "cpu_system_seconds": 46.37,
+      "swaps": 0
+    },
+    {
+      "round": 2,
+      "concurrency": 1,
+      "run_id": 41253892558,
+      "job_id": 124692868139,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41253892558/job/124692868139",
+      "wall_seconds": 209.37229287499997,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 207857
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "true",
+        "PUB_CACHE_HIT": "true"
+      },
+      "max_rss_bytes": 1466400768,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:03:28.465994; combined: 0:03:28.466020.",
+        "Runtime for phase Compile: Wall-clock: 0:00:35.810510; combined: 0:00:35.810688.",
+        "Runtime for phase Run: Wall-clock: 0:02:50.316602; combined: 0:02:50.316791.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.005963; combined: 0:00:00.005992."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:11Z",
+          "completed_at": "2026-10-31T23:46:13Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:13Z",
+          "completed_at": "2026-10-31T23:46:16Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:16Z",
+          "completed_at": "2026-10-31T23:46:18Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:18Z",
+          "completed_at": "2026-10-31T23:46:18Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:18Z",
+          "completed_at": "2026-10-31T23:46:19Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:19Z",
+          "completed_at": "2026-10-31T23:46:19Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:19Z",
+          "completed_at": "2026-10-31T23:46:44Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:44Z",
+          "completed_at": "2026-10-31T23:47:49Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:49Z",
+          "completed_at": "2026-10-31T23:47:53Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:53Z",
+          "completed_at": "2026-10-31T23:47:54Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:54Z",
+          "completed_at": "2026-10-31T23:48:41Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:48:41Z",
+          "completed_at": "2026-10-31T23:48:44Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:48:44Z",
+          "completed_at": "2026-10-31T23:49:00Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:49:00Z",
+          "completed_at": "2026-10-31T23:52:31Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:52:31Z",
+          "completed_at": "2026-10-31T23:52:32Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:52:32Z",
+          "completed_at": "2026-10-31T23:52:33Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:52:33Z",
+          "completed_at": "2026-10-31T23:52:33Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:52:33Z",
+          "completed_at": "2026-10-31T23:52:34Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:52:34Z",
+          "completed_at": "2026-10-31T23:52:35Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:52:35Z",
+          "completed_at": "2026-10-31T23:52:36Z"
+        }
+      ],
+      "compile_wall_seconds": 35.81051,
+      "run_wall_seconds": 170.316602,
+      "cpu_user_seconds": 188.22,
+      "cpu_system_seconds": 28.99,
+      "swaps": 0
+    },
+    {
+      "round": 2,
+      "concurrency": 2,
+      "run_id": 41253892558,
+      "job_id": 124692867875,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41253892558/job/124692867875",
+      "wall_seconds": 101.499248209,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 100260
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "true",
+        "PUB_CACHE_HIT": "true"
+      },
+      "max_rss_bytes": 1505705984,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:01:40.729207; combined: 0:01:40.729230.",
+        "Runtime for phase Compile: Wall-clock: 0:00:25.960699; combined: 0:00:25.960881.",
+        "Runtime for phase Run: Wall-clock: 0:01:28.943422; combined: 0:02:24.374383.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.003730; combined: 0:00:00.003761."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:11Z",
+          "completed_at": "2026-10-31T23:46:13Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:13Z",
+          "completed_at": "2026-10-31T23:46:14Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:14Z",
+          "completed_at": "2026-10-31T23:46:16Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:16Z",
+          "completed_at": "2026-10-31T23:46:16Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:16Z",
+          "completed_at": "2026-10-31T23:46:17Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:17Z",
+          "completed_at": "2026-10-31T23:46:17Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:17Z",
+          "completed_at": "2026-10-31T23:46:44Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:44Z",
+          "completed_at": "2026-10-31T23:47:15Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:15Z",
+          "completed_at": "2026-10-31T23:47:18Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:18Z",
+          "completed_at": "2026-10-31T23:47:18Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:18Z",
+          "completed_at": "2026-10-31T23:47:54Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:54Z",
+          "completed_at": "2026-10-31T23:47:58Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:58Z",
+          "completed_at": "2026-10-31T23:48:13Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:48:13Z",
+          "completed_at": "2026-10-31T23:49:55Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:49:55Z",
+          "completed_at": "2026-10-31T23:49:57Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:49:57Z",
+          "completed_at": "2026-10-31T23:49:58Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:49:58Z",
+          "completed_at": "2026-10-31T23:49:58Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:49:58Z",
+          "completed_at": "2026-10-31T23:49:58Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:49:58Z",
+          "completed_at": "2026-10-31T23:49:58Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:49:58Z",
+          "completed_at": "2026-10-31T23:49:59Z"
+        }
+      ],
+      "compile_wall_seconds": 25.960699,
+      "run_wall_seconds": 88.943422,
+      "cpu_user_seconds": 149.69,
+      "cpu_system_seconds": 20.57,
+      "swaps": 0
+    },
+    {
+      "round": 2,
+      "concurrency": 3,
+      "run_id": 41253892558,
+      "job_id": 124692868194,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41253892558/job/124692868194",
+      "wall_seconds": 118.78677979100001,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 117290
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "true",
+        "PUB_CACHE_HIT": "true"
+      },
+      "max_rss_bytes": 1478901760,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:01:57.860981; combined: 0:01:57.861009.",
+        "Runtime for phase Compile: Wall-clock: 0:00:39.337937; combined: 0:00:39.338161.",
+        "Runtime for phase Run: Wall-clock: 0:01:43.938613; combined: 0:04:01.510033.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.005398; combined: 0:00:00.005455."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:11Z",
+          "completed_at": "2026-10-31T23:46:13Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:13Z",
+          "completed_at": "2026-10-31T23:46:15Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:15Z",
+          "completed_at": "2026-10-31T23:46:17Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:17Z",
+          "completed_at": "2026-10-31T23:46:17Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:17Z",
+          "completed_at": "2026-10-31T23:46:18Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:18Z",
+          "completed_at": "2026-10-31T23:46:18Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:18Z",
+          "completed_at": "2026-10-31T23:46:44Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:46:44Z",
+          "completed_at": "2026-10-31T23:47:24Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:24Z",
+          "completed_at": "2026-10-31T23:47:29Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:29Z",
+          "completed_at": "2026-10-31T23:47:29Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:47:29Z",
+          "completed_at": "2026-10-31T23:48:17Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:48:17Z",
+          "completed_at": "2026-10-31T23:48:20Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:48:20Z",
+          "completed_at": "2026-10-31T23:48:37Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:48:37Z",
+          "completed_at": "2026-10-31T23:50:36Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:50:36Z",
+          "completed_at": "2026-10-31T23:50:38Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:50:38Z",
+          "completed_at": "2026-10-31T23:50:39Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:50:39Z",
+          "completed_at": "2026-10-31T23:50:39Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:50:39Z",
+          "completed_at": "2026-10-31T23:50:40Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:50:40Z",
+          "completed_at": "2026-10-31T23:50:40Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:50:40Z",
+          "completed_at": "2026-10-31T23:50:42Z"
+        }
+      ],
+      "compile_wall_seconds": 39.337937,
+      "run_wall_seconds": 103.938613,
+      "cpu_user_seconds": 203.21,
+      "cpu_system_seconds": 31.49,
+      "swaps": 0
+    },
+    {
+      "round": 3,
+      "concurrency": 1,
+      "run_id": 41254397665,
+      "job_id": 124694380719,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41254397665/job/124694380719",
+      "wall_seconds": 209.47195741699997,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 207986
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "true",
+        "PUB_CACHE_HIT": "true"
+      },
+      "max_rss_bytes": 1560739840,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:03:28.508741; combined: 0:03:28.508761.",
+        "Runtime for phase Compile: Wall-clock: 0:00:40.318132; combined: 0:00:40.318365.",
+        "Runtime for phase Run: Wall-clock: 0:02:46.560317; combined: 0:02:46.560559.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.005476; combined: 0:00:00.005525."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:46Z",
+          "completed_at": "2026-10-31T23:53:48Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:48Z",
+          "completed_at": "2026-10-31T23:53:50Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:50Z",
+          "completed_at": "2026-10-31T23:53:52Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:52Z",
+          "completed_at": "2026-10-31T23:53:52Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:52Z",
+          "completed_at": "2026-10-31T23:53:53Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:53Z",
+          "completed_at": "2026-10-31T23:53:53Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:53Z",
+          "completed_at": "2026-10-31T23:54:11Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:11Z",
+          "completed_at": "2026-10-31T23:54:28Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:28Z",
+          "completed_at": "2026-10-31T23:54:33Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:33Z",
+          "completed_at": "2026-10-31T23:54:33Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:33Z",
+          "completed_at": "2026-10-31T23:55:14Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:14Z",
+          "completed_at": "2026-10-31T23:55:18Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:18Z",
+          "completed_at": "2026-10-31T23:55:40Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:40Z",
+          "completed_at": "2026-10-31T23:59:11Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:11Z",
+          "completed_at": "2026-10-31T23:59:12Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:12Z",
+          "completed_at": "2026-10-31T23:59:13Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:13Z",
+          "completed_at": "2026-10-31T23:59:13Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:13Z",
+          "completed_at": "2026-10-31T23:59:14Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:14Z",
+          "completed_at": "2026-10-31T23:59:15Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:15Z",
+          "completed_at": "2026-10-31T23:59:17Z"
+        }
+      ],
+      "compile_wall_seconds": 40.318132,
+      "run_wall_seconds": 166.560317,
+      "cpu_user_seconds": 189.1,
+      "cpu_system_seconds": 30.18,
+      "swaps": 0
+    },
+    {
+      "round": 3,
+      "concurrency": 2,
+      "run_id": 41254397665,
+      "job_id": 124694380547,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41254397665/job/124694380547",
+      "wall_seconds": 188.23948083299996,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 185829
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "true",
+        "PUB_CACHE_HIT": "true"
+      },
+      "max_rss_bytes": 1507229696,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:03:06.715891; combined: 0:03:06.715915.",
+        "Runtime for phase Compile: Wall-clock: 0:01:01.727753; combined: 0:01:01.728099.",
+        "Runtime for phase Run: Wall-clock: 0:02:42.463916; combined: 0:04:24.273422.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.008217; combined: 0:00:00.008280."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:48Z",
+          "completed_at": "2026-10-31T23:53:50Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:50Z",
+          "completed_at": "2026-10-31T23:53:51Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:51Z",
+          "completed_at": "2026-10-31T23:53:53Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:53Z",
+          "completed_at": "2026-10-31T23:53:53Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:53Z",
+          "completed_at": "2026-10-31T23:53:53Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:53Z",
+          "completed_at": "2026-10-31T23:53:54Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:54Z",
+          "completed_at": "2026-10-31T23:54:30Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:30Z",
+          "completed_at": "2026-10-31T23:55:07Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:07Z",
+          "completed_at": "2026-10-31T23:55:11Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:11Z",
+          "completed_at": "2026-10-31T23:55:12Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:12Z",
+          "completed_at": "2026-10-31T23:56:02Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:56:02Z",
+          "completed_at": "2026-10-31T23:56:06Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:56:06Z",
+          "completed_at": "2026-10-31T23:56:32Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:56:32Z",
+          "completed_at": "2026-10-31T23:59:42Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:42Z",
+          "completed_at": "2026-10-31T23:59:44Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:44Z",
+          "completed_at": "2026-10-31T23:59:45Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:45Z",
+          "completed_at": "2026-10-31T23:59:46Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:46Z",
+          "completed_at": "2026-10-31T23:59:47Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:47Z",
+          "completed_at": "2026-10-31T23:59:48Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:59:48Z",
+          "completed_at": "2026-10-31T23:59:50Z"
+        }
+      ],
+      "compile_wall_seconds": 61.727753,
+      "run_wall_seconds": 162.46391599999998,
+      "cpu_user_seconds": 269.5,
+      "cpu_system_seconds": 46.12,
+      "swaps": 0
+    },
+    {
+      "round": 3,
+      "concurrency": 3,
+      "run_id": 41254397665,
+      "job_id": 124694380747,
+      "url": "https://github.com/fy142857/OViewer/actions/runs/41254397665/job/124694380747",
+      "wall_seconds": 142.48402424999998,
+      "exit_code": 0,
+      "timed_out": false,
+      "job_conclusion": "success",
+      "count": 1083,
+      "passed": 1083,
+      "failed": [],
+      "skipped": 0,
+      "done": {
+        "success": true,
+        "type": "done",
+        "time": 141231
+      },
+      "test_set_sha256": "f60a0a3e8b536dcbf3e1d5552242d3ca572de5ff6687a8ea9f39b75a7aa2fe2d",
+      "cache": {
+        "FLUTTER_CACHE_HIT": "true",
+        "PUB_CACHE_HIT": "true"
+      },
+      "max_rss_bytes": 1508245504,
+      "phases": [
+        "Runtime for phase TestRunner: Wall-clock: 0:02:21.716299; combined: 0:02:21.716322.",
+        "Runtime for phase Compile: Wall-clock: 0:00:51.306628; combined: 0:00:51.307007.",
+        "Runtime for phase Run: Wall-clock: 0:02:07.999761; combined: 0:04:55.114645.",
+        "Runtime for phase CoverageTotal: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageParseJson: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageAddHitmap: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase CoverageDataCollect: Wall-clock: 0:00:00.000000; combined: 0:00:00.000000.",
+        "Runtime for phase WatcherFinishedTest: Wall-clock: 0:00:00.008340; combined: 0:00:00.008420."
+      ],
+      "environment": {
+        "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+        "image_os": "macos15",
+        "image_version": "20261028.0489.1",
+        "runner_arch": "ARM64",
+        "machine": "arm64",
+        "pubspec_lock_sha256": "0b1722e47859a0a46bb6d1ddddd1c6bfef97e379487b03db3d9964f194ae5a99",
+        "generated_database_sha256": "33c2f65a1ee66d97898f1907d42f1b0b5f61b2c06a0883cacff8d19f4524480b",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "hardware": "hw.ncpu: 3\nhw.memsize: 7516192768\nmachdep.cpu.brand_string: Apple M1 (Virtual)",
+        "xcode": "Xcode 16.4\nBuild version 16F6",
+        "flutter": {
+          "frameworkVersion": "3.16.0",
+          "frameworkRevision": "db7ef5bf9f59442b0e200a90587e8fa5e0c6336a",
+          "engineRevision": "74d16627b940bb15e50891f82cad6c3e3465bd6d",
+          "dartSdkVersion": "3.2.0"
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:46Z",
+          "completed_at": "2026-10-31T23:53:48Z"
+        },
+        {
+          "name": "Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:48Z",
+          "completed_at": "2026-10-31T23:53:50Z"
+        },
+        {
+          "name": "Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:50Z",
+          "completed_at": "2026-10-31T23:53:52Z"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:52Z",
+          "completed_at": "2026-10-31T23:53:52Z"
+        },
+        {
+          "name": "Test Pod deployment target guard",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:52Z",
+          "completed_at": "2026-10-31T23:53:53Z"
+        },
+        {
+          "name": "Setup Xcode",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:53Z",
+          "completed_at": "2026-10-31T23:53:53Z"
+        },
+        {
+          "name": "Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:53:53Z",
+          "completed_at": "2026-10-31T23:54:14Z"
+        },
+        {
+          "name": "Flutter doctor",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:14Z",
+          "completed_at": "2026-10-31T23:54:45Z"
+        },
+        {
+          "name": "Get dependencies",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:45Z",
+          "completed_at": "2026-10-31T23:54:48Z"
+        },
+        {
+          "name": "Verify vendored WebView against official archive",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:48Z",
+          "completed_at": "2026-10-31T23:54:49Z"
+        },
+        {
+          "name": "Generate drift code",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:54:49Z",
+          "completed_at": "2026-10-31T23:55:25Z"
+        },
+        {
+          "name": "Verify version rules",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:25Z",
+          "completed_at": "2026-10-31T23:55:28Z"
+        },
+        {
+          "name": "Analyze against reviewed baseline",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:28Z",
+          "completed_at": "2026-10-31T23:55:42Z"
+        },
+        {
+          "name": "Measure Flutter tests",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:55:42Z",
+          "completed_at": "2026-10-31T23:58:05Z"
+        },
+        {
+          "name": "Upload benchmark diagnostics",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:58:06Z",
+          "completed_at": "2026-10-31T23:58:07Z"
+        },
+        {
+          "name": "Post Setup Flutter",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:58:07Z",
+          "completed_at": "2026-10-31T23:58:08Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:58:08Z",
+          "completed_at": "2026-10-31T23:58:08Z"
+        },
+        {
+          "name": "Post Checkout frozen candidate 139",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:58:08Z",
+          "completed_at": "2026-10-31T23:58:09Z"
+        },
+        {
+          "name": "Post Checkout experimental harness",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:58:09Z",
+          "completed_at": "2026-10-31T23:58:10Z"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success",
+          "started_at": "2026-10-31T23:58:10Z",
+          "completed_at": "2026-10-31T23:58:12Z"
+        }
+      ],
+      "compile_wall_seconds": 51.306628,
+      "run_wall_seconds": 127.999761,
+      "cpu_user_seconds": 244.69,
+      "cpu_system_seconds": 44.36,
+      "swaps": 0
+    }
+  ],
+  "groups": [
+    {
+      "concurrency": 1,
+      "samples": 3,
+      "seconds": [
+        273.213874042,
+        209.37229287499997,
+        209.47195741699997
+      ],
+      "median": 209.47195741699997,
+      "minimum": 209.37229287499997,
+      "maximum": 273.213874042,
+      "all_passed": true,
+      "reduction_percent": 0.0
+    },
+    {
+      "concurrency": 2,
+      "samples": 3,
+      "seconds": [
+        150.78866920899998,
+        101.499248209,
+        188.23948083299996
+      ],
+      "median": 150.78866920899998,
+      "minimum": 101.499248209,
+      "maximum": 188.23948083299996,
+      "all_passed": true,
+      "reduction_percent": 28.014866014345785
+    },
+    {
+      "concurrency": 3,
+      "samples": 3,
+      "seconds": [
+        156.046086458,
+        118.78677979100001,
+        142.48402424999998
+      ],
+      "median": 142.48402424999998,
+      "minimum": 118.78677979100001,
+      "maximum": 156.046086458,
+      "all_passed": true,
+      "reduction_percent": 31.97942769668486
+    }
+  ],
+  "complete": true,
+  "same_environment": true,
+  "same_test_set": true,
+  "method": {
+    "source_sha": "dbf940b36996169f0817a3b45480d0f50cc3ec6e",
+    "harness_sha": "ae211fd",
+    "date": "2026-11-01",
+    "rounds": 3,
+    "test_timeout_seconds": 1200,
+    "command": "flutter test --no-pub --reporter expanded --file-reporter=json:reports/tests.json --exclude-tags reader_prefetch_slow --concurrency=N --verbose",
+    "cache_note": "Round 1: SDK/Pub cache miss; rounds 2/3: cache hit. No test compilation artifacts reused. Preparation excluded from timed command.",
+    "recommendation": "2 as a conservative default under the pre-agreed 10% threshold; no stable speed winner between 2 and 3; production configuration unchanged."
+  },
+  "artifacts": [
+    {
+      "id": 13062591376,
+      "name": "benchmark-r1-c3",
+      "size_in_bytes": 162787,
+      "created_at": "2026-10-31T23:41:55Z",
+      "expires_at": "2026-11-30T23:41:54Z",
+      "digest": "sha256:4e92686677e68b48c0348b94cd65de261ddbcdcd4b49773878b77016b6f73e94"
+    },
+    {
+      "id": 13062536885,
+      "name": "benchmark-r1-c1",
+      "size_in_bytes": 171782,
+      "created_at": "2026-10-31T23:45:02Z",
+      "expires_at": "2026-11-30T23:45:00Z",
+      "digest": "sha256:96f678c985bf8898137489f6f50664f525b58d6e44ea1596765ff7b0ea8709db"
+    },
+    {
+      "id": 13062162380,
+      "name": "benchmark-r1-c2",
+      "size_in_bytes": 165914,
+      "created_at": "2026-10-31T23:41:33Z",
+      "expires_at": "2026-11-30T23:41:32Z",
+      "digest": "sha256:aa51030e86d4c608ee583733a79d72d5091cccf46d5614af86e94201d6547e5c"
+    },
+    {
+      "id": 13062188701,
+      "name": "benchmark-r2-c1",
+      "size_in_bytes": 170358,
+      "created_at": "2026-10-31T23:52:33Z",
+      "expires_at": "2026-11-30T23:52:31Z",
+      "digest": "sha256:dee9601a3176c52f11e5d2d4b000150a804818f824bc94f201624e4a29c025a3"
+    },
+    {
+      "id": 13061778595,
+      "name": "benchmark-r2-c3",
+      "size_in_bytes": 162235,
+      "created_at": "2026-10-31T23:50:38Z",
+      "expires_at": "2026-11-30T23:50:37Z",
+      "digest": "sha256:c4e30ca6009220c132be99c442bdb96eb5ff6acd7179663b343364ef08021278"
+    },
+    {
+      "id": 13061778549,
+      "name": "benchmark-r2-c2",
+      "size_in_bytes": 161986,
+      "created_at": "2026-10-31T23:49:57Z",
+      "expires_at": "2026-11-30T23:49:56Z",
+      "digest": "sha256:770595711022a24d4cce79c3b93438d309c60086cd6912f9f457011ddd6628d7"
+    },
+    {
+      "id": 13062643150,
+      "name": "benchmark-r3-c1",
+      "size_in_bytes": 170544,
+      "created_at": "2026-10-31T23:59:13Z",
+      "expires_at": "2026-11-30T23:59:11Z",
+      "digest": "sha256:bc02eb2a7500c088bec0f2c09237826df871d813a37eb1ba88a1a57848070bee"
+    },
+    {
+      "id": 13062423930,
+      "name": "benchmark-r3-c2",
+      "size_in_bytes": 166438,
+      "created_at": "2026-10-31T23:59:44Z",
+      "expires_at": "2026-11-30T23:59:43Z",
+      "digest": "sha256:456b1746e5472d49e8e3bf1980c22b9bf6382f76e6a996f539d217885e0296fb"
+    },
+    {
+      "id": 13062423739,
+      "name": "benchmark-r3-c3",
+      "size_in_bytes": 162359,
+      "created_at": "2026-10-31T23:58:07Z",
+      "expires_at": "2026-11-30T23:58:06Z",
+      "digest": "sha256:fd9709a4a05962e945b48eea3ee291babadfd80ff38f8f79d65d93a0101a354f"
+    }
+  ]
+}
