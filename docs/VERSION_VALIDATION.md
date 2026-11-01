@@ -9,6 +9,9 @@
 - 本地 Flutter 3.16 完整回归 **1,240 项通过**（5 分 47 秒，包含全部预读慢场景），静态检查保留 157 条既有诊断，无新增错误或警告。
 - VOG AL10 独立测试包使用生产 HTTP、SQLite、文件、下载调度及阅读组件，通过 `test_driver/sparse_index_acceptance.dart` 受控验收：120 页/20 个目录分页，首次请求 `[0,14,19]`，跨分页追加后为 `[0,14,19,10]`；阅读第 73 页仅增加 `[12,11]`。最终仅持久保存 24 条目录记录和 4 张目标图片，原书总页数保持 120。日志以 `[sparse-index-acceptance] PASS` 收尾。
 - 受控验收使用本机 fixture，不代表真实 EH/EX 网络性能；没有进行 iOS 真机验收或正式发布。
+- 候选 **1.12.0+148**：源提交 `6341e1609be9324c595215fe8b083eb0f76c1363`，构建提交 `b0cd01ec134dee9c277655906b2c4ba44891bcd2`。[候选准备](https://github.com/fy142857/OViewer/actions/runs/41277444736)、[Android](https://github.com/fy142857/OViewer/actions/runs/41277477633)、[iOS](https://github.com/fy142857/OViewer/actions/runs/41277478987) 均首次成功。
+- 两端各通过 **1,240 项 Flutter 测试与 91 项脚本测试**，包含全部预读慢场景；静态分析均为 157 条既有诊断，无新增错误或警告。Android 原生检查及 APK 产物校验通过，iOS 原生构建、部署声明检查及未签名 IPA 产物校验通过。
+- 本地 Flutter 3.13 环境与原依赖锁文件已恢复，schema 6 的生成代码与 Flutter 3.16 生成结果 SHA-256 一致。仅更新 `dev`；`main` 和正式 Release 未改动。
 
 ## Windows debug 跨盘 Kotlin 编译（2026-11-01）
 
