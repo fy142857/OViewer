@@ -251,6 +251,12 @@ void main() {
     expect(identical(bloc.state.readyResources[21], resource), true);
     expect(bloc.state.imageAttempts[21] ?? 0, 0);
     expect(await resource.snapshot(), [1, 2, 3]);
+    bloc.add(const ChangeReaderPreferences(1, ReaderPageLayout.doublePage,
+        alignment: ReaderSpreadAlignment.width));
+    await until(() => bloc.state.readingMode == 1);
+    expect(bloc.state.retainedNetworkPages, isEmpty);
+    expect(bloc.state.localPage(21), isNotNull,
+        reason: 'explicit presentation changes must prefer the new local file');
     bloc.add(const PageChanged(22));
     await until(() => bloc.state.currentPage == 22);
     expect(bloc.state.localPage(21), isNotNull);

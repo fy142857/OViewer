@@ -267,7 +267,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     });
     on<ChangeReadingMode>((event, emit) {
       if (!_active) return;
-      emit(state.copyWith(readingMode: event.mode, visiblePages: {}));
+      emit(state.copyWith(readingMode: event.mode, visiblePages: {},
+          retainedNetworkPages: event.mode == state.readingMode
+              ? state.retainedNetworkPages : <int>{}));
       _prioritize();
       _loadVisiblePages();
       _preloadAdjacent();
@@ -277,6 +279,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       emit(state.copyWith(
           readingMode: event.mode,
           preloadCount: event.preloadCount,
+          retainedNetworkPages: event.mode != state.readingMode ||
+                  event.layout != state.pageLayout
+              ? <int>{} : state.retainedNetworkPages,
           visiblePages: event.mode != state.readingMode ||
                   event.layout != state.pageLayout
               ? <int>{}
