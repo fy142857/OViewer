@@ -93,15 +93,20 @@ class _FavoritesFiltersSheetState extends State<_FavoritesFiltersSheet> {
                           child: Text(s.reset))
                     ]),
                     const SizedBox(height: 16),
+                    Text(s.favoriteCategories,
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
                     DropdownButtonFormField<int>(
                         key: const ValueKey('favorite-group-selector'),
                         value: _group,
                         isExpanded: true,
-                        decoration: InputDecoration(
-                            labelText: s.favoriteCategories,
+                        alignment: AlignmentDirectional.centerStart,
+                        borderRadius: BorderRadius.circular(12),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        decoration: const InputDecoration(
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8)),
+                                horizontal: 12, vertical: 12)),
                         items: [
                           for (var i = -1; i <= 9; i++)
                             DropdownMenuItem(
