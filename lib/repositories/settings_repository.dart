@@ -31,6 +31,11 @@ class SettingsRepository {
   Future<void> setReaderSpreadAlignment(ReaderSpreadAlignment value) =>
       _storage.setReaderSpreadAlignment(value);
 
+  ReaderPageTransition getReaderPageTransition() =>
+      _storage.getReaderPageTransition();
+  Future<void> setReaderPageTransition(ReaderPageTransition value) =>
+      _storage.setReaderPageTransition(value);
+
   ReaderPageLayout getReaderPageLayout() => _storage.getReaderPageLayout();
   Future<void> setReaderPageLayout(ReaderPageLayout layout) =>
       _storage.setReaderPageLayout(layout);

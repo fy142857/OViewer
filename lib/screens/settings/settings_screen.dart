@@ -1,4 +1,5 @@
 import '../../models/reader_page_layout.dart';
+import '../../widgets/reader_transition_setting.dart';
 import '../../widgets/reader_preload_setting.dart';
 import '../../widgets/site_mode_tile.dart';
 import '../../widgets/offline_settings_panel.dart';
@@ -166,6 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => _showReadingModeDialog(context, state.readingMode),
               ),
 
+              const ReaderTransitionSetting(),
               ListTile(
                 key: const ValueKey('settings-reader-page-layout'),
                 leading: const Icon(Icons.view_carousel_outlined),

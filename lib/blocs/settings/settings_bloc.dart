@@ -70,6 +70,22 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       await _repository.setReaderSpreadAlignment(event.alignment);
       emit(state.copyWith(spreadAlignment: event.alignment));
     });
+    on<UpdateReaderPageTransition>((event, emit) async {
+      if (state.savingPageTransition) {
+        event.completer.complete();
+        return;
+      }
+      emit(state.copyWith(savingPageTransition: true));
+      try {
+        await _repository.setReaderPageTransition(event.value);
+        emit(state.copyWith(
+            pageTransition: event.value, savingPageTransition: false));
+        event.completer.complete();
+      } catch (error, stack) {
+        emit(state.copyWith(savingPageTransition: false));
+        event.completer.completeError(error, stack);
+      }
+    });
     on<UpdateReaderPageLayout>((event, emit) async {
       await _repository.setReaderPageLayout(event.layout);
       emit(state.copyWith(pageLayout: event.layout));
@@ -88,6 +104,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         themeMode: repository.getThemeMode(),
         readingMode: repository.getReadingMode(),
         preloadCount: repository.getReaderPreloadCount(),
+        pageTransition: repository.getReaderPageTransition(),
         pageLayout: repository.getReaderPageLayout(),
         spreadAlignment: repository.getReaderSpreadAlignment(),
         displayMode: repository.getDisplayMode(),

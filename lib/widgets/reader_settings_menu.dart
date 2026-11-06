@@ -6,6 +6,7 @@ import '../blocs/settings/settings_state.dart';
 import '../core/l10n/s.dart';
 import '../models/reader_page_layout.dart';
 import 'reader_menu.dart';
+import 'reader_transition_setting.dart';
 
 class ReaderSettingsButton extends StatelessWidget {
   const ReaderSettingsButton({super.key});
@@ -144,6 +145,22 @@ class ReaderSettingsOptions extends StatelessWidget {
                 2: (s.verticalScroll, Icons.swap_vert)
               },
               onChanged: (value) => settings.add(UpdateReadingMode(value))),
+          if (state.readingMode != 2)
+            _selector<ReaderPageTransition>(context,
+                id: 'reader-transition',
+                label: s.readerPageTransition,
+                value: state.pageTransition,
+                choices: {
+                  ReaderPageTransition.none: (
+                    s.readerTransitionNone,
+                    Icons.hide_image_outlined
+                  ),
+                  ReaderPageTransition.slide: (
+                    s.readerTransitionSlide,
+                    Icons.swipe
+                  )
+                },
+                onChanged: (value) => saveReaderTransition(context, value)),
           _selector<ReaderPageLayout>(context,
               id: 'reader-page-layout',
               label: s.readerPageLayout,

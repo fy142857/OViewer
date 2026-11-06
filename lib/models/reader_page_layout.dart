@@ -1,3 +1,5 @@
+enum ReaderPageTransition { none, slide }
+
 enum ReaderPageLayout { single, doublePage }
 
 enum ReaderSpreadAlignment { width, height }

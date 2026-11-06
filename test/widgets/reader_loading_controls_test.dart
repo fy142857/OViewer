@@ -72,12 +72,18 @@ void main() {
   });
 
   for (final mode in [0, 1, 2]) {
-    for (final layout in ReaderPageLayout.values) {
+    for (final variant in [
+      for (final layout in ReaderPageLayout.values)
+        for (final transition in ReaderPageTransition.values)
+          (layout, transition)
+    ]) {
+      final layout = variant.$1;
+      final transition = variant.$2;
       for (final fail in mode < 2 && layout == ReaderPageLayout.single
           ? [false, true]
           : [false]) {
         testWidgets(
-            'issue 73: controls work before first frame mode=$mode layout=$layout fail=$fail',
+            'issue 73: controls work before first frame mode=$mode layout=$layout transition=$transition fail=$fail',
             (tester) async {
           await tester.binding.setSurfaceSize(const Size(400, 800));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -92,7 +98,10 @@ void main() {
           when(() => settings.getReaderSpreadAlignment())
               .thenReturn(ReaderSpreadAlignment.width);
           when(() => settingsBloc.state).thenReturn(SettingsState(
-              locale: 'en', readingMode: mode, pageLayout: layout));
+              locale: 'en',
+              readingMode: mode,
+              pageLayout: layout,
+              pageTransition: transition));
           when(() => settingsBloc.stream)
               .thenAnswer((_) => const Stream.empty());
           when(() => history.getProgress(any())).thenAnswer((_) async => null);
@@ -196,7 +205,7 @@ void main() {
               expect(find.byIcon(Icons.arrow_back), findsNothing);
               for (final point in [
                 const Offset(200, 400),
-                const Offset(20, 200)
+                const Offset(120, 200)
               ]) {
                 await tester.tapAt(point);
                 await tester.pump(const Duration(milliseconds: 350));
@@ -208,6 +217,58 @@ void main() {
                 await tester.pump(const Duration(milliseconds: 350));
                 expect(bloc.state.showUI, isFalse);
                 expect(modes.last, 'SystemUiMode.immersiveSticky');
+              }
+              // Edge navigation keeps controls independently visible/hidden.
+              final nextPoint = mode == 2
+                  ? const Offset(380, 600)
+                  : Offset(mode == 0 ? 380 : 20, 400);
+              final prevPoint = mode == 2
+                  ? const Offset(20, 200)
+                  : Offset(mode == 0 ? 20 : 380, 400);
+              await tester.tapAt(const Offset(200, 400));
+              await tester.pump(const Duration(milliseconds: 350));
+              expect(bloc.state.showUI, isTrue);
+              await tester.tapAt(nextPoint);
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 16));
+              for (var frame = 0; frame < 12; frame++) {
+                await tester.pump(const Duration(milliseconds: 50));
+              }
+              expect(bloc.state.currentPage,
+                  layout == ReaderPageLayout.single ? 1 : 2);
+              expect(bloc.state.showUI, isTrue);
+              await tester.tapAt(prevPoint);
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 16));
+              for (var frame = 0; frame < 12; frame++) {
+                await tester.pump(const Duration(milliseconds: 50));
+              }
+              expect(bloc.state.currentPage, 0);
+              await tester.tapAt(const Offset(200, 400));
+              await tester.pump(const Duration(milliseconds: 350));
+              expect(bloc.state.showUI, isFalse);
+              if (mode < 2 && transition == ReaderPageTransition.none) {
+                await tester.timedDragFrom(const Offset(200, 400),
+                    const Offset(25, 0), const Duration(milliseconds: 300));
+                await tester.pump(const Duration(milliseconds: 100));
+                expect(bloc.state.currentPage, 0,
+                    reason: 'Short slow drags do not turn pages');
+                final gesture =
+                    await tester.startGesture(const Offset(200, 400));
+                await gesture.moveBy(Offset(mode == 0 ? -100 : 100, 0));
+                await tester.pump(const Duration(milliseconds: 100));
+                final pageView = tester.widget<PageView>(find.byType(PageView));
+                expect(pageView.controller.page, 0);
+                await gesture.up();
+                for (var frame = 0; frame < 12; frame++) {
+                  await tester.pump(const Duration(milliseconds: 50));
+                }
+                expect(bloc.state.currentPage,
+                    layout == ReaderPageLayout.single ? 1 : 2);
+                await tester.tapAt(prevPoint);
+                for (var frame = 0; frame < 12; frame++) {
+                  await tester.pump(const Duration(milliseconds: 50));
+                }
               }
               if (mode < 2) {
                 final direction = mode == 0 ? -300.0 : 300.0;
@@ -226,10 +287,10 @@ void main() {
                 completeDownloads(Uint8List.fromList([1, 2, 3]));
                 await advance();
                 expect(find.text('Retry').hitTestable(), findsOneWidget);
-                await tester.tapAt(const Offset(20, 200));
+                await tester.tapAt(const Offset(120, 200));
                 await tester.pump(const Duration(milliseconds: 350));
                 expect(bloc.state.showUI, isTrue);
-                await tester.tapAt(const Offset(20, 200));
+                await tester.tapAt(const Offset(120, 200));
                 await tester.pump(const Duration(milliseconds: 350));
                 expect(bloc.state.showUI, isFalse);
                 await tester.tap(find.text('Retry').hitTestable().first);
@@ -254,6 +315,43 @@ void main() {
               await tester.tapAt(const Offset(200, 400));
               await tester.pump(const Duration(milliseconds: 350));
               expect(bloc.state.showUI, isFalse);
+              // Pinching blocks navigation in every reading direction.
+              final firstFinger =
+                  await tester.startGesture(const Offset(150, 380), pointer: 1);
+              final secondFinger =
+                  await tester.startGesture(const Offset(250, 420), pointer: 2);
+              await firstFinger.moveTo(const Offset(130, 370));
+              await secondFinger.moveTo(const Offset(270, 430));
+              await tester.pump(const Duration(milliseconds: 50));
+              await firstFinger.moveTo(const Offset(80, 340));
+              await secondFinger.moveTo(const Offset(320, 460));
+              await tester.pump(const Duration(milliseconds: 50));
+              await firstFinger.up();
+              await secondFinger.up();
+              for (var frame = 0; frame < 12; frame++) {
+                await tester.pump(const Duration(milliseconds: 50));
+              }
+              final zoomPage = bloc.state.currentPage;
+              await tester.tapAt(nextPoint);
+              for (var frame = 0; frame < 12; frame++) {
+                await tester.pump(const Duration(milliseconds: 50));
+              }
+              expect(bloc.state.currentPage, zoomPage,
+                  reason: 'A zoomed edge tap must not turn pages');
+              expect(bloc.state.showUI, isTrue);
+              await tester.tapAt(const Offset(200, 400));
+              await tester.pump(const Duration(milliseconds: 40));
+              await tester.tapAt(const Offset(200, 400));
+              for (var frame = 0; frame < 12; frame++) {
+                await tester.pump(const Duration(milliseconds: 50));
+              }
+              await tester.tapAt(nextPoint);
+              for (var frame = 0; frame < 12; frame++) {
+                await tester.pump(const Duration(milliseconds: 50));
+              }
+              expect(bloc.state.currentPage,
+                  layout == ReaderPageLayout.single ? 1 : 2,
+                  reason: 'Restoring zoom restores navigation');
               expect(tester.takeException(), isNull);
             } finally {
               final previousErrorHandler = FlutterError.onError;

@@ -26,6 +26,14 @@ class UpdateReaderSpreadAlignment extends SettingsEvent {
   List<Object?> get props => [alignment];
 }
 
+class UpdateReaderPageTransition extends SettingsEvent {
+  final ReaderPageTransition value;
+  final Completer<void> completer;
+  const UpdateReaderPageTransition(this.value, this.completer);
+  @override
+  List<Object?> get props => [value];
+}
+
 class UpdateReaderPageLayout extends SettingsEvent {
   final ReaderPageLayout layout;
   const UpdateReaderPageLayout(this.layout);

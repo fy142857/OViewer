@@ -523,6 +523,13 @@ class S {
   String get readerAlignHeight => _zh ? '按高度对齐' : 'Fit height';
   String get readerSettings => _zh ? '阅读设置' : 'Reading settings';
   String get readingDirection => _zh ? '阅读方向' : 'Reading direction';
+  String get readerPageTransition => _zh ? '过渡动画' : 'Page transition';
+  String get readerTransitionNone => _zh ? '无' : 'None';
+  String get readerTransitionSlide => _zh ? '滑动' : 'Slide';
+  String get readerTransitionHint =>
+      _zh ? '仅横向阅读生效' : 'Horizontal reading only';
+  String get readerTransitionSaveFailed =>
+      _zh ? '保存过渡动画设置失败，请重试' : 'Could not save page transition. Please retry.';
   String get readerPageLayout => _zh ? '页面布局' : 'Page layout';
   String get readerPreloadCount => _zh ? '预加载图片数量' : 'Image preload count';
   String readerPreloadLabel(int count, bool doublePage) => _zh

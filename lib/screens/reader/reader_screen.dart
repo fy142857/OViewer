@@ -198,6 +198,144 @@ class _ReaderViewState extends State<_ReaderView> {
   final ScrollController _thumbnailScrollController = ScrollController();
   final TransformationController _zoomController = TransformationController();
   bool _isZoomed = false;
+  bool _horizontalZoomed = false;
+  bool _turning = false;
+  int _turnRevision = 0;
+  ReaderPageTransition? _lastTransition;
+  Offset? _swipeStart;
+  Duration? _swipeTime;
+  bool _swipeCancelled = false;
+  bool _swipeMoved = false;
+  final Set<int> _pointers = {};
+  final GlobalKey _readingViewport = GlobalKey();
+
+  bool get _zoomed => _isZoomed || _horizontalZoomed;
+
+  void _readerTap(TapUpDetails details) {
+    final box =
+        _readingViewport.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final point = box.globalToLocal(details.globalPosition);
+    final state = context.read<ReaderBloc>().state;
+    if (_zoomed ||
+        (point.dx >= box.size.width * .2 && point.dx < box.size.width * .8)) {
+      _toggleUI();
+      return;
+    }
+    final next = state.readingMode == 2
+        ? point.dy >= box.size.height / 2
+        : (point.dx >= box.size.width * .8) != (state.readingMode == 1);
+    // Let PhotoView finish the pointer's scale/scroll activity first.
+    final revision = _turnRevision;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && revision == _turnRevision) _turnPage(next ? 1 : -1);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  Future<void> _turnPage(int delta) async {
+    final state = context.read<ReaderBloc>().state;
+    if (_turning || _zoomed || widget.requests.isCancelled) return;
+    final target = state.spreads.spreadOf(state.currentPage) + delta;
+    if (target < 0 || target >= state.spreads.count) return;
+    _turning = true;
+    final revision = ++_turnRevision;
+    _explicitPage =
+        state.readingMode == 2 ? state.spreads.pages(target).first : null;
+    try {
+      if (state.readingMode == 2) {
+        if (_verticalScrollController.isAttached) {
+          await _verticalScrollController.scrollTo(
+              index: target,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut);
+        }
+      } else if (_pageController.hasClients) {
+        if (context.read<SettingsBloc>().state.pageTransition ==
+            ReaderPageTransition.none) {
+          _pageController.jumpToPage(target);
+        } else {
+          await _pageController.animateToPage(target,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut);
+        }
+      }
+    } finally {
+      if (revision == _turnRevision) _turning = false;
+    }
+  }
+
+  void _cancelNavigation() {
+    _turnRevision++;
+    _turning = false;
+    _swipeCancelled = true;
+    _swipeStart = null;
+  }
+
+  Widget _readerGestures(ReaderState state, Widget child) {
+    final transition = context.read<SettingsBloc>().state.pageTransition;
+    if (_lastTransition != null && _lastTransition != transition) {
+      _cancelNavigation();
+      final revision = _turnRevision;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            revision == _turnRevision &&
+            _pageController.hasClients) {
+          _pageController.jumpToPage(state.spreads.spreadOf(state.currentPage));
+        }
+      });
+    }
+    _lastTransition = transition;
+    return Listener(
+        key: _readingViewport,
+        onPointerDown: (event) {
+          _pointers.add(event.pointer);
+          if (_pointers.length != 1) {
+            _swipeCancelled = true;
+            return;
+          }
+          _swipeStart = event.position;
+          _swipeTime = event.timeStamp;
+          _swipeCancelled = _zoomed || _turning;
+          _swipeMoved = false;
+        },
+        onPointerMove: (event) {
+          if (_swipeStart == null || _swipeMoved || _swipeCancelled) return;
+          if ((event.position - _swipeStart!).distance > 18) {
+            if (event.timeStamp - _swipeTime! >=
+                const Duration(milliseconds: 500)) {
+              _swipeCancelled = true;
+            }
+            _swipeMoved = true;
+          }
+        },
+        onPointerCancel: (event) {
+          _pointers.remove(event.pointer);
+          _swipeCancelled = true;
+        },
+        onPointerUp: (event) {
+          _pointers.remove(event.pointer);
+          final start = _swipeStart;
+          if (start == null ||
+              _swipeCancelled ||
+              _zoomed ||
+              state.readingMode == 2 ||
+              transition != ReaderPageTransition.none) return;
+          final delta = event.position - start;
+          final seconds =
+              (event.timeStamp - _swipeTime!).inMicroseconds / 1000000;
+          if ((!_swipeMoved && seconds >= .5) ||
+              delta.dx.abs() <= delta.dy.abs()) return;
+          final fast = seconds > 0 &&
+              delta.dx.abs() / seconds >= 500 &&
+              delta.dx.abs() >= 18;
+          if (delta.dx.abs() >= 48 || fast) {
+            _turnPage((delta.dx < 0) != (state.readingMode == 1) ? 1 : -1);
+          }
+        },
+        child: child);
+  }
+
   late final FileService _imageFiles;
   final Map<String, int> _thumbnailAttempts = {};
   final Map<int, (ReaderRequestController, FileService)> _pageFiles = {};
@@ -485,6 +623,7 @@ class _ReaderViewState extends State<_ReaderView> {
 
   @override
   Widget build(BuildContext context) {
+    context.select((SettingsBloc bloc) => bloc.state.pageTransition);
     final initial = context.read<ReaderBloc>().state;
     _schedulePreload();
     if (!_positionInitialized && initial.status == ReaderStatus.ready) {
@@ -528,6 +667,8 @@ class _ReaderViewState extends State<_ReaderView> {
                 _lastReadingMode != state.readingMode ||
                 _lastPageLayout != state.pageLayout ||
                 _lastSpreadAlignment != state.spreadAlignment)) {
+          _cancelNavigation();
+          _horizontalZoomed = false;
           _explicitPage = state.currentPage;
           _zoomController.value = Matrix4.identity();
           _pageController.dispose();
@@ -610,20 +751,22 @@ class _ReaderViewState extends State<_ReaderView> {
           body: Stack(
             children: [
               // Main content
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: state.readingMode == 2 ? _toggleUI : null,
-                onLongPress: state.readingMode == 2 ||
-                        state.pageLayout == ReaderPageLayout.doublePage
-                    ? null
-                    : () => _showPageMenu(state.currentPage),
-                onDoubleTap: state.readingMode == 2 && _isZoomed
-                    ? () => _zoomController.value = Matrix4.identity()
-                    : null,
-                child: state.readingMode == 2
-                    ? _buildVerticalReader(state)
-                    : _buildHorizontalReader(state),
-              ),
+              _readerGestures(
+                  state,
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: state.readingMode == 2 ? _readerTap : null,
+                    onLongPress: state.readingMode == 2 ||
+                            state.pageLayout == ReaderPageLayout.doublePage
+                        ? null
+                        : () => _showPageMenu(state.currentPage),
+                    onDoubleTap: state.readingMode == 2 && _isZoomed
+                        ? () => _zoomController.value = Matrix4.identity()
+                        : null,
+                    child: state.readingMode == 2
+                        ? _buildVerticalReader(state)
+                        : _buildHorizontalReader(state),
+                  )),
               // Top bar overlay
               if (state.showUI) _buildTopBar(context, state),
               // Bottom slider overlay
@@ -642,7 +785,7 @@ class _ReaderViewState extends State<_ReaderView> {
   // PhotoView's loading/error builders bypass its normal image gesture layer.
   Widget _horizontalPlaceholder(Widget child) => GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: _toggleUI,
+        onTapUp: _readerTap,
         child: SizedBox.expand(child: child),
       );
 
@@ -752,10 +895,9 @@ class _ReaderViewState extends State<_ReaderView> {
     final provider = OfflineImageProvider(
         GetIt.I<OfflineRepository>().files, localPage,
         session: widget.requests,
-        prepared:
-            !thumbnail && widget.initialRead?.matches(localPage) == true
-                ? widget.initialRead
-                : null,
+        prepared: !thumbnail && widget.initialRead?.matches(localPage) == true
+            ? widget.initialRead
+            : null,
         isCurrent: () => mounted && !widget.requests.isCancelled,
         beforeLoad: (index == _entryPage && !thumbnail)
             ? null
@@ -991,9 +1133,11 @@ class _ReaderViewState extends State<_ReaderView> {
             const SizedBox(height: 8),
             if (context.read<ReaderBloc>().state.offlineBook != null &&
                 !context.read<ReaderBloc>().networkAllowed)
-              Text(S.of(context).offlineError(
-                  context.read<ReaderBloc>().imageScope.isCurrent
-                      ? 'source_changed' : 'session_changed'),
+              Text(
+                  S.of(context).offlineError(
+                      context.read<ReaderBloc>().imageScope.isCurrent
+                          ? 'source_changed'
+                          : 'session_changed'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70)),
             TextButton(
@@ -1010,7 +1154,8 @@ class _ReaderViewState extends State<_ReaderView> {
     if (index == _entryPage && state.localPage(index) == null) {
       _releaseEntryPriority();
     }
-    if (state.offlineBook != null && !state.preloadWindow.targets.contains(index)) {
+    if (state.offlineBook != null &&
+        !state.preloadWindow.targets.contains(index)) {
       return _offlineMissing(index);
     }
     if (state.failedIndices.contains(index) ||
@@ -1045,7 +1190,17 @@ class _ReaderViewState extends State<_ReaderView> {
                 : ObjectKey(_pageController),
             pageController: _pageController,
             itemCount: state.spreads.count,
-            scrollPhysics: const ReaderScrollPhysics(),
+            scrollPhysics: _horizontalZoomed ||
+                    context.select(
+                            (SettingsBloc b) => b.state.pageTransition) ==
+                        ReaderPageTransition.none
+                ? const NeverScrollableScrollPhysics()
+                : const ReaderScrollPhysics(),
+            scaleStateChangedCallback: (scale) {
+              final zoomed = scale != PhotoViewScaleState.initial;
+              if (_horizontalZoomed != zoomed)
+                setState(() => _horizontalZoomed = zoomed);
+            },
             reverse: state.readingMode == 1, // RTL
             builder: (context, index) {
               if (state.pageLayout == ReaderPageLayout.doublePage) {
@@ -1055,7 +1210,7 @@ class _ReaderViewState extends State<_ReaderView> {
                       size: viewport,
                       child: _spreadRow(state, index,
                           horizontal: true, viewport: viewport)),
-                  onTapUp: (_, __, ___) => _toggleUI(),
+                  onTapUp: (_, details, ___) => _readerTap(details),
                   initialScale: 1.0,
                   minScale: 1.0,
                   maxScale: 3.0,
@@ -1067,15 +1222,15 @@ class _ReaderViewState extends State<_ReaderView> {
                   return PhotoViewGalleryPageOptions.customChild(
                       disableGestures: true,
                       child: GestureDetector(
-                          onTap: _toggleUI, child: _offlineMissing(index)));
+                          onTapUp: _readerTap, child: _offlineMissing(index)));
                 return PhotoViewGalleryPageOptions(
-                    onTapUp: (_, __, ___) => _toggleUI(),
+                    onTapUp: (_, details, ___) => _readerTap(details),
                     imageProvider: provider,
                     initialScale: PhotoViewComputedScale.contained,
                     minScale: PhotoViewComputedScale.contained,
                     maxScale: PhotoViewComputedScale.covered * 3,
-                    errorBuilder: (_, __, ___) => _horizontalPlaceholder(
-                        _pendingImage(state, index)));
+                    errorBuilder: (_, __, ___) =>
+                        _horizontalPlaceholder(_pendingImage(state, index)));
               }
               final image = state.loadedImages[index];
               if (!_onlineAllowed(state, index) ||
@@ -1084,12 +1239,12 @@ class _ReaderViewState extends State<_ReaderView> {
                   state.loadingIndices.contains(index) ||
                   state.failedIndices.contains(index)) {
                 return PhotoViewGalleryPageOptions.customChild(
-                  onTapUp: (_, __, ___) => _toggleUI(),
+                  onTapUp: (_, details, ___) => _readerTap(details),
                   child: _pendingImage(state, index),
                 );
               }
               return PhotoViewGalleryPageOptions(
-                onTapUp: (_, __, ___) => _toggleUI(),
+                onTapUp: (_, details, ___) => _readerTap(details),
                 imageProvider: _imageProvider(image.imageUrl,
                     page: index, attempt: state.imageAttempts[index] ?? 0),
                 filterQuality: FilterQuality.medium,
@@ -1148,6 +1303,7 @@ class _ReaderViewState extends State<_ReaderView> {
               itemCount: state.spreads.count,
               itemScrollController: _verticalScrollController,
               itemPositionsListener: _verticalPositionsListener,
+              physics: _isZoomed ? const NeverScrollableScrollPhysics() : null,
               initialScrollIndex: state.spreads.spreadOf(state.currentPage),
               itemBuilder: (context, index) {
                 if (state.pageLayout == ReaderPageLayout.doublePage ||
@@ -1166,8 +1322,7 @@ class _ReaderViewState extends State<_ReaderView> {
                               loadingHeight: MediaQuery.sizeOf(context).height,
                               errorBuilder: (_, __, ___) => SizedBox(
                                   height: 300,
-                                  child:
-                                      _pendingImage(state, index))));
+                                  child: _pendingImage(state, index))));
                 }
                 final image = state.loadedImages[index];
                 if (!_onlineAllowed(state, index) ||

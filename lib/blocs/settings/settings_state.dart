@@ -5,6 +5,8 @@ const _sentinel = Object();
 
 class SettingsState extends Equatable {
   final int themeMode; // 0=system, 1=light, 2=dark
+  final ReaderPageTransition pageTransition;
+  final bool savingPageTransition;
   final ReaderPageLayout pageLayout;
   final ReaderSpreadAlignment spreadAlignment;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
@@ -29,6 +31,8 @@ class SettingsState extends Equatable {
     this.readingMode = 0,
     this.preloadCount = 1,
     this.savingPreloadCount = false,
+    this.pageTransition = ReaderPageTransition.slide,
+    this.savingPageTransition = false,
     this.pageLayout = ReaderPageLayout.single,
     this.spreadAlignment = ReaderSpreadAlignment.width,
     this.displayMode = 0,
@@ -49,6 +53,8 @@ class SettingsState extends Equatable {
     int? readingMode,
     int? preloadCount,
     bool? savingPreloadCount,
+    ReaderPageTransition? pageTransition,
+    bool? savingPageTransition,
     ReaderPageLayout? pageLayout,
     ReaderSpreadAlignment? spreadAlignment,
     int? displayMode,
@@ -68,6 +74,8 @@ class SettingsState extends Equatable {
       readingMode: readingMode ?? this.readingMode,
       preloadCount: preloadCount ?? this.preloadCount,
       savingPreloadCount: savingPreloadCount ?? this.savingPreloadCount,
+      pageTransition: pageTransition ?? this.pageTransition,
+      savingPageTransition: savingPageTransition ?? this.savingPageTransition,
       pageLayout: pageLayout ?? this.pageLayout,
       spreadAlignment: spreadAlignment ?? this.spreadAlignment,
       displayMode: displayMode ?? this.displayMode,
@@ -99,6 +107,8 @@ class SettingsState extends Equatable {
         readingMode,
         preloadCount,
         savingPreloadCount,
+        pageTransition,
+        savingPageTransition,
         pageLayout,
         spreadAlignment,
         displayMode,

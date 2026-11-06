@@ -156,6 +156,21 @@ class LocalStorage {
     }
   }
 
+  ReaderPageTransition getReaderPageTransition() =>
+      _prefs.get('reader_page_transition') == 'none'
+          ? ReaderPageTransition.none
+          : ReaderPageTransition.slide;
+  Future<void> setReaderPageTransition(ReaderPageTransition value) async {
+    try {
+      if (!await _prefs.setString('reader_page_transition', value.name)) {
+        throw StateError('Could not save page transition');
+      }
+    } catch (_) {
+      await _prefs.reload();
+      rethrow;
+    }
+  }
+
   ReaderPageLayout getReaderPageLayout() =>
       _prefs.get('reader_page_layout') == 'doublePage'
           ? ReaderPageLayout.doublePage
