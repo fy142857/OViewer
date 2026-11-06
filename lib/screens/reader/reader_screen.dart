@@ -194,6 +194,10 @@ class _ReaderView extends StatefulWidget {
 class _ReaderViewState extends State<_ReaderView> {
   late PageController _pageController;
   final ItemScrollController _verticalScrollController = ItemScrollController();
+  double? _verticalInitialAlignment;
+  int? _centeredSpread;
+  bool _centerBoundarySpace = false;
+  bool _centerRepairQueued = false;
   final ItemPositionsListener _verticalPositionsListener =
       ItemPositionsListener.create();
   final ScrollController _thumbnailScrollController = ScrollController();
@@ -252,25 +256,103 @@ class _ReaderViewState extends State<_ReaderView> {
     // Let PhotoView finish the pointer's scale/scroll activity first.
     final revision = _turnRevision;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && revision == _turnRevision) _turnPage(next ? 1 : -1);
+      if (mounted && revision == _turnRevision) {
+        _turnPage(next ? 1 : -1, centerVertical: state.readingMode == 2);
+      }
     });
     WidgetsBinding.instance.ensureVisualUpdate();
   }
 
-  Future<void> _turnPage(int delta) async {
+  (double, double)? _verticalGeometry(int spread) {
+    final root = _readingViewport.currentContext;
+    final viewport = root?.findRenderObject() as RenderBox?;
+    RenderBox? row;
+    void visit(Element element) {
+      if (element.widget is FadeTransition &&
+          (element.widget as FadeTransition).opacity.value < .5) return;
+      if (element.widget.key == ValueKey('reader-spread-$spread')) {
+        final render = element.findRenderObject();
+        if (render is RenderBox && render.attached && render.hasSize)
+          row = render;
+        return;
+      }
+      element.visitChildren(visit);
+    }
+
+    root?.visitChildElements(visit);
+    if (row != null &&
+        viewport != null &&
+        viewport.hasSize &&
+        viewport.size.height > 0) {
+      return (
+        row!.localToGlobal(Offset.zero, ancestor: viewport).dy /
+            viewport.size.height,
+        row!.size.height / viewport.size.height
+      );
+    }
+    for (final position in _verticalPositionsListener.itemPositions.value) {
+      if (position.index == spread)
+        return (
+          position.itemLeadingEdge,
+          position.itemTrailingEdge - position.itemLeadingEdge
+        );
+    }
+    return null;
+  }
+
+  double _centerAlignment(int spread) =>
+      (1 - (_verticalGeometry(spread)?.$2 ?? 1)) / 2;
+
+  double _verticalAnchor(int spread, double leading) =>
+      leading - (_centerBoundarySpace && spread == 0 ? .5 : 0);
+
+  void _centerVerticalSpread(int spread) {
+    if (!mounted ||
+        _zoomed ||
+        _centeredSpread != spread ||
+        _explicitPage == null ||
+        !_verticalScrollController.isAttached ||
+        widget.requests.isCancelled) return;
+    final geometry = _verticalGeometry(spread);
+    final viewport =
+        _readingViewport.currentContext?.findRenderObject() as RenderBox?;
+    if (geometry == null || viewport == null) return;
+    final error = (geometry.$1 + geometry.$2 / 2 - .5) * viewport.size.height;
+    if (error.abs() <= 1) return;
+    // Re-anchor a fresh list after decoded dimensions change. Reusing a list
+    // which is still correcting its old dimensions can retain a stale offset.
+    setState(() {
+      _verticalInitialAlignment =
+          _verticalAnchor(spread, (1 - geometry.$2) / 2);
+      _scrollStorage = PageStorageBucket();
+    });
+  }
+
+  Future<void> _turnPage(int delta, {bool centerVertical = false}) async {
     final state = context.read<ReaderBloc>().state;
     if (_turning || _zoomed || widget.requests.isCancelled) return;
     final target = state.spreads.spreadOf(state.currentPage) + delta;
     if (target < 0 || target >= state.spreads.count) return;
     _turning = true;
     final revision = ++_turnRevision;
+    _verticalInitialAlignment = null;
+    _centeredSpread = state.readingMode == 2 && centerVertical ? target : null;
     _explicitPage =
         state.readingMode == 2 ? state.spreads.pages(target).first : null;
     try {
       if (state.readingMode == 2) {
         if (_verticalScrollController.isAttached) {
+          if (centerVertical && !_centerBoundarySpace) {
+            setState(() => _centerBoundarySpace = true);
+            await WidgetsBinding.instance.endOfFrame;
+            if (!mounted ||
+                revision != _turnRevision ||
+                widget.requests.isCancelled) return;
+          }
+          final alignment = centerVertical ? _centerAlignment(target) : 0.0;
           await _verticalScrollController.scrollTo(
               index: target,
+              alignment: alignment,
               duration: const Duration(milliseconds: 150),
               curve: Curves.easeOut);
           // A second tap can hold the scroll activity before its animation
@@ -284,8 +366,12 @@ class _ReaderViewState extends State<_ReaderView> {
               _verticalScrollController.isAttached &&
               !_verticalPositionsListener.itemPositions.value.any((position) =>
                   position.index == target &&
-                  position.itemLeadingEdge.abs() < .001)) {
-            _verticalScrollController.jumpTo(index: target);
+                  (position.itemLeadingEdge - alignment).abs() < .001)) {
+            _verticalScrollController.jumpTo(
+                index: target, alignment: _verticalAnchor(target, alignment));
+          }
+          if (centerVertical && revision == _turnRevision) {
+            _centerVerticalSpread(target);
           }
         }
       } else if (_pageController.hasClients) {
@@ -299,11 +385,16 @@ class _ReaderViewState extends State<_ReaderView> {
         }
       }
     } finally {
-      if (revision == _turnRevision) _turning = false;
+      if (revision == _turnRevision) {
+        _turning = false;
+        _queueVerticalCenter();
+      }
     }
   }
 
   void _cancelNavigation() {
+    _centeredSpread = null;
+    _verticalInitialAlignment = null;
     _turnRevision++;
     _turning = false;
     _swipeCancelled = true;
@@ -450,6 +541,7 @@ class _ReaderViewState extends State<_ReaderView> {
     super.didChangeDependencies();
     final viewport = MediaQuery.sizeOf(context);
     if (_viewport != null && _viewport != viewport) {
+      _verticalInitialAlignment = null;
       _explicitPage = context.read<ReaderBloc>().state.currentPage;
       _scrollStorage = PageStorageBucket();
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -460,12 +552,14 @@ class _ReaderViewState extends State<_ReaderView> {
   }
 
   void _jumpToPage(int page) {
+    _cancelNavigation();
     final bloc = context.read<ReaderBloc>();
     _explicitPage = page;
     bloc.add(PageChanged(page));
     final spread = bloc.state.spreads.spreadOf(page);
     if (bloc.state.readingMode == 2) {
-      _verticalScrollController.jumpTo(index: spread);
+      _verticalScrollController.jumpTo(
+          index: spread, alignment: _verticalAnchor(spread, 0));
     } else {
       _pageController.jumpToPage(spread);
     }
@@ -603,6 +697,7 @@ class _ReaderViewState extends State<_ReaderView> {
   void _onZoomChanged() {
     final scale = _zoomController.value.getMaxScaleOnAxis();
     final zoomed = scale > 1.01;
+    if (zoomed) _centeredSpread = null;
     if (zoomed != _isZoomed) {
       setState(() => _isZoomed = zoomed);
     }
@@ -611,6 +706,7 @@ class _ReaderViewState extends State<_ReaderView> {
   void _onVerticalScroll() {
     final positions = _verticalPositionsListener.itemPositions.value;
     if (positions.isEmpty) return;
+    _queueVerticalCenter();
     final offlineState = context.read<ReaderBloc>().state;
     final visible = {
       for (final position in positions)
@@ -647,6 +743,25 @@ class _ReaderViewState extends State<_ReaderView> {
     final page = bloc.state.spreads.pages(current.index).first;
     if (page != bloc.state.currentPage) {
       bloc.add(PageChanged(page));
+    }
+  }
+
+  void _queueVerticalCenter() {
+    final centered = _centeredSpread;
+    if (centered != null && !_turning && !_centerRepairQueued && !_zoomed) {
+      _centerRepairQueued = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // The positioned list also publishes/corrects offsets after layout.
+        // Measure after that work has reached the following frame.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _centerRepairQueued = false;
+          if (mounted && _centeredSpread == centered && _explicitPage != null) {
+            _centerVerticalSpread(centered);
+          }
+        });
+        WidgetsBinding.instance.ensureVisualUpdate();
+      });
+      WidgetsBinding.instance.ensureVisualUpdate();
     }
   }
 
@@ -1356,7 +1471,11 @@ class _ReaderViewState extends State<_ReaderView> {
       final viewport = constraints.biggest;
       return NotificationListener<ScrollStartNotification>(
         onNotification: (notification) {
-          if (notification.dragDetails != null) _explicitPage = null;
+          if (notification.dragDetails != null) {
+            _explicitPage = null;
+            _centeredSpread = null;
+            _verticalInitialAlignment = null;
+          }
           return false;
         },
         child: PageStorage(
@@ -1367,18 +1486,33 @@ class _ReaderViewState extends State<_ReaderView> {
             maxScale: 3.0,
             panEnabled: _isZoomed,
             scaleEnabled: true,
-            child: ScrollablePositionedList.builder(
-              key: ObjectKey(_scrollStorage),
-              itemCount: state.spreads.count,
-              itemScrollController: _verticalScrollController,
-              itemPositionsListener: _verticalPositionsListener,
-              physics: _isZoomed ? const NeverScrollableScrollPhysics() : null,
-              initialScrollIndex: state.spreads.spreadOf(state.currentPage),
-              itemBuilder: (context, index) {
-                return _spreadRow(state, index,
-                    horizontal: false, viewport: viewport);
-              },
-            ),
+            child: NotificationListener<SizeChangedLayoutNotification>(
+                onNotification: (_) {
+                  _queueVerticalCenter();
+                  return false;
+                },
+                child: ScrollablePositionedList.builder(
+                  key: ObjectKey(_scrollStorage),
+                  itemCount: state.spreads.count,
+                  itemScrollController: _verticalScrollController,
+                  itemPositionsListener: _verticalPositionsListener,
+                  physics:
+                      _isZoomed ? const NeverScrollableScrollPhysics() : null,
+                  initialScrollIndex: state.spreads
+                      .spreadOf(_explicitPage ?? state.currentPage),
+                  initialAlignment: _verticalInitialAlignment ??
+                      _verticalAnchor(
+                          state.spreads
+                              .spreadOf(_explicitPage ?? state.currentPage),
+                          0),
+                  padding: _centerBoundarySpace
+                      ? EdgeInsets.only(
+                          top: viewport.height / 2, bottom: viewport.height)
+                      : EdgeInsets.zero,
+                  itemBuilder: (_, index) => SizeChangedLayoutNotifier(
+                      child: _spreadRow(state, index,
+                          horizontal: false, viewport: viewport)),
+                )),
           ),
         ),
       );

@@ -10,7 +10,12 @@ import 'package:oviewer/repositories/favorites_repository.dart';
 import 'package:oviewer/blocs/favorites/favorites_bloc.dart';
 import 'package:oviewer/blocs/favorites/favorites_event.dart';
 import 'favorites_scope_test.dart' show DioMock, Db, Repo, result, flush;
-import 'favorites_search_test.dart' show html;
+
+String categoryPage(List<(int, String)> rows, {String? next}) =>
+    '<table class="itg gltc"><tbody><tr><th>Category</th><th>Gallery</th><th>Info</th></tr>'
+    '${rows.map((row) => '<tr><td><div class="cn">${row.$2}</div></td><td><a href="/g/${row.$1}/abc/"><span class="glink">Gallery ${row.$1}</span></a></td><td>1 page</td></tr>').join()}'
+    '</tbody></table>${next == null ? '<span id="unext"></span>' : '<a id="unext" href="$next">Next</a>'}'
+    '${rows.isEmpty ? '<p>No hits found</p>' : ''}';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -33,9 +38,11 @@ void main() {
           when(() => dio.get(any())).thenAnswer((call) async {
             final uri = Uri.parse(call.positionalArguments.first as String);
             urls.add(uri);
+            final category = categories.isEmpty ? 'Misc' : categories.first;
             return uri.queryParameters['next'] == null
-                ? html([10], next: '?next=9&amp;favcat=1&amp;f_cats=1023')
-                : html([9]);
+                ? categoryPage([(10, category)],
+                    next: '?next=9&amp;favcat=1&amp;f_cats=1023')
+                : categoryPage([(9, category)]);
           });
           final repo = FavoritesRepository(dio, Db());
           final first = await repo.fetchCloudFavorites(
@@ -69,6 +76,101 @@ void main() {
       }
     }
   }
+  for (final ex in [false, true]) {
+    for (final query in [null, 'female:test']) {
+      test(
+          'mixed categories are filtered across empty pages EX=$ex query=$query',
+          () async {
+        AppConstants.useExHentai = ex;
+        final dio = DioMock();
+        final urls = <Uri>[];
+        when(() => dio.get(any())).thenAnswer((call) async {
+          final uri = Uri.parse(call.positionalArguments.first as String);
+          urls.add(uri);
+          return switch (uri.queryParameters['next']) {
+            '1' => categoryPage([(5, 'Misc')], next: '?next=2'),
+            '2' => categoryPage([(4, 'Manga'), (3, 'Western')]),
+            _ => categoryPage([(8, 'Doujinshi'), (7, 'Manga'), (6, 'Western')],
+                next: '?next=1'),
+          };
+        });
+        final repo = FavoritesRepository(dio, Db());
+        final first = await repo.fetchCloudFavorites(
+            cat: 4, categories: ['Manga'], keyword: query);
+        expect(first.galleries.map((g) => g.gid), [7]);
+        final more = await repo.fetchCloudFavorites(
+            cat: 4,
+            categories: ['Manga'],
+            keyword: query,
+            nextUrl: first.nextPageUrl,
+            page: 1);
+        expect(more.galleries.map((g) => g.gid), [4]);
+        expect(more.nextPageUrl, isNull);
+        expect(urls.map((u) => u.queryParameters['next']), [null, '1', '2']);
+        expect(urls.every((u) => u.queryParameters['favcat'] == '4'), true);
+      });
+    }
+  }
+  test('empty first pages continue until an actual match, or true exhaustion',
+      () async {
+    final dio = DioMock();
+    when(() => dio.get(any())).thenAnswer((call) async {
+      final uri = Uri.parse(call.positionalArguments.first as String);
+      return uri.queryParameters['next'] == null
+          ? categoryPage([(3, 'Misc')], next: '?next=2')
+          : categoryPage([(2, 'Western')]);
+    });
+    final repo = FavoritesRepository(dio, Db());
+    expect(
+        (await repo.fetchCloudFavorites(categories: ['Western']))
+            .galleries
+            .single
+            .gid,
+        2);
+    final empty = await repo.fetchCloudFavorites(categories: ['Manga']);
+    expect(empty.galleries, isEmpty);
+    expect(empty.nextPageUrl, isNull);
+    final multi =
+        await repo.fetchCloudFavorites(categories: ['Western', 'Misc']);
+    expect(multi.galleries.single.gid, 3);
+    expect(multi.nextPageUrl, isNotNull);
+  });
+  test(
+      'skipping categories retains retry position and stops repeated or cancelled cursors',
+      () async {
+    final dio = DioMock();
+    var fail = true;
+    when(() => dio.get(any(), cancelToken: any(named: 'cancelToken')))
+        .thenAnswer((call) async {
+      final uri = Uri.parse(call.positionalArguments.first as String);
+      if (uri.queryParameters['next'] != null) {
+        if (fail) throw StateError('offline');
+        return categoryPage([(1, 'Manga')]);
+      }
+      return categoryPage([(2, 'Misc')], next: '?next=1');
+    });
+    final repo = FavoritesRepository(dio, Db());
+    final token = CancelToken();
+    await expectLater(
+        repo.fetchCloudFavorites(categories: ['Manga'], cancelToken: token),
+        throwsStateError);
+    fail = false;
+    expect(
+        (await repo
+                .fetchCloudFavorites(categories: ['Manga'], cancelToken: token))
+            .galleries
+            .single
+            .gid,
+        1);
+    token.cancel();
+    await expectLater(
+        repo.fetchCloudFavorites(categories: ['Manga'], cancelToken: token),
+        throwsA(isA<DioException>()));
+    when(() => dio.get(any())).thenAnswer(
+        (_) async => categoryPage([(2, 'Misc')], next: '?next=repeat'));
+    await expectLater(
+        repo.fetchCloudFavorites(categories: ['Manga']), throwsFormatException);
+  });
   test(
       'apply combines group and categories, cancels stale page, preserves query and isolates entries',
       () async {

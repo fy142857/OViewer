@@ -23,7 +23,8 @@ class GalleryCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 140,
+          height: 140 *
+              MediaQuery.textScaleFactorOf(context).clamp(1.0, double.infinity),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

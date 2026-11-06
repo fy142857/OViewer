@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import '../core/theme/app_colors.dart';
+import '../core/l10n/s.dart';
 import '../models/gallery_tag.dart';
 import '../repositories/tag_translation_repository.dart';
 
@@ -51,8 +52,16 @@ class TagChip extends StatelessWidget {
       triggerMode: TooltipTriggerMode.manual,
       child: InkWell(
         onTap: onTap,
-        onLongPress: () => Clipboard.setData(
-            ClipboardData(text: '${tag.namespace}:${tag.key}')),
+        onLongPress: () async {
+          await Clipboard.setData(
+              ClipboardData(text: '${tag.namespace}:${tag.key}'));
+          if (!context.mounted) return;
+          ScaffoldMessenger.maybeOf(context)
+            ?..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(
+                content: Text(S.of(context).copied),
+                duration: const Duration(seconds: 2)));
+        },
         borderRadius: BorderRadius.circular(4),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),

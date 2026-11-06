@@ -230,6 +230,15 @@ void main() {
               await volume(1);
               expect(bloc.state.currentPage,
                   layout == ReaderPageLayout.single ? 1 : 2);
+              if (mode == 2 && layout == ReaderPageLayout.single) {
+                expect(
+                    tester
+                        .getTopLeft(
+                            find.byKey(const ValueKey('reader-spread-1')))
+                        .dy,
+                    closeTo(0, 1),
+                    reason: 'Volume navigation retains top alignment');
+              }
               expect(bloc.state.showUI, isFalse);
               await volume(-1);
               expect(bloc.state.currentPage, 0);
@@ -340,6 +349,28 @@ void main() {
                 await advance();
               }
               expect(bloc.state.readyResources.containsKey(0), isTrue);
+              if (mode == 2) {
+                // Disk/decode completions use the real async zone; flush it as
+                // well as animation frames until the final correction settles.
+                for (var io = 0; io < 20; io++) {
+                  completeDownloads(png);
+                  await advance();
+                  for (var frame = 0; frame < 6; frame++) {
+                    await tester.pump(const Duration(milliseconds: 50));
+                  }
+                  final row = tester.renderObject<RenderBox>(
+                      find.byKey(const ValueKey('reader-spread-0')));
+                  if ((row.localToGlobal(row.size.center(Offset.zero)).dy - 400)
+                              .abs() <=
+                          1 &&
+                      !tester.binding.hasScheduledFrame) break;
+                }
+                final target = tester.renderObject<RenderBox>(
+                    find.byKey(const ValueKey('reader-spread-0')));
+                expect(target.localToGlobal(target.size.center(Offset.zero)).dy,
+                    closeTo(400, 1.1),
+                    reason: 'Late decoded dimensions keep the target centered');
+              }
               if (mode == 2 && alignment == ReaderSpreadAlignment.height) {
                 expect(
                     tester

@@ -97,8 +97,11 @@ class _FavoritesFiltersSheetState extends State<_FavoritesFiltersSheet> {
                         key: const ValueKey('favorite-group-selector'),
                         value: _group,
                         isExpanded: true,
-                        decoration:
-                            InputDecoration(labelText: s.favoriteCategories),
+                        decoration: InputDecoration(
+                            labelText: s.favoriteCategories,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8)),
                         items: [
                           for (var i = -1; i <= 9; i++)
                             DropdownMenuItem(

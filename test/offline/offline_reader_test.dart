@@ -436,6 +436,28 @@ void main() {
                 reason:
                     'Width fit preserves the full tall image without clamping');
           }
+          bloc.add(ToggleReaderUI());
+          await settleOffline(tester);
+          await tester
+              .tapAt(Offset(viewport.width * .05, viewport.height * .3));
+          await settleOffline(tester);
+          final previousSpread = layout == ReaderPageLayout.single ? 1 : 0;
+          final previous = tester
+              .getRect(find.byKey(ValueKey('reader-spread-$previousSpread')));
+          expect(previous.center.dy, closeTo(viewport.height / 2, 1.1),
+              reason: 'Edge previous centers the short target image/group');
+          expect(bloc.state.currentPage,
+              layout == ReaderPageLayout.single ? 1 : 0);
+          await tester
+              .tapAt(Offset(viewport.width * .95, viewport.height * .6));
+          await settleOffline(tester);
+          final nextSpread = layout == ReaderPageLayout.single ? 2 : 1;
+          final next =
+              tester.getRect(find.byKey(ValueKey('reader-spread-$nextSpread')));
+          expect(next.center.dy, closeTo(viewport.height / 2, 1.1),
+              reason:
+                  'Edge next centers tall targets as well as short targets');
+          expect(bloc.state.currentPage, 2);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
           await tester.runAsync(

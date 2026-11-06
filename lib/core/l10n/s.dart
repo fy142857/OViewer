@@ -6,6 +6,7 @@ import '../../blocs/settings/settings_bloc.dart';
 /// Simple map-based localization. Supports zh (Chinese) and en (English).
 /// Usage: `S.of(context).settings`
 class S {
+  String get copied => _zh ? '已复制' : 'Copied';
   String get offlineCache => _zh ? '离线缓存' : 'Offline cache';
   String get offlineParallelGalleries =>
       _zh ? '同时下载的漫画数' : 'Parallel galleries';

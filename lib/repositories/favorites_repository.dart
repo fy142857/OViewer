@@ -41,7 +41,7 @@ class FavoritesRepository {
             .fold<int>(0, (bits, entry) => bits | entry.value);
     final query = keyword?.trim() ?? '';
     if (query.isEmpty) {
-      return _fetchPage(
+      return _fetchMatchingPage(
           page: page,
           cat: cat,
           nextUrl: nextUrl,
@@ -86,7 +86,7 @@ class FavoritesRepository {
           final branch = Uri.parse(url).queryParameters['f_search'];
           if (!normalized.contains(branch))
             throw const FormatException('Invalid favorites query cursor');
-          final r = await _fetchPage(
+          final r = await _fetchMatchingPage(
               cat: cat,
               page: page,
               nextUrl: url,
@@ -105,6 +105,49 @@ class FavoritesRepository {
         nextPageUrl: result.nextPageUrl,
         requestUrl: nextUrl);
   }
+
+  // Favorites responses may ignore the category parameter. Validate real rows
+  // and pass completely excluded pages without presenting a false empty result.
+  Future<FavoritesResult> _fetchMatchingPage({
+    required int page,
+    required int cat,
+    String? nextUrl,
+    CancelToken? cancelToken,
+    String? keyword,
+    required int excludedCategories,
+  }) async {
+    final site = AppConstants.baseUrl;
+    final session = _dio.sessionRevision;
+    final visited = <String>{};
+    var cursor = nextUrl;
+    var currentPage = page;
+    while (true) {
+      if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
+      if (site != AppConstants.baseUrl || session != _dio.sessionRevision) {
+        throw StateError('Favorites session expired');
+      }
+      final result = await _fetchPage(
+          page: currentPage,
+          cat: cat,
+          nextUrl: cursor,
+          cancelToken: cancelToken,
+          keyword: keyword,
+          excludedCategories: excludedCategories);
+      if (result.requestUrl != null && !visited.add(result.requestUrl!)) {
+        throw const FormatException('Repeated favorites filter page');
+      }
+      if (result.galleries.isNotEmpty || result.nextPageUrl == null)
+        return result;
+      if (visited.contains(result.nextPageUrl)) {
+        throw const FormatException('Repeated favorites filter cursor');
+      }
+      cursor = result.nextPageUrl;
+      currentPage++;
+    }
+  }
+
+  static String _categoryKey(String category) =>
+      category.toLowerCase().replaceAll(RegExp(r'[\s-]+'), '');
 
   /// Every page stays on the selected site and favorite category. A server
   /// cursor supplies ordering/position, never a different account or category.
@@ -152,6 +195,16 @@ class FavoritesRepository {
       throw const FormatException('Expected a favorites page');
     }
     final pageCount = GalleryListParser.parsePageCount(html);
+    final allowedCategories = {
+      for (final entry in AppConstants.categoryBits.entries)
+        if (excludedCategories & entry.value == 0) _categoryKey(entry.key)
+    };
+    final matching = excludedCategories == 0
+        ? galleries
+        : galleries
+            .where((gallery) =>
+                allowedCategories.contains(_categoryKey(gallery.category)))
+            .toList();
     // #unext without href explicitly means the end in cursor-based layouts.
     final button = document.querySelector('#unext');
     String? next = button == null
@@ -179,7 +232,7 @@ class FavoritesRepository {
           '[favorites-metric] site=${origin.host} category=$cat page=$page count=${galleries.length} next=${next != null} controls=$slots');
     }
     return FavoritesResult(
-        galleries: galleries,
+        galleries: matching,
         totalPages: pageCount,
         nextPageUrl: next,
         requestUrl: url);

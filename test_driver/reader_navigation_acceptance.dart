@@ -82,11 +82,16 @@ Future<void> run() async {
       for (final transition in ReaderPageTransition.values) {
         settings.add(UpdateReadingMode(mode));
         settings.add(UpdateReaderPageLayout(layout));
+        final alignment = transition == ReaderPageTransition.none
+            ? ReaderSpreadAlignment.width
+            : ReaderSpreadAlignment.height;
+        settings.add(UpdateReaderSpreadAlignment(alignment));
         final done = Completer<void>();
         settings.add(UpdateReaderPageTransition(transition, done));
         await done.future;
         await waitFor(() =>
             settings.state.readingMode == mode &&
+            settings.state.spreadAlignment == alignment &&
             settings.state.pageLayout == layout);
         unawaited(navigator.pushNamed('/reader', arguments: {
           'gid': key.gid,
@@ -123,6 +128,19 @@ Future<void> run() async {
                 (layout == ReaderPageLayout.single ? 1 : 2),
             'Next edge: $mode/$layout/$transition');
         check(reader!.state.showUI, 'Turning must retain controls');
+        if (mode == 2) {
+          final spread =
+              reader!.state.spreads.spreadOf(reader!.state.currentPage);
+          final target = elements()
+              .firstWhere(
+                  (e) => e.widget.key == ValueKey('reader-spread-$spread'))
+              .findRenderObject()! as RenderBox;
+          final center =
+              target.localToGlobal(Offset(0, target.size.height / 2)).dy;
+          final expected = box.localToGlobal(Offset(0, box.size.height / 2)).dy;
+          check((center - expected).abs() < 1.5,
+              'Vertical edge turn centers the image/group: $layout/$alignment');
+        }
         await tap(previous);
         check(reader!.state.currentPage == 0, 'Previous edge');
         await tap(point(.5, .5));
