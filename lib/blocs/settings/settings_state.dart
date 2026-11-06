@@ -7,6 +7,7 @@ class SettingsState extends Equatable {
   final int themeMode; // 0=system, 1=light, 2=dark
   final ReaderPageTransition pageTransition;
   final bool savingPageTransition;
+  final bool volumeKeys, savingVolumeKeys;
   final ReaderPageLayout pageLayout;
   final ReaderSpreadAlignment spreadAlignment;
   final int readingMode; // 0=LR, 1=RL, 2=vertical
@@ -33,6 +34,8 @@ class SettingsState extends Equatable {
     this.savingPreloadCount = false,
     this.pageTransition = ReaderPageTransition.slide,
     this.savingPageTransition = false,
+    this.volumeKeys = false,
+    this.savingVolumeKeys = false,
     this.pageLayout = ReaderPageLayout.single,
     this.spreadAlignment = ReaderSpreadAlignment.width,
     this.displayMode = 0,
@@ -55,6 +58,8 @@ class SettingsState extends Equatable {
     bool? savingPreloadCount,
     ReaderPageTransition? pageTransition,
     bool? savingPageTransition,
+    bool? volumeKeys,
+    bool? savingVolumeKeys,
     ReaderPageLayout? pageLayout,
     ReaderSpreadAlignment? spreadAlignment,
     int? displayMode,
@@ -76,6 +81,8 @@ class SettingsState extends Equatable {
       savingPreloadCount: savingPreloadCount ?? this.savingPreloadCount,
       pageTransition: pageTransition ?? this.pageTransition,
       savingPageTransition: savingPageTransition ?? this.savingPageTransition,
+      volumeKeys: volumeKeys ?? this.volumeKeys,
+      savingVolumeKeys: savingVolumeKeys ?? this.savingVolumeKeys,
       pageLayout: pageLayout ?? this.pageLayout,
       spreadAlignment: spreadAlignment ?? this.spreadAlignment,
       displayMode: displayMode ?? this.displayMode,
@@ -109,6 +116,8 @@ class SettingsState extends Equatable {
         savingPreloadCount,
         pageTransition,
         savingPageTransition,
+        volumeKeys,
+        savingVolumeKeys,
         pageLayout,
         spreadAlignment,
         displayMode,

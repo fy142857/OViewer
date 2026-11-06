@@ -191,11 +191,11 @@ class _CommentCardState extends State<CommentCard> {
     }
 
     if (spans.isEmpty) {
-      return Text(plainText, style: style);
+      return SelectableText(plainText, style: style);
     }
 
-    return RichText(
-      text: TextSpan(style: style, children: spans),
+    return SelectableText.rich(
+      TextSpan(style: style, children: spans),
     );
   }
 

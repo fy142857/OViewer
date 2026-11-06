@@ -326,6 +326,9 @@ void main() {
       expect(bloc.state.allCommentsLoaded, false);
       await tester.scrollUntilVisible(find.text('Retry'), 500,
           scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Retry'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
       expect(bloc.state.detail!.comments.length, 202);

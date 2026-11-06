@@ -160,6 +160,19 @@ class LocalStorage {
       _prefs.get('reader_page_transition') == 'none'
           ? ReaderPageTransition.none
           : ReaderPageTransition.slide;
+
+  bool getReaderVolumeKeys() => _prefs.get('reader_volume_keys') == true;
+  Future<void> setReaderVolumeKeys(bool enabled) async {
+    try {
+      if (!await _prefs.setBool('reader_volume_keys', enabled)) {
+        throw StateError('Could not save volume keys');
+      }
+    } catch (_) {
+      await _prefs.reload();
+      rethrow;
+    }
+  }
+
   Future<void> setReaderPageTransition(ReaderPageTransition value) async {
     try {
       if (!await _prefs.setString('reader_page_transition', value.name)) {

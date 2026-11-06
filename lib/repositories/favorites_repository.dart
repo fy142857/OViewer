@@ -31,11 +31,22 @@ class FavoritesRepository {
       int cat = -1,
       String? nextUrl,
       CancelToken? cancelToken,
+      List<String> categories = const [],
       String? keyword}) async {
+    final selected = categories.toSet();
+    final excluded = selected.isEmpty
+        ? 0
+        : AppConstants.categoryBits.entries
+            .where((entry) => !selected.contains(entry.key))
+            .fold<int>(0, (bits, entry) => bits | entry.value);
     final query = keyword?.trim() ?? '';
     if (query.isEmpty) {
       return _fetchPage(
-          page: page, cat: cat, nextUrl: nextUrl, cancelToken: cancelToken);
+          page: page,
+          cat: cat,
+          nextUrl: nextUrl,
+          cancelToken: cancelToken,
+          excludedCategories: excluded);
     }
     final site = AppConstants.baseUrl;
     final session = _dio.sessionRevision;
@@ -50,9 +61,15 @@ class FavoritesRepository {
           'f_search': q,
           'sn': 'on',
           'st': 'on',
+          'f_cats': '$excluded',
           if (cat >= 0) 'favcat': '$cat'
         }).toString();
-    final scope = {'site': site, 'query': query, 'category': cat};
+    final scope = {
+      'site': site,
+      'query': query,
+      'category': cat,
+      'excludedCategories': excluded
+    };
     final result = await mergeSearchResults(
         initialUrls: normalized.map(first).toList(),
         scope: scope,
@@ -74,6 +91,7 @@ class FavoritesRepository {
               page: page,
               nextUrl: url,
               cancelToken: cancelToken,
+              excludedCategories: excluded,
               keyword: branch);
           return SearchResult(
               galleries: r.galleries,
@@ -96,6 +114,7 @@ class FavoritesRepository {
     String? nextUrl,
     CancelToken? cancelToken,
     String? keyword,
+    int excludedCategories = 0,
   }) async {
     final first = ApiEndpoints.favorites(page: page, cat: cat);
     final origin = Uri.parse(AppConstants.baseUrl);
@@ -107,6 +126,7 @@ class FavoritesRepository {
         throw const FormatException('Invalid favorites page link');
       }
       final params = {...uri.queryParameters}..remove('favcat');
+      params['f_cats'] = '$excludedCategories';
       if (cat >= 0) params['favcat'] = '$cat';
       params.remove('f_search');
       if (keyword != null) {

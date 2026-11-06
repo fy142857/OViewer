@@ -52,6 +52,15 @@ class SelectFavoriteCategory extends FavoritesEvent {
 
 class EnsureFavoritesLoaded extends FavoritesEvent {}
 
+class ApplyFavoriteFilters extends FavoritesEvent {
+  final int category;
+  final List<String> galleryCategories;
+  const ApplyFavoriteFilters(this.category, this.galleryCategories,
+      {super.entry});
+  @override
+  List<Object?> get props => [category, galleryCategories, entry];
+}
+
 class FavoritesScopeReset extends FavoritesEvent {
   final int generation;
   final bool clearKeyword;

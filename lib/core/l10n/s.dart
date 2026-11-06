@@ -38,6 +38,9 @@ class S {
       default: return _zh ? '请输入页码或区间，用逗号分隔' : 'Enter pages or ranges separated by commas';
     }
   }
+  String get readerVolumeKeys => _zh ? '音量键翻页' : 'Volume key navigation';
+  String get readerVolumeKeysHint => _zh ? '音量上键上一页，下键下一页，仅阅读时生效' : 'Volume up: previous; volume down: next. Active only while reading.';
+  String get readerVolumeKeysSaveFailed => _zh ? '音量键设置保存失败，请重试' : 'Could not save volume key settings. Please retry.';
   String get offlineAddPage => _zh ? '加入离线下载（联网）' : 'Add to offline download (online)';
   String get offlineNotCached => _zh ? '尚未缓存' : 'Not cached yet';
   String get offlineReload => _zh ? '重新读取' : 'Read again';

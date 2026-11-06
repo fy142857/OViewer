@@ -34,6 +34,14 @@ class UpdateReaderPageTransition extends SettingsEvent {
   List<Object?> get props => [value];
 }
 
+class UpdateReaderVolumeKeys extends SettingsEvent {
+  final bool enabled;
+  final Completer<void> completer;
+  const UpdateReaderVolumeKeys(this.enabled, this.completer);
+  @override
+  List<Object?> get props => [enabled];
+}
+
 class UpdateReaderPageLayout extends SettingsEvent {
   final ReaderPageLayout layout;
   const UpdateReaderPageLayout(this.layout);

@@ -18,6 +18,7 @@ import 'package:oviewer/core/network/eh_image_cache_manager.dart';
 import 'package:oviewer/core/parser/gallery_detail_parser.dart';
 import 'package:oviewer/core/storage/reader_index_cache.dart';
 import 'package:oviewer/core/storage/reader_reentry_cache.dart';
+import 'package:oviewer/core/services/reader_volume_keys.dart';
 import 'package:oviewer/models/gallery_image.dart';
 import 'package:oviewer/models/reader_index_page.dart';
 import 'package:oviewer/models/reader_page_layout.dart';
@@ -75,15 +76,19 @@ void main() {
     for (final variant in [
       for (final layout in ReaderPageLayout.values)
         for (final transition in ReaderPageTransition.values)
-          (layout, transition)
+          for (final alignment in mode == 2
+              ? ReaderSpreadAlignment.values
+              : [ReaderSpreadAlignment.width])
+            (layout, transition, alignment)
     ]) {
       final layout = variant.$1;
       final transition = variant.$2;
+      final alignment = variant.$3;
       for (final fail in mode < 2 && layout == ReaderPageLayout.single
           ? [false, true]
           : [false]) {
         testWidgets(
-            'issue 73: controls work before first frame mode=$mode layout=$layout transition=$transition fail=$fail',
+            'reader controls and volume keys mode=$mode layout=$layout transition=$transition alignment=$alignment fail=$fail',
             (tester) async {
           await tester.binding.setSurfaceSize(const Size(400, 800));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -95,12 +100,13 @@ void main() {
           when(() => settings.getReadingMode()).thenReturn(mode);
           when(() => settings.getReaderPageLayout()).thenReturn(layout);
           when(() => settings.getReaderPreloadCount()).thenReturn(1);
-          when(() => settings.getReaderSpreadAlignment())
-              .thenReturn(ReaderSpreadAlignment.width);
+          when(() => settings.getReaderSpreadAlignment()).thenReturn(alignment);
           when(() => settingsBloc.state).thenReturn(SettingsState(
               locale: 'en',
               readingMode: mode,
               pageLayout: layout,
+              spreadAlignment: alignment,
+              volumeKeys: true,
               pageTransition: transition));
           when(() => settingsBloc.stream)
               .thenAnswer((_) => const Stream.empty());
@@ -202,6 +208,27 @@ void main() {
                   reason:
                       'Links are resolved; the image itself is still loading.');
               expect(bloc.state.readyResources, isEmpty);
+              Future<void> volume(int delta) async {
+                await tester.binding.defaultBinaryMessenger
+                    .handlePlatformMessage(
+                        ReaderVolumeKeys.channel.name,
+                        const StandardMethodCodec()
+                            .encodeMethodCall(MethodCall('turn', delta)),
+                        (_) {});
+                for (var frame = 0; frame < 12; frame++) {
+                  await tester.pump(const Duration(milliseconds: 50));
+                }
+              }
+
+              await volume(-1);
+              expect(bloc.state.currentPage, 0,
+                  reason: 'Previous at start stays in bounds');
+              await volume(1);
+              expect(bloc.state.currentPage,
+                  layout == ReaderPageLayout.single ? 1 : 2);
+              expect(bloc.state.showUI, isFalse);
+              await volume(-1);
+              expect(bloc.state.currentPage, 0);
               expect(find.byIcon(Icons.arrow_back), findsNothing);
               for (final point in [
                 const Offset(200, 400),
@@ -309,6 +336,20 @@ void main() {
                 await advance();
               }
               expect(bloc.state.readyResources.containsKey(0), isTrue);
+              if (mode == 2 && alignment == ReaderSpreadAlignment.height) {
+                expect(
+                    tester
+                        .getSize(find.byKey(const ValueKey('reader-spread-0')))
+                        .height,
+                    800,
+                    reason:
+                        'Portrait fit-height uses one viewport per image/spread');
+                expect(
+                    tester
+                        .getSize(find.byKey(const ValueKey('reader-page-0')))
+                        .height,
+                    lessThanOrEqualTo(800));
+              }
               await tester.tapAt(const Offset(200, 400));
               await tester.pump(const Duration(milliseconds: 350));
               expect(bloc.state.showUI, isTrue);
@@ -332,6 +373,9 @@ void main() {
                 await tester.pump(const Duration(milliseconds: 50));
               }
               final zoomPage = bloc.state.currentPage;
+              await volume(1);
+              expect(bloc.state.currentPage, zoomPage,
+                  reason: 'Zoomed volume input does not turn pages');
               await tester.tapAt(nextPoint);
               for (var frame = 0; frame < 12; frame++) {
                 await tester.pump(const Duration(milliseconds: 50));

@@ -5,6 +5,7 @@ import '../../repositories/search_repository.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/gallery_preview.dart';
+import '../../core/constants/app_constants.dart';
 import '../../repositories/favorites_repository.dart';
 import '../../repositories/settings_repository.dart';
 import 'favorites_event.dart';
@@ -69,6 +70,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       scrollStorage = PageStorageBucket();
       emit(FavoritesState(
           keyword: event.clearKeyword ? '' : state.keyword,
+          galleryCategories: state.galleryCategories,
           category: state.category,
           scopeRevision: state.scopeRevision + 1));
       if (_views > 0 && _signedIn) add(EnsureFavoritesLoaded());
@@ -86,6 +88,8 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     });
     on<LoadMoreFavorites>(_more);
     on<SelectFavoriteCategory>(_select);
+    on<ApplyFavoriteFilters>((event, emit) =>
+        _applyFilters(event.category, event.galleryCategories, emit));
     on<FavoritesInvalidated>((event, emit) async {
       _dirty = true;
       if (_views > 0 && _signedIn) {
@@ -105,6 +109,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       scrollStorage = PageStorageBucket();
       emit(FavoritesState(
           keyword: keyword,
+          galleryCategories: state.galleryCategories,
           savingCategory: state.savingCategory,
           category: state.category,
           scopeRevision: state.scopeRevision + 1));
@@ -199,14 +204,22 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       !_closing && !isClosed && _signedIn && generation == _generation;
 
   Future<void> _select(
-      SelectFavoriteCategory event, Emitter<FavoritesState> emit) async {
-    if (event.category < -1 || event.category > 9 || !_signedIn) return;
-    if (state.savingCategory || event.category == state.category) return;
+          SelectFavoriteCategory event, Emitter<FavoritesState> emit) =>
+      _applyFilters(event.category, state.galleryCategories, emit);
+
+  Future<void> _applyFilters(int category, List<String> categories,
+      Emitter<FavoritesState> emit) async {
+    if (category < -1 || category > 9 || !_signedIn) return;
+    final selected =
+        AppConstants.categories.where(categories.contains).toList();
+    if (state.savingCategory ||
+        (category == state.category &&
+            listEquals(selected, state.galleryCategories))) return;
     final choice = ++_choice;
     emit(state.copyWith(savingCategory: true, errorMessage: null));
     final saved = _preferences.then((_) => entry == FavoritesEntry.home
-        ? _settings?.setFavoriteCategory(event.category)
-        : _settings?.setFavoriteCategory(event.category, entry: 'sidebar'));
+        ? _settings?.setFavoriteCategory(category)
+        : _settings?.setFavoriteCategory(category, entry: 'sidebar'));
     _preferences =
         saved.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     try {
@@ -218,7 +231,8 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       scrollStorage = PageStorageBucket();
       emit(FavoritesState(
           keyword: state.keyword,
-          category: event.category,
+          galleryCategories: List.unmodifiable(selected),
+          category: category,
           scopeRevision: state.scopeRevision + 1));
       if (_signedIn) await _load(emit);
     } catch (_) {
@@ -331,15 +345,26 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
 
   Future<FavoritesResult> _fetch(int category, CancelToken request,
           {int page = 0, String? nextUrl}) =>
-      state.keyword.isEmpty
+      state.galleryCategories.isNotEmpty
           ? _repository.fetchCloudFavorites(
-              cat: category, page: page, nextUrl: nextUrl, cancelToken: request)
-          : _repository.fetchCloudFavorites(
               cat: category,
               page: page,
               nextUrl: nextUrl,
               cancelToken: request,
-              keyword: state.keyword);
+              keyword: state.keyword.isEmpty ? null : state.keyword,
+              categories: state.galleryCategories)
+          : state.keyword.isEmpty
+              ? _repository.fetchCloudFavorites(
+                  cat: category,
+                  page: page,
+                  nextUrl: nextUrl,
+                  cancelToken: request)
+              : _repository.fetchCloudFavorites(
+                  cat: category,
+                  page: page,
+                  nextUrl: nextUrl,
+                  cancelToken: request,
+                  keyword: state.keyword);
 
   @override
   Future<void> close() {

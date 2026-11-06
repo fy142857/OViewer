@@ -8,6 +8,15 @@ import 'package:oviewer/models/reader_page_layout.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/widgets/reader_settings_menu.dart';
 
+Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+  if (finder.hitTestable().evaluate().isEmpty) {
+    await Scrollable.ensureVisible(tester.element(finder), alignment: .5);
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets(
       'selected last option opens downward and scrolls in limited height',
@@ -31,14 +40,14 @@ void main() {
         child: MaterialApp(
             home: Scaffold(
                 appBar: AppBar(actions: const [ReaderSettingsButton()])))));
-    await tester.tap(find.byKey(const ValueKey('reader-settings')));
+    await tapVisible(tester, find.byKey(const ValueKey('reader-settings')));
     await tester.pumpAndSettle();
     final selector = find.byKey(const ValueKey('reader-spread-alignment'));
     expect(ModalRoute.of(tester.element(selector))!.transitionDuration,
         const Duration(milliseconds: 150));
     await tester.ensureVisible(selector);
     final top = tester.getTopLeft(selector).dy;
-    await tester.tap(selector);
+    await tapVisible(tester, selector);
     await tester.pumpAndSettle();
     final first = find.byKey(const ValueKey(
         'reader-spread-alignment-option-ReaderSpreadAlignment.width'));
@@ -55,7 +64,7 @@ void main() {
     expect(tester.getBottomLeft(scroll).dy, lessThanOrEqualTo(232.1));
     await tester.drag(scroll, const Offset(0, -100));
     await tester.pumpAndSettle();
-    await tester.tap(last);
+    await tapVisible(tester, last);
     await tester.pumpAndSettle();
     expect(repository.getReaderSpreadAlignment(), ReaderSpreadAlignment.height);
     expect(find.byType(ReaderSettingsOptions), findsOneWidget);
@@ -64,7 +73,7 @@ void main() {
 
   for (final locale in ['zh', 'en']) {
     testWidgets(
-        'anchored menu conditionally shows alignment and saves global preferences ($locale)',
+        'anchored menu always shows alignment and saves global preferences ($locale)',
         (tester) async {
       SharedPreferences.setMockInitialValues({});
       final storage = LocalStorage();
@@ -85,7 +94,7 @@ void main() {
           child: MaterialApp(
               home: Scaffold(
                   appBar: AppBar(actions: const [ReaderSettingsButton()])))));
-      await tester.tap(find.byKey(const ValueKey('reader-settings')));
+      await tapVisible(tester, find.byKey(const ValueKey('reader-settings')));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
       expect(tester.getSize(find.byType(ReaderSettingsOptions)).width,
@@ -94,18 +103,23 @@ void main() {
           tester.getRect(find.byKey(const ValueKey('reader-settings')));
       expect(tester.getTopLeft(find.byType(ReaderSettingsOptions)).dy,
           lessThan(anchor.bottom + 40));
-      expect(
-          find.byKey(const ValueKey('reader-spread-alignment')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('reader-page-layout')));
+      expect(find.byKey(const ValueKey('reader-spread-alignment')),
+          findsOneWidget);
+      await tapVisible(
+          tester, find.byKey(const ValueKey('reader-page-layout')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(locale == 'zh' ? '双页' : 'Double page').last);
+      await tester
+          .ensureVisible(find.text(locale == 'zh' ? '双页' : 'Double page').last);
+      await tester.pumpAndSettle();
+      await tapVisible(
+          tester, find.text(locale == 'zh' ? '双页' : 'Double page').last);
       await tester.pumpAndSettle();
       expect(bloc.state.pageLayout, ReaderPageLayout.doublePage);
       expect(repository.getReaderPageLayout(), ReaderPageLayout.doublePage);
       expect(find.byType(ReaderSettingsOptions), findsOneWidget);
       final selectorTop =
           tester.getTopLeft(find.byKey(const ValueKey('reader-direction'))).dy;
-      await tester.tap(find.byKey(const ValueKey('reader-direction')));
+      await tapVisible(tester, find.byKey(const ValueKey('reader-direction')));
       await tester.pumpAndSettle();
       expect(
           tester
@@ -121,24 +135,28 @@ void main() {
       await tester
           .tap(find.text(locale == 'zh' ? '从右到左' : 'Right to Left').last);
       await tester.pumpAndSettle();
-      expect(
-          find.byKey(const ValueKey('reader-spread-alignment')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('reader-direction')));
+      expect(find.byKey(const ValueKey('reader-spread-alignment')),
+          findsOneWidget);
+      await tapVisible(tester, find.byKey(const ValueKey('reader-direction')));
       await tester.pumpAndSettle();
       await tester
           .tap(find.text(locale == 'zh' ? '垂直滚动' : 'Vertical Scroll').last);
       await tester.pumpAndSettle();
-      expect(
-          find.byKey(const ValueKey('reader-spread-alignment')), findsNothing);
+      expect(find.byKey(const ValueKey('reader-spread-alignment')),
+          findsOneWidget);
       expect(find.byType(DropdownButtonFormField<int>), findsNothing);
       tester.view.physicalSize = const Size(800, 400);
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('reader-spread-alignment')),
           findsOneWidget);
+      await tester
+          .ensureVisible(find.byKey(const ValueKey('reader-spread-alignment')));
+      await tester.pumpAndSettle();
       final alignmentTop = tester
           .getTopLeft(find.byKey(const ValueKey('reader-spread-alignment')))
           .dy;
-      await tester.tap(find.byKey(const ValueKey('reader-spread-alignment')));
+      await tapVisible(
+          tester, find.byKey(const ValueKey('reader-spread-alignment')));
       await tester.pumpAndSettle();
       expect(
           tester
@@ -146,19 +164,24 @@ void main() {
                   'reader-spread-alignment-option-ReaderSpreadAlignment.width')))
               .dy,
           closeTo(alignmentTop + 8, 0.1));
-      await tester.tap(find.text(locale == 'zh' ? '按高度对齐' : 'Fit height').last);
+      await tapVisible(
+          tester, find.text(locale == 'zh' ? '按高度对齐' : 'Fit height').last);
       await tester.pumpAndSettle();
       expect(
           repository.getReaderSpreadAlignment(), ReaderSpreadAlignment.height);
-      await tester.tap(find.byKey(const ValueKey('reader-page-layout')));
+      await tapVisible(
+          tester, find.byKey(const ValueKey('reader-page-layout')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(locale == 'zh' ? '单页' : 'Single page').last);
+      await tapVisible(
+          tester, find.text(locale == 'zh' ? '单页' : 'Single page').last);
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('reader-spread-alignment')),
           findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('reader-page-layout')));
+      await tapVisible(
+          tester, find.byKey(const ValueKey('reader-page-layout')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(locale == 'zh' ? '双页' : 'Double page').last);
+      await tapVisible(
+          tester, find.text(locale == 'zh' ? '双页' : 'Double page').last);
       await tester.pumpAndSettle();
       expect(
           find.descendant(
@@ -166,13 +189,13 @@ void main() {
               matching: find.text(locale == 'zh' ? '按高度对齐' : 'Fit height')),
           findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('reader-direction')));
+      await tapVisible(tester, find.byKey(const ValueKey('reader-direction')));
       await tester.pumpAndSettle();
       await tester
           .tap(find.text(locale == 'zh' ? '从右到左' : 'Right to Left').last);
       await tester.pumpAndSettle();
-      expect(
-          find.byKey(const ValueKey('reader-spread-alignment')), findsNothing);
+      expect(find.byKey(const ValueKey('reader-spread-alignment')),
+          findsOneWidget);
       expect(repository.getReadingMode(), 1);
       expect(repository.getReaderPageLayout(), ReaderPageLayout.doublePage);
       expect(tester.takeException(), isNull);

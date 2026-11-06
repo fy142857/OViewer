@@ -33,6 +33,9 @@ class SettingsRepository {
 
   ReaderPageTransition getReaderPageTransition() =>
       _storage.getReaderPageTransition();
+  bool getReaderVolumeKeys() => _storage.getReaderVolumeKeys();
+  Future<void> setReaderVolumeKeys(bool enabled) =>
+      _storage.setReaderVolumeKeys(enabled);
   Future<void> setReaderPageTransition(ReaderPageTransition value) =>
       _storage.setReaderPageTransition(value);
 

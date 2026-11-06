@@ -7,6 +7,7 @@ import '../core/l10n/s.dart';
 import '../models/reader_page_layout.dart';
 import 'reader_menu.dart';
 import 'reader_transition_setting.dart';
+import 'reader_volume_setting.dart';
 
 class ReaderSettingsButton extends StatelessWidget {
   const ReaderSettingsButton({super.key});
@@ -177,24 +178,23 @@ class ReaderSettingsOptions extends StatelessWidget {
               },
               onChanged: (value) =>
                   settings.add(UpdateReaderPageLayout(value))),
-          if (state.readingMode == 2 &&
-              MediaQuery.orientationOf(context) == Orientation.landscape)
-            _selector<ReaderSpreadAlignment>(context,
-                id: 'reader-spread-alignment',
-                label: s.readerSpreadAlignment,
-                value: state.spreadAlignment,
-                choices: {
-                  ReaderSpreadAlignment.width: (
-                    s.readerAlignWidth,
-                    Icons.swap_horiz
-                  ),
-                  ReaderSpreadAlignment.height: (
-                    s.readerAlignHeight,
-                    Icons.height
-                  )
-                },
-                onChanged: (value) =>
-                    settings.add(UpdateReaderSpreadAlignment(value))),
+          _selector<ReaderSpreadAlignment>(context,
+              id: 'reader-spread-alignment',
+              label: s.readerSpreadAlignment,
+              value: state.spreadAlignment,
+              choices: {
+                ReaderSpreadAlignment.width: (
+                  s.readerAlignWidth,
+                  Icons.swap_horiz
+                ),
+                ReaderSpreadAlignment.height: (
+                  s.readerAlignHeight,
+                  Icons.height
+                )
+              },
+              onChanged: (value) =>
+                  settings.add(UpdateReaderSpreadAlignment(value))),
+          const ReaderVolumeSetting(inReader: true),
         ]);
       });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import '../core/theme/app_colors.dart';
 import '../models/gallery_tag.dart';
@@ -47,8 +48,11 @@ class TagChip extends StatelessWidget {
     final color = _namespaceColor(tag.namespace);
     return Tooltip(
       message: '${tag.namespace}:${tag.key}',
+      triggerMode: TooltipTriggerMode.manual,
       child: InkWell(
         onTap: onTap,
+        onLongPress: () => Clipboard.setData(
+            ClipboardData(text: '${tag.namespace}:${tag.key}')),
         borderRadius: BorderRadius.circular(4),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),

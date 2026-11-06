@@ -55,16 +55,20 @@ void main() {
           .thenReturn(const AuthState(status: AuthStatus.authenticated));
       when(() => auth.stream).thenAnswer((_) => const Stream.empty());
       final calls = <(String?, int)>[];
+      final categoryCalls = <List<String>>[];
       when(() => repo.fetchCloudFavorites(
           page: any(named: 'page'),
           cat: any(named: 'cat'),
           keyword: any(named: 'keyword'),
+          categories: any(named: 'categories'),
           nextUrl: any(named: 'nextUrl'),
           cancelToken: any(named: 'cancelToken'))).thenAnswer((call) async {
         calls.add((
           call.namedArguments[#keyword] as String?,
           call.namedArguments[#cat] as int
         ));
+        categoryCalls.add(List<String>.from(
+            call.namedArguments[#categories] as List<String>));
         if (call.namedArguments[#keyword] == 'failure')
           throw StateError('offline');
         return const FavoritesResult(galleries: [], totalPages: 1);
@@ -146,11 +150,18 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
-      final group = find.byKey(const ValueKey('favorite-category-4'));
-      await tester.scrollUntilVisible(group, 150,
-          scrollable: find.descendant(
-              of: find.byType(BottomSheet), matching: find.byType(Scrollable)));
-      await tester.tap(group);
+      await tester.tap(find.byKey(const ValueKey('favorite-group-selector')));
+      await tester.pumpAndSettle();
+      final option = find.descendant(
+          of: find.byKey(const ValueKey('favorite-category-4')).last,
+          matching: find.byType(Text));
+      await tester.ensureVisible(option);
+      await tester.pumpAndSettle();
+      await tester.tap(option);
+      await tester.pumpAndSettle();
+      final apply = find.byKey(const ValueKey('favorite-filters-apply'));
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
       await tester.pumpAndSettle();
       expect(side.state.keyword, 'sidebar query');
       expect(side.state.category, 4);
@@ -180,6 +191,54 @@ void main() {
       expect(side.state.category, 4);
       expect(search.getSearchHistory(),
           containsAll(['home query', 'sidebar query']));
+      Future<void> openFilters() async {
+        await tester.tap(find.byType(FloatingActionButton));
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> chooseManga() async {
+        final manga = find.byKey(const ValueKey('gallery-category-Manga'));
+        await tester.scrollUntilVisible(manga, 100,
+            scrollable: find.descendant(
+                of: find.byType(BottomSheet),
+                matching: find.byType(Scrollable)));
+        await tester.pumpAndSettle();
+        await tester.tap(manga);
+        await tester.pumpAndSettle();
+      }
+
+      final beforeCancel = calls.length;
+      await openFilters();
+      await chooseManga();
+      navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(calls.length, beforeCancel);
+      expect(side.state.galleryCategories, isEmpty);
+      await openFilters();
+      await chooseManga();
+      await tester.tap(find.byKey(const ValueKey('favorite-filters-apply')));
+      await tester.pumpAndSettle();
+      expect(side.state.galleryCategories, ['Manga']);
+      expect(side.state.category, 4);
+      expect(categoryCalls.last, ['Manga']);
+      expect(bloc.state.galleryCategories, isEmpty);
+      await openFilters();
+      final reset = find.text(locale == 'zh' ? '重置' : 'Reset');
+      await tester.ensureVisible(reset);
+      await tester.pumpAndSettle();
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<DropdownButtonFormField<int>>(
+                  find.byKey(const ValueKey('favorite-group-selector')))
+              .initialValue,
+          -1);
+      await tester.tap(find.byKey(const ValueKey('favorite-filters-apply')));
+      await tester.pumpAndSettle();
+      expect(side.state.category, -1);
+      expect(side.state.galleryCategories, isEmpty);
+      expect(categoryCalls.last, isEmpty);
       verifyNever(() => dio.get(any()));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());

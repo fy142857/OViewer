@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.content.Context
 import android.content.Intent
 import android.view.WindowManager
+import android.view.KeyEvent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,6 +17,8 @@ class MainActivity: FlutterActivity() {
     private var exporter: PageImageExporter? = null
     private var sponsor: SponsorBridge? = null
     private var automaticLoginCheck: AutomaticLoginCheck? = null
+    private var readerVolumeKeys = false
+    private var readerVolumeChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +38,13 @@ class MainActivity: FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        readerVolumeChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/reader_volume_keys")
+        readerVolumeChannel?.setMethodCallHandler { call, result ->
+            if (call.method == "setEnabled") {
+                readerVolumeKeys = call.arguments == true
+                result.success(null)
+            } else result.notImplemented()
+        }
         automaticLoginCheck = AutomaticLoginCheck(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/automatic_login_check")
             .setMethodCallHandler(automaticLoginCheck)
@@ -73,10 +83,24 @@ class MainActivity: FlutterActivity() {
         if (intent.action == ApkDownloadService.OPEN) runtime.updates?.open(intent)
     }
     override fun onResume() { super.onResume(); runtime.setForeground(this, true) }
-    override fun onPause() { runtime.setForeground(this, false); super.onPause() }
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (readerVolumeKeys && hasWindowFocus() &&
+            (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                readerVolumeChannel?.invokeMethod("turn",
+                    if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) -1 else 1)
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+    override fun onPause() { readerVolumeKeys = false; runtime.setForeground(this, false); super.onPause() }
     override fun onDestroy() {
         sponsor?.dispose(); exporter?.dispose()
         automaticLoginCheck?.dispose()
+        readerVolumeKeys = false
+        readerVolumeChannel?.setMethodCallHandler(null)
+        readerVolumeChannel = null
         flutterEngine?.let { engine ->
             for (name in listOf("oviewer/release_link", "oviewer/account_registration", "oviewer/automatic_login_check", "oviewer/sponsor", "oviewer/page_image_export")) {
                 MethodChannel(engine.dartExecutor.binaryMessenger, name).setMethodCallHandler(null)

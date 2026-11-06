@@ -7,6 +7,7 @@ const _unset = Object();
 
 class FavoritesState extends Equatable {
   final String keyword;
+  final List<String> galleryCategories;
   final FavoritesStatus status;
   final List<GalleryPreview> favorites;
   final int category, currentPage, totalPages, scopeRevision;
@@ -14,6 +15,7 @@ class FavoritesState extends Equatable {
   final String? nextPageUrl, errorMessage;
   const FavoritesState(
       {this.keyword = '',
+      this.galleryCategories = const [],
       this.status = FavoritesStatus.initial,
       this.favorites = const [],
       this.category = -1,
@@ -28,6 +30,7 @@ class FavoritesState extends Equatable {
       this.errorMessage});
   FavoritesState copyWith(
           {String? keyword,
+          List<String>? galleryCategories,
           FavoritesStatus? status,
           List<GalleryPreview>? favorites,
           int? category,
@@ -42,6 +45,7 @@ class FavoritesState extends Equatable {
           Object? errorMessage = _unset}) =>
       FavoritesState(
           keyword: keyword ?? this.keyword,
+          galleryCategories: galleryCategories ?? this.galleryCategories,
           status: status ?? this.status,
           favorites: favorites ?? this.favorites,
           category: category ?? this.category,
@@ -61,6 +65,7 @@ class FavoritesState extends Equatable {
   @override
   List<Object?> get props => [
         keyword,
+        galleryCategories,
         status,
         favorites,
         category,

@@ -7,7 +7,6 @@ import '../../blocs/search/search_event.dart';
 import '../../blocs/search/search_state.dart';
 import '../../blocs/settings/settings_bloc.dart';
 import '../../blocs/settings/settings_event.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/l10n/s.dart';
 import '../../core/utils/eh_url_parser.dart';
 import '../../core/utils/tag_autocomplete.dart';
@@ -17,6 +16,7 @@ import '../../models/gallery_preview.dart';
 import '../../repositories/search_repository.dart';
 import '../../repositories/tag_translation_repository.dart';
 import '../../widgets/gallery_card.dart';
+import '../../widgets/search_filter_controls.dart';
 import '../../widgets/gallery_grid_item.dart';
 import '../../widgets/adaptive_gallery_grid.dart';
 import '../../widgets/shimmer_loading.dart';
@@ -356,10 +356,9 @@ class _SearchViewState extends State<_SearchView> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!widget.inputOnly)
-            FloatingActionButton.small(
+            SearchFilterAction(
               heroTag: 'filter',
               onPressed: _showFilterDialog,
-              child: const Icon(Icons.tune),
             ),
           if (!widget.inputOnly) const SizedBox(height: 12),
           FloatingActionButton(
@@ -630,31 +629,13 @@ class _SearchViewState extends State<_SearchView> {
                       Text(s.categories,
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: AppConstants.categories.map((cat) {
-                          final selected = tempCategories.contains(cat);
-                          final color = Color(
-                            AppConstants.categoryColors[cat] ?? 0xFF607D8B,
-                          );
-                          return FilterChip(
-                            label: Text(cat),
-                            selected: selected,
-                            selectedColor: color.withOpacity(0.25),
-                            showCheckmark: false,
-                            onSelected: (val) {
-                              setSheetState(() {
-                                if (val) {
-                                  tempCategories.add(cat);
-                                } else {
-                                  tempCategories.remove(cat);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
+                      GalleryCategoryFilters(
+                          selected: tempCategories,
+                          onSelected: (cat, val) => setSheetState(() {
+                                val
+                                    ? tempCategories.add(cat)
+                                    : tempCategories.remove(cat);
+                              })),
                       const SizedBox(height: 20),
                       // Min rating
                       Text(s.minimumRating,

@@ -1,4 +1,5 @@
 import '../../widgets/reader_image_layout.dart';
+import '../../core/services/reader_volume_keys.dart';
 import '../../widgets/reader_scroll_physics.dart';
 import '../../models/reader_page_layout.dart';
 import '../../blocs/settings/settings_bloc.dart';
@@ -424,9 +425,8 @@ class _ReaderViewState extends State<_ReaderView> {
     final pages = state.spreads
         .pages(spread, reverse: horizontal && state.readingMode == 1);
     final landscape = viewport.width > viewport.height;
-    final fitHeight = !horizontal &&
-        landscape &&
-        state.spreadAlignment == ReaderSpreadAlignment.height;
+    final fitHeight =
+        !horizontal && state.spreadAlignment == ReaderSpreadAlignment.height;
     final compact = horizontal && landscape && pages.length == 2;
     if (fitHeight || compact) {
       double ratio(int page) {
@@ -624,6 +624,8 @@ class _ReaderViewState extends State<_ReaderView> {
   @override
   Widget build(BuildContext context) {
     context.select((SettingsBloc bloc) => bloc.state.pageTransition);
+    final volumeKeys =
+        context.select((SettingsBloc bloc) => bloc.state.volumeKeys);
     final initial = context.read<ReaderBloc>().state;
     _schedulePreload();
     if (!_positionInitialized && initial.status == ReaderStatus.ready) {
@@ -746,37 +748,40 @@ class _ReaderViewState extends State<_ReaderView> {
           );
         }
 
-        return Scaffold(
-          backgroundColor: Colors.black,
-          body: Stack(
-            children: [
-              // Main content
-              _readerGestures(
-                  state,
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapUp: state.readingMode == 2 ? _readerTap : null,
-                    onLongPress: state.readingMode == 2 ||
-                            state.pageLayout == ReaderPageLayout.doublePage
-                        ? null
-                        : () => _showPageMenu(state.currentPage),
-                    onDoubleTap: state.readingMode == 2 && _isZoomed
-                        ? () => _zoomController.value = Matrix4.identity()
-                        : null,
-                    child: state.readingMode == 2
-                        ? _buildVerticalReader(state)
-                        : _buildHorizontalReader(state),
-                  )),
-              // Top bar overlay
-              if (state.showUI) _buildTopBar(context, state),
-              // Bottom slider overlay
-              if (state.showUI && state.totalPages > 1)
-                _buildBottomBar(context, state),
-              // Page indicator (always visible when UI hidden)
-              if (!state.showUI) _buildPageIndicator(context, state),
-            ],
-          ),
-        );
+        return ReaderVolumeKeys(
+            enabled: volumeKeys && !widget.requests.isCancelled,
+            onTurn: _turnPage,
+            child: Scaffold(
+              backgroundColor: Colors.black,
+              body: Stack(
+                children: [
+                  // Main content
+                  _readerGestures(
+                      state,
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapUp: state.readingMode == 2 ? _readerTap : null,
+                        onLongPress: state.readingMode == 2 ||
+                                state.pageLayout == ReaderPageLayout.doublePage
+                            ? null
+                            : () => _showPageMenu(state.currentPage),
+                        onDoubleTap: state.readingMode == 2 && _isZoomed
+                            ? () => _zoomController.value = Matrix4.identity()
+                            : null,
+                        child: state.readingMode == 2
+                            ? _buildVerticalReader(state)
+                            : _buildHorizontalReader(state),
+                      )),
+                  // Top bar overlay
+                  if (state.showUI) _buildTopBar(context, state),
+                  // Bottom slider overlay
+                  if (state.showUI && state.totalPages > 1)
+                    _buildBottomBar(context, state),
+                  // Page indicator (always visible when UI hidden)
+                  if (!state.showUI) _buildPageIndicator(context, state),
+                ],
+              ),
+            ));
       },
     );
   }
@@ -1283,8 +1288,7 @@ class _ReaderViewState extends State<_ReaderView> {
   Widget _buildVerticalReader(ReaderState state) {
     return LayoutBuilder(builder: (context, constraints) {
       final viewport = constraints.biggest;
-      final fitHeight = viewport.width > viewport.height &&
-          state.spreadAlignment == ReaderSpreadAlignment.height;
+      final fitHeight = state.spreadAlignment == ReaderSpreadAlignment.height;
       return NotificationListener<ScrollStartNotification>(
         onNotification: (notification) {
           if (notification.dragDetails != null) _explicitPage = null;

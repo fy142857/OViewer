@@ -394,18 +394,27 @@ void main() {
     await frames(tester);
     final button = find.byType(FloatingActionButton);
     expect(tester.getSize(button), const Size(48, 48));
-    expect(find.descendant(of: button, matching: find.byIcon(Icons.menu)),
+    expect(find.descendant(of: button, matching: find.byIcon(Icons.tune)),
         findsOneWidget);
     await tester.tap(button);
     await tester.pumpAndSettle();
-    final sheet = find.byType(BottomSheet);
-    final options = find.descendant(of: sheet, matching: find.byType(ListView));
-    await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('favorite-category-9')), 250,
-        scrollable:
-            find.descendant(of: options, matching: find.byType(Scrollable)));
-    await tester.tap(find.byKey(const ValueKey('favorite-category-9')));
-    await frames(tester);
+    Future<void> choose(int group) async {
+      await tester.tap(find.byKey(const ValueKey('favorite-group-selector')));
+      await tester.pumpAndSettle();
+      final option = find.descendant(
+          of: find.byKey(ValueKey('favorite-category-$group')).last,
+          matching: find.byType(Text));
+      await tester.ensureVisible(option);
+      await tester.pumpAndSettle();
+      await tester.tap(option);
+      await tester.pumpAndSettle();
+      final apply = find.byKey(const ValueKey('favorite-filters-apply'));
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
+      await frames(tester);
+    }
+
+    await choose(9);
     expect(favoritesBloc.state.category, 9);
     tester
         .state<NavigatorState>(find.byType(Navigator))
@@ -417,21 +426,13 @@ void main() {
         cat: 9, cancelToken: any(named: 'cancelToken'))).called(1);
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
-    final secondOptions = find.descendant(
-        of: find.byType(BottomSheet), matching: find.byType(Scrollable));
-    await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('favorite-category-9')), 250,
-        scrollable: secondOptions);
     expect(
         tester
-            .widget<ListTile>(find.byKey(const ValueKey('favorite-category-9')))
-            .selected,
-        false);
-    await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('favorite-category-3')), -250,
-        scrollable: secondOptions);
-    await tester.tap(find.byKey(const ValueKey('favorite-category-3')));
-    await frames(tester);
+            .widget<DropdownButtonFormField<int>>(
+                find.byKey(const ValueKey('favorite-group-selector')))
+            .initialValue,
+        -1);
+    await choose(3);
     expect(favoritesBloc.forEntry(FavoritesEntry.sidebar).state.category, 3);
     expect(favoritesBloc.state.category, 9);
     tester.state<NavigatorState>(find.byType(Navigator)).pop();
