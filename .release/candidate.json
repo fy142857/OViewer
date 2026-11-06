@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.12.0",
   "branch": "dev",
-  "build_number": 151,
-  "candidate_id": "1.13.0+151",
-  "fingerprint": "f0bc85535a875d1d59ab88c20db41109477ad47a540ec576db6ff111cc75e46c",
-  "notes": "### 新增\n\n- 阅读设置新增“过渡动画”：横向可选无或滑动，默认滑动，设置页与阅读器同步保存；纵向保持连续滚动。\n- 阅读区域左右各 20% 支持点击翻页：横向按阅读方向切换，纵向两侧上半区上一页、下半区下一页；双页按组切换，工具栏显隐独立。放大时优先平移图片及切换工具栏，还原后恢复翻页（#76）。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+  "build_number": 152,
+  "candidate_id": "1.13.0+152",
+  "fingerprint": "9929f309e4bdfd24c7d7c01df358e8d3424450ed264f15e745453ac7c65db860",
+  "notes": "### 新增\n\n- Android 阅读器支持音量键翻页，设置页和阅读菜单共用持久化开关，默认关闭；上键上一页、下键下一页，单双页及三种阅读方向均可使用（#80）。\n- 评论支持选择与复制；标签长按直接复制原始标签，保留点击搜索（#81）。\n- 收藏页复用搜索筛选入口与类别选项，支持漫画类别筛选；收藏分组合并到同一面板的选择器，统一应用、取消及重置，首页与侧栏独立（#82）。\n- 阅读设置新增“过渡动画”：横向可选无或滑动，默认滑动，设置页与阅读器同步保存；纵向保持连续滚动。\n- 阅读区域左右各 20% 支持点击翻页：横向按阅读方向切换，纵向两侧上半区上一页、下半区下一页；双页按组切换，工具栏显隐独立。放大时优先平移图片及切换工具栏，还原后恢复翻页（#76）。\n\n### 修复\n\n- 阅读菜单常驻显示图片对齐选项，垂直阅读在竖屏下也可按宽度或高度对齐（#78）。\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "327cde28b9bc50f06185152a443952801fe9fd73",
+  "source_sha": "7c4847b9d7383ae39da2c7980171e94f9cc07376",
   "summary": [
     {
       "change_kind": "feature",
@@ -15,6 +15,16 @@
       "original_type": "feat",
       "sha": "327cde28b9bc50f06185152a443952801fe9fd73",
       "subject": "feat(reader): add transition preference and edge navigation",
+      "type": "feat",
+      "version_impact": "minor"
+    },
+    {
+      "change_kind": "feature",
+      "classification_reason": "新增 Android 音量键翻页和收藏范围内漫画类别筛选能力，同时完善图片对齐及文字复制；兼容现有设置、数据和 iOS 12。",
+      "classification_source": "commit-trailers",
+      "original_type": "feat",
+      "sha": "7c4847b9d7383ae39da2c7980171e94f9cc07376",
+      "subject": "feat: add volume navigation, copying and favorites filters",
       "type": "feat",
       "version_impact": "minor"
     }
