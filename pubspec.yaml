@@ -1,7 +1,7 @@
 name: oviewer
 description: A manga viewer app for E-Hentai
 publish_to: 'none'
-version: 1.13.0+152
+version: 1.13.0+153
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
