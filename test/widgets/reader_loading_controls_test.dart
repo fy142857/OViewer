@@ -9,6 +9,10 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:photo_view/photo_view.dart';
+// Inspect the actual zoom controllers after real pointer sequences.
+// ignore: implementation_imports
+import 'package:photo_view/src/core/photo_view_core.dart';
 import 'package:oviewer/blocs/reader/reader_bloc.dart';
 import 'package:oviewer/blocs/reader/reader_state.dart';
 import 'package:oviewer/blocs/settings/settings_bloc.dart';
@@ -341,14 +345,89 @@ void main() {
                     tester
                         .getSize(find.byKey(const ValueKey('reader-spread-0')))
                         .height,
-                    800,
+                    tester
+                        .getSize(find.byKey(const ValueKey('reader-page-0')))
+                        .height,
                     reason:
-                        'Portrait fit-height uses one viewport per image/spread');
+                        'Short images/groups do not reserve a whole viewport');
                 expect(
                     tester
                         .getSize(find.byKey(const ValueKey('reader-page-0')))
                         .height,
                     lessThanOrEqualTo(800));
+              }
+              for (final edge in [nextPoint, prevPoint]) {
+                await tester.tapAt(edge);
+                await tester.pump(const Duration(milliseconds: 40));
+                await tester.tapAt(edge);
+                for (var frame = 0; frame < 12; frame++) {
+                  await tester.pump(const Duration(milliseconds: 50));
+                }
+                for (var io = 0; io < 3; io++) {
+                  completeDownloads(png);
+                  await advance();
+                }
+                if (mode < 2) {
+                  expect(
+                      tester
+                          .widgetList<PhotoViewCore>(find.byType(PhotoViewCore))
+                          .every((core) =>
+                              core.scaleStateController.scaleState ==
+                              PhotoViewScaleState.initial),
+                      true,
+                      reason: 'Rapid taps on either edge never zoom');
+                } else {
+                  expect(
+                      tester
+                          .widget<InteractiveViewer>(
+                              find.byType(InteractiveViewer))
+                          .transformationController!
+                          .value
+                          .getMaxScaleOnAxis(),
+                      closeTo(1, .01));
+                }
+                expect(bloc.state.showUI, false,
+                    reason: 'Edge taps only navigate');
+                for (var back = 0;
+                    back < 3 && bloc.state.currentPage > 0;
+                    back++) {
+                  await volume(-1);
+                  completeDownloads(png);
+                  await advance();
+                }
+                expect(bloc.state.currentPage, 0);
+              }
+              if (mode < 2 && layout == ReaderPageLayout.single) {
+                await tester.tapAt(const Offset(200, 400));
+                await tester.pump(const Duration(milliseconds: 40));
+                await tester.tapAt(const Offset(200, 400));
+                for (var frame = 0; frame < 12; frame++) {
+                  await tester.pump(const Duration(milliseconds: 50));
+                }
+                expect(
+                    tester
+                        .widgetList<PhotoViewCore>(find.byType(PhotoViewCore))
+                        .any((core) =>
+                            core.scaleStateController.scaleState !=
+                            PhotoViewScaleState.initial),
+                    true,
+                    reason: 'Center double tap still zooms');
+                for (var cycle = 0;
+                    cycle < 3 &&
+                        tester
+                            .widgetList<PhotoViewCore>(
+                                find.byType(PhotoViewCore))
+                            .any((core) =>
+                                core.scaleStateController.scaleState !=
+                                PhotoViewScaleState.initial);
+                    cycle++) {
+                  await tester.tapAt(const Offset(200, 400));
+                  await tester.pump(const Duration(milliseconds: 40));
+                  await tester.tapAt(const Offset(200, 400));
+                  for (var frame = 0; frame < 12; frame++) {
+                    await tester.pump(const Duration(milliseconds: 50));
+                  }
+                }
               }
               await tester.tapAt(const Offset(200, 400));
               await tester.pump(const Duration(milliseconds: 350));
@@ -357,6 +436,8 @@ void main() {
               await tester.pump(const Duration(milliseconds: 350));
               expect(bloc.state.showUI, isFalse);
               // Pinching blocks navigation in every reading direction.
+              expect(bloc.state.currentPage, 0,
+                  reason: 'Return to first page before zooming');
               final firstFinger =
                   await tester.startGesture(const Offset(150, 380), pointer: 1);
               final secondFinger =
@@ -373,6 +454,8 @@ void main() {
                 await tester.pump(const Duration(milliseconds: 50));
               }
               final zoomPage = bloc.state.currentPage;
+              expect(zoomPage, 0,
+                  reason: 'Zoom keeps the exact page after rapid navigation');
               await volume(1);
               expect(bloc.state.currentPage, zoomPage,
                   reason: 'Zoomed volume input does not turn pages');
@@ -389,6 +472,8 @@ void main() {
               for (var frame = 0; frame < 12; frame++) {
                 await tester.pump(const Duration(milliseconds: 50));
               }
+              expect(bloc.state.currentPage, zoomPage,
+                  reason: 'Restoring zoom keeps the page');
               await tester.tapAt(nextPoint);
               for (var frame = 0; frame < 12; frame++) {
                 await tester.pump(const Duration(milliseconds: 50));

@@ -14,6 +14,7 @@ import 'package:oviewer/core/services/reader_volume_keys.dart';
 import 'package:oviewer/core/storage/local_storage.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/widgets/reader_volume_setting.dart';
+import 'package:oviewer/widgets/reader_settings_menu.dart';
 
 class _FailedStore extends InMemorySharedPreferencesStore {
   _FailedStore() : super.withData({});
@@ -33,6 +34,62 @@ Future<void> turn(int delta) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(() => debugDefaultTargetPlatformOverride = null);
+  for (final locale in ['zh', 'en']) {
+    for (final scale in [1.0, 1.6]) {
+      testWidgets(
+          'reader volume label aligns with selectors and switch is smaller $locale/$scale',
+          (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final storage = LocalStorage();
+        await storage.init();
+        final repo = SettingsRepository(storage);
+        final bloc = SettingsBloc(repo,
+            initialState:
+                SettingsBloc.readSaved(repo).copyWith(locale: locale));
+        addTearDown(bloc.close);
+        await tester.binding.setSurfaceSize(const Size(320, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await tester.pumpWidget(BlocProvider.value(
+            value: bloc,
+            child: MaterialApp(
+                home: Scaffold(
+                    body: SingleChildScrollView(
+                        child: Column(children: [
+              const SizedBox(width: 228, child: ReaderSettingsOptions()),
+              const ReaderVolumeSetting(),
+            ]))))));
+        final direction = find.descendant(
+            of: find.byKey(const ValueKey('reader-direction')),
+            matching: find.byType(Text));
+        final label = find.descendant(
+            of: find.byKey(const ValueKey('reader-volume-keys')),
+            matching: find.byType(Text));
+        expect(tester.getTopLeft(label).dx,
+            closeTo(tester.getTopLeft(direction).dx, .1));
+        final small = find.descendant(
+            of: find.byKey(const ValueKey('reader-volume-keys')),
+            matching: find.byType(Switch));
+        final normal = find.descendant(
+            of: find.byKey(const ValueKey('settings-volume-keys')),
+            matching: find.byType(Switch));
+        expect(tester.getRect(small).width,
+            lessThan(tester.getRect(normal).width));
+        expect(tester.getRect(small).height,
+            lessThan(tester.getRect(normal).height));
+        await tester.tap(small);
+        await tester.pumpAndSettle();
+        expect(bloc.state.volumeKeys, true);
+        expect(repo.getReaderVolumeKeys(), true);
+        await tester.tap(label);
+        await tester.pumpAndSettle();
+        expect(bloc.state.volumeKeys, false,
+            reason: 'The label still toggles the setting');
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
   for (final initial in [null, false, true, 'true', 1]) {
     test('volume preference safely restores and persists: $initial', () async {
       SharedPreferences.setMockInitialValues(

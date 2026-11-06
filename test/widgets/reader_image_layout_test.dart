@@ -3,6 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:oviewer/widgets/reader_image_layout.dart';
 
 void main() {
+  test(
+      'portrait height fit fills width through the height boundary, then leaves side margins',
+      () {
+    const viewport = Size(400, 800);
+    expect(heightFittedPages([4], viewport), [const Size(400, 100)]);
+    expect(heightFittedPages([.5], viewport), [const Size(400, 800)]);
+    expect(heightFittedPages([.25], viewport), [const Size(200, 800)]);
+  });
   test('height fit makes the taller equal-width page fill the viewport', () {
     final sizes = heightFittedPages([0.5, 3], const Size(800, 360));
     expect(sizes, [const Size(180, 360), const Size(180, 60)]);

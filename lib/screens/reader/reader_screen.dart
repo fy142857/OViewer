@@ -209,10 +209,33 @@ class _ReaderViewState extends State<_ReaderView> {
   bool _swipeMoved = false;
   final Set<int> _pointers = {};
   final GlobalKey _readingViewport = GlobalKey();
+  Offset? _lastPointerPosition;
 
   bool get _zoomed => _isZoomed || _horizontalZoomed;
 
-  void _readerTap(TapUpDetails details) {
+  bool _edgePosition(Offset position) {
+    final box =
+        _readingViewport.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return false;
+    final x = box.globalToLocal(position).dx;
+    return x < box.size.width * .2 || x >= box.size.width * .8;
+  }
+
+  PhotoViewScaleState _scaleCycle(PhotoViewScaleState current) =>
+      _lastPointerPosition != null && _edgePosition(_lastPointerPosition!)
+          ? current
+          : defaultScaleStateCycle(current);
+
+  void _readerDoubleTap() {
+    if (_lastPointerPosition != null && !_edgePosition(_lastPointerPosition!)) {
+      _zoomController.value = Matrix4.identity();
+    }
+  }
+
+  void _readerTap(TapUpDetails details, {bool edgePointer = false}) {
+    // Edge taps are handled directly at pointer-up so PhotoView's double-tap
+    // recognizer cannot swallow rapid page turns or turn them into zooming.
+    if (!edgePointer && _edgePosition(details.globalPosition)) return;
     final box =
         _readingViewport.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
@@ -250,6 +273,20 @@ class _ReaderViewState extends State<_ReaderView> {
               index: target,
               duration: const Duration(milliseconds: 150),
               curve: Curves.easeOut);
+          // A second tap can hold the scroll activity before its animation
+          // reaches the target. Finish that turn while it is still explicit;
+          // a real drag clears the explicit page and keeps control of scrolling.
+          if (mounted &&
+              revision == _turnRevision &&
+              !_zoomed &&
+              !widget.requests.isCancelled &&
+              _explicitPage == state.spreads.pages(target).first &&
+              _verticalScrollController.isAttached &&
+              !_verticalPositionsListener.itemPositions.value.any((position) =>
+                  position.index == target &&
+                  position.itemLeadingEdge.abs() < .001)) {
+            _verticalScrollController.jumpTo(index: target);
+          }
         }
       } else if (_pageController.hasClients) {
         if (context.read<SettingsBloc>().state.pageTransition ==
@@ -290,6 +327,7 @@ class _ReaderViewState extends State<_ReaderView> {
     return Listener(
         key: _readingViewport,
         onPointerDown: (event) {
+          _lastPointerPosition = event.position;
           _pointers.add(event.pointer);
           if (_pointers.length != 1) {
             _swipeCancelled = true;
@@ -297,7 +335,7 @@ class _ReaderViewState extends State<_ReaderView> {
           }
           _swipeStart = event.position;
           _swipeTime = event.timeStamp;
-          _swipeCancelled = _zoomed || _turning;
+          _swipeCancelled = _turning;
           _swipeMoved = false;
         },
         onPointerMove: (event) {
@@ -317,6 +355,19 @@ class _ReaderViewState extends State<_ReaderView> {
         onPointerUp: (event) {
           _pointers.remove(event.pointer);
           final start = _swipeStart;
+          if (start != null &&
+              !_swipeCancelled &&
+              _pointers.isEmpty &&
+              !_swipeMoved &&
+              (event.position - start).distance <= 18 &&
+              event.timeStamp - _swipeTime! <
+                  const Duration(milliseconds: 500) &&
+              _edgePosition(start) &&
+              _edgePosition(event.position)) {
+            _readerTap(
+                TapUpDetails(globalPosition: event.position, kind: event.kind),
+                edgePointer: true);
+          }
           if (start == null ||
               _swipeCancelled ||
               _zoomed ||
@@ -444,7 +495,9 @@ class _ReaderViewState extends State<_ReaderView> {
           ? heightFittedPages(ratios, viewport)
           : compactHorizontalPages(ratios, viewport);
       return SizedBox(
-        height: viewport.height,
+        height: horizontal
+            ? viewport.height
+            : sizes.map((size) => size.height).reduce((a, b) => a > b ? a : b),
         child: Row(
           key: ValueKey('reader-spread-$spread'),
           mainAxisAlignment: MainAxisAlignment.center,
@@ -506,7 +559,7 @@ class _ReaderViewState extends State<_ReaderView> {
     final metadata = state.loadedImages[page];
     final screen = MediaQuery.sizeOf(context);
     final loadingHeight = state.offlineBook != null
-        ? screen.height * 0.6
+        ? screen.height * (state.pageLayout == ReaderPageLayout.single ? 1 : .6)
         : metadata != null && metadata.width > 0 && metadata.height > 0
             ? screen.width /
                 state.spreads.containing(page).length *
@@ -522,16 +575,21 @@ class _ReaderViewState extends State<_ReaderView> {
       fit: horizontal || alignedHeight != null
           ? BoxFit.contain
           : BoxFit.fitWidth,
-      onDecodedSize: (size) {
-        if (!mounted || widget.requests.isCancelled || size.height <= 0) return;
-        final key = (page, state.imageAttempts[page] ?? 0);
-        final ratio = size.width / size.height;
-        if (_pageAspectRatios[key] == ratio) return;
-        setState(() {
-          _pageAspectRatios.removeWhere((entry, _) => entry.$1 == page);
-          _pageAspectRatios[key] = ratio;
-        });
-      },
+      onDecodedSize: !horizontal &&
+              alignedHeight == null &&
+              state.pageLayout == ReaderPageLayout.single
+          ? null
+          : (size) {
+              if (!mounted || widget.requests.isCancelled || size.height <= 0)
+                return;
+              final key = (page, state.imageAttempts[page] ?? 0);
+              final ratio = size.width / size.height;
+              if (_pageAspectRatios[key] == ratio) return;
+              setState(() {
+                _pageAspectRatios.removeWhere((entry, _) => entry.$1 == page);
+                _pageAspectRatios[key] = ratio;
+              });
+            },
       loadingHeight: horizontal || alignedHeight != null ? null : loadingHeight,
       errorBuilder: (_, error, ___) => bounded(provider is OfflineImageProvider
           ? _pendingImage(state, page)
@@ -766,7 +824,7 @@ class _ReaderViewState extends State<_ReaderView> {
                             ? null
                             : () => _showPageMenu(state.currentPage),
                         onDoubleTap: state.readingMode == 2 && _isZoomed
-                            ? () => _zoomController.value = Matrix4.identity()
+                            ? _readerDoubleTap
                             : null,
                         child: state.readingMode == 2
                             ? _buildVerticalReader(state)
@@ -1059,6 +1117,7 @@ class _ReaderViewState extends State<_ReaderView> {
 
   Future<void> _showPageMenu(int page) async {
     if (_pageMenuOpen || widget.requests.isCancelled) return;
+    _cancelNavigation();
     _pageMenuOpen = true;
     final bloc = context.read<ReaderBloc>();
     final s = S.of(context);
@@ -1146,8 +1205,10 @@ class _ReaderViewState extends State<_ReaderView> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70)),
             TextButton(
-              onPressed: () =>
-                  context.read<ReaderBloc>().add(RetryImageAtIndex(index)),
+              onPressed: () {
+                _cancelNavigation();
+                context.read<ReaderBloc>().add(RetryImageAtIndex(index));
+              },
               child: Text(S.of(context).retry,
                   style: const TextStyle(color: Colors.white)),
             ),
@@ -1210,6 +1271,7 @@ class _ReaderViewState extends State<_ReaderView> {
             builder: (context, index) {
               if (state.pageLayout == ReaderPageLayout.doublePage) {
                 return PhotoViewGalleryPageOptions.customChild(
+                  scaleStateCycle: _scaleCycle,
                   childSize: viewport,
                   child: SizedBox.fromSize(
                       size: viewport,
@@ -1225,10 +1287,12 @@ class _ReaderViewState extends State<_ReaderView> {
                 final provider = _offlineProvider(state, index);
                 if (provider == null)
                   return PhotoViewGalleryPageOptions.customChild(
+                      scaleStateCycle: _scaleCycle,
                       disableGestures: true,
                       child: GestureDetector(
                           onTapUp: _readerTap, child: _offlineMissing(index)));
                 return PhotoViewGalleryPageOptions(
+                    scaleStateCycle: _scaleCycle,
                     onTapUp: (_, details, ___) => _readerTap(details),
                     imageProvider: provider,
                     initialScale: PhotoViewComputedScale.contained,
@@ -1244,11 +1308,13 @@ class _ReaderViewState extends State<_ReaderView> {
                   state.loadingIndices.contains(index) ||
                   state.failedIndices.contains(index)) {
                 return PhotoViewGalleryPageOptions.customChild(
+                  scaleStateCycle: _scaleCycle,
                   onTapUp: (_, details, ___) => _readerTap(details),
                   child: _pendingImage(state, index),
                 );
               }
               return PhotoViewGalleryPageOptions(
+                scaleStateCycle: _scaleCycle,
                 onTapUp: (_, details, ___) => _readerTap(details),
                 imageProvider: _imageProvider(image.imageUrl,
                     page: index, attempt: state.imageAttempts[index] ?? 0),
@@ -1288,7 +1354,6 @@ class _ReaderViewState extends State<_ReaderView> {
   Widget _buildVerticalReader(ReaderState state) {
     return LayoutBuilder(builder: (context, constraints) {
       final viewport = constraints.biggest;
-      final fitHeight = state.spreadAlignment == ReaderSpreadAlignment.height;
       return NotificationListener<ScrollStartNotification>(
         onNotification: (notification) {
           if (notification.dragDetails != null) _explicitPage = null;
@@ -1310,70 +1375,8 @@ class _ReaderViewState extends State<_ReaderView> {
               physics: _isZoomed ? const NeverScrollableScrollPhysics() : null,
               initialScrollIndex: state.spreads.spreadOf(state.currentPage),
               itemBuilder: (context, index) {
-                if (state.pageLayout == ReaderPageLayout.doublePage ||
-                    fitHeight) {
-                  return _spreadRow(state, index,
-                      horizontal: false, viewport: viewport);
-                }
-                if (state.localPage(index) != null) {
-                  final provider = _offlineProvider(state, index);
-                  return _pageSurface(
-                      index,
-                      provider == null
-                          ? SizedBox(height: 300, child: _offlineMissing(index))
-                          : ReaderPageImage(
-                              image: provider,
-                              loadingHeight: MediaQuery.sizeOf(context).height,
-                              errorBuilder: (_, __, ___) => SizedBox(
-                                  height: 300,
-                                  child: _pendingImage(state, index))));
-                }
-                final image = state.loadedImages[index];
-                if (!_onlineAllowed(state, index) ||
-                    _preload.failed(index, state.imageAttempts[index] ?? 0) ||
-                    image == null ||
-                    state.loadingIndices.contains(index) ||
-                    state.failedIndices.contains(index)) {
-                  return _pageSurface(
-                      index,
-                      SizedBox(
-                        height: image != null &&
-                                image.width > 0 &&
-                                image.height > 0
-                            ? (MediaQuery.sizeOf(context).width *
-                                    image.height /
-                                    image.width)
-                                .clamp(
-                                    200.0, MediaQuery.sizeOf(context).width * 3)
-                            : MediaQuery.sizeOf(context).height,
-                        child: _pendingImage(state, index),
-                      ));
-                }
-
-                // Calculate aspect ratio for proper height
-                double aspectRatio = image.width > 0 && image.height > 0
-                    ? image.width / image.height
-                    : 0.7; // default portrait ratio
-                final screenWidth = MediaQuery.of(context).size.width;
-                final imageHeight = screenWidth / aspectRatio;
-
-                return _pageSurface(
-                    index,
-                    SizedBox(
-                      width: screenWidth,
-                      height: imageHeight.clamp(200.0, screenWidth * 3),
-                      child: ReaderPageImage(
-                        image: _imageProvider(image.imageUrl,
-                            page: index,
-                            attempt: state.imageAttempts[index] ?? 0),
-                        errorBuilder: (_, error, ___) =>
-                            error is ReaderLocalCacheMiss
-                                ? const Center(
-                                    child: CircularProgressIndicator(
-                                        color: Colors.white))
-                                : _decodedImageError(state, index),
-                      ),
-                    ));
+                return _spreadRow(state, index,
+                    horizontal: false, viewport: viewport);
               },
             ),
           ),

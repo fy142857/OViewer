@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:photo_view/photo_view.dart';
+// ignore: implementation_imports
+import 'package:photo_view/src/core/photo_view_core.dart';
+import 'package:oviewer/blocs/reader/reader_event.dart';
 import 'package:oviewer/main.dart' as application;
 import 'package:oviewer/blocs/reader/reader_bloc.dart';
 import 'package:oviewer/blocs/settings/settings_bloc.dart';
@@ -29,6 +33,19 @@ Future<void> tap(Offset point) async {
   await Future<void>.delayed(const Duration(milliseconds: 50));
   send(PointerUpEvent(pointer: id, position: point, timeStamp: _clock.elapsed));
   await Future<void>.delayed(const Duration(milliseconds: 600));
+}
+
+Future<void> rapidTaps(Offset point) async {
+  for (var tap = 0; tap < 2; tap++) {
+    final id = ++_pointer;
+    send(PointerDownEvent(
+        pointer: id, position: point, timeStamp: _clock.elapsed));
+    await Future<void>.delayed(const Duration(milliseconds: 35));
+    send(PointerUpEvent(
+        pointer: id, position: point, timeStamp: _clock.elapsed));
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+  }
+  await Future<void>.delayed(const Duration(milliseconds: 650));
 }
 
 Future<void> main() async {
@@ -135,6 +152,43 @@ Future<void> run() async {
                   (layout == ReaderPageLayout.single ? 1 : 2),
               'Swipe navigation');
         }
+        for (final edge in [previous, next]) {
+          await rapidTaps(edge);
+          if (mode != 2) {
+            check(
+                elements()
+                    .map((e) => e.widget)
+                    .whereType<PhotoViewCore>()
+                    .every((core) =>
+                        core.scaleStateController.scaleState ==
+                        PhotoViewScaleState.initial),
+                'Rapid edge taps must not zoom: $mode/$layout/$transition');
+          } else {
+            check(
+                elements()
+                    .map((e) => e.widget)
+                    .whereType<InteractiveViewer>()
+                    .every((viewer) =>
+                        viewer.transformationController!.value
+                            .getMaxScaleOnAxis() <
+                        1.01),
+                'Rapid vertical edge taps must not zoom');
+          }
+          check(
+              !reader!.state.showUI, 'Rapid edge taps retain hidden controls');
+        }
+        reader!.add(ToggleReaderUI());
+        await waitFor(() => elements().any((e) => e.widget is Slider));
+        elements()
+            .map((e) => e.widget)
+            .whereType<Slider>()
+            .single
+            .onChangeEnd!(0);
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        reader!.add(ToggleReaderUI());
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        check(reader!.state.currentPage == 0,
+            'Restore exact first page after rapid taps');
         await waitFor(() => reader!.state.readyResources
             .containsKey(reader!.state.currentPage));
         final beforeZoom = reader!.state.currentPage;

@@ -187,8 +187,10 @@ void main() {
           .thenReturn(ReaderSpreadAlignment.width);
       await tester.runAsync(() async {
         final first = book.pages.first;
-        final bytes = await repository.files.read(first.relativePath!, first.bytes, first.sha256!);
-        final second = await repository.files.write(book.id, 1, Stream.value(bytes), current: () => true);
+        final bytes = await repository.files
+            .read(first.relativePath!, first.bytes, first.sha256!);
+        final second = await repository.files
+            .write(book.id, 1, Stream.value(bytes), current: () => true);
         await repository.savePage(book.id, 1, second, current: () => true);
         book = (await repository.get(book.id))!;
       });
@@ -340,6 +342,107 @@ void main() {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 30)));
     });
+  }
+
+  for (final viewport in [const Size(400, 800), const Size(800, 400)]) {
+    for (final layout in ReaderPageLayout.values) {
+      for (final alignment in ReaderSpreadAlignment.values) {
+        testWidgets(
+            'vertical pages join without gaps $viewport/$layout/$alignment',
+            (tester) async {
+          await tester.binding.setSurfaceSize(viewport);
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          when(() => settings.getReadingMode()).thenReturn(2);
+          when(() => settings.getReaderPageLayout()).thenReturn(layout);
+          when(() => settings.getReaderSpreadAlignment()).thenReturn(alignment);
+          await tester.runAsync(() async {
+            book = await repository.create(
+                const OfflineKey(GallerySource.eh, 7800, 'abc'),
+                'Seamless pages',
+                4);
+            await repository.putIndex(
+                book.id,
+                4,
+                [
+                  for (var page = 0; page < 4; page++)
+                    ThumbnailInfo(
+                        pageToken: 'p$page', pageIndex: page, thumbUrl: '')
+                ],
+                current: () => true);
+            for (var page = 0; page < 4; page++) {
+              final recorder = ui.PictureRecorder();
+              Canvas(recorder).drawColor(
+                  page < 2 ? Colors.orange : Colors.blue, BlendMode.src);
+              final picture = recorder.endRecording();
+              final image = await picture.toImage(40, page < 2 ? 10 : 400);
+              final png =
+                  (await image.toByteData(format: ui.ImageByteFormat.png))!
+                      .buffer
+                      .asUint8List();
+              image.dispose();
+              picture.dispose();
+              final saved = await repository.files
+                  .write(book.id, page, Stream.value(png), current: () => true);
+              await repository.savePage(book.id, page, saved,
+                  current: () => true);
+            }
+            book = (await repository.get(book.id))!;
+            await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+                value: settingsBloc,
+                child: MaterialApp(
+                    home: ReaderScreen(
+                        gid: 7800,
+                        token: 'abc',
+                        initialPage: 0,
+                        offlineBook: book))));
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+          });
+          await settleOffline(tester);
+          final first =
+              tester.getRect(find.byKey(const ValueKey('reader-spread-0')));
+          final second =
+              tester.getRect(find.byKey(const ValueKey('reader-spread-1')));
+          expect(second.top, closeTo(first.bottom, .1),
+              reason: 'No viewport padding between images/groups');
+          final columns = layout == ReaderPageLayout.single ? 1 : 2;
+          final gap =
+              alignment == ReaderSpreadAlignment.height && columns == 2 ? 4 : 0;
+          final shortWidth = (viewport.width - gap) / columns;
+          expect(first.height, closeTo(shortWidth / 4, .1));
+          final short =
+              tester.getRect(find.byKey(const ValueKey('reader-page-0')));
+          expect(short.width, closeTo(shortWidth, .1),
+              reason: 'Short images fill the available width');
+          final bloc = tester
+              .element(find.byType(ScrollablePositionedList))
+              .read<ReaderBloc>();
+          bloc.add(ToggleReaderUI());
+          await settleOffline(tester);
+          tester.widget<Slider>(find.byType(Slider)).onChangeEnd!(2);
+          await settleOffline(tester);
+          final tall =
+              tester.getRect(find.byKey(const ValueKey('reader-page-2')));
+          if (alignment == ReaderSpreadAlignment.height) {
+            expect(tall.height, closeTo(viewport.height, .1));
+            expect(tall.width, closeTo(viewport.height / 10, .1));
+            final group = tester
+                .getRect(find.byKey(ValueKey('reader-spread-${2 ~/ columns}')));
+            expect(group.height, closeTo(viewport.height, .1));
+            expect(tall.width * columns + gap, lessThan(viewport.width),
+                reason: 'Tall images leave horizontal whitespace');
+          } else {
+            expect(tall.width, closeTo(viewport.width / columns, .1));
+            expect(tall.height, closeTo(viewport.width / columns * 10, .1),
+                reason:
+                    'Width fit preserves the full tall image without clamping');
+          }
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+          await tester.runAsync(
+              () => Future<void>.delayed(const Duration(milliseconds: 30)));
+        });
+      }
+    }
   }
 
   testWidgets(
@@ -569,66 +672,70 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets(
-      'decoded explicit offline page keeps its position while neighbors arrive',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(400, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    when(() => settings.getReadingMode()).thenReturn(2);
-    when(() => settings.getReaderPreloadCount()).thenReturn(1);
-    when(() => settings.getReaderPageLayout())
-        .thenReturn(ReaderPageLayout.single);
-    when(() => settings.getReaderSpreadAlignment())
-        .thenReturn(ReaderSpreadAlignment.width);
-    await tester.runAsync(() async {
-      final first = book.pages.first;
-      final bytes = await repository.files
-          .read(first.relativePath!, first.bytes, first.sha256!);
-      await repository.putIndex(
-          book.id,
-          5,
-          List.generate(
-              5,
-              (i) =>
-                  ThumbnailInfo(pageToken: 'p$i', pageIndex: i, thumbUrl: '')),
-          current: () => true);
-      for (var i = 0; i < 5; i++) {
-        final saved = await repository.files
-            .write(book.id, i, Stream.value(bytes), current: () => true);
-        await repository.savePage(book.id, i, saved, current: () => true);
+  for (final alignment in ReaderSpreadAlignment.values) {
+    testWidgets(
+        'decoded explicit offline page keeps its position while neighbors arrive $alignment',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      when(() => settings.getReadingMode()).thenReturn(2);
+      when(() => settings.getReaderPreloadCount()).thenReturn(1);
+      when(() => settings.getReaderPageLayout())
+          .thenReturn(ReaderPageLayout.single);
+      when(() => settings.getReaderSpreadAlignment()).thenReturn(alignment);
+      await tester.runAsync(() async {
+        final first = book.pages.first;
+        final bytes = await repository.files
+            .read(first.relativePath!, first.bytes, first.sha256!);
+        await repository.putIndex(
+            book.id,
+            5,
+            List.generate(
+                5,
+                (i) => ThumbnailInfo(
+                    pageToken: 'p$i', pageIndex: i, thumbUrl: '')),
+            current: () => true);
+        for (var i = 0; i < 5; i++) {
+          final saved = await repository.files
+              .write(book.id, i, Stream.value(bytes), current: () => true);
+          await repository.savePage(book.id, i, saved, current: () => true);
+        }
+        book = (await repository.get(book.id))!;
+        await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+            value: settingsBloc,
+            child: MaterialApp(
+                home: ReaderScreen(
+                    gid: 42,
+                    token: 'abc',
+                    initialPage: 3,
+                    offlineBook: book))));
+      });
+      final target = find.byWidgetPredicate((w) =>
+          w is ReaderPageImage &&
+          w.image is OfflineImageProvider &&
+          (w.image as OfflineImageProvider).page.pageIndex == 3);
+      final positions = <double>[];
+      for (var i = 0; i < 40; i++) {
+        await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 25)));
+        await tester.pump(const Duration(milliseconds: 25));
+        if (target.evaluate().isNotEmpty &&
+            find
+                .descendant(of: target, matching: find.byType(RawImage))
+                .evaluate()
+                .isNotEmpty) {
+          positions.add(tester.getTopLeft(target).dy);
+        }
       }
-      book = (await repository.get(book.id))!;
-      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
-          value: settingsBloc,
-          child: MaterialApp(
-              home: ReaderScreen(
-                  gid: 42, token: 'abc', initialPage: 3, offlineBook: book))));
+      await settleOffline(tester);
+      expect(positions, isNotEmpty);
+      expect(positions.first, closeTo(0, 1));
+      for (final y in positions) expect(y, closeTo(positions.first, 1));
+      expect(tester.element(target).read<ReaderBloc>().state.currentPage, 3);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
     });
-    final target = find.byWidgetPredicate((w) =>
-        w is ReaderPageImage &&
-        w.image is OfflineImageProvider &&
-        (w.image as OfflineImageProvider).page.pageIndex == 3);
-    final positions = <double>[];
-    for (var i = 0; i < 40; i++) {
-      await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 25)));
-      await tester.pump(const Duration(milliseconds: 25));
-      if (target.evaluate().isNotEmpty &&
-          find
-              .descendant(of: target, matching: find.byType(RawImage))
-              .evaluate()
-              .isNotEmpty) {
-        positions.add(tester.getTopLeft(target).dy);
-      }
-    }
-    await settleOffline(tester);
-    expect(positions, isNotEmpty);
-    expect(positions.first, closeTo(0, 1));
-    for (final y in positions) expect(y, closeTo(positions.first, 1));
-    expect(tester.element(target).read<ReaderBloc>().state.currentPage, 3);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-  });
+  }
 
   test(
       'prepared entry read is single use and rejects a different page revision',
