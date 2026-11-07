@@ -231,6 +231,17 @@ class _SearchViewState extends State<_SearchView> {
     _suggestionRevision.value++;
   }
 
+  void _refreshHistorySuggestions() {
+    final value = _controller.value;
+    // A history edit does not change the query. Replace the visible candidates
+    // together instead of clearing them during the typing debounce interval.
+    if (!_focusNode.hasFocus ||
+        !value.composing.isCollapsed ||
+        _suggestedValue != value) return;
+    _suggestionTimer?.cancel();
+    _updateSuggestions(value);
+  }
+
   List<String> _matchingHistory(String query) =>
       _controller.value.composing.isCollapsed
           ? matchingSearchHistory(
@@ -375,7 +386,7 @@ class _SearchViewState extends State<_SearchView> {
       body: BlocListener<SearchBloc, SearchState>(
           listenWhen: (previous, current) =>
               previous.searchHistory != current.searchHistory,
-          listener: (_, __) => _scheduleSuggestions(),
+          listener: (_, __) => _refreshHistorySuggestions(),
           child: ValueListenableBuilder<int>(
               valueListenable: _suggestionRevision,
               builder: (context, _, __) => Column(

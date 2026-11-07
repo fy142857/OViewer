@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,6 +39,59 @@ class MockFavorites extends Mock implements FavoritesRepository {}
 void main() {
   setUpAll(() => registerFallbackValue(const SearchFilter()));
   tearDown(() => GetIt.I.reset());
+
+  for (final inputOnly in [false, true]) {
+    testWidgets(
+        'deleting history keeps suggestions mounted on every frame ($inputOnly)',
+        (tester) async {
+      final search = MockSearch();
+      final tags = MockTags();
+      final settings = MockSettings();
+      final history = ['solo one', 'solo two'];
+      final saved = Completer<void>();
+      when(() => search.getSearchHistory()).thenAnswer((_) => [...history]);
+      when(() => search.removeSearchHistory('solo one')).thenAnswer((_) async {
+        await saved.future;
+        history.remove('solo one');
+      });
+      when(() => tags.searchByTranslation(any())).thenReturn([
+        const TagSearchResult(namespace: 'male', key: 'solo', translation: '独自')
+      ]);
+      stubPhrases(tags);
+      when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
+      when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+      GetIt.I.registerSingleton<SearchRepository>(search);
+      GetIt.I.registerSingleton<TagTranslationRepository>(tags);
+      GetIt.I.registerSingleton<FavoritesRepository>(MockFavorites());
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settings,
+          child: MaterialApp(home: SearchScreen(inputOnly: inputOnly))));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'solo');
+      await tester.pumpAndSettle();
+      final list = tester.element(find.byType(ListView));
+      await tester.longPress(find.text('solo one'));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('solo one'), findsOneWidget);
+      expect(find.text('male:solo'), findsOneWidget);
+      saved.complete();
+      // Inspect intermediate frames, not just the settled result: the old
+      // implementation briefly replaced this list with full search history.
+      for (var frame = 0; frame < 12; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(find.text('male:solo'), findsOneWidget);
+        expect(find.text('solo two'), findsOneWidget);
+        expect(tester.element(find.byType(ListView)), same(list));
+        expect(find.text('Clear'), findsNothing);
+      }
+      expect(find.text('solo one'), findsNothing);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'solo');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    });
+  }
 
   for (final inputOnly in [false, true]) {
     testWidgets('long press deletes matching history persistently ($inputOnly)',
