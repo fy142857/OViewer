@@ -55,7 +55,7 @@ void main() {
     await tester.tap(find.text(r'male:solo$'));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-        r'female:elf$ male:solo$');
+        r'female:elf$ male:solo$ ');
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
@@ -246,8 +246,8 @@ void main() {
       await tester.tap(find.text(history[1]));
       await tester.pump(const Duration(milliseconds: 160));
       final controller = tester.widget<TextField>(field).controller!;
-      expect(controller.text, history[1]);
-      expect(controller.selection.extentOffset, history[1].length);
+      expect(controller.text, '${history[1]} ');
+      expect(controller.selection.extentOffset, history[1].length + 1);
       expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
 
       // Read fresh history, including changes made elsewhere in the app.

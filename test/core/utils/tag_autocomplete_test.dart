@@ -36,7 +36,18 @@ void main() {
         [r'male:solo$', r'female:elf$ male:solo$']);
     expect(result.keys, [r'female:elf$ male:solo$', r'male:solo$']);
     expect(
-        result.values.map((v) => v.text).toSet(), {r'female:elf$ male:solo$'});
+        result.values.map((v) => v.text).toSet(), {r'female:elf$ male:solo$ '});
+    expect(
+        result.values.every((v) => v.selection.extentOffset == v.text.length),
+        isTrue);
+  });
+  test('history completion keeps exactly one trailing space', () {
+    final result = searchHistoryCompletions(
+        const TextEditingValue(
+            text: 'male:so', selection: TextSelection.collapsed(offset: 7)),
+        [r'male:solo$   ']);
+    expect(result.values.single.text, r'male:solo$ ');
+    expect(result.values.single.selection.extentOffset, 11);
   });
   test('history candidates preserve recency and ignore case/extra whitespace',
       () {

@@ -78,42 +78,68 @@ class GalleryGridItem extends StatelessWidget {
                     bottom: 4,
                     left: 4,
                     right: 4,
-                    child: Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      spacing: 4,
-                      runSpacing: 4,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        _badge(Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.calendar_today,
-                              size: 10, color: Colors.black),
-                          const SizedBox(width: 2),
-                          Text(
-                              '${gallery.postedAt.year}-${gallery.postedAt.month.toString().padLeft(2, '0')}-${gallery.postedAt.day.toString().padLeft(2, '0')}'),
-                        ])),
-                        _badge(
-                          Row(
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.bottomLeft,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: _badge(
+                                  Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.calendar_today,
+                                            size: 10, color: Colors.black),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                            '${gallery.postedAt.year}-${gallery.postedAt.month.toString().padLeft(2, '0')}-${gallery.postedAt.day.toString().padLeft(2, '0')}'),
+                                      ]),
+                                  key: const ValueKey('gallery-date-badge')),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Icon(Icons.photo,
-                                  size: 10, color: Colors.black),
-                              const SizedBox(width: 2),
-                              Text('${gallery.fileCount}'),
+                              if (language != null && language.isNotEmpty) ...[
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: _badge(
+                                      Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.language,
+                                                size: 10, color: Colors.black),
+                                            const SizedBox(width: 2),
+                                            Text(language),
+                                          ]),
+                                      key: const ValueKey(
+                                          'gallery-language-badge')),
+                                ),
+                                const SizedBox(height: 4),
+                              ],
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: _badge(
+                                    Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.photo,
+                                              size: 10, color: Colors.black),
+                                          const SizedBox(width: 2),
+                                          Text('${gallery.fileCount}'),
+                                        ]),
+                                    key: const ValueKey('gallery-pages-badge')),
+                              ),
                             ],
                           ),
                         ),
-                        if (language != null && language.isNotEmpty) ...[
-                          _badge(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.language,
-                                    size: 10, color: Colors.black),
-                                const SizedBox(width: 2),
-                                Text(language),
-                              ],
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -154,7 +180,8 @@ class GalleryGridItem extends StatelessWidget {
     );
   }
 
-  Widget _badge(Widget child) => Container(
+  Widget _badge(Widget child, {Key? key}) => Container(
+        key: key,
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: BoxDecoration(
           color: Colors.white,

@@ -9,6 +9,7 @@ import 'package:oviewer/core/network/eh_image_cache_manager.dart';
 import 'package:oviewer/core/parser/gallery_list_parser.dart';
 import 'package:oviewer/widgets/gallery_card.dart';
 import 'package:oviewer/widgets/gallery_grid_item.dart';
+import 'package:oviewer/models/gallery_preview.dart';
 
 class MockCookies extends Mock implements CookieManager {}
 
@@ -63,6 +64,56 @@ void main() {
               .color,
           Colors.black);
       expect(tester.takeException(), isNull);
+    }
+    for (final width in [140.0, 200.0, 320.0]) {
+      for (final scale in [1.0, 2.0]) {
+        for (final language in [null, 'English']) {
+          final gallery = GalleryPreview(
+              gid: 42,
+              token: 'abc',
+              title: 'Gallery',
+              thumbUrl: url,
+              category: 'Manga',
+              rating: 4,
+              uploader: '',
+              fileCount: 1234,
+              language: language,
+              postedAt: DateTime(2026, 9, 23));
+          await tester.pumpWidget(MaterialApp(
+              home: MediaQuery(
+                  data: MediaQueryData(textScaleFactor: scale),
+                  child: Scaffold(
+                      body: Align(
+                          alignment: Alignment.topLeft,
+                          child: SizedBox(
+                              width: width,
+                              child: GalleryGridItem(gallery: gallery)))))));
+          await tester.pumpAndSettle();
+          final cover = find.byType(AspectRatio);
+          final date = find.byKey(const ValueKey('gallery-date-badge'));
+          final pages = find.byKey(const ValueKey('gallery-pages-badge'));
+          expect(tester.getBottomLeft(date).dx,
+              closeTo(tester.getBottomLeft(cover).dx + 4, .1));
+          expect(tester.getBottomLeft(date).dy,
+              closeTo(tester.getBottomLeft(cover).dy - 4, .1));
+          expect(tester.getBottomRight(pages).dx,
+              closeTo(tester.getBottomRight(cover).dx - 4, .1));
+          expect(tester.getBottomRight(pages).dy,
+              closeTo(tester.getBottomRight(cover).dy - 4, .1));
+          expect(tester.getBottomRight(date).dx,
+              lessThan(tester.getBottomLeft(pages).dx));
+          final lang = find.byKey(const ValueKey('gallery-language-badge'));
+          if (language == null) {
+            expect(lang, findsNothing);
+          } else {
+            expect(tester.getBottomRight(lang).dx,
+                closeTo(tester.getBottomRight(pages).dx, .1));
+            expect(tester.getBottomRight(lang).dy,
+                lessThan(tester.getTopRight(pages).dy));
+          }
+          expect(tester.takeException(), isNull);
+        }
+      }
     }
     await tester.pumpWidget(const SizedBox.shrink());
     PaintingBinding.instance.imageCache.clear();

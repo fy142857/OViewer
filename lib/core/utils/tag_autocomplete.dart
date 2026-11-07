@@ -42,10 +42,13 @@ Map<String, TextEditingValue> searchHistoryCompletions(
     for (final entry
         in matchingSearchHistory(query, history, aliases: aliases)) {
       result.putIfAbsent(entry, () {
-        final text = value.text.replaceRange(start, end, entry);
+        final replacement =
+            end == value.text.length ? '${entry.trimRight()} ' : entry;
+        final text = value.text.replaceRange(start, end, replacement);
         return TextEditingValue(
             text: text,
-            selection: TextSelection.collapsed(offset: start + entry.length));
+            selection:
+                TextSelection.collapsed(offset: start + replacement.length));
       });
     }
   }
