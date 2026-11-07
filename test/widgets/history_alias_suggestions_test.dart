@@ -111,8 +111,8 @@ void main() {
       await tester.tap(find.text(newest));
       await tester.pump();
       final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.controller!.text, newest);
-      expect(field.controller!.selection.extentOffset, newest.length);
+      expect(field.controller!.text, '$newest ');
+      expect(field.controller!.selection.extentOffset, newest.length + 1);
       expect(field.focusNode!.hasFocus, true);
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
