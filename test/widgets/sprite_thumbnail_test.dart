@@ -1,4 +1,3 @@
-import 'package:oviewer/widgets/adaptive_gallery_grid.dart';
 import 'package:oviewer/widgets/adaptive_thumbnail_grid.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -68,23 +67,14 @@ void main() {
       const Size(360, 720)
     ]) {
       await tester.binding.setSurfaceSize(viewport);
-      await tester.pumpWidget(
-          MaterialApp(home: LayoutBuilder(builder: (_, constraints) {
-        // Match responsive preview tile sizes through portrait/landscape changes.
-        final columns = AdaptiveGalleryGrid.columnCount(constraints.maxWidth, 1,
-            maxItemWidth: AdaptiveThumbnailGrid.maxThumbnailWidth,
-            horizontalPadding: 0,
-            itemSpacing: 4);
-        final width = (constraints.maxWidth - (columns - 1) * 4) / columns;
-        return Center(
-            child: RepaintBoundary(
-                key: boundaryKey,
-                child: SizedBox(
-                    width: width,
-                    height: width / 0.7,
-                    child: SpriteThumbnail(
-                        thumbnail: greenTile, image: provider))));
-      })));
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: AdaptiveThumbnailGrid(
+                  itemCount: 1,
+                  itemBuilder: (_, __) => RepaintBoundary(
+                      key: boundaryKey,
+                      child: SpriteThumbnail(
+                          thumbnail: greenTile, image: provider))))));
       await tester.runAsync(() => precacheImage(
           provider, tester.element(find.byType(SpriteThumbnail))));
       await tester.pump();

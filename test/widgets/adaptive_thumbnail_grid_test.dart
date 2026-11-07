@@ -48,17 +48,21 @@ void main() {
                 80: 1,
                 320: embedded ? 4 : 3,
                 416: embedded ? 5 : 4,
-                600: 6,
-                900: 9,
-                1200: 12
+                599: 6,
+                600: 4,
+                900: 6,
+                1200: 8,
+                1920: 13
               }
             : <double, int>{
                 80: 1,
                 320: 2,
                 416: embedded ? 3 : 2,
-                600: 3,
-                900: 5,
-                1200: 6
+                599: 3,
+                600: 2,
+                900: 3,
+                1200: 4,
+                1920: 7
               };
         for (final entry in cases.entries) {
           width.value = entry.key;
@@ -70,7 +74,13 @@ void main() {
               entry.value);
           final first = tester.getRect(find.byKey(const ValueKey('thumb-0')));
           expect(first.width / first.height, closeTo(0.7, 0.001));
-          expect(first.width, lessThanOrEqualTo(100 * scale + 0.01));
+          expect(first.width,
+              lessThanOrEqualTo((entry.key >= 600 ? 150 : 100) * scale + 0.01));
+          if (entry.key >= 600) {
+            // Check rendered size, so merely reducing columns without making
+            // the preview easier to inspect cannot satisfy the regression.
+            expect(first.width, greaterThan(125 * scale));
+          }
           final last =
               tester.getRect(find.byKey(ValueKey('thumb-${entry.value - 1}')));
           expect(last.top, first.top);

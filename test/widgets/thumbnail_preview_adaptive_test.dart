@@ -64,7 +64,8 @@ void main() {
       await EhImageCacheManager.instance.dispose();
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'), null);
-      expect(directory!.parent.absolute.path, Directory.systemTemp.absolute.path);
+      expect(
+          directory!.parent.absolute.path, Directory.systemTemp.absolute.path);
       await directory.delete(recursive: true);
     });
     await tester.binding.setSurfaceSize(const Size(360, 600));
@@ -100,7 +101,9 @@ void main() {
     expect(opened!['initialPage'], 6);
     Navigator.of(tester.element(find.text('Reader opened'))).pop();
     await pumpPreview();
-    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    // Keep the initial batch, including its loading tile, shorter than the
+    // viewport even with the enlarged previews, to exercise automatic filling.
+    await tester.binding.setSurfaceSize(const Size(1200, 1000));
     await pumpPreview();
     expect(requests, [0, 1]);
     expect(find.text('95'), findsNothing);
@@ -113,7 +116,12 @@ void main() {
         (tester.widget<GridView>(find.byType(GridView)).gridDelegate
                 as SliverGridDelegateWithFixedCrossAxisCount)
             .crossAxisCount,
-        12);
+        8);
+    expect(tester.getSize(find.byType(ClipRRect).first).width,
+        closeTo(144.5, 0.01));
+    await tester.scrollUntilVisible(find.text('95'), 300,
+        scrollable: find.byType(Scrollable));
+    await pumpPreview();
     expect(find.text('95'), findsOneWidget);
     await tester.tap(find.text('95'));
     await pumpPreview();
@@ -145,7 +153,9 @@ void main() {
         (tester.widget<GridView>(find.byType(GridView)).gridDelegate
                 as SliverGridDelegateWithFixedCrossAxisCount)
             .crossAxisCount,
-        8);
+        6);
+    expect(tester.getSize(find.byType(ClipRRect).first).width,
+        closeTo(131.333, 0.01));
     selectedIndex = null;
     await tester.tap(find.byType(ClipRRect).at(4));
     expect(selectedIndex, 4);

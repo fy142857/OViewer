@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'adaptive_gallery_grid.dart';
 
-/// Detail and full-preview grids share the card grid's width-based sizing rule.
+/// Detail and full-preview grids size thumbnails from their local viewport.
 class AdaptiveThumbnailGrid extends StatelessWidget {
   const AdaptiveThumbnailGrid(
       {super.key,
@@ -17,6 +17,8 @@ class AdaptiveThumbnailGrid extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final ScrollPhysics? physics;
   static const maxThumbnailWidth = 100.0;
+  static const largeViewportWidth = 600.0;
+  static const maxLargeThumbnailWidth = 150.0;
   static const spacing = 4.0;
   static const aspectRatio = 0.7;
 
@@ -26,7 +28,9 @@ class AdaptiveThumbnailGrid extends StatelessWidget {
         final columns = AdaptiveGalleryGrid.columnCount(
           constraints.maxWidth,
           MediaQuery.textScaleFactorOf(context),
-          maxItemWidth: maxThumbnailWidth,
+          maxItemWidth: constraints.maxWidth >= largeViewportWidth
+              ? maxLargeThumbnailWidth
+              : maxThumbnailWidth,
           horizontalPadding:
               padding.resolve(Directionality.of(context)).horizontal,
           itemSpacing: spacing,
