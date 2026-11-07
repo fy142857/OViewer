@@ -34,6 +34,33 @@ void main() {
   setUpAll(() => registerFallbackValue(const SearchFilter()));
   tearDown(() => GetIt.I.reset());
 
+  testWidgets('later tag history offers standalone and combined entries',
+      (tester) async {
+    final search = MockSearch();
+    final settings = MockSettings();
+    when(() => search.getSearchHistory())
+        .thenReturn([r'male:solo$', r'female:elf$ male:solo$']);
+    when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
+    when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+    GetIt.I.registerSingleton<SearchRepository>(search);
+    GetIt.I.registerSingleton<FavoritesRepository>(MockFavorites());
+    await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+        value: settings,
+        child: const MaterialApp(home: SearchScreen(inputOnly: true))));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), r'female:elf$ male:so');
+    await tester.pumpAndSettle();
+    expect(find.text(r'male:solo$'), findsOneWidget);
+    expect(find.text(r'female:elf$ male:solo$'), findsOneWidget);
+    await tester.tap(find.text(r'male:solo$'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        r'female:elf$ male:solo$');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('long search history builds on demand and recalls older entries',
       (tester) async {
     final search = MockSearch();

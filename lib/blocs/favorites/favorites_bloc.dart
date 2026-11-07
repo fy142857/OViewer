@@ -44,6 +44,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
   Future<void> _cacheReady = Future.value();
   Future<void> _preferences = Future.value();
   final _visited = <String>{};
+  final _removedGids = <int>{};
 
   static int _saved(SettingsRepository? settings, FavoritesEntry entry) {
     final value = (entry == FavoritesEntry.home
@@ -87,6 +88,13 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       }
     });
     on<LoadMoreFavorites>(_more);
+    on<FavoriteRemoved>((event, emit) {
+      if (event.scope != _scope) return;
+      _removedGids.add(event.gid);
+      emit(state.copyWith(
+          favorites:
+              state.favorites.where((g) => g.gid != event.gid).toList()));
+    });
     on<SelectFavoriteCategory>(_select);
     on<ApplyFavoriteFilters>((event, emit) =>
         _applyFilters(event.category, event.galleryCategories, emit));
@@ -146,12 +154,24 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
         return;
       }
       if (_current(generation) && _repository.changes == null) {
-        await _load(emit);
+        _removedGids.add(event.gid);
+        emit(state.copyWith(
+            favorites:
+                state.favorites.where((g) => g.gid != event.gid).toList()));
       }
     });
   }
 
   void _favoritesChanged() {
+    final change = _repository.lastChange;
+    if (_signedIn && change != null) {
+      if (change.removed) {
+        _removedGids.add(change.gid);
+        if (!_closing && !isClosed) add(FavoriteRemoved(change.gid, _scope));
+        return;
+      }
+      _removedGids.remove(change.gid);
+    }
     if (!_closing &&
         !isClosed &&
         _signedIn &&
@@ -181,6 +201,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       Future<void> cacheReady) {
     final clear = !signedIn || account != _account || revision != _revision;
     _scope = scope;
+    _removedGids.clear();
     _signedIn = signedIn;
     _account = account;
     _revision = revision;
@@ -247,6 +268,7 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
     if (!_signedIn || _closing) return;
     _dirty = false;
     final generation = ++_generation;
+    _removedGids.clear();
     _request?.cancel('Favorites refreshed');
     final request = _request = CancelToken();
     final category = state.category;
@@ -266,7 +288,8 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       if (!_current(generation)) return;
       final result = await _fetch(category, request);
       if (!_current(generation)) return;
-      await _repository.rebuildCache(result.galleries,
+      await _repository.rebuildCache(
+          result.galleries.where((g) => !_removedGids.contains(g.gid)).toList(),
           isCurrent: () => _current(generation));
       if (!_current(generation)) return;
       _visited
@@ -275,7 +298,9 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
       final seen = <int>{};
       emit(state.copyWith(
           status: FavoritesStatus.loaded,
-          favorites: result.galleries.where((g) => seen.add(g.gid)).toList(),
+          favorites: result.galleries
+              .where((g) => !_removedGids.contains(g.gid) && seen.add(g.gid))
+              .toList(),
           currentPage: 0,
           totalPages: result.totalPages,
           nextPageUrl: result.nextPageUrl,
@@ -319,10 +344,14 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
             !visited.add(result.requestUrl!)) {
           throw const FormatException('Repeated favorites page');
         }
-        await _repository.rebuildCache(result.galleries,
+        await _repository.rebuildCache(
+            result.galleries
+                .where((g) => !_removedGids.contains(g.gid))
+                .toList(),
             isCurrent: () => _current(generation));
         if (!_current(generation)) return;
-        added.addAll(result.galleries.where((g) => ids.add(g.gid)));
+        added.addAll(result.galleries
+            .where((g) => !_removedGids.contains(g.gid) && ids.add(g.gid)));
         url = result.nextPageUrl;
         page++;
       }
@@ -331,7 +360,9 @@ class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
         ..clear()
         ..addAll(visited);
       emit(state.copyWith(
-          favorites: [...state.favorites, ...added],
+          favorites: [...state.favorites, ...added]
+              .where((g) => !_removedGids.contains(g.gid))
+              .toList(),
           currentPage: page,
           nextPageUrl: url,
           hasReachedEnd: url == null,

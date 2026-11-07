@@ -44,6 +44,24 @@ void main() {
       final hearts = tester.widgetList<Icon>(find.byIcon(Icons.favorite));
       expect(hearts.length, favorited ? 2 : 0);
       expect(hearts.every((icon) => icon.color == Colors.red), isTrue);
+      final grid = find.byType(GalleryGridItem);
+      final date = find.descendant(of: grid, matching: find.text('2026-09-23'));
+      expect(date, findsOneWidget);
+      expect(
+          DefaultTextStyle.of(tester.element(date)).style.color, Colors.black);
+      final dateBadge = tester
+          .widgetList<Container>(
+              find.ancestor(of: date, matching: find.byType(Container)))
+          .firstWhere((widget) => widget.decoration is BoxDecoration);
+      expect((dateBadge.decoration! as BoxDecoration).color, Colors.white);
+      expect(tester.widget<Icon>(find.byIcon(Icons.calendar_today)).color,
+          Colors.black);
+      expect(
+          tester
+              .widget<Icon>(
+                  find.descendant(of: grid, matching: find.byIcon(Icons.photo)))
+              .color,
+          Colors.black);
       expect(tester.takeException(), isNull);
     }
     await tester.pumpWidget(const SizedBox.shrink());

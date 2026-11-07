@@ -19,6 +19,7 @@ class FavoritesRepository {
   final AppDatabase _db;
   final _changes = ValueNotifier<int>(0);
   Listenable? get changes => _changes;
+  ({int gid, bool removed})? lastChange;
   Future<void> _cacheTail = Future.value();
   int _cacheGeneration = 0;
 
@@ -281,6 +282,7 @@ class FavoritesRepository {
         'update': '1',
       });
       if (!current()) throw StateError('Favorites session expired');
+      lastChange = (gid: gid, removed: false);
       _changes.value++;
     } catch (_) {
       // Revert local cache on API failure
@@ -313,6 +315,7 @@ class FavoritesRepository {
         'update': '1',
       });
       if (!current()) throw StateError('Favorites session expired');
+      lastChange = (gid: gid, removed: true);
       _changes.value++;
     } catch (_) {
       // Revert local cache on API failure

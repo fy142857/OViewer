@@ -76,6 +76,7 @@ class _SearchViewState extends State<_SearchView> {
   TextEditingValue? _suggestedValue;
   List<TagSuggestion> _suggestions = [];
   List<String> _historySuggestions = [];
+  Map<String, TextEditingValue> _historyCompletions = {};
 
   @override
   void initState() {
@@ -201,9 +202,10 @@ class _SearchViewState extends State<_SearchView> {
   }
 
   void _updateSuggestions(TextEditingValue value) {
-    final history = _controller.value.composing.isCollapsed
-        ? _matchingHistory(_controller.text)
-        : <String>[];
+    _historyCompletions = searchHistoryCompletions(
+        value, GetIt.I<SearchRepository>().getSearchHistory(),
+        aliases: _tagRepository?.historyMatcher);
+    final history = _historyCompletions.keys.toList();
     var suggestions = <TagSuggestion>[];
     try {
       final repo = GetIt.I<TagTranslationRepository>();
@@ -215,7 +217,8 @@ class _SearchViewState extends State<_SearchView> {
     }
     String comparable(String text) =>
         normalizeTagSearchQuery(text).trim().toLowerCase();
-    final historyQueries = history.map(comparable).toSet();
+    final historyQueries =
+        _historyCompletions.values.map((v) => comparable(v.text)).toSet();
     final filtered = historyQueries.isEmpty
         ? suggestions
         : suggestions
@@ -245,10 +248,11 @@ class _SearchViewState extends State<_SearchView> {
 
   void _applyHistorySuggestion(String query) {
     if (_controller.value != _suggestedValue) return;
-    _controller.value = TextEditingValue(
-      text: query,
-      selection: TextSelection.collapsed(offset: query.length),
-    );
+    _controller.value = _historyCompletions[query] ??
+        TextEditingValue(
+          text: query,
+          selection: TextSelection.collapsed(offset: query.length),
+        );
     _clearSuggestions();
     _focusNode.requestFocus();
   }

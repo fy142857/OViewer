@@ -327,8 +327,7 @@ void main() {
       expect(bloc.state.status, FavoritesStatus.loaded);
     });
 
-    test(
-        'removal refreshes current category instead of returning to Favorite 0',
+    test('removal preserves current category without reloading its first page',
         () async {
       when(() => repo.removeCloudFavorite(4, 'abc')).thenAnswer((_) async {});
       bloc.attachView();
@@ -337,7 +336,8 @@ void main() {
       await flush();
       expect(bloc.state.category, 4);
       verify(() => repo.fetchCloudFavorites(
-          cat: 4, cancelToken: any(named: 'cancelToken'))).called(2);
+          cat: 4, cancelToken: any(named: 'cancelToken'))).called(1);
+      expect(bloc.state.favorites.any((g) => g.gid == 4), isFalse);
     });
 
     test('closing during preference save cannot start a new network request',

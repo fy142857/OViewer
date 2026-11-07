@@ -77,3 +77,11 @@ class SearchFavorites extends FavoritesEvent {
 }
 
 class FavoritesInvalidated extends FavoritesEvent {}
+
+class FavoriteRemoved extends FavoritesEvent {
+  final int gid;
+  final Object? scope;
+  const FavoriteRemoved(this.gid, this.scope);
+  @override
+  List<Object?> get props => [gid, scope];
+}

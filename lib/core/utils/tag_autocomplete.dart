@@ -31,6 +31,45 @@ List<String> matchingSearchHistory(String query, List<String> history,
         {TagHistoryMatcher? aliases}) =>
     aliases?.match(query, history) ?? literalHistoryMatches(query, history);
 
+/// Complete the current term while retaining already entered filters. Full
+/// query history has precedence when the same entry matches both searches.
+Map<String, TextEditingValue> searchHistoryCompletions(
+    TextEditingValue value, List<String> history,
+    {TagHistoryMatcher? aliases}) {
+  if (!value.composing.isCollapsed) return {};
+  final result = <String, TextEditingValue>{};
+  void addMatches(String query, int start, int end) {
+    for (final entry
+        in matchingSearchHistory(query, history, aliases: aliases)) {
+      result.putIfAbsent(entry, () {
+        final text = value.text.replaceRange(start, end, entry);
+        return TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: start + entry.length));
+      });
+    }
+  }
+
+  addMatches(value.text, 0, value.text.length);
+  final selection = value.selection;
+  if (!selection.isValid || selection.end > value.text.length) return result;
+  if (!selection.isCollapsed) {
+    addMatches(value.text.substring(selection.start, selection.end),
+        selection.start, selection.end);
+    return result;
+  }
+  final tokens =
+      RegExp(r'(?:[^\s"]+|"[^"]*"?)+').allMatches(value.text).toList();
+  final cursor = selection.extentOffset;
+  final active = tokens.indexWhere((t) => t.start < cursor && cursor <= t.end);
+  if (active > 0) {
+    final token = tokens[active];
+    addMatches(
+        value.text.substring(token.start, cursor), token.start, token.end);
+  }
+  return result;
+}
+
 /// Try the longest plain-text phrase ending at the caret first. Quoted tags
 /// and scoped search terms form boundaries, so existing filters stay intact.
 List<TagSuggestion> tagSuggestions(

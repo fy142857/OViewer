@@ -16,6 +16,28 @@ List<TagSearchResult> search(String query) =>
         : [];
 
 void main() {
+  test('history completes a later term and preserves prefix and suffix', () {
+    const source = r'female:elf$ male:sol language:english$';
+    final result = searchHistoryCompletions(
+        const TextEditingValue(
+            text: source, selection: TextSelection.collapsed(offset: 20)),
+        [r'male:solo$', r'female:elf$ male:solo$ language:english$']);
+    expect(result[r'male:solo$']!.text,
+        r'female:elf$ male:solo$ language:english$');
+    expect(result[r'male:solo$']!.selection.extentOffset, 22);
+  });
+  test('history offers both complete combinations and individual later tags',
+      () {
+    const text = r'female:elf$ male:so';
+    final result = searchHistoryCompletions(
+        TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length)),
+        [r'male:solo$', r'female:elf$ male:solo$']);
+    expect(result.keys, [r'female:elf$ male:solo$', r'male:solo$']);
+    expect(
+        result.values.map((v) => v.text).toSet(), {r'female:elf$ male:solo$'});
+  });
   test('history candidates preserve recency and ignore case/extra whitespace',
       () {
     expect(

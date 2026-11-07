@@ -76,29 +76,38 @@ class GalleryGridItem extends StatelessWidget {
                   ),
                   Positioned(
                     bottom: 4,
+                    left: 4,
                     right: 4,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 4,
+                      runSpacing: 4,
                       children: [
+                        _badge(Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.calendar_today,
+                              size: 10, color: Colors.black),
+                          const SizedBox(width: 2),
+                          Text(
+                              '${gallery.postedAt.year}-${gallery.postedAt.month.toString().padLeft(2, '0')}-${gallery.postedAt.day.toString().padLeft(2, '0')}'),
+                        ])),
                         _badge(
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.photo,
-                                  size: 10, color: Colors.white70),
+                                  size: 10, color: Colors.black),
                               const SizedBox(width: 2),
                               Text('${gallery.fileCount}'),
                             ],
                           ),
                         ),
                         if (language != null && language.isNotEmpty) ...[
-                          const SizedBox(width: 4),
                           _badge(
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.language,
-                                    size: 10, color: Colors.white70),
+                                    size: 10, color: Colors.black),
                                 const SizedBox(width: 2),
                                 Text(language),
                               ],
@@ -148,11 +157,11 @@ class GalleryGridItem extends StatelessWidget {
   Widget _badge(Widget child) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.black54,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(3),
         ),
         child: DefaultTextStyle(
-          style: const TextStyle(color: Colors.white, fontSize: 10),
+          style: const TextStyle(color: Colors.black, fontSize: 10),
           child: child,
         ),
       );
