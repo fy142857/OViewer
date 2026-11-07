@@ -1,5 +1,15 @@
 # 版本管理实施验收记录
 
+## v1.13.0 正式发布（2026-11-08）
+
+- [正式 Release](https://github.com/fy142857/OViewer/releases/tag/v1.13.0) 已公开并设为最新版本，复用候选 `1.13.0+161` 的原始 APK、IPA。源码提交 `f112ac866fe6d6e44974d15bfe704cd06491d998`，标签及构建提交 `351234c61e433e63c7e13f82d09174bafec59f6d`；未重新编译或签名发布附件。
+- [Android 构建](https://github.com/fy142857/OViewer/actions/runs/42423912980) 与 [iOS 构建](https://github.com/fy142857/OViewer/actions/runs/42423914319) 均成功，各通过 **1,308 项 Flutter 测试及 91 项脚本测试**；静态检查无新增错误或警告。按提交声明跳过 64 个预读慢场景，不将缩减范围称为全量。相关阅读改动此前的慢场景验收记录保持有效，本轮仅修正遗漏的历史别名测试断言，未为发布补跑无关本地测试。
+- `main` 晋升后 [候选准备](https://github.com/fy142857/OViewer/actions/runs/42424877435) 成功，复用候选 161。[发布前只读校验](https://github.com/fy142857/OViewer/actions/runs/42424903182) 与 [正式发布](https://github.com/fy142857/OViewer/actions/runs/42425028248) 均成功，检查候选来源、版本、分支包含关系、构建号递增、包内版本、Android 签名及产物哈希，上传后再次下载校验。
+- 公开附件为 `OViewer.apk`（30,887,139 字节）、`OViewer.ipa`（26,985,437 字节）、`release-manifest.json`、`SHA256SUMS.txt`；已核对公开 Release、最新版本标记、标签、附件大小及摘要与 manifest 一致。
+- APK SHA-256：`49e43544d5784816cbff4c6a6e9a62448affbc7c940b47a7c239afd250ebea2d`；IPA SHA-256：`42ebf80be00ace1561e435e0730dcfa9d6f2bbc6cdf158e478b6b9f8eb1ff27a`。Android 证书仍为 `a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4`。
+- iOS 为未签名 IPA，保留最低 iOS 12 部署声明，本轮未做 iOS 12 真机验收。发布准备期间普通 Debug 应用在 VOG AL10 安装启动成功，不将其描述为正式 APK 覆盖升级测试。仓库无 v1.13.0 Milestone，未关闭其他版本的 Milestone。
+- 已归档更新日志；收尾按约定将文档提交完整同步到本地及远端 `dev`、`main`，正式标签仍固定于上述候选构建提交。
+
 ## v1.13.0 发布前历史别名回归修正（2026-11-08）
 
 - 正式发布检查发现候选 160 的 Android（42423325351）及 iOS（42423327095）均在 Flutter 测试阶段失败：中英文历史别名用例仍期待无末尾空格，与此前已确认的联想补空格行为不一致。两端各执行 1,308 项，1,306 通过、2 项失败，不能使用该候选发布。
