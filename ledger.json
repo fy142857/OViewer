@@ -9609,8 +9609,133 @@
         }
       ],
       "version": "1.13.0"
+    },
+    {
+      "base_tag": "v1.12.0",
+      "branch": "dev",
+      "build_number": 161,
+      "build_sha": "351234c61e433e63c7e13f82d09174bafec59f6d",
+      "candidate_id": "1.13.0+161",
+      "fingerprint": "adf609698ff596f006d53a40cc6071c861ff5ec3761f3db192c956c578124a22",
+      "notes": "### 新增\n\n- Android 阅读器支持音量键翻页，设置页和阅读菜单共用持久化开关，默认关闭；上键上一页、下键下一页，单双页及三种阅读方向均可使用（#80）。\n- 评论支持选择与复制；标签长按直接复制原始标签，保留点击搜索（#81）。\n- 收藏页复用搜索筛选入口与类别选项，支持漫画类别筛选；收藏分组合并到同一面板的选择器，统一应用、取消及重置，首页与侧栏独立（#82）。\n- 阅读设置新增“过渡动画”：横向可选无或滑动，默认滑动，设置页与阅读器同步保存；纵向保持连续滚动。\n- 阅读区域左右各 20% 支持点击翻页：横向按阅读方向切换，纵向两侧上半区上一页、下半区下一页；双页按组切换，工具栏显隐独立。放大时优先平移图片及切换工具栏，还原后恢复翻页（#76）。\n\n### 修复\n\n- 长按删除最近搜索时原地更新联想列表，消除短暂切回搜索历史界面的闪动（#87）。\n- 输入搜索词后弹出的最近搜索支持长按删除单条记录，保存后立即更新联想列表并保留输入内容（#87）。\n- 卡片日期固定左下角，页数固定右下角、语言固定在页数上方；点击历史联想填到搜索框末尾后自动补一个空格（#85、#87）。\n- 收藏页取消收藏时保留已加载分页和滚动记录，避免返回后跳回第一页；迟到分页响应不重新加入已取消条目（#86）。\n- 输入第二个及后续搜索标签时，同时提供当前标签的独立历史和完整组合历史，选中独立历史时保留已有前后条件（#87）。\n- 卡片封面左下方增加日期图标和日期，底部日期、页数及语言标识统一为白底黑字（#85）。\n- 大屏及横屏下适当放大详情页和全部预览页的缩略图，按预览区域实际宽度调节列数，保留手机窄屏布局（#77）。\n- 收藏筛选中的分组选择器在返回关闭列表后保持圆角；框内文字缩小并垂直居中，收藏分组与分类标题统一样式及左侧对齐。\n- 标签长按复制成功后，在应用底部显示“已复制”提示。\n- 收藏分类筛选校验实际返回类别，并继续读取整页不匹配后的分页；缩小分组选择框，大字体下列表卡片随文字调整高度。\n- 垂直阅读点击两侧翻页时，将相邻图片／页组的中心定位到屏幕中心，图片解码尺寸更新后保持居中。\n- 阅读器左右翻页区域禁用双击缩放，快速连点只翻页；垂直翻页被第二次点击中断时，保持页码与画面一致。\n- 垂直阅读按实际图片／页组高度紧接下一页：高度对齐时，按宽度显示不超过屏高的图片铺满宽度，长图缩至屏高并居中；宽度对齐不再限制长短图的高度。\n- 阅读菜单中的音量键翻页文字与其他设置项对齐，缩小开关显示尺寸。\n- 阅读菜单常驻显示图片对齐选项，垂直阅读在竖屏下也可按宽度或高度对齐（#78）。\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "f112ac866fe6d6e44974d15bfe704cd06491d998",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "新增可持久保存的横向过渡动画选项及三种阅读方向的边缘翻页能力，单双页共用，缩放时优先图片操作。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "327cde28b9bc50f06185152a443952801fe9fd73",
+          "subject": "feat(reader): add transition preference and edge navigation",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "feature",
+          "classification_reason": "新增 Android 音量键翻页和收藏范围内漫画类别筛选能力，同时完善图片对齐及文字复制；兼容现有设置、数据和 iOS 12。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "7c4847b9d7383ae39da2c7980171e94f9cc07376",
+          "subject": "feat: add volume navigation, copying and favorites filters",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复阅读器边缘连点误缩放、音量开关排版及垂直图片对齐和间隙，保持既有数据、阅读模式和预加载策略兼容。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "c774dd3c97745b787181df4bd6a26d359bd9a32d",
+          "subject": "fix(reader): separate edge taps and pack vertical images",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复收藏分类未过滤实际返回条目、复制缺少反馈及选择框排版，并按要求调整垂直边缘翻页居中；保留既有数据和兼容性。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "bede87cc0e800137957a41c9d24ab1621effb951",
+          "subject": "fix: filter favorite results and center vertical edge turns",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复收藏分组选择器返回后的焦点尖角，统一分组与分类标题样式及对齐，缩小并居中框内文字。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "d3d27a1db33a72f17e58b69726cb25bb4850fa21",
+          "subject": "fix(favorites): align group selector and preserve focused corners",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "解决大屏预览图片过小的问题，详情及全部预览按局部宽度放大缩略图，保持窄屏布局与点击原页码。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "9a8988d0bc3b72878960516699eccab02551d55b",
+          "subject": "fix(preview): enlarge thumbnails in wide viewports",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复取消收藏返回丢失分页、后续标签历史缺失，统一卡片底部日期和标识，并验证既有长图完整显示修复。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "a081d965ae716450b62153efce6d084720970c2e",
+          "subject": "fix: preserve favorite pages and complete later search tags",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "按最新要求固定卡片日期和语言页数位置，并修复历史联想填入末尾后缺少空格。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "a0c97cf01cc4359e1af2a664e3077561650665e4",
+          "subject": "fix: anchor card badges and space history completions",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "补齐弹出的最近搜索记录长按删除，保存后刷新联想并保留输入内容。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "ff78105c2cb84a2d52400395c1e10f272b456e3b",
+          "subject": "fix(search): delete recent suggestions on long press",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "历史删除后一次性更新当前联想，消除清空候选并等待防抖期间切回搜索历史的闪动。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "7cf33e2c4b01b803d3bdef4c429ba7df7dcb7232",
+          "subject": "fix(search): retain suggestions while deleting history",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "maintenance",
+          "classification_reason": "更新遗漏的中英文历史别名输入及光标断言以符合已确认的末尾空格行为，保留原查询提交验证，不修改业务代码。",
+          "classification_source": "commit-trailers",
+          "original_type": "test",
+          "sha": "f112ac866fe6d6e44974d15bfe704cd06491d998",
+          "subject": "test(search): expect spacing after recalled aliases",
+          "type": "chore",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.13.0"
     }
   ],
-  "last_build_number": 160,
+  "last_build_number": 161,
   "schema": 1
 }
