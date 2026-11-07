@@ -10,6 +10,11 @@ import 'package:oviewer/repositories/favorites_repository.dart';
 import 'package:oviewer/models/search_filter.dart';
 import 'package:oviewer/repositories/tag_translation_repository.dart';
 import 'package:oviewer/screens/search/search_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:oviewer/core/storage/local_storage.dart';
+import 'package:oviewer/core/network/dio_client.dart';
+
+class HistoryDio extends Mock implements DioClient {}
 
 class MockSearch extends Mock implements SearchRepository {}
 
@@ -33,6 +38,50 @@ class MockFavorites extends Mock implements FavoritesRepository {}
 void main() {
   setUpAll(() => registerFallbackValue(const SearchFilter()));
   tearDown(() => GetIt.I.reset());
+
+  for (final inputOnly in [false, true]) {
+    testWidgets('long press deletes matching history persistently ($inputOnly)',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = LocalStorage();
+      await storage.init();
+      final search = SearchRepository(HistoryDio(), storage);
+      await search.addSearchHistory(r'male:solo$');
+      await search.addSearchHistory(r'female:elf$ male:solo$');
+      final settings = MockSettings();
+      when(() => settings.state).thenReturn(const SettingsState(locale: 'en'));
+      when(() => settings.stream).thenAnswer((_) => const Stream.empty());
+      GetIt.I.registerSingleton<SearchRepository>(search);
+      GetIt.I.registerSingleton<FavoritesRepository>(MockFavorites());
+      await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+          value: settings,
+          child: MaterialApp(home: SearchScreen(inputOnly: inputOnly))));
+      await tester.pumpAndSettle();
+      const query = r'female:elf$ male:so';
+      await tester.enterText(find.byType(TextField), query);
+      await tester.pumpAndSettle();
+      expect(find.text(r'male:solo$'), findsOneWidget);
+      await tester.longPress(find.text(r'male:solo$'));
+      await tester.pumpAndSettle();
+      expect(find.text(r'male:solo$'), findsNothing);
+      expect(find.text(r'female:elf$ male:solo$'), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          query);
+      final reopened = LocalStorage();
+      await reopened.init();
+      expect(reopened.getSearchHistory(), [r'female:elf$ male:solo$']);
+      await tester.longPress(find.text(r'female:elf$ male:solo$'));
+      await tester.pumpAndSettle();
+      expect(find.text(r'female:elf$ male:solo$'), findsNothing);
+      expect(search.getSearchHistory(), isEmpty);
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.history), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    });
+  }
 
   testWidgets('later tag history offers standalone and combined entries',
       (tester) async {
