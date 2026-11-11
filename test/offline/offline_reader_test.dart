@@ -359,22 +359,23 @@ void main() {
             book = await repository.create(
                 const OfflineKey(GallerySource.eh, 7800, 'abc'),
                 'Seamless pages',
-                4);
+                6);
             await repository.putIndex(
                 book.id,
-                4,
+                6,
                 [
-                  for (var page = 0; page < 4; page++)
+                  for (var page = 0; page < 6; page++)
                     ThumbnailInfo(
                         pageToken: 'p$page', pageIndex: page, thumbUrl: '')
                 ],
                 current: () => true);
-            for (var page = 0; page < 4; page++) {
+            for (var page = 0; page < 6; page++) {
               final recorder = ui.PictureRecorder();
               Canvas(recorder).drawColor(
                   page < 2 ? Colors.orange : Colors.blue, BlendMode.src);
               final picture = recorder.endRecording();
-              final image = await picture.toImage(40, page < 2 ? 10 : 400);
+              final image =
+                  await picture.toImage(40, page >= 2 && page < 4 ? 400 : 10);
               final png =
                   (await image.toByteData(format: ui.ImageByteFormat.png))!
                       .buffer
@@ -444,8 +445,11 @@ void main() {
           final previousSpread = layout == ReaderPageLayout.single ? 1 : 0;
           final previous = tester
               .getRect(find.byKey(ValueKey('reader-spread-$previousSpread')));
-          expect(previous.center.dy, closeTo(viewport.height / 2, 1.1),
-              reason: 'Edge previous centers the short target image/group');
+          final previousTop = ((viewport.height - previous.height) / 2)
+              .clamp(0.0, previousSpread * first.height);
+          expect(previous.top, closeTo(previousTop, 1.1),
+              reason:
+                  'Center when possible, without exposing space before the first page');
           expect(bloc.state.currentPage,
               layout == ReaderPageLayout.single ? 1 : 0);
           await tester
@@ -458,6 +462,44 @@ void main() {
               reason:
                   'Edge next centers tall targets as well as short targets');
           expect(bloc.state.currentPage, 2);
+          // The tail is short too: neither tapping nor manual scrolling may
+          // expose artificial boundary padding after a centered page turn.
+          bloc.add(ToggleReaderUI());
+          await settleOffline(tester);
+          tester.widget<Slider>(find.byType(Slider)).onChangeEnd!(5);
+          await settleOffline(tester);
+          bloc.add(ToggleReaderUI());
+          await settleOffline(tester);
+          await tester
+              .tapAt(Offset(viewport.width * .05, viewport.height * .3));
+          await settleOffline(tester);
+          await tester
+              .tapAt(Offset(viewport.width * .95, viewport.height * .6));
+          await settleOffline(tester);
+          final lastSpread = 5 ~/ columns;
+          expect(
+              tester
+                  .getRect(find.byKey(ValueKey('reader-spread-$lastSpread')))
+                  .bottom,
+              closeTo(viewport.height, 1.1),
+              reason: 'Short tail aligns to the bottom');
+          expect(bloc.state.currentPage, lastSpread * columns);
+          await tester.dragFrom(Offset(viewport.width / 2, viewport.height / 2),
+              const Offset(0, 20000));
+          await settleOffline(tester);
+          expect(
+              tester.getRect(find.byKey(const ValueKey('reader-spread-0'))).top,
+              closeTo(0, 1.1),
+              reason: 'Manual scroll stops at the first image');
+          await tester.dragFrom(Offset(viewport.width / 2, viewport.height / 2),
+              const Offset(0, -20000));
+          await settleOffline(tester);
+          expect(
+              tester
+                  .getRect(find.byKey(ValueKey('reader-spread-$lastSpread')))
+                  .bottom,
+              closeTo(viewport.height, 1.1),
+              reason: 'Manual scroll stops at the final image');
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
           await tester.runAsync(

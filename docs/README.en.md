@@ -42,7 +42,9 @@ Zoom into images and jump between pages using the progress slider or thumbnail s
 
 Adjust **Image preload count** in Settings → Reading or the loading icon to the left of the reader's book icon. Choose 1–5 (default 1) pages before and after the visible content, or spreads in double-page mode. All three online directions share the saved value, and changes apply immediately. Up to two background images load at once; visible images take priority. Image addresses are still fetched for at least three pages before and after. Offline reading keeps its existing loading policy.
 
-Tap the reading area to show or hide the controls and status bar. While the app remains running, reopening the reader can display a recently retained full-resolution image immediately. Otherwise, a known cached file is read and decoded without first requesting its image page. Leaving the reader still stops unfinished loads; failed images can be retried.
+In vertical mode, the outer 10% on each side turns pages: tap the upper half for the previous page or the lower half for the next. Tap the middle 80% to show or hide the controls and status bar. Horizontal modes retain 20% edge zones. Vertical page turns center the target image or spread where possible, stopping at the content boundaries without adding scrollable blank space.
+
+While the app remains running, reopening the reader can display a recently retained full-resolution image immediately. Otherwise, a known cached file is read and decoded without first requesting its image page. Leaving the reader still stops unfinished loads; failed images can be retried.
 
 ## Favorites and history
 

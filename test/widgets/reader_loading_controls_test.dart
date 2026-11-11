@@ -245,11 +245,19 @@ void main() {
               expect(find.byIcon(Icons.arrow_back), findsNothing);
               for (final point in [
                 const Offset(200, 400),
-                const Offset(120, 200)
+                const Offset(120, 200),
+                if (mode == 2) ...[
+                  const Offset(40, 200),
+                  const Offset(60, 600),
+                  const Offset(340, 200),
+                  const Offset(359.5, 600),
+                ],
               ]) {
                 await tester.tapAt(point);
                 await tester.pump(const Duration(milliseconds: 350));
                 expect(bloc.state.showUI, isTrue);
+                expect(bloc.state.currentPage, 0,
+                    reason: 'Interior taps do not turn pages');
                 expect(find.byIcon(Icons.arrow_back), findsOneWidget);
                 expect(find.byType(Slider), findsOneWidget);
                 expect(modes.last, 'SystemUiMode.edgeToEdge');
@@ -260,11 +268,11 @@ void main() {
               }
               // Edge navigation keeps controls independently visible/hidden.
               final nextPoint = mode == 2
-                  ? const Offset(380, 600)
-                  : Offset(mode == 0 ? 380 : 20, 400);
+                  ? const Offset(360, 600)
+                  : Offset(mode == 0 ? 340 : 60, 400);
               final prevPoint = mode == 2
-                  ? const Offset(20, 200)
-                  : Offset(mode == 0 ? 20 : 380, 400);
+                  ? const Offset(39.5, 200)
+                  : Offset(mode == 0 ? 60 : 340, 400);
               await tester.tapAt(const Offset(200, 400));
               await tester.pump(const Duration(milliseconds: 350));
               expect(bloc.state.showUI, isTrue);
@@ -360,16 +368,14 @@ void main() {
                   }
                   final row = tester.renderObject<RenderBox>(
                       find.byKey(const ValueKey('reader-spread-0')));
-                  if ((row.localToGlobal(row.size.center(Offset.zero)).dy - 400)
-                              .abs() <=
-                          1 &&
+                  if ((row.localToGlobal(Offset.zero).dy).abs() <= 1 &&
                       !tester.binding.hasScheduledFrame) break;
                 }
                 final target = tester.renderObject<RenderBox>(
                     find.byKey(const ValueKey('reader-spread-0')));
-                expect(target.localToGlobal(target.size.center(Offset.zero)).dy,
-                    closeTo(400, 1.1),
-                    reason: 'Late decoded dimensions keep the target centered');
+                expect(target.localToGlobal(Offset.zero).dy, closeTo(0, 1.1),
+                    reason:
+                        'Late decoded dimensions keep the first page flush with the top');
               }
               if (mode == 2 && alignment == ReaderSpreadAlignment.height) {
                 expect(

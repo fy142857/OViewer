@@ -196,7 +196,6 @@ class _ReaderViewState extends State<_ReaderView> {
   final ItemScrollController _verticalScrollController = ItemScrollController();
   double? _verticalInitialAlignment;
   int? _centeredSpread;
-  bool _centerBoundarySpace = false;
   bool _centerRepairQueued = false;
   final ItemPositionsListener _verticalPositionsListener =
       ItemPositionsListener.create();
@@ -217,12 +216,16 @@ class _ReaderViewState extends State<_ReaderView> {
 
   bool get _zoomed => _isZoomed || _horizontalZoomed;
 
+  double get _edgeFraction =>
+      context.read<ReaderBloc>().state.readingMode == 2 ? .1 : .2;
+
   bool _edgePosition(Offset position) {
     final box =
         _readingViewport.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return false;
     final x = box.globalToLocal(position).dx;
-    return x < box.size.width * .2 || x >= box.size.width * .8;
+    return x < box.size.width * _edgeFraction ||
+        x >= box.size.width * (1 - _edgeFraction);
   }
 
   PhotoViewScaleState _scaleCycle(PhotoViewScaleState current) =>
@@ -245,14 +248,14 @@ class _ReaderViewState extends State<_ReaderView> {
     if (box == null) return;
     final point = box.globalToLocal(details.globalPosition);
     final state = context.read<ReaderBloc>().state;
-    if (_zoomed ||
-        (point.dx >= box.size.width * .2 && point.dx < box.size.width * .8)) {
+    if (_zoomed || !_edgePosition(details.globalPosition)) {
       _toggleUI();
       return;
     }
     final next = state.readingMode == 2
         ? point.dy >= box.size.height / 2
-        : (point.dx >= box.size.width * .8) != (state.readingMode == 1);
+        : (point.dx >= box.size.width * (1 - _edgeFraction)) !=
+            (state.readingMode == 1);
     // Let PhotoView finish the pointer's scale/scroll activity first.
     final revision = _turnRevision;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -300,11 +303,26 @@ class _ReaderViewState extends State<_ReaderView> {
     return null;
   }
 
-  double _centerAlignment(int spread) =>
-      (1 - (_verticalGeometry(spread)?.$2 ?? 1)) / 2;
-
-  double _verticalAnchor(int spread, double leading) =>
-      leading - (_centerBoundarySpace && spread == 0 ? .5 : 0);
+  double _centerAlignment(int spread) {
+    final target = _verticalGeometry(spread);
+    if (target == null) return 0;
+    var leading = (1 - target.$2) / 2;
+    final last = _verticalGeometry(
+        context.read<ReaderBloc>().state.spreads.count - 1);
+    if (last != null) {
+      final minimum = 1 - (last.$1 + last.$2 - target.$1);
+      if (leading < minimum) leading = minimum;
+    }
+    final first = _verticalGeometry(0);
+    if (first != null) {
+      final maximum = target.$1 - first.$1;
+      if (leading > maximum) leading = maximum;
+    }
+    // The natural list bounds clamp unseen ends. Once laid out, the bounds
+    // above also prevent repeated centering repairs at an unreachable offset.
+    // If the whole book is shorter than the viewport, keep its start at the top.
+    return leading;
+  }
 
   void _centerVerticalSpread(int spread) {
     if (!mounted ||
@@ -317,13 +335,13 @@ class _ReaderViewState extends State<_ReaderView> {
     final viewport =
         _readingViewport.currentContext?.findRenderObject() as RenderBox?;
     if (geometry == null || viewport == null) return;
-    final error = (geometry.$1 + geometry.$2 / 2 - .5) * viewport.size.height;
+    final alignment = _centerAlignment(spread);
+    final error = (geometry.$1 - alignment) * viewport.size.height;
     if (error.abs() <= 1) return;
     // Re-anchor a fresh list after decoded dimensions change. Reusing a list
     // which is still correcting its old dimensions can retain a stale offset.
     setState(() {
-      _verticalInitialAlignment =
-          _verticalAnchor(spread, (1 - geometry.$2) / 2);
+      _verticalInitialAlignment = alignment;
       _scrollStorage = PageStorageBucket();
     });
   }
@@ -342,13 +360,6 @@ class _ReaderViewState extends State<_ReaderView> {
     try {
       if (state.readingMode == 2) {
         if (_verticalScrollController.isAttached) {
-          if (centerVertical && !_centerBoundarySpace) {
-            setState(() => _centerBoundarySpace = true);
-            await WidgetsBinding.instance.endOfFrame;
-            if (!mounted ||
-                revision != _turnRevision ||
-                widget.requests.isCancelled) return;
-          }
           final alignment = centerVertical ? _centerAlignment(target) : 0.0;
           await _verticalScrollController.scrollTo(
               index: target,
@@ -368,7 +379,7 @@ class _ReaderViewState extends State<_ReaderView> {
                   position.index == target &&
                   (position.itemLeadingEdge - alignment).abs() < .001)) {
             _verticalScrollController.jumpTo(
-                index: target, alignment: _verticalAnchor(target, alignment));
+                index: target, alignment: alignment);
           }
           if (centerVertical && revision == _turnRevision) {
             _centerVerticalSpread(target);
@@ -558,8 +569,7 @@ class _ReaderViewState extends State<_ReaderView> {
     bloc.add(PageChanged(page));
     final spread = bloc.state.spreads.spreadOf(page);
     if (bloc.state.readingMode == 2) {
-      _verticalScrollController.jumpTo(
-          index: spread, alignment: _verticalAnchor(spread, 0));
+      _verticalScrollController.jumpTo(index: spread);
     } else {
       _pageController.jumpToPage(spread);
     }
@@ -1500,15 +1510,8 @@ class _ReaderViewState extends State<_ReaderView> {
                       _isZoomed ? const NeverScrollableScrollPhysics() : null,
                   initialScrollIndex: state.spreads
                       .spreadOf(_explicitPage ?? state.currentPage),
-                  initialAlignment: _verticalInitialAlignment ??
-                      _verticalAnchor(
-                          state.spreads
-                              .spreadOf(_explicitPage ?? state.currentPage),
-                          0),
-                  padding: _centerBoundarySpace
-                      ? EdgeInsets.only(
-                          top: viewport.height / 2, bottom: viewport.height)
-                      : EdgeInsets.zero,
+                  initialAlignment: _verticalInitialAlignment ?? 0,
+                  padding: EdgeInsets.zero,
                   itemBuilder: (_, index) => SizeChangedLayoutNotifier(
                       child: _spreadRow(state, index,
                           horizontal: false, viewport: viewport)),
