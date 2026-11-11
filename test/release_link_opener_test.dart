@@ -11,6 +11,21 @@ void main() {
   tearDown(() =>
       messenger.setMockMethodCallHandler(ReleaseLinkOpener.channel, null));
 
+  test('repository link uses the fixed native destination and reports failure',
+      () async {
+    for (final opened in [true, false]) {
+      messenger.setMockMethodCallHandler(ReleaseLinkOpener.channel,
+          (call) async {
+        expect(call.method, 'openRepository');
+        expect(call.arguments, isNull);
+        return opened;
+      });
+      expect(await ReleaseLinkOpener().openRepository(), opened);
+    }
+    messenger.setMockMethodCallHandler(ReleaseLinkOpener.channel, null);
+    expect(await ReleaseLinkOpener().openRepository(), isFalse);
+  });
+
   test('passes release URL and propagates native success or failure', () async {
     for (final opened in [true, false]) {
       messenger.setMockMethodCallHandler(ReleaseLinkOpener.channel,

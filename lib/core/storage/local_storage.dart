@@ -49,15 +49,21 @@ class LocalStorage {
       _setOfflineLimit('offline_parallel_pages', value, 6);
 
   // Keep a detected update across settings visits and application restarts.
-  static const _keyLatestReleaseVersion = 'latest_release_version';
-  String? getLatestReleaseVersion() =>
-      _prefs.getString(_keyLatestReleaseVersion);
-  Future<void> setLatestReleaseVersion(String? version) async {
-    final saved = version == null
-        ? await _prefs.remove(_keyLatestReleaseVersion)
-        : await _prefs.setString(_keyLatestReleaseVersion, version);
+  static const _keyLatestReleaseBuild = 'latest_release_build_number';
+  int? getLatestReleaseBuildNumber() {
+    final value = _prefs.get(_keyLatestReleaseBuild);
+    return value is int && value > 0 ? value : null;
+  }
+  Future<void> setLatestReleaseBuildNumber(int? build) async {
+    final saved = build == null
+        ? await _prefs.remove(_keyLatestReleaseBuild)
+        : await _prefs.setInt(_keyLatestReleaseBuild, build);
     if (!saved)
-      throw StateError('Could not persist the latest release version.');
+      throw StateError('Could not persist the latest release build.');
+    if (_prefs.containsKey('latest_release_version') &&
+        !await _prefs.remove('latest_release_version')) {
+      throw StateError('Could not remove the legacy release reminder.');
+    }
   }
 
   final Map<String, int> _favoriteCategories = {};

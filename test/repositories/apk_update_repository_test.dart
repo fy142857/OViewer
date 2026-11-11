@@ -5,29 +5,10 @@ import 'package:http/testing.dart';
 import 'package:oviewer/models/apk_update.dart';
 import 'package:oviewer/repositories/update_repository.dart';
 
-Map<String, dynamic> apkManifest() {
-  final candidate = {
-    'version': '1.8.0',
-    'build_number': 70,
-    'candidate_id': '1.8.0+70',
-    'source_sha': 'source',
-    'build_sha': 'build'
-  };
-  return {
-    'schema': 1,
-    'version': 'v1.8.0',
-    'candidate': candidate,
-    'android': {
-      ...candidate,
-      'schema': 1,
-      'platform': 'android',
-      'filename': 'OViewer.apk',
-      'size': 4,
-      'sha256': 'a' * 64,
-      'signing_cert_sha256': 'b' * 64
-    }
-  };
-}
+import '../fixtures/update_release.dart';
+
+Map<String, dynamic> apkManifest() =>
+    releaseManifest(version: '1.8.0', build: 70);
 
 Map<String, dynamic> apkRelease() => {
       'tag_name': 'v1.8.0',
@@ -85,7 +66,6 @@ old''', '1.8.0');
   test('Android resolves exact assets and consistent manifest', () async {
     final calls = <Uri>[];
     final repo = UpdateRepository(
-        readVersion: () async => '1.7.0',
         readBuildNumber: () async => 67,
         clientFactory: () => MockClient((r) async {
               calls.add(r.url);
@@ -115,7 +95,7 @@ old''', '1.8.0');
     'hash',
     'build'
   ]) {
-    test('invalid $invalid preserves update indication and release link',
+    test('invalid $invalid never offers an unsafe APK and keeps release link',
         () async {
       final release = apkRelease();
       final manifest = apkManifest();
@@ -145,7 +125,6 @@ old''', '1.8.0');
           break;
       }
       final repo = UpdateRepository(
-          readVersion: () async => '1.7.0',
           readBuildNumber: () async => invalid == 'build' ? 71 : 67,
           clientFactory: () => MockClient((r) async => http.Response(
               jsonEncode(
@@ -153,27 +132,38 @@ old''', '1.8.0');
               200,
               headers: {'content-type': 'application/json; charset=utf-8'})));
       final result = await repo.check(android: true).result;
-      expect(result.status, UpdateStatus.available);
-      expect(result.apk, isNull);
+      final verified = !['missing', 'version', 'candidate'].contains(invalid);
       expect(
-          result.apkFailure, invalid == 'build' ? 'newer_build' : 'metadata');
+          result.status,
+          invalid == 'build'
+              ? UpdateStatus.ahead
+              : verified
+                  ? UpdateStatus.available
+                  : UpdateStatus.unverified);
+      expect(result.apk, isNull);
+      expect(result.apkFailure, invalid == 'build' ? null : 'metadata');
       expect(result.releaseUrl, isNotNull);
-      expect(repo.updateAvailable, isTrue);
+      expect(repo.updateAvailable, verified && invalid != 'build');
     });
   }
 
-  test('iOS only requests release, even without assets', () async {
-    var calls = 0;
+  test('iOS reads its manifest build without needing or downloading an APK',
+      () async {
+    final calls = <Uri>[];
     final repo = UpdateRepository(
-        readVersion: () async => '1.7.0',
-        readBuildNumber: () async => throw StateError('Not used on iOS'),
+        readBuildNumber: () async => 67,
         clientFactory: () => MockClient((r) async {
-              calls++;
-              return http.Response(
-                  jsonEncode(apkRelease()..remove('assets')), 200,
-                  headers: {'content-type': 'application/json; charset=utf-8'});
+              calls.add(r.url);
+              final data = apkRelease();
+              (data['assets'] as List)
+                  .removeWhere((a) => a['name'] == 'OViewer.apk');
+              return jsonResponse(
+                  r.url == UpdateRepository.endpoint ? data : apkManifest());
             }));
-    expect((await repo.check().result).status, UpdateStatus.available);
-    expect(calls, 1);
+    final result = await repo.check().result;
+    expect(result.status, UpdateStatus.available);
+    expect(result.apk, isNull);
+    expect(calls.length, 2);
+    expect(calls.last.path, endsWith('/release-manifest.json'));
   });
 }

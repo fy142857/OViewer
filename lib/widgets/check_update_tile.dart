@@ -100,12 +100,16 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
       final s = S.of(context);
       switch (result.status) {
         case UpdateStatus.available:
+        case UpdateStatus.current:
+        case UpdateStatus.ahead:
+        case UpdateStatus.unverified:
+          final available = result.status == UpdateStatus.available;
           final version =
               result.version!.replaceFirst(RegExp(r'^v'), '').split('+').first;
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: Text(s.updateAvailable),
+              title: Text(available ? s.updateAvailable : s.checkUpdate),
               content: SizedBox(
                 width: 400,
                 child: SingleChildScrollView(
@@ -113,9 +117,25 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s.updateInstallPrompt(version)),
-                      const SizedBox(height: 16),
-                      UpdateReleaseNotes(result.notes),
+                      TextButton(
+                        key: const ValueKey('update-release-link'),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text(s.updateReleaseLink,
+                            style: const TextStyle(
+                                decoration: TextDecoration.underline)),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(available
+                          ? s.updateInstallPrompt(version)
+                          : result.status == UpdateStatus.current
+                              ? s.versionCurrent
+                              : result.status == UpdateStatus.ahead
+                                  ? s.versionAhead
+                                  : s.updateInvalidResponse),
+                      if (available) ...[
+                        const SizedBox(height: 16),
+                        UpdateReleaseNotes(result.notes),
+                      ],
                     ],
                   ),
                 ),
@@ -124,19 +144,14 @@ class _CheckUpdateTileState extends State<CheckUpdateTile> {
                 TextButton(
                     onPressed: () => Navigator.pop(context, false),
                     child: Text(s.cancel)),
-                TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(s.confirm)),
+                if (available)
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text(s.confirm)),
               ],
             ),
           );
           if (confirmed == true && _visible) await _open(result.releaseUrl!);
-          break;
-        case UpdateStatus.current:
-          _message(s.versionCurrent);
-          break;
-        case UpdateStatus.ahead:
-          _message(s.versionAhead);
           break;
         case UpdateStatus.noRelease:
           _message(s.noReleaseAvailable);

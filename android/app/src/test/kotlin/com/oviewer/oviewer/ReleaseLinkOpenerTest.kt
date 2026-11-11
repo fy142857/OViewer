@@ -27,6 +27,16 @@ class ReleaseLinkOpenerTest {
     }
     private val url = "https://github.com/fy142857/OViewer/releases/tag/v1.2.0"
 
+    @Test fun opensOnlyFixedRepositoryWithBrowserSelector() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val result = Result()
+        ReleaseLinkOpener(activity).onMethodCall(MethodCall("openRepository", "https://example.com"), result)
+        assertEquals(true, result.value)
+        val intent = Shadows.shadowOf(activity).nextStartedActivity
+        assertEquals("https://github.com/fy142857/OViewer", intent.data.toString())
+        assertTrue(intent.selector?.hasCategory(Intent.CATEGORY_APP_BROWSER) == true)
+    }
+
     @Test fun opensReleaseWithBrowserSelector() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val result = Result()

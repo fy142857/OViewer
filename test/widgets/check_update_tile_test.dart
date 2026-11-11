@@ -14,8 +14,7 @@ import 'package:oviewer/widgets/update_release_notes.dart';
 import 'package:oviewer/core/storage/local_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../repositories/update_repository_test.dart'
-    show TrackingClient, release;
+import '../fixtures/update_release.dart';
 
 class MockSettings extends Mock implements SettingsBloc {}
 
@@ -42,12 +41,12 @@ void main() {
     final pending = Completer<http.Response>();
     var requests = 0;
     final opened = <Uri>[];
-    final client = TrackingClient((_) {
+    final client = ReleaseClient((_) {
       requests++;
       return pending.future;
     });
     final repo = UpdateRepository(
-        clientFactory: () => client, readVersion: () async => '1.0.0');
+        clientFactory: () => client, readBuildNumber: () async => 1);
     await tester.pumpWidget(app(repo, (url) async {
       opened.add(url);
       return true;
@@ -98,8 +97,8 @@ void main() {
       var requests = 0;
       final opened = <Uri>[];
       final repo = UpdateRepository(
-        readVersion: () async => '1.0.0',
-        clientFactory: () => TrackingClient((request) async {
+        readBuildNumber: () async => 1,
+        clientFactory: () => ReleaseClient((request) async {
           requests++;
           expect(request.url, UpdateRepository.endpoint);
           return http.Response(jsonEncode({...release(), 'body': body}), 200,
@@ -144,23 +143,35 @@ void main() {
   }
 
   for (final sample in [
-    ('zh', '1.2.0', '当前已是最新版本'),
-    ('en', '1.2.0', 'You are on the latest version'),
-    ('zh', '2.0.0', '当前版本高于最新正式版'),
-    ('en', '2.0.0', 'Your version is newer than the latest release'),
+    ('zh', 32, '当前已是最新版本'),
+    ('en', 32, 'You are on the latest version'),
+    ('zh', 33, '当前版本高于最新正式版'),
+    ('en', 33, 'Your version is newer than the latest release'),
   ]) {
     testWidgets('reports ${sample.$2} in ${sample.$1} without opening',
         (tester) async {
       final repo = UpdateRepository(
-          clientFactory: () => TrackingClient(
+          clientFactory: () => ReleaseClient(
               (_) async => http.Response(jsonEncode(release()), 200)),
-          readVersion: () async => sample.$2);
-      await tester.pumpWidget(app(
-          repo, (_) async => throw StateError('Must not open'),
-          locale: sample.$1));
+          readBuildNumber: () async => sample.$2);
+      final opened = <Uri>[];
+      await tester.pumpWidget(app(repo, (url) async {
+        opened.add(url);
+        return true;
+      }, locale: sample.$1, platform: TargetPlatform.iOS));
       await tester.tap(find.byKey(const ValueKey('check-update')));
       await tester.pumpAndSettle();
       expect(find.text(sample.$3), findsOneWidget);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(opened, isEmpty);
+      expect(
+          find.byKey(const ValueKey('update-available-badge')), findsNothing);
+      final link = find.byKey(const ValueKey('update-release-link'));
+      expect(link, findsOneWidget);
+      await tester.tap(link);
+      await tester.pumpAndSettle();
+      expect(opened.single.toString(), release()['html_url']);
+      expect(find.byType(AlertDialog), findsNothing);
     });
   }
 
@@ -168,11 +179,11 @@ void main() {
       (tester) async {
     var requests = 0;
     final repo = UpdateRepository(
-        clientFactory: () => TrackingClient((_) async {
+        clientFactory: () => ReleaseClient((_) async {
               if (++requests == 1) throw http.ClientException('offline');
               return http.Response('', 404);
             }),
-        readVersion: () async => '1.0.0');
+        readBuildNumber: () async => 1);
     await tester.pumpWidget(app(repo, (_) async => true));
     await tester.tap(find.text('检查更新'));
     await tester.pumpAndSettle();
@@ -188,11 +199,11 @@ void main() {
     var requests = 0;
     var opens = 0;
     final repo = UpdateRepository(
-        clientFactory: () => TrackingClient((_) async {
+        clientFactory: () => ReleaseClient((_) async {
               requests++;
               return http.Response(jsonEncode(release()), 200);
             }),
-        readVersion: () async => '1.0.0');
+        readBuildNumber: () async => 1);
     await tester.pumpWidget(app(repo, (_) async => ++opens > 1));
     await tester.tap(find.text('检查更新'));
     await tester.pumpAndSettle();
@@ -217,10 +228,10 @@ void main() {
       await storage.init();
       var requests = 0;
       var opens = 0;
-      UpdateRepository repository(String installed) => UpdateRepository(
+      UpdateRepository repository(int installed) => UpdateRepository(
             storage: storage,
-            readVersion: () async => installed,
-            clientFactory: () => TrackingClient((_) async {
+            readBuildNumber: () async => installed,
+            clientFactory: () => ReleaseClient((_) async {
               requests++;
               return http.Response(jsonEncode(release()), 200);
             }),
@@ -230,7 +241,7 @@ void main() {
         return true;
       }
 
-      await tester.pumpWidget(app(repository('1.0.0'), open, locale: locale));
+      await tester.pumpWidget(app(repository(1), open, locale: locale));
       await tester.pumpAndSettle();
       expect(requests, 0);
       await tester.tap(find.byKey(const ValueKey('check-update')));
@@ -244,23 +255,23 @@ void main() {
       await tester.tap(find.text(locale == 'zh' ? '取消' : 'Cancel'));
       await tester.pumpAndSettle();
       expect(opens, 0);
-      expect(storage.getLatestReleaseVersion(), '1.2.0');
+      expect(storage.getLatestReleaseBuildNumber(), 32);
       final badge = find.byKey(const ValueKey('update-available-badge'));
       expect(tester.widget<Text>(badge).style!.color, Colors.purple);
       expect(tester.widget<Text>(badge).data,
           locale == 'zh' ? '已有新版本' : 'Update available');
       await tester.pumpWidget(const SizedBox());
-      await tester.pumpWidget(app(repository('1.0.0'), open, locale: locale));
+      await tester.pumpWidget(app(repository(1), open, locale: locale));
       await tester.pumpAndSettle();
       expect(badge, findsOneWidget);
       expect(requests, 1);
       expect(opens, 0);
       expect(find.byType(AlertDialog), findsNothing);
       await tester.pumpWidget(const SizedBox());
-      await tester.pumpWidget(app(repository('1.2.0'), open, locale: locale));
+      await tester.pumpWidget(app(repository(32), open, locale: locale));
       await tester.pumpAndSettle();
       expect(badge, findsNothing);
-      expect(storage.getLatestReleaseVersion(), isNull);
+      expect(storage.getLatestReleaseBuildNumber(), isNull);
       expect(requests, 1);
       expect(tester.takeException(), isNull);
     });
@@ -268,21 +279,21 @@ void main() {
 
   testWidgets('failed check does not dismiss a saved update reminder',
       (tester) async {
-    SharedPreferences.setMockInitialValues({'latest_release_version': '1.2.0'});
+    SharedPreferences.setMockInitialValues({'latest_release_build_number': 32});
     final storage = LocalStorage();
     await storage.init();
     final repo = UpdateRepository(
         storage: storage,
-        readVersion: () async => '1.0.0',
+        readBuildNumber: () async => 1,
         clientFactory: () =>
-            TrackingClient((_) async => http.Response('', 500)));
+            ReleaseClient((_) async => http.Response('', 500)));
     await tester.pumpWidget(app(repo, (_) async => true));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('check-update')));
     await tester.pumpAndSettle();
     expect(
         find.byKey(const ValueKey('update-available-badge')), findsOneWidget);
-    expect(storage.getLatestReleaseVersion(), '1.2.0');
+    expect(storage.getLatestReleaseBuildNumber(), 32);
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.text('检查更新失败，请检查网络后重试'), findsOneWidget);
   });
@@ -291,11 +302,11 @@ void main() {
     testWidgets('leaving settings suppresses late jump (dispose: $dispose)',
         (tester) async {
       final pending = Completer<http.Response>();
-      final client = TrackingClient((_) => pending.future);
+      final client = ReleaseClient((_) => pending.future);
       final navigator = GlobalKey<NavigatorState>();
       var opens = 0;
       final repo = UpdateRepository(
-          clientFactory: () => client, readVersion: () async => '1.0.0');
+          clientFactory: () => client, readBuildNumber: () async => 1);
       await tester.pumpWidget(app(repo, (_) async {
         opens++;
         return true;

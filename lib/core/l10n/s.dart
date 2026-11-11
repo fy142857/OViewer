@@ -168,6 +168,7 @@ class S {
   String get updateNow => _zh ? '立即更新' : 'Update now';
   String get installNow => _zh ? '立即安装' : 'Install now';
   String get updateReleaseLink => _zh ? '跳转发布页（下载更稳）' : 'Open release page (more reliable download)';
+  String get openGitHub => _zh ? '前往GitHub' : 'Open GitHub';
   String get updateHide => _zh ? '隐藏' : 'Hide';
   String get updateContinue => _zh ? '继续下载' : 'Continue';
   String get updatePause => _zh ? '暂停' : 'Pause';

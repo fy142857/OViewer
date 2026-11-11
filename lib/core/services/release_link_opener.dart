@@ -14,8 +14,14 @@ class ReleaseLinkOpener {
 
   Future<bool> open(Uri uri) async {
     if (!isReleaseUrl(uri)) return false;
+    return _invoke('open', uri.toString());
+  }
+
+  Future<bool> openRepository() => _invoke('openRepository');
+
+  Future<bool> _invoke(String method, [String? url]) async {
     try {
-      return await channel.invokeMethod<bool>('open', uri.toString()) ?? false;
+      return await channel.invokeMethod<bool>(method, url) ?? false;
     } on PlatformException {
       return false;
     } on MissingPluginException {

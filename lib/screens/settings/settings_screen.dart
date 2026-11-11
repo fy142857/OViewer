@@ -314,7 +314,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // ---- About ----
-              _sectionHeader(s.about),
+              _sectionHeader(s.about,
+                  action: TextButton(
+                    key: const ValueKey('settings-github-link'),
+                    onPressed: () async {
+                      final opened =
+                          await GetIt.I<ReleaseLinkOpener>().openRepository();
+                      if (!opened && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(s.releaseOpenFailed)));
+                      }
+                    },
+                    child: Text(s.openGitHub),
+                  )),
               ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: const Text('OViewer'),
@@ -347,17 +359,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _sectionHeader(String title) {
+  Widget _sectionHeader(String title, {Widget? action}) {
+    final label = Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-      ),
+      child: action == null
+          ? label
+          : Row(children: [
+              Expanded(child: label),
+              Flexible(child: Align(alignment: Alignment.centerRight, child: action)),
+            ]),
     );
   }
 

@@ -10,7 +10,7 @@ import '../models/apk_update.dart';
 import '../core/services/release_link_opener.dart';
 import '../core/storage/local_storage.dart';
 
-enum UpdateStatus { available, current, ahead, noRelease }
+enum UpdateStatus { available, current, ahead, noRelease, unverified }
 
 enum UpdateFailure {
   network,
@@ -52,61 +52,49 @@ class UpdateRepository {
   UpdateRepository({
     LocalStorage? storage,
     http.Client Function()? clientFactory,
-    Future<String> Function()? readVersion,
     Future<int> Function()? readBuildNumber,
     this.timeout = const Duration(seconds: 15),
   })  : _storage = storage,
-        _knownLatest = storage?.getLatestReleaseVersion(),
+        _knownLatest = storage?.getLatestReleaseBuildNumber(),
         _clientFactory = clientFactory ?? (() => UpdateHttpClient()),
         _readBuildNumber = readBuildNumber ??
             (() async =>
-                int.parse((await PackageInfo.fromPlatform()).buildNumber)),
-        _readVersion = readVersion ?? _installedVersion;
+                int.parse((await PackageInfo.fromPlatform()).buildNumber));
 
   static final endpoint =
       Uri.https('api.github.com', '/repos/fy142857/OViewer/releases/latest');
   final http.Client Function() _clientFactory;
-  final Future<String> Function() _readVersion;
   final Future<int> Function() _readBuildNumber;
   final Duration timeout;
   final LocalStorage? _storage;
-  String? _knownLatest;
+  int? _knownLatest;
 
   bool get updateAvailable => _knownLatest != null;
 
   /// Reconcile saved detection with the installed package, without networking.
   Future<void> restoreUpdateStatus() async {
     try {
-      final installed = _version(await _readVersion());
+      final installed = await _readBuildNumber();
+      if (installed <= 0) return;
       final known = _knownLatest;
-      if (known != null && _compare(installed, _version(known)) >= 0) {
-        await _saveKnownVersion(null);
+      if (known == null || installed >= known) {
+        // Old version-name-only reminders cannot establish a newer build.
+        await _saveKnownBuild(null);
       }
     } catch (_) {
       // Failure to identify the package is not evidence that it was upgraded.
-      // Keep a saved update indication until a version comparison succeeds.
+      // Keep a saved update indication until a build comparison succeeds.
     }
   }
 
-  Future<void> _saveKnownVersion(String? version) async {
-    _knownLatest = version;
+  Future<void> _saveKnownBuild(int? build) async {
+    _knownLatest = build;
     try {
-      await _storage?.setLatestReleaseVersion(version);
+      await _storage?.setLatestReleaseBuildNumber(build);
     } catch (_) {
       throw const UpdateCheckException(UpdateFailure.storage);
     }
   }
-
-  static int _compare(List<int> a, List<int> b) {
-    for (var i = 0; i < 3; i++) {
-      final comparison = a[i].compareTo(b[i]);
-      if (comparison != 0) return comparison;
-    }
-    return 0;
-  }
-
-  static Future<String> _installedVersion() async =>
-      (await PackageInfo.fromPlatform()).version;
 
   UpdateCheckOperation check({bool android = false}) {
     http.Client? client;
@@ -143,9 +131,10 @@ class UpdateRepository {
 
   Future<UpdateCheckResult> _check(
       http.Client client, bool Function() cancelled, bool android) async {
-    late final List<int> installed;
+    late final int installed;
     try {
-      installed = _version(await _readVersion());
+      installed = await _readBuildNumber();
+      if (installed <= 0) throw const FormatException('Invalid build number');
     } catch (_) {
       throw const UpdateCheckException(UpdateFailure.version);
     }
@@ -156,6 +145,7 @@ class UpdateRepository {
       'Accept': 'application/vnd.github+json',
       'User-Agent': 'OViewer-update-check',
     });
+    if (cancelled()) throw const UpdateCheckException(UpdateFailure.network);
     if (response.statusCode == 404) {
       return const UpdateCheckResult(UpdateStatus.noRelease);
     }
@@ -173,23 +163,53 @@ class UpdateRepository {
       final tag = data['tag_name'] as String;
       final latest = _version(tag);
       final url = Uri.parse(data['html_url'] as String);
-      if (!ReleaseLinkOpener.isReleaseUrl(url)) {
+      if (!ReleaseLinkOpener.isReleaseUrl(url) ||
+          url.pathSegments.last != tag) {
         throw const FormatException('Invalid release URL');
       }
-      final comparison = _compare(latest, installed);
-      if (cancelled()) throw const UpdateCheckException(UpdateFailure.network);
-      await _saveKnownVersion(comparison > 0 ? latest.join('.') : null);
-      ApkUpdate? apk;
-      String? apkFailure;
       final notes =
           updateReleaseNotes(data['body'] as String? ?? '', latest.join('.'));
+      late final Map<String, dynamic> manifest;
+      late final int build;
+      try {
+        manifest = await _releaseManifest(client, data, tag);
+        final platform = android ? 'android' : 'ios';
+        final info = manifest[platform] as Map<String, dynamic>;
+        final candidate = manifest['candidate'] as Map<String, dynamic>;
+        if (manifest['schema'] != 1 ||
+            manifest['version'] != tag ||
+            candidate['version'] != latest.join('.') ||
+            info['schema'] != 1 ||
+            info['platform'] != platform ||
+            const [
+              'version',
+              'build_number',
+              'candidate_id',
+              'build_sha',
+              'source_sha'
+            ].any((key) => info[key] == null || info[key] != candidate[key])) {
+          throw const FormatException('Inconsistent release manifest');
+        }
+        build = info['build_number'] as int;
+        if (build <= 0) throw const FormatException('Invalid release build');
+      } catch (_) {
+        if (cancelled())
+          throw const UpdateCheckException(UpdateFailure.network);
+        // Keep a reachable release page, but never infer an update from its name.
+        return UpdateCheckResult(UpdateStatus.unverified,
+            version: tag,
+            releaseUrl: url,
+            apkFailure: 'metadata',
+            notes: notes);
+      }
+      final comparison = build.compareTo(installed);
+      if (cancelled()) throw const UpdateCheckException(UpdateFailure.network);
+      await _saveKnownBuild(comparison > 0 ? build : null);
+      ApkUpdate? apk;
+      String? apkFailure;
       if (android && comparison > 0) {
         try {
-          apk = await _androidPackage(client, data, tag, url, notes);
-          if (apk.buildNumber <= await _readBuildNumber()) {
-            apkFailure = 'newer_build';
-            apk = null;
-          }
+          apk = _androidPackage(data, manifest, tag, url, notes);
         } catch (_) {
           apkFailure = 'metadata';
         }
@@ -214,20 +234,20 @@ class UpdateRepository {
     }
   }
 
-  Future<ApkUpdate> _androidPackage(http.Client client,
-      Map<String, dynamic> data, String tag, Uri release, String notes) async {
+  Map<String, dynamic> _asset(
+      Map<String, dynamic> data, String tag, String name) {
     final assets = (data['assets'] as List).cast<Map<String, dynamic>>();
-    Map<String, dynamic> asset(String name) {
-      final value = assets.where((a) => a['name'] == name).single;
-      if (!ApkUpdate.assetUrl(
-          Uri.parse(value['browser_download_url'] as String), tag, name)) {
-        throw const FormatException('Invalid release attachment');
-      }
-      return value;
+    final value = assets.where((a) => a['name'] == name).single;
+    if (!ApkUpdate.assetUrl(
+        Uri.parse(value['browser_download_url'] as String), tag, name)) {
+      throw const FormatException('Invalid release attachment');
     }
+    return value;
+  }
 
-    final apk = asset('OViewer.apk');
-    final manifest = asset('release-manifest.json');
+  Future<Map<String, dynamic>> _releaseManifest(
+      http.Client client, Map<String, dynamic> data, String tag) async {
+    final manifest = _asset(data, tag, 'release-manifest.json');
     final response = await client.send(http.Request(
         'GET', Uri.parse(manifest['browser_download_url'] as String)));
     if (response.statusCode != 200)
@@ -238,7 +258,12 @@ class UpdateRepository {
         throw const FormatException('Manifest too large');
       bytes.addAll(chunk);
     }
-    final root = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+    return jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+  }
+
+  ApkUpdate _androidPackage(Map<String, dynamic> data,
+      Map<String, dynamic> root, String tag, Uri release, String notes) {
+    final apk = _asset(data, tag, 'OViewer.apk');
     final info = root['android'] as Map<String, dynamic>;
     final candidate = root['candidate'] as Map<String, dynamic>;
     if (root['schema'] != 1 ||
