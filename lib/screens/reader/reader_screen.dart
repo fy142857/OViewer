@@ -734,23 +734,32 @@ class _ReaderViewState extends State<_ReaderView> {
         context.read<ReaderBloc>().add(PageChanged(target));
       return;
     }
-    // Find the item whose leading edge is closest to (but <= ) the top of the
-    // viewport. This avoids jitter caused by two items having nearly equal
-    // visible area — the page only advances once the next item's top edge
-    // scrolls past the midpoint of the screen.
-    final sorted = positions.toList()
-      ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
-    // Pick the last item whose leading edge is at or above the 0.5 mark
-    // (i.e. its top is in the upper half of the viewport).
-    var current = sorted.first;
-    for (final pos in sorted) {
-      if (pos.itemLeadingEdge <= 0.5) {
-        current = pos;
+    // Boundary pages win even when short images occupy little of the screen.
+    // Include elastic overscroll and tolerate sub-pixel layout differences.
+    const edgeTolerance = .001;
+    final atTop = positions.any((p) =>
+        p.index == 0 && p.itemLeadingEdge >= -edgeTolerance);
+    final atBottom = positions.any((p) =>
+        p.index == offlineState.spreads.count - 1 &&
+        p.itemTrailingEdge <= 1 + edgeTolerance);
+    final int page;
+    if (atTop) {
+      // A book shorter than one viewport has both ends visible; prefer page 1.
+      page = 0;
+    } else if (atBottom) {
+      page = offlineState.totalPages - 1;
+    } else {
+      // Away from either boundary, keep the existing midpoint selection rule.
+      final sorted = positions.toList()
+        ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
+      var current = sorted.first;
+      for (final pos in sorted) {
+        if (pos.itemLeadingEdge <= 0.5) current = pos;
       }
+      page = offlineState.spreads.pages(current.index).first;
     }
     _releaseOffscreenResources();
     final bloc = context.read<ReaderBloc>();
-    final page = bloc.state.spreads.pages(current.index).first;
     if (page != bloc.state.currentPage) {
       bloc.add(PageChanged(page));
     }
@@ -1485,6 +1494,9 @@ class _ReaderViewState extends State<_ReaderView> {
             _explicitPage = null;
             _centeredSpread = null;
             _verticalInitialAlignment = null;
+            // A clamped drag at an already reached edge may not publish new
+            // item positions, but it still releases explicit jump/resume focus.
+            _onVerticalScroll();
           }
           return false;
         },

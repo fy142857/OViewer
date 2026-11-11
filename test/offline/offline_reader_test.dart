@@ -484,6 +484,14 @@ void main() {
               closeTo(viewport.height, 1.1),
               reason: 'Short tail aligns to the bottom');
           expect(bloc.state.currentPage, lastSpread * columns);
+          await tester.timedDragFrom(
+              Offset(viewport.width / 2, viewport.height / 2),
+              const Offset(0, -40),
+              const Duration(milliseconds: 500));
+          await settleOffline(tester);
+          expect(bloc.state.currentPage, 5,
+              reason:
+                  'A clamped drag at the tail releases explicit spread focus');
           await tester.dragFrom(Offset(viewport.width / 2, viewport.height / 2),
               const Offset(0, 20000));
           await settleOffline(tester);
@@ -491,6 +499,17 @@ void main() {
               tester.getRect(find.byKey(const ValueKey('reader-spread-0'))).top,
               closeTo(0, 1.1),
               reason: 'Manual scroll stops at the first image');
+          expect(bloc.state.currentPage, 0,
+              reason: 'The top boundary overrides the midpoint page rule');
+          final savedTop = await tester.runAsync(() => repository.get(book.id));
+          expect(savedTop!.record.lastReadPage, 0);
+          await tester.timedDragFrom(
+              Offset(viewport.width / 2, viewport.height / 2),
+              const Offset(0, -80),
+              const Duration(milliseconds: 500));
+          await settleOffline(tester);
+          expect(bloc.state.currentPage, inExclusiveRange(0, 5),
+              reason: 'Leaving the top restores midpoint-based page selection');
           await tester.dragFrom(Offset(viewport.width / 2, viewport.height / 2),
               const Offset(0, -20000));
           await settleOffline(tester);
@@ -500,6 +519,19 @@ void main() {
                   .bottom,
               closeTo(viewport.height, 1.1),
               reason: 'Manual scroll stops at the final image');
+          expect(bloc.state.currentPage, 5,
+              reason: 'The bottom boundary selects the original final page');
+          final savedTail =
+              await tester.runAsync(() => repository.get(book.id));
+          expect(savedTail!.record.lastReadPage, 5);
+          await tester.timedDragFrom(
+              Offset(viewport.width / 2, viewport.height / 2),
+              const Offset(0, 80),
+              const Duration(milliseconds: 500));
+          await settleOffline(tester);
+          expect(bloc.state.currentPage, lessThan(5),
+              reason:
+                  'Seeing the tail without reaching its bottom is not end-of-book');
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
           await tester.runAsync(

@@ -44,6 +44,8 @@ Adjust **Image preload count** in Settings → Reading or the loading icon to th
 
 In vertical mode, the outer 10% on each side turns pages: tap the upper half for the previous page or the lower half for the next. Tap the middle 80% to show or hide the controls and status bar. Horizontal modes retain 20% edge zones. Vertical page turns center the target image or spread where possible, stopping at the content boundaries without adding scrollable blank space.
 
+Manually scrolling to the top selects the first page; reaching the bottom selects the final original page, regardless of image height or screen coverage. Normal scroll-based page selection resumes after leaving either boundary.
+
 While the app remains running, reopening the reader can display a recently retained full-resolution image immediately. Otherwise, a known cached file is read and decoded without first requesting its image page. Leaving the reader still stops unfinished loads; failed images can be retried.
 
 ## Favorites and history
