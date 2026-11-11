@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:file/file.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 // Needed to await registration through CacheManager.store in 3.3.x.
 // ignore: implementation_imports
@@ -24,7 +26,11 @@ class EhImageCacheManager extends CacheManager {
   static EhImageCacheManager? _instance;
   final Config _readerConfig;
   final ImageCacheQuota _quota;
+  final bool _retainEngine;
   Future<void>? _clearing;
+  final ValueNotifier<bool> clearing = ValueNotifier(false);
+  Future<int>? _sizeRead;
+  final Set<Future<void>> _registrations = {};
   int _fileSequence = 0;
   int _clearGeneration = 0;
 
@@ -76,7 +82,8 @@ class EhImageCacheManager extends CacheManager {
                 cookieManager,
               ),
             ),
-            limitBytes: limitMB * 1024 * 1024);
+            limitBytes: limitMB * 1024 * 1024,
+            retainEngine: true);
 
   static (Config, ImageCacheQuota) _configure(Config config, int limitBytes) {
     final quota =
@@ -89,25 +96,32 @@ class EhImageCacheManager extends CacheManager {
   }
 
   EhImageCacheManager._configured(Config config,
-      {int limitBytes = 500 * 1024 * 1024})
-      : this._withQuota(_configure(config, limitBytes));
+      {int limitBytes = 500 * 1024 * 1024, bool retainEngine = false})
+      : this._withQuota(_configure(config, limitBytes), retainEngine);
 
-  EhImageCacheManager._withQuota((Config, ImageCacheQuota) configured)
+  EhImageCacheManager._withQuota(
+      (Config, ImageCacheQuota) configured, this._retainEngine)
       : _readerConfig = configured.$1,
         _quota = configured.$2,
         super(configured.$1);
 
   @visibleForTesting
   EhImageCacheManager.forTesting(Config config,
-      {int limitBytes = 500 * 1024 * 1024})
-      : this._configured(config, limitBytes: limitBytes);
+      {int limitBytes = 500 * 1024 * 1024, bool retainEngine = false})
+      : this._configured(config,
+            limitBytes: limitBytes, retainEngine: retainEngine);
 
   @override
   Future<FileInfo?> getFileFromCache(String key,
       {bool ignoreMemCache = false}) async {
     await _quota.drain();
-    final result =
-        await super.getFileFromCache(key, ignoreMemCache: ignoreMemCache);
+    while (_clearing != null) {
+      await _waitForClear();
+    }
+    // A disk lookup also schedules an unawaited metadata touch in the library.
+    // Keep it in the lookup's generation so clearing cannot be undone by it.
+    final result = await _quota.inWriteGeneration(
+        () => super.getFileFromCache(key, ignoreMemCache: ignoreMemCache));
     if (result != null) await _quota.touch(key);
     return result;
   }
@@ -134,6 +148,8 @@ class EhImageCacheManager extends CacheManager {
     final cacheKey = key ?? url;
     final tag = headers?[ImageCacheScope.header];
     final scope = tag == null ? null : ImageCacheScope.fromTag(tag);
+    await _waitForClear();
+    final generation = _clearGeneration;
     _quota.pin(cacheKey);
     try {
       await _quota.drain();
@@ -141,8 +157,12 @@ class EhImageCacheManager extends CacheManager {
       for (var attempt = 0; attempt < 2; attempt++) {
         try {
           scope?.ensureCurrent();
-          await for (final response in super.getFileStream(url,
-              key: key, headers: headers, withProgress: withProgress)) {
+          await for (final response in _quota.guardWriteStream(() => super
+              .getFileStream(url,
+                  key: key, headers: headers, withProgress: withProgress))) {
+            if (generation != _clearGeneration) {
+              throw StateError('Image cache was cleared during download');
+            }
             scope?.ensureCurrent();
             yield response;
           }
@@ -159,6 +179,21 @@ class EhImageCacheManager extends CacheManager {
     } finally {
       await _quota.unpin(cacheKey, check: true);
     }
+  }
+
+  @override
+  Future<FileInfo> downloadFile(String url,
+      {String? key,
+      Map<String, String>? authHeaders,
+      bool force = false}) async {
+    await _waitForClear();
+    final generation = _clearGeneration;
+    final result = await _quota.inWriteGeneration(() => super
+        .downloadFile(url, key: key, authHeaders: authHeaders, force: force));
+    if (generation != _clearGeneration) {
+      throw StateError('Image cache was cleared during download');
+    }
+    return result;
   }
 
   @override
@@ -188,6 +223,9 @@ class EhImageCacheManager extends CacheManager {
       String extension,
       Future<void> Function(File) write) async {
     final generation = _clearGeneration;
+    // Writes requested during cleanup belong to the new generation. Do not let
+    // their files or same-key metadata race with the deletion snapshot.
+    await _waitForClear();
     _quota.pin(cacheKey);
     try {
       await _quota.drain();
@@ -196,16 +234,23 @@ class EhImageCacheManager extends CacheManager {
           'oviewer-${DateTime.now().microsecondsSinceEpoch}-${_fileSequence++}.$extension';
       final file = await _readerConfig.fileSystem.createFile(path);
       await write(file);
+      final length = await file.length();
       if (generation != _clearGeneration) {
         await file.delete();
         throw StateError('Image cache was cleared during write');
       }
-      await store.putFile(CacheObject(url,
+      final registration = store.putFile(CacheObject(url,
           key: cacheKey,
           relativePath: path,
           validTill: DateTime.now().add(maxAge),
           eTag: eTag,
-          length: await file.length()));
+          length: length));
+      _registrations.add(registration);
+      try {
+        await registration;
+      } finally {
+        _registrations.remove(registration);
+      }
       if (generation != _clearGeneration) {
         // A newer write may already own this key. Delete only this writer's
         // unique file; a stale missing-file index is discarded on its next read.
@@ -220,12 +265,44 @@ class EhImageCacheManager extends CacheManager {
   }
 
   @override
-  Future<void> emptyCache() =>
-      _clearing ??= _clearImages().whenComplete(() => _clearing = null);
+  Future<void> emptyCache() {
+    if (_clearing != null) return _clearing!;
+    final completion = Completer<void>();
+    _clearing = completion.future;
+    _clearGeneration++;
+    _quota.invalidateWrites();
+    clearing.value = true;
+    _clearImages().then((_) {
+      _clearing = null;
+      clearing.value = false;
+      completion.complete();
+    }, onError: (Object error, StackTrace stack) {
+      _clearing = null;
+      clearing.value = false;
+      completion.completeError(error, stack);
+    });
+    return completion.future;
+  }
+
+  Future<void> _waitForClear() async {
+    while (_clearing != null) {
+      try {
+        await _clearing;
+      } catch (_) {
+        // Partial deletion failure must not disable subsequent cache writes.
+      }
+    }
+  }
 
   /// Actual bytes in the image-cache directory, including expired files that
   /// have not been deleted yet. Database metadata and saved photos live elsewhere.
   Future<int> getSizeBytes() async {
+    await _waitForClear();
+    if (_clearing != null) return getSizeBytes();
+    return _sizeRead ??= _measureSize().whenComplete(() => _sizeRead = null);
+  }
+
+  Future<int> _measureSize() async {
     final probe = await _readerConfig.fileSystem.createFile('__size_probe__');
     final directory = probe.parent;
     if (!await directory.exists()) return ReaderReentryCache.shared.memoryBytes;
@@ -244,37 +321,67 @@ class EhImageCacheManager extends CacheManager {
   }
 
   Future<void> _clearImages() async {
-    _clearGeneration++;
     ReaderReentryCache.shared.clear();
     _quota.pause();
     final memory = PaintingBinding.instance.imageCache;
     memory.clear();
     memory.clearLiveImages();
+    var retained = false;
     try {
-      // Wait for repository initialization without creating a cache entry.
-      await getFileFromCache('__oviewer_cache_clear__');
+      if (_retainEngine && defaultTargetPlatform == TargetPlatform.android) {
+        await const MethodChannel('oviewer/image_cache').invokeMethod('retain');
+        retained = true;
+      }
+      // Let a pre-clear size scan and already-started metadata registrations
+      // finish once; no new scan or writer can enter until this task completes.
+      try {
+        await _sizeRead;
+      } catch (_) {}
+      await Future.wait(_registrations.toList().map((write) async {
+        try {
+          await write;
+        } catch (_) {}
+      }));
+      await _quota.drain();
       final entries = await _readerConfig.repo.getAllObjects();
       Object? failure;
       StackTrace? failureStack;
-      for (final entry in entries) {
-        try {
-          // flutter_cache_manager 3.x emptyCache starts file deletion without
-          // awaiting it. removeFile awaits deletion before removing metadata,
-          // so a failed file stays discoverable for the user's next retry.
-          await removeFile(entry.key);
-        } catch (error, stack) {
-          failure ??= error;
-          failureStack ??= stack;
+      var next = 0;
+      Future<void> worker() async {
+        while (next < entries.length) {
+          final entry = entries[next++];
+          try {
+            // Use the snapshot directly: no lookup/touch per key. This API
+            // awaits disk deletion before metadata, retaining failed records.
+            await removeClearEntry(entry);
+          } catch (error, stack) {
+            failure ??= error;
+            failureStack ??= stack;
+          }
         }
       }
-      if (failure != null) Error.throwWithStackTrace(failure, failureStack!);
+
+      await Future.wait(List.generate(4, (_) => worker()));
+      final error = failure;
+      if (error != null) Error.throwWithStackTrace(error, failureStack!);
     } finally {
       store.emptyMemoryCache();
       memory.clear();
       memory.clearLiveImages();
-      await _quota.resume();
+      try {
+        await _quota.resume();
+      } finally {
+        if (retained) {
+          await const MethodChannel('oviewer/image_cache')
+              .invokeMethod('release');
+        }
+      }
     }
   }
+
+  @visibleForTesting
+  Future<void> removeClearEntry(CacheObject entry) =>
+      store.removeCachedFile(entry);
 }
 
 class _CookieHttpFileService extends FileService {

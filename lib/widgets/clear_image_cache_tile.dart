@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../core/l10n/s.dart';
 
 class ClearImageCacheTile extends StatefulWidget {
   final Future<void> Function() onClear;
   final Future<int> Function() readSize;
   final Listenable? changes;
+  final ValueListenable<bool>? clearing;
   final int Function()? readMemorySize;
   final bool Function()? cleanupFailed;
   final Future<void> Function()? retryCleanup;
@@ -13,6 +15,7 @@ class ClearImageCacheTile extends StatefulWidget {
       required this.onClear,
       required this.readSize,
       this.changes,
+      this.clearing,
       this.readMemorySize,
       this.cleanupFailed,
       this.retryCleanup});
@@ -27,17 +30,26 @@ class _ClearImageCacheTileState extends State<ClearImageCacheTile> {
   bool _sizeFailed = false;
   int _sizeRequest = 0;
   bool _retrying = false;
+  Future<void>? _reading;
+  bool _sizeDirty = false;
 
   @override
   void initState() {
     super.initState();
-    _refreshSize();
+    widget.clearing?.addListener(_observeClear);
+    _observeClear();
+    if (!_clearing) _refreshSize();
     widget.changes?.addListener(_refreshSize);
   }
 
   @override
   void didUpdateWidget(covariant ClearImageCacheTile oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.clearing != widget.clearing) {
+      oldWidget.clearing?.removeListener(_observeClear);
+      widget.clearing?.addListener(_observeClear);
+      _observeClear();
+    }
     if (oldWidget.changes != widget.changes) {
       oldWidget.changes?.removeListener(_refreshSize);
       widget.changes?.addListener(_refreshSize);
@@ -47,8 +59,15 @@ class _ClearImageCacheTileState extends State<ClearImageCacheTile> {
 
   @override
   void dispose() {
+    widget.clearing?.removeListener(_observeClear);
     widget.changes?.removeListener(_refreshSize);
     super.dispose();
+  }
+
+  void _observeClear() {
+    // Join the application-owned task when re-entering settings. Disposing this
+    // widget only removes its observers, never cancels the operation.
+    if (widget.clearing?.value == true && !_clearing) _clear();
   }
 
   Future<void> _retryCleanup() async {
@@ -69,7 +88,20 @@ class _ClearImageCacheTileState extends State<ClearImageCacheTile> {
     }
   }
 
-  Future<void> _refreshSize() async {
+  Future<void> _refreshSize() {
+    if (_clearing || !mounted) return Future.value();
+    _sizeDirty = true;
+    return _reading ??= _refreshSizes().whenComplete(() => _reading = null);
+  }
+
+  Future<void> _refreshSizes() async {
+    while (_sizeDirty && mounted && !_clearing) {
+      _sizeDirty = false;
+      await _readSize();
+    }
+  }
+
+  Future<void> _readSize() async {
     final request = ++_sizeRequest;
     try {
       final bytes = await widget.readSize();
@@ -110,9 +142,14 @@ class _ClearImageCacheTileState extends State<ClearImageCacheTile> {
       // Report failure without exposing file paths or claiming success.
     } finally {
       if (mounted) {
-        await _refreshSize();
-        if (mounted) {
-          setState(() => _clearing = false);
+        setState(() {
+          _clearing = false;
+          _bytes = null;
+        });
+        _refreshSize();
+        final lifecycle = WidgetsBinding.instance.lifecycleState;
+        if ((ModalRoute.of(context)?.isCurrent ?? true) &&
+            (lifecycle == null || lifecycle == AppLifecycleState.resumed)) {
           final s = S.of(context);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(succeeded ? s.cacheCleared : s.cacheClearFailed)));

@@ -27,8 +27,26 @@ class ImageCacheQuota extends CacheInfoRepository {
   int _paused = 0;
   int limitBytes;
   bool cleanupFailed = false;
+  final Object _writeGenerationKey = Object();
+  int _writeGeneration = 0;
 
   ImageCacheQuota(this.delegate, this.files, {required this.limitBytes});
+
+  void invalidateWrites() => _writeGeneration++;
+
+  T inWriteGeneration<T>(T Function() action) =>
+      runZoned(action, zoneValues: {_writeGenerationKey: _writeGeneration});
+
+  /// The cache library registers downloads asynchronously, outside the public
+  /// putFile methods. Keep their generation through its stream subscription.
+  Stream<T> guardWriteStream<T>(Stream<T> Function() create) =>
+      Stream<T>.multi((sink) {
+        final subscription = inWriteGeneration(() => create()
+            .listen(sink.add, onError: sink.addError, onDone: sink.close));
+        sink.onCancel = subscription.cancel;
+        sink.onPause = subscription.pause;
+        sink.onResume = subscription.resume;
+      });
 
   Future<T> _serial<T>(Future<T> Function() action) {
     final result = _tail.then((_) async {
@@ -80,6 +98,10 @@ class ImageCacheQuota extends CacheInfoRepository {
   Future<void> enforce() {
     if (_disposed) return Future.value();
     _dirty = true;
+    if (_paused > 0) {
+      _deferred = true;
+      return Future.value();
+    }
     return _maintenance ??= _maintain().whenComplete(() => _maintenance = null);
   }
 
@@ -95,7 +117,7 @@ class ImageCacheQuota extends CacheInfoRepository {
       _deferred = true;
       rethrow;
     } finally {
-      if (!_disposed) changes.value++;
+      if (!_disposed && _paused == 0) changes.value++;
     }
   }
 
@@ -179,7 +201,20 @@ class ImageCacheQuota extends CacheInfoRepository {
   Future<List<CacheObject>> getAllObjects() => _serial(delegate.getAllObjects);
   @override
   Future<dynamic> updateOrInsert(CacheObject cacheObject) async {
+    final generation = Zone.current[_writeGenerationKey] as int?;
     final result = await _serial(() async {
+      if (generation != null && generation != _writeGeneration) {
+        // A pre-clear library download must not recreate cleared metadata or
+        // replace a newer same-key image. Its unique file is safe to discard.
+        final current = await delegate.get(cacheObject.key);
+        // A queued old request can read a post-clear entry and receive 304.
+        // That path belongs to the current index, not to the stale downloader.
+        if (current?.relativePath != cacheObject.relativePath) {
+          final file = await files.createFile(cacheObject.relativePath);
+          if (await file.exists()) await deleteCachedFile(file);
+        }
+        return cacheObject;
+      }
       final existing = await delegate.get(cacheObject.key);
       await (existing == null
           ? delegate.insert(CacheObject(cacheObject.url,

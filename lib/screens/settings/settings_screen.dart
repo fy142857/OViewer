@@ -294,6 +294,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // ---- Storage ----
               _sectionHeader(s.storage),
               ClearImageCacheTile(
+                clearing: EhImageCacheManager.instance.clearing,
                 onClear: () => EhImageCacheManager.instance.emptyCache(),
                 readSize: () => EhImageCacheManager.instance.getSizeBytes(),
                 readMemorySize: () =>

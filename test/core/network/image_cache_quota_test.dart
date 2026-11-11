@@ -62,6 +62,71 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 3));
   }
 
+  test(
+      'clear rejects a late library download without replacing a new same-key write',
+      () async {
+    final started = Completer<void>();
+    final body = StreamController<List<int>>(onListen: started.complete);
+    when(() => files.get('late-cover', headers: any(named: 'headers')))
+        .thenAnswer((_) async => HttpGetResponse(
+            http.StreamedResponse(body.stream, 200, contentLength: 2)));
+    final old = expectLater(
+        manager.getFileStream('late-cover').drain<void>(), throwsStateError);
+    await started.future;
+    await manager.emptyCache();
+    await manager.putFile('late-cover', Uint8List.fromList([9, 8]));
+    body.add([1, 2]);
+    await body.close();
+    await old;
+    await manager.enforceLimit();
+    expect(await manager.readBytes('late-cover'), [9, 8]);
+    expect(await manager.getSizeBytes(), 2);
+  });
+
+  test('direct download also cannot register its pre-clear response', () async {
+    final started = Completer<void>();
+    final body = StreamController<List<int>>(onListen: started.complete);
+    when(() => files.get('direct', headers: any(named: 'headers'))).thenAnswer(
+        (_) async => HttpGetResponse(
+            http.StreamedResponse(body.stream, 200, contentLength: 2)));
+    final old = expectLater(manager.downloadFile('direct'), throwsStateError);
+    await started.future;
+    await manager.emptyCache();
+    body.add([1, 2]);
+    await body.close();
+    await old;
+    await manager.enforceLimit();
+    expect(await manager.readBytes('direct'), isNull);
+    expect(await manager.getSizeBytes(), 0);
+  });
+
+  test('queued stale 304 cannot delete a post-clear file it did not create',
+      () async {
+    when(() => files.concurrentFetches).thenReturn(1);
+    final started = Completer<void>();
+    final body = StreamController<List<int>>(onListen: started.complete);
+    when(() => files.get('occupy', headers: any(named: 'headers'))).thenAnswer(
+        (_) async => HttpGetResponse(
+            http.StreamedResponse(body.stream, 200, contentLength: 1)));
+    when(() => files.get('queued', headers: any(named: 'headers'))).thenAnswer(
+        (_) async =>
+            HttpGetResponse(http.StreamedResponse(const Stream.empty(), 304)));
+    final first = expectLater(manager.downloadFile('occupy'), throwsStateError);
+    await started.future;
+    final queued =
+        expectLater(manager.downloadFile('queued'), throwsStateError);
+    await Future<void>.delayed(Duration.zero);
+    await manager.emptyCache();
+    await manager.putFile('queued', Uint8List.fromList([9, 8]));
+    body.add([1]);
+    await body.close();
+    await first;
+    await queued;
+    await manager.enforceLimit();
+    expect(await manager.readBytes('queued'), [9, 8]);
+    expect(await manager.getSizeBytes(), 2);
+  });
+
   test('failed streamed writes cannot leave excess unregistered files',
       () async {
     Stream<List<int>> broken() async* {

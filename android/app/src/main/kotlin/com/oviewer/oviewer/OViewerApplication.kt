@@ -12,10 +12,11 @@ import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
 import java.lang.ref.WeakReference
 
-/** One Dart runtime and queue, retained while a download service owns work. */
+/** One Dart runtime and queue, retained while an asynchronous task owns work. */
 class OViewerApplication : Application() {
     private var engine: FlutterEngine? = null
     private var channel: MethodChannel? = null
+    private var imageCacheChannel: MethodChannel? = null
     private var host = WeakReference<MainActivity>(null)
     private val handler = Handler(Looper.getMainLooper())
     private val workOwners = mutableSetOf<String>()
@@ -37,6 +38,9 @@ class OViewerApplication : Application() {
         engine?.let { return it }
         val created = FlutterEngine(this)
         engine = created
+        imageCacheChannel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/image_cache").also {
+            it.setMethodCallHandler(ImageCacheWorkBridge(this))
+        }
         updates = ApkUpdateRuntime(this, created.dartExecutor.binaryMessenger)
         installer = ApkUpdateBridge(this) { foregroundActivity() }
         MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/apk_update")
@@ -98,6 +102,8 @@ class OViewerApplication : Application() {
             if (workOwners.isEmpty() && host.get() == null) {
                 channel?.setMethodCallHandler(null)
                 channel = null
+                imageCacheChannel?.setMethodCallHandler(null)
+                imageCacheChannel = null
                 updates?.dispose(); updates = null
                 installer?.dispose(); installer = null
                 engine?.destroy()

@@ -1,0 +1,135 @@
+// Run via scripts/benchmark_image_cache_clear.py, which extracts the baseline.
+// Host benchmark: real files + flutter_cache_manager's JSON metadata backend.
+// It does not predict Android/iOS SQLite bridge latency or device throughput.
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_cache_manager/src/storage/cache_object.dart';
+import 'package:oviewer/core/network/eh_image_cache_manager.dart';
+import 'eh_image_cache_manager.dart' as baseline;
+
+class MeasuredRepository extends JsonCacheInfoRepository {
+  int gets = 0, updates = 0, snapshots = 0, deletes = 0;
+  int snapshotMicros = 0, deleteMicros = 0;
+  MeasuredRepository(File file) : super.withFile(file);
+  @override
+  Future<CacheObject?> get(String key) {
+    gets++;
+    return super.get(key);
+  }
+
+  @override
+  Future<int> update(CacheObject item, {bool setTouchedToNow = true}) {
+    updates++;
+    return super.update(item, setTouchedToNow: setTouchedToNow);
+  }
+
+  @override
+  Future<List<CacheObject>> getAllObjects() async {
+    snapshots++;
+    final clock = Stopwatch()..start();
+    final result = await super.getAllObjects();
+    snapshotMicros += clock.elapsedMicroseconds;
+    return result;
+  }
+
+  @override
+  Future<int> deleteAll(Iterable<int> ids) async {
+    deletes++;
+    final clock = Stopwatch()..start();
+    final result = await super.deleteAll(ids);
+    deleteMicros += clock.elapsedMicroseconds;
+    return result;
+  }
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+      'compare real cache deletion, five runs per layout and initialization state',
+      () async {
+    final rows = <Map<String, Object>>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    for (final layout in [(5000, 1024), (10, 512000)]) {
+      for (final cold in [false, true]) {
+        for (var run = 0; run < 5; run++) {
+          // Alternate order to reduce filesystem warming bias.
+          for (final old in run.isEven ? [true, false] : [false, true]) {
+            final directory =
+                await Directory.systemTemp.createTemp('oviewer-clear-bench-');
+            messenger.setMockMethodCallHandler(
+                const MethodChannel('plugins.flutter.io/path_provider'),
+                (_) async => directory.path);
+            final index = File('${directory.path}/index.json');
+            final seed = JsonCacheInfoRepository.withFile(index);
+            final config = Config('images', repo: seed);
+            await seed.open();
+            final bytes = Uint8List(layout.$2);
+            for (var i = 0; i < layout.$1; i++) {
+              final path = '$i.image';
+              final file = await config.fileSystem.createFile(path);
+              await file.writeAsBytes(bytes);
+              await seed.insert(CacheObject('image-$i',
+                  relativePath: path,
+                  validTill: DateTime.now().add(const Duration(days: 1)),
+                  length: bytes.length));
+            }
+            await seed.close();
+            final repo = MeasuredRepository(index);
+            final configured =
+                Config('images', repo: repo, fileSystem: config.fileSystem);
+            final dynamic manager = old
+                ? baseline.EhImageCacheManager.forTesting(configured)
+                : EhImageCacheManager.forTesting(configured);
+            if (!cold) await manager.getFileFromCache('initialize');
+            repo.gets = repo.updates = repo.snapshots = repo.deletes = 0;
+            var notifications = 0;
+            final changes = manager.changes;
+            void changed() {
+              notifications++;
+            }
+
+            changes.addListener(changed);
+            final clear = Stopwatch()..start();
+            await manager.emptyCache();
+            clear.stop();
+            final measure = Stopwatch()..start();
+            expect(await manager.getSizeBytes(), 0);
+            measure.stop();
+            final row = <String, Object>{
+              'implementation': old ? 'baseline' : 'current',
+              'files': layout.$1,
+              'bytes': layout.$1 * layout.$2,
+              'cold': cold,
+              'run': run + 1,
+              'clear_us': clear.elapsedMicroseconds,
+              'final_size_us': measure.elapsedMicroseconds,
+              'get_calls': repo.gets,
+              'touch_updates': repo.updates,
+              'snapshots': repo.snapshots,
+              'snapshot_us': repo.snapshotMicros,
+              'delete_calls': repo.deletes,
+              'metadata_delete_us': repo.deleteMicros,
+              'notifications': notifications,
+            };
+            rows.add(row);
+            // ignore: avoid_print
+            print(jsonEncode(row));
+            changes.removeListener(changed);
+            await manager.dispose();
+            expect(directory.parent.absolute.path,
+                Directory.systemTemp.absolute.path);
+            await directory.delete(recursive: true);
+          }
+        }
+      }
+    }
+    await File('build/cache_clear_benchmark/results.json')
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(rows));
+    messenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'), null);
+  }, timeout: const Timeout(Duration(minutes: 20)));
+}

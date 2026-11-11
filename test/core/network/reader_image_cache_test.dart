@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_cache_manager/src/storage/cache_object.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:oviewer/core/network/eh_image_cache_manager.dart';
@@ -27,15 +28,43 @@ const alternate =
 class ControlledClearCache extends EhImageCacheManager {
   final gates = <String, Completer<void>>{};
   final failures = <String>{};
+  int active = 0;
+  int peak = 0;
+  int deletions = 0;
   ControlledClearCache(super.config) : super.forTesting();
   @override
-  Future<void> removeFile(String key) async {
-    final gate = gates[key];
-    if (gate != null) await gate.future;
-    if (failures.contains(key)) {
-      throw const FileSystemException('Test deletion failure');
+  Future<void> removeClearEntry(CacheObject entry) async {
+    final key = entry.key;
+    active++;
+    deletions++;
+    if (active > peak) peak = active;
+    try {
+      final gate = gates[key];
+      if (gate != null) await gate.future;
+      if (failures.contains(key)) {
+        throw const FileSystemException('Test deletion failure');
+      }
+      await super.removeClearEntry(entry);
+    } finally {
+      active--;
     }
-    await super.removeFile(key);
+  }
+}
+
+class RegistrationRepository extends JsonCacheInfoRepository {
+  bool blockNextInsert = false;
+  final registering = Completer<void>();
+  final allowRegistration = Completer<void>();
+  RegistrationRepository(File file) : super.withFile(file);
+  @override
+  Future<CacheObject> insert(CacheObject entry,
+      {bool setTouchedToNow = true}) async {
+    if (blockNextInsert) {
+      blockNextInsert = false;
+      registering.complete();
+      await allowRegistration.future;
+    }
+    return super.insert(entry, setTouchedToNow: setTouchedToNow);
   }
 }
 
@@ -43,15 +72,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory directory;
   late ControlledClearCache manager;
+  late RegistrationRepository repository;
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('oviewer-reader-cache-');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
             const MethodChannel('plugins.flutter.io/path_provider'),
             (_) async => directory.path);
-    manager = ControlledClearCache(Config('reader-cache-test',
-        repo: JsonCacheInfoRepository.withFile(
-            File('${directory.path}/cache.json'))));
+    repository = RegistrationRepository(File('${directory.path}/cache.json'));
+    manager =
+        ControlledClearCache(Config('reader-cache-test', repo: repository));
     await manager.getFileFromCache('initialize-test-cache');
   });
   tearDown(() async {
@@ -122,6 +152,86 @@ void main() {
     await manager.emptyCache();
     expect(await blocked.exists(), false);
     expect(await manager.getFileFromCache(failedKey), isNull);
+  });
+
+  test('four deletion workers await all files; new same-key write waits',
+      () async {
+    final png = await makePng();
+    final gate = Completer<void>();
+    for (var i = 0; i < 12; i++) {
+      await manager.putFile('key-$i', png);
+      manager.gates['key-$i'] = gate;
+    }
+    final clearing = manager.emptyCache();
+    expect(manager.clearing.value, true);
+    var readFinished = false;
+    final read = manager.getFileFromCache('key-11')
+      ..then((_) => readFinished = true);
+    var written = false;
+    final replacement = manager.putFile('key-0', Uint8List.fromList([4, 2]))
+      ..then((_) => written = true);
+    while (manager.active < 4) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(manager.deletions, 4);
+    expect(written, false);
+    expect(readFinished, false);
+    gate.complete();
+    await clearing;
+    expect(await read, isNull);
+    expect(manager.clearing.value, false);
+    await replacement;
+    expect(manager.peak, 4);
+    expect(manager.deletions, 12);
+    expect(await manager.readBytes('key-0'), [4, 2]);
+    expect(await manager.readBytes('key-11'), isNull);
+  });
+
+  test('late old stream cannot delete a new write with the same key', () async {
+    final started = Completer<void>();
+    final source = StreamController<List<int>>(onListen: started.complete);
+    final old = expectLater(
+        manager.putFileStream('same-key', source.stream), throwsStateError);
+    await started.future;
+    await manager.emptyCache();
+    await manager.putFile('same-key', Uint8List.fromList([9, 8]));
+    source.add([1]);
+    await source.close();
+    await old;
+    expect(await manager.readBytes('same-key'), [9, 8]);
+    expect(await manager.getSizeBytes(), 2);
+  });
+
+  test(
+      'clear drains in-progress registration before snapshot and new same-key write',
+      () async {
+    repository.blockNextInsert = true;
+    final old = expectLater(
+        manager.putFile('same-key', Uint8List.fromList([1])), throwsStateError);
+    await repository.registering.future;
+    final clear = manager.emptyCache();
+    final replacement = manager.putFile('same-key', Uint8List.fromList([9, 8]));
+    await Future<void>.delayed(Duration.zero);
+    expect(manager.clearing.value, true);
+    repository.allowRegistration.complete();
+    await old;
+    await clear;
+    await replacement;
+    expect(await manager.readBytes('same-key'), [9, 8]);
+    expect(await manager.getSizeBytes(), 2);
+  });
+
+  test(
+      'missing indexed file does not fail cleanup; unrelated offline file survives',
+      () async {
+    final file = await manager.putFile('missing', Uint8List(3));
+    await file.delete();
+    final offline = File('${directory.path}/offline/page.jpg');
+    await offline.parent.create();
+    await offline.writeAsBytes([7]);
+    await manager.emptyCache();
+    expect(await manager.getFileFromCache('missing'), isNull);
+    expect(await offline.readAsBytes(), [7]);
   });
 
   test(
