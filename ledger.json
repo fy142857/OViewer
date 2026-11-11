@@ -9839,8 +9839,63 @@
         }
       ],
       "version": "1.13.1"
+    },
+    {
+      "base_tag": "v1.13.0",
+      "branch": "dev",
+      "build_number": 165,
+      "build_sha": "2a0d6102f57eb90680641992f008c060dfa11550",
+      "candidate_id": "1.13.1+165",
+      "fingerprint": "94e6376452cd946497adbbe9bd76f190a52f4b57555b85f315aab1d7cd682b6d",
+      "notes": "### 新增\n\n### 修复\n\n- 缩短图片缓存清理等待：按索引快照以最多 4 个并发删除，合并清理期间的容量通知和大小扫描；离开设置页或切到后台时清理仍由当前进程继续，重新进入设置可查看同一任务。清理失败保留可重试记录，旧写入不会覆盖清理后的新缓存。进程被系统终止后不自动续跑（#84）。\n\n- 垂直手动滚动到顶部或底部时，页码优先切换为首页或原书尾页，不再受图片占屏比例和中线判定影响；离开边界后恢复原有规则，双页触底同步保存最后一页进度（#89 后续）。\n- 垂直阅读侧边翻页后不再添加首尾额外留白，滚动到开头或结尾时贴齐内容边界；目标图片居中时兼顾首尾边界和解码后的尺寸变化（#89）。\n- 垂直阅读左右两侧点击翻页区域各缩为屏幕宽度的 10%，中间 80% 用于工具栏显隐；横向阅读仍保留两侧各 20%（#91）。\n- Android/iOS 检查更新统一按正式版构建号判断，相同版本名的较旧构建也会提示更新；已达到或超过正式版构建号时清除更新提醒（#88）。\n- iOS 检查结果为最新或高于正式版时仍显示更新弹窗，并保留“跳转发布页（下载更稳）”链接；设置“关于”右侧增加“前往GitHub”入口（#88）。\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "a0328712cfa7f6d020c6da6caffb10010569bef3",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "fix",
+          "classification_reason": "修正 Android/iOS 既有更新判断为构建号比较，同步更新提醒并补齐发布页和项目入口，不改变安装校验或新增独立业务能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "853cb0804887010dba549161d8669206974cf470",
+          "subject": "fix(update): compare release build numbers and retain navigation links",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复垂直翻页后首尾额外留白，并将垂直两侧点击区域调整为各 10%；保留横向操作及既有阅读能力。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "f302df8986562520dcb365b59dc316ab491a49f0",
+          "subject": "fix(reader): clamp vertical boundaries and narrow tap zones",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修正垂直滚动到顶或触底时页码仍受占屏位置判定影响的问题，同步保存原书首尾页进度，不新增独立功能。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "1fd4768275828a3ca7133a34b74ab37ee39a07b2",
+          "subject": "fix(reader): prioritize first and last pages at scroll boundaries",
+          "type": "fix",
+          "version_impact": "patch"
+        },
+        {
+          "change_kind": "performance",
+          "classification_reason": "缩短既有图片缓存清理等待并保留转圈和进程内继续清理行为，不改变缓存键、数据格式或离线内容。",
+          "classification_source": "commit-trailers",
+          "original_type": "perf",
+          "sha": "a0328712cfa7f6d020c6da6caffb10010569bef3",
+          "subject": "perf(cache): shorten image cache clearing",
+          "type": "perf",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.13.1"
     }
   ],
-  "last_build_number": 164,
+  "last_build_number": 165,
   "schema": 1
 }
