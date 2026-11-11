@@ -1,12 +1,12 @@
 {
   "base_tag": "v1.13.0",
   "branch": "dev",
-  "build_number": 162,
-  "candidate_id": "1.13.1+162",
-  "fingerprint": "6b03c9f0476fc74962ac115c1cc8d432081bd26db771cbaec81ea03bf8851ef1",
-  "notes": "### 新增\n\n### 修复\n\n- Android/iOS 检查更新统一按正式版构建号判断，相同版本名的较旧构建也会提示更新；已达到或超过正式版构建号时清除更新提醒（#88）。\n- iOS 检查结果为最新或高于正式版时仍显示更新弹窗，并保留“跳转发布页（下载更稳）”链接；设置“关于”右侧增加“前往GitHub”入口（#88）。\n\n### 变更\n\n### 已知限制",
+  "build_number": 163,
+  "candidate_id": "1.13.1+163",
+  "fingerprint": "014b42043c07678b672ed39fe29c7ee7d12806e0282d69733e6eb18e4848e132",
+  "notes": "### 新增\n\n### 修复\n\n- 垂直阅读侧边翻页后不再添加首尾额外留白，滚动到开头或结尾时贴齐内容边界；目标图片居中时兼顾首尾边界和解码后的尺寸变化（#89）。\n- 垂直阅读左右两侧点击翻页区域各缩为屏幕宽度的 10%，中间 80% 用于工具栏显隐；横向阅读仍保留两侧各 20%（#91）。\n- Android/iOS 检查更新统一按正式版构建号判断，相同版本名的较旧构建也会提示更新；已达到或超过正式版构建号时清除更新提醒（#88）。\n- iOS 检查结果为最新或高于正式版时仍显示更新弹窗，并保留“跳转发布页（下载更稳）”链接；设置“关于”右侧增加“前往GitHub”入口（#88）。\n\n### 变更\n\n### 已知限制",
   "schema": 1,
-  "source_sha": "853cb0804887010dba549161d8669206974cf470",
+  "source_sha": "f302df8986562520dcb365b59dc316ab491a49f0",
   "summary": [
     {
       "change_kind": "fix",
@@ -15,6 +15,16 @@
       "original_type": "fix",
       "sha": "853cb0804887010dba549161d8669206974cf470",
       "subject": "fix(update): compare release build numbers and retain navigation links",
+      "type": "fix",
+      "version_impact": "patch"
+    },
+    {
+      "change_kind": "fix",
+      "classification_reason": "修复垂直翻页后首尾额外留白，并将垂直两侧点击区域调整为各 10%；保留横向操作及既有阅读能力。",
+      "classification_source": "commit-trailers",
+      "original_type": "fix",
+      "sha": "f302df8986562520dcb365b59dc316ab491a49f0",
+      "subject": "fix(reader): clamp vertical boundaries and narrow tap zones",
       "type": "fix",
       "version_impact": "patch"
     }
