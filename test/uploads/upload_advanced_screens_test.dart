@@ -19,6 +19,8 @@ class _Services extends Mock implements UploadServices {}
 
 class _Auth extends Mock implements AuthBloc {}
 
+class _Terms extends Fake implements UploadPublicationTermsConsent {}
+
 Uri _uri(String id) => uploadOrigin.resolve('managegallery?ulgid=$id');
 UploadDraft _draft(String id) => UploadDraft(
     id: id,
@@ -63,6 +65,8 @@ void main() {
     registerFallbackValue(UploadGalleryAction.publish);
     registerFallbackValue(_prepared('12345', UploadGalleryAction.publish));
     registerFallbackValue(_uri('12345'));
+    registerFallbackValue(<PreparedUploadAction>[]);
+    registerFallbackValue(_Terms());
   });
   setUp(() {
     services = _Services();
@@ -81,6 +85,12 @@ void main() {
             (call.positionalArguments[0] as UploadDraft).id,
             call.positionalArguments[1] as UploadGalleryAction));
     when(() => services.performAdvanced(any(), any(), confirmed: true))
+        .thenAnswer((call) async => UploadActionResult(
+            (call.positionalArguments[1] as PreparedUploadAction).action));
+    when(() => services.acceptPublicationTerms(any(), confirmed: true))
+        .thenAnswer((_) async => _Terms());
+    when(() => services.performAdvanced(any(), any(),
+            confirmed: true, publicationTerms: any(named: 'publicationTerms')))
         .thenAnswer((call) async => UploadActionResult(
             (call.positionalArguments[1] as PreparedUploadAction).action));
   });
@@ -104,7 +114,7 @@ void main() {
       accountId: '101',
       action: UploadGalleryAction.publish,
       targets: [_gallery('12345'), _gallery('12346'), _gallery('12347')]));
-  Future<void> openBatch(WidgetTester tester) async {
+  Future<void> openBatch(WidgetTester tester, {bool agree = true}) async {
     await tester.pumpWidget(batch());
     await tester.pumpAndSettle();
     final button = find.text('Review and confirm');
@@ -112,7 +122,40 @@ void main() {
         scrollable: find.byType(Scrollable).first);
     await tester.tap(button);
     await tester.pumpAndSettle();
+    if (agree) {
+      final terms =
+          find.byKey(const ValueKey('upload-batch-publication-terms'));
+      await tester.ensureVisible(terms);
+      await tester.tap(terms);
+      await tester.pumpAndSettle();
+    }
   }
+
+  testWidgets(
+      'terms link failure is shown without granting agreement or sending an action',
+      (tester) async {
+    when(() => services.openExternal(any()))
+        .thenThrow(StateError('No browser available'));
+    await openBatch(tester, agree: false);
+    final terms = find.byKey(const ValueKey('upload-batch-publication-terms'));
+    final link = find.text('Read E-Hentai Terms of Service');
+    await tester.ensureVisible(link);
+    await tester.tap(link);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+        find.textContaining('The operation did not finish.'), findsOneWidget);
+    expect(tester.widget<CheckboxListTile>(terms).value, false);
+    expect(
+        tester
+            .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Confirm listed targets'))
+            .onPressed,
+        isNull);
+    verifyNever(() => services.acceptPublicationTerms(any(), confirmed: true));
+    verifyNever(() => services.performAdvanced(any(), any(),
+        confirmed: true, publicationTerms: any(named: 'publicationTerms')));
+  });
 
   testWidgets('review never sends an action until exact snapshot is confirmed',
       (tester) async {
@@ -188,12 +231,14 @@ void main() {
       'uncertain second result stops batch and does not replay first or third',
       (tester) async {
     final sent = <String>[];
-    when(() => services.performAdvanced(any(), any(), confirmed: true))
+    when(() => services.performAdvanced(any(), any(),
+            confirmed: true, publicationTerms: any(named: 'publicationTerms')))
         .thenAnswer((call) async {
       final id = (call.positionalArguments.first as UploadDraft).id;
       sent.add(id);
-      if (id == '12346')
+      if (id == '12346') {
         throw const UploadFailure(UploadFailureKind.resultUncertain);
+      }
       return const UploadActionResult(UploadGalleryAction.publish);
     });
     await openBatch(tester);
@@ -211,9 +256,10 @@ void main() {
       (tester) async {
     when(() => services.prepareAdvanced(any(), any())).thenAnswer((call) async {
       final id = (call.positionalArguments.first as UploadDraft).id;
-      if (id == '12346')
+      if (id == '12346') {
         throw const UploadFailure(UploadFailureKind.restricted,
             serverMessage: 'Try again later.');
+      }
       return _prepared(id, UploadGalleryAction.publish);
     });
     await tester.pumpWidget(batch());
@@ -228,16 +274,17 @@ void main() {
       (tester) async {
     when(() => services.prepareAdvanced(any(), any())).thenAnswer((call) async {
       final id = (call.positionalArguments.first as UploadDraft).id;
-      if (id == '12346')
+      if (id == '12346') {
         throw const UploadFailure(UploadFailureKind.restricted,
             code: 'unavailable_action');
+      }
       return _prepared(id, UploadGalleryAction.publish);
     });
     await openBatch(tester);
     await tester.tap(find.text('Confirm listed targets'));
     await tester.pumpAndSettle();
-    final sent = verify(() =>
-            services.performAdvanced(captureAny(), any(), confirmed: true))
+    final sent = verify(() => services.performAdvanced(captureAny(), any(),
+            confirmed: true, publicationTerms: any(named: 'publicationTerms')))
         .captured
         .cast<UploadDraft>()
         .map((draft) => draft.id)

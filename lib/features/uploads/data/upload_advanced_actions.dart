@@ -292,7 +292,11 @@ class UploadAdvancedActions {
                 .map((a) => response.uri.resolve(a.attributes['href']!));
             final linked = parentLinks.any((uri) =>
                 uploadGalleryId(uri) == previous || uri == previousPublic);
-            if (!editor.canUpload || (!sameId && !linked)) {
+            // An editable page at the original URL is not evidence that this
+            // request unlocked it. Match recovery's false-to-true requirement;
+            // a distinct child still requires the observed parent link.
+            if (!editor.canUpload ||
+                (sameId ? fresh.editor.canUpload : !linked)) {
               throw const UploadFailure(UploadFailureKind.resultUncertain);
             }
             return UploadActionResult(prepared.action,

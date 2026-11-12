@@ -368,67 +368,130 @@ class _UploadBulkAdvancedScreenState extends State<UploadBulkAdvancedScreen> {
     final ready = _entries.where((e) => e.state == 'ready').toList();
     if (ready.isEmpty) return;
     final authBloc = context.read<AuthBloc>();
+    final publishing = widget.action == UploadGalleryAction.publish;
+    var agreedTerms = false;
+    Object? termsLinkError;
     final confirmed = await showDialog<bool>(
         context: context,
-        builder: (ctx) => BlocBuilder<AuthBloc, AuthState>(
-            bloc: authBloc,
-            builder: (_, auth) {
-              if (!_owner(auth, widget.accountId, _generation)) {
-                return AlertDialog(
-                    title: Text(_zh ? '登录状态已改变' : 'Login state changed'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text(_zh ? '关闭' : 'Close')),
-                    ]);
-              }
-              return AlertDialog(
-                  title: Text(_zh
-                      ? '确认批量${uploadActionLabel(widget.action, true)}'
-                      : 'Confirm batch action'),
-                  content: SingleChildScrollView(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                        Text(_zh
-                            ? '仅执行下列 ${ready.length} 项；结果可能部分成功，停止不会撤回已经发送的请求。'
-                            : 'Only these ${ready.length} targets will run. Partial success is possible; stopping does not undo sent requests.'),
-                        for (final entry in ready)
-                          Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: _summary(entry.prepared!, _zh)),
-                        RuleNotices(
-                            location: _location(widget.action),
-                            onOpenSource: widget.services.openExternal),
-                        if (ready.any((entry) =>
-                            entry.prepared!.editor.form.fields['category']
-                                ?.value ==
-                            '0'))
-                          RuleNotices(
-                              location: UploadRuleLocation.visibility,
-                              onOpenSource: widget.services.openExternal),
-                      ])),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: Text(_zh ? '取消' : 'Cancel')),
-                    FilledButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child:
-                            Text(_zh ? '确认执行以上清单' : 'Confirm listed targets')),
-                  ]);
-            }));
-    if (confirmed != true || !_current) return;
+        builder: (ctx) => StatefulBuilder(
+            builder: (ctx, update) => BlocBuilder<AuthBloc, AuthState>(
+                bloc: authBloc,
+                builder: (_, auth) {
+                  if (!_owner(auth, widget.accountId, _generation)) {
+                    return AlertDialog(
+                        title: Text(_zh ? '登录状态已改变' : 'Login state changed'),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text(_zh ? '关闭' : 'Close')),
+                        ]);
+                  }
+                  return AlertDialog(
+                      title: Text(_zh
+                          ? '确认批量${uploadActionLabel(widget.action, true)}'
+                          : 'Confirm batch action'),
+                      content: SingleChildScrollView(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                            Text(_zh
+                                ? '仅执行下列 ${ready.length} 项；结果可能部分成功，停止不会撤回已经发送的请求。'
+                                : 'Only these ${ready.length} targets will run. Partial success is possible; stopping does not undo sent requests.'),
+                            for (final entry in ready)
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: _summary(entry.prepared!, _zh)),
+                            RuleNotices(
+                                location: _location(widget.action),
+                                onOpenSource: widget.services.openExternal),
+                            if (ready.any((entry) =>
+                                entry.prepared!.editor.form.fields['category']
+                                    ?.value ==
+                                '0'))
+                              RuleNotices(
+                                  location: UploadRuleLocation.visibility,
+                                  onOpenSource: widget.services.openExternal),
+                            if (publishing) ...[
+                              TextButton(
+                                  onPressed: () async {
+                                    try {
+                                      await widget.services.openExternal(
+                                          Uri.parse(
+                                              'https://e-hentai.org/tos.php'));
+                                    } catch (error) {
+                                      if (ctx.mounted && _current) {
+                                        update(() => termsLinkError = error);
+                                      }
+                                    }
+                                  },
+                                  child: Text(_zh
+                                      ? '阅读 E-Hentai 服务条款'
+                                      : 'Read E-Hentai Terms of Service')),
+                              if (termsLinkError != null)
+                                Text(
+                                    uploadFailureMessage(termsLinkError!, _zh)),
+                              CheckboxListTile(
+                                  key: const ValueKey(
+                                      'upload-batch-publication-terms'),
+                                  contentPadding: EdgeInsets.zero,
+                                  value: agreedTerms,
+                                  onChanged: (value) =>
+                                      update(() => agreedTerms = value == true),
+                                  title: Text(_zh
+                                      ? '我已阅读并同意服务条款，仅授权本次清单中的画廊发布'
+                                      : 'I have read and agree to the Terms of Service for publishing only the galleries in this reviewed list')),
+                            ],
+                          ])),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: Text(_zh ? '取消' : 'Cancel')),
+                        FilledButton(
+                            onPressed: !publishing || agreedTerms
+                                ? () => Navigator.pop(ctx, true)
+                                : null,
+                            child: Text(
+                                _zh ? '确认执行以上清单' : 'Confirm listed targets')),
+                      ]);
+                })));
+    if (confirmed != true || !_current || (publishing && !agreedTerms)) return;
     setState(() {
       _running = true;
       _stop = false;
     });
+    UploadPublicationTermsConsent? terms;
+    try {
+      if (publishing) {
+        terms = await widget.services.acceptPublicationTerms(
+            ready.map((entry) => entry.prepared!).toList(),
+            confirmed: true);
+      }
+    } catch (error) {
+      if (_current) {
+        setState(() {
+          for (final entry in ready) {
+            entry.state = 'not_executed';
+          }
+          ready.first.state = 'failed';
+          ready.first.error = error;
+          _running = false;
+          _finished = true;
+        });
+      }
+      return;
+    }
     for (final entry in ready) {
       if (!_current || _stop) break;
       setState(() => entry.state = 'running');
       try {
-        await widget.services
-            .performAdvanced(entry.draft!, entry.prepared!, confirmed: true);
+        if (terms == null) {
+          await widget.services
+              .performAdvanced(entry.draft!, entry.prepared!, confirmed: true);
+        } else {
+          await widget.services.performAdvanced(entry.draft!, entry.prepared!,
+              confirmed: true, publicationTerms: terms);
+        }
         entry.state = 'success';
       } catch (error) {
         entry.error = error;

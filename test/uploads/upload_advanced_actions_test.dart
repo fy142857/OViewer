@@ -547,6 +547,45 @@ void main() {
     expect(f.adapter.requests, hasLength(2));
   });
 
+  for (final scenario in [
+    (beforeEditable: false, afterEditable: true, confirmed: true),
+    (beforeEditable: true, afterEditable: true, confirmed: false),
+    (beforeEditable: false, afterEditable: false, confirmed: false),
+  ]) {
+    test(
+        'same-ID clone requires an unlock transition: '
+        '${scenario.beforeEditable} to ${scenario.afterEditable}', () async {
+      String ownerPage(bool editable) {
+        final doc = html.parse(published(operation: 'unlock'));
+        if (!editable) doc.querySelector('#uploadbutton')!.remove();
+        return doc.documentElement!.outerHtml;
+      }
+
+      final f = make((request) => page(ownerPage(
+          request.uri.queryParameters['act'] == 'unlock'
+              ? scenario.afterEditable
+              : scenario.beforeEditable)));
+      final prepared =
+          await f.actions.prepare('101', editorUri, UploadGalleryAction.clone);
+      final result = f.actions.perform('101', prepared, confirmed: true);
+      if (scenario.confirmed) {
+        final confirmed = await result;
+        expect(confirmed.kind, UploadGalleryAction.clone);
+        expect(confirmed.editor!.uri, editorUri);
+        expect(confirmed.editor!.canUpload, isTrue);
+      } else {
+        await expectLater(
+            result,
+            throwsA(isA<UploadFailure>().having(
+                (e) => e.kind, 'kind', UploadFailureKind.resultUncertain)));
+      }
+      expect(
+          f.adapter.requests.where(
+              (request) => request.uri.queryParameters['act'] == 'unlock'),
+          hasLength(1));
+    });
+  }
+
   test(
       'statistics link for a different public gallery is rejected before sending',
       () async {

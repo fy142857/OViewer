@@ -119,6 +119,19 @@ class UploadAdvancedRecovery {
       : candidates = List.unmodifiable(candidates);
 }
 
+/// Explicit agreement for one reviewed publication batch. It is neither saved
+/// in draft fields nor shared with another action, service instance or login.
+class UploadPublicationTermsConsent {
+  final String accountId;
+  final int? sessionRevision;
+  final Object _issuer;
+  final Map<String, PreparedUploadAction> _reviewed;
+  final Set<String> _used = {};
+  UploadPublicationTermsConsent._(this.accountId, this.sessionRevision,
+      this._issuer, Map<String, PreparedUploadAction> reviewed)
+      : _reviewed = Map.unmodifiable(reviewed);
+}
+
 /// Application-owned services. A route never owns a running upload.
 class UploadServices {
   final app.CookieManager cookies;
@@ -143,6 +156,7 @@ class UploadServices {
   Future<void> _remoteWrites = Future<void>.value();
   Uri? _preparingGallery;
   final Object _preparationOwner = Object();
+  final Object _publicationTermsIssuer = Object();
   static final Object _writeOwnerKey = Object();
   static final Object _writeIntentKey = Object();
   static final Object _visibilityKey = Object();
@@ -1577,9 +1591,55 @@ class UploadServices {
     return prepared;
   }
 
+  Future<UploadPublicationTermsConsent> acceptPublicationTerms(
+      List<PreparedUploadAction> reviewed,
+      {required bool confirmed}) async {
+    final frozen = List<PreparedUploadAction>.unmodifiable(reviewed);
+    if (!confirmed || frozen.isEmpty) {
+      throw ArgumentError(
+          'Explicit agreement to the reviewed publication terms is required');
+    }
+    final revision = cookies.sessionRevision;
+    final account = frozen.first.accountId;
+    await _check(account, revision);
+    final targets = <String, PreparedUploadAction>{};
+    for (final action in frozen) {
+      final id = uploadGalleryId(action.editorUri);
+      if (action.action != UploadGalleryAction.publish ||
+          action.accountId != account ||
+          action.revision != revision ||
+          id == null ||
+          targets.containsKey(id)) {
+        throw ArgumentError(
+            'Terms agreement must match one reviewed publication batch');
+      }
+      targets[id] = action;
+    }
+    return UploadPublicationTermsConsent._(
+        account, revision, _publicationTermsIssuer, targets);
+  }
+
+  void _consumePublicationTerms(UploadPublicationTermsConsent consent,
+      PreparedUploadAction prepared, String account, int? revision) {
+    final id = uploadGalleryId(prepared.editorUri);
+    if (prepared.action != UploadGalleryAction.publish ||
+        !identical(consent._issuer, _publicationTermsIssuer) ||
+        consent.accountId != account ||
+        consent.sessionRevision != revision ||
+        prepared.revision != revision ||
+        id == null ||
+        !identical(consent._reviewed[id], prepared) ||
+        !consent._used.add(id)) {
+      throw const UploadFailure(UploadFailureKind.restricted,
+          serverMessage:
+              'Review the publication targets and agree to their terms again.');
+    }
+  }
+
   Future<UploadActionResult> performAdvanced(
           UploadDraft draft, PreparedUploadAction prepared,
-          {required bool confirmed}) =>
+          {required bool confirmed,
+          UploadPublicationTermsConsent? publicationTerms}) =>
       _serializedRemoteAction(draft, () async {
         if (!confirmed ||
             prepared.accountId != draft.accountId ||
@@ -1611,9 +1671,14 @@ class UploadServices {
         if (prepared.action == UploadGalleryAction.publish && current.dirty) {
           throw StateError('Save all local changes before publishing');
         }
+        if (publicationTerms != null) {
+          _consumePublicationTerms(
+              publicationTerms, prepared, draft.accountId, revision);
+        }
         if (prepared.action == UploadGalleryAction.publish &&
             prepared.editor.form.fields.containsKey('tos') &&
-            current.fields['tos']?.contains('on') != true) {
+            current.fields['tos']?.contains('on') != true &&
+            publicationTerms == null) {
           throw ArgumentError(
               'Explicit terms acceptance is required before publishing');
         }
