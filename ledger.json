@@ -9944,8 +9944,43 @@
         }
       ],
       "version": "1.15.0"
+    },
+    {
+      "base_tag": "v1.14.0",
+      "branch": "dev",
+      "build_number": 168,
+      "build_sha": "ecd08db34cbe5b7983c42c2825b2b0b7d33c2ce6",
+      "candidate_id": "1.15.0+168",
+      "fingerprint": "b0168c487ff2b57603e3fefc9dee2b62ef4dccdc1db347b650e49d5717fa78f3",
+      "notes": "### 新增\n\n- 侧栏“下载”下方新增“上传”，提供画廊管理、独立本地草稿、文件／相册／ZIP 导入、图片预览排序、目录及批量管理，并在对应字段和操作位置展示详细规则（#83，验收进行中）。\n- 上传任务与阅读、下载队列分离，记录批次接收证据；结果不明时先核对站内条目，上传完成不自动公开发布。公开分类变更、发布、删除与 Disown 使用明确的确认流程。\n\n### 修复\n\n- 补齐批量发布对本次审阅清单的服务条款确认，避免新读取的远端草稿因缺少本地同意记录而无法发布；同意不保存为全局状态。克隆返回同一画廊时，必须观察到从不可上传变为可上传，未变化的页面不再误报成功（#83）。\n\n### 变更\n\n### 已知限制\n\n- #83 尚未完成双平台及所有管理操作验收：Android 未发布画廊的锁屏上传、自动接收确认、排序、删除及空目录清理已实测；iOS 缺少 Mac／iPhone 环境，后台重定向边界仍待验证，已发布画廊操作也尚未实站验收。详细范围见 [上传验收记录](docs/GALLERY_UPLOADS.md)。",
+      "schema": 1,
+      "source_sha": "d5732d5d1361e9251b16b8225f10761ac38c0a91",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "首次提供原生画廊上传、独立后台任务及日常管理能力，最低 Android API 21 和 iOS 12 保持不变。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "a4839d592c662b5badf1ea7da730c353af24aee8",
+          "subject": "feat(uploads): add native gallery upload and management",
+          "type": "feat",
+          "version_impact": "minor"
+        },
+        {
+          "change_kind": "fix",
+          "classification_reason": "修复既有上传管理中的批量发布条款确认缺口和同编号克隆误报成功，不新增独立能力或提高最低系统版本。",
+          "classification_source": "commit-trailers",
+          "original_type": "fix",
+          "sha": "d5732d5d1361e9251b16b8225f10761ac38c0a91",
+          "subject": "fix(uploads): bind batch terms and verify clone transitions",
+          "type": "fix",
+          "version_impact": "patch"
+        }
+      ],
+      "version": "1.15.0"
     }
   ],
-  "last_build_number": 167,
+  "last_build_number": 168,
   "schema": 1
 }
