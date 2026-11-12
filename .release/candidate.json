@@ -1,23 +1,23 @@
 {
-  "base_tag": "v1.13.1",
+  "base_tag": "v1.14.0",
   "branch": "dev",
-  "build_number": 166,
-  "candidate_id": "1.14.0+166",
-  "fingerprint": "19515253a6d13aa17a32f424d6fda3eed6a62f694b96e96a677bff5a015a43dc",
-  "notes": "### 新增\n\n- 新增应用内悬浮返回按钮，默认开启，覆盖全屏阅读等应用页面；支持自由拖动、跨页面和重启后记住位置，以及设置中的开关和大小滑杆。点击优先收起键盘，再关闭弹层或返回上一页，首页不退出应用（#90）。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+  "build_number": 167,
+  "candidate_id": "1.15.0+167",
+  "fingerprint": "03ae0a4c27dadd6848ace6eebbe0724a1d0904845f4d5c9202664c5c8c7c58c0",
+  "notes": "### 新增\n\n- 侧栏“下载”下方新增“上传”，提供画廊管理、独立本地草稿、文件／相册／ZIP 导入、图片预览排序、目录及批量管理，并在对应字段和操作位置展示详细规则（#83，验收进行中）。\n- 上传任务与阅读、下载队列分离，记录批次接收证据；结果不明时先核对站内条目，上传完成不自动公开发布。公开分类变更、发布、删除与 Disown 使用明确的确认流程。\n\n### 修复\n\n### 变更\n\n### 已知限制\n\n- #83 尚未完成双平台及所有管理操作验收：Android 未发布画廊的锁屏上传、自动接收确认、排序、删除及空目录清理已实测；iOS 缺少 Mac／iPhone 环境，后台重定向边界仍待验证，已发布画廊操作也尚未实站验收。详细范围见 [上传验收记录](docs/GALLERY_UPLOADS.md)。",
   "schema": 1,
-  "source_sha": "a581459acf32b97cabe88682b2c7c36a74b65aa8",
+  "source_sha": "a4839d592c662b5badf1ea7da730c353af24aee8",
   "summary": [
     {
       "change_kind": "feature",
-      "classification_reason": "首次提供全应用悬浮返回按钮、自由拖动、位置记忆及开关和大小设置，属于新增独立功能。",
+      "classification_reason": "首次提供原生画廊上传、独立后台任务及日常管理能力，最低 Android API 21 和 iOS 12 保持不变。",
       "classification_source": "commit-trailers",
       "original_type": "feat",
-      "sha": "a581459acf32b97cabe88682b2c7c36a74b65aa8",
-      "subject": "feat(navigation): add persistent draggable back button",
+      "sha": "a4839d592c662b5badf1ea7da730c353af24aee8",
+      "subject": "feat(uploads): add native gallery upload and management",
       "type": "feat",
       "version_impact": "minor"
     }
   ],
-  "version": "1.14.0"
+  "version": "1.15.0"
 }
