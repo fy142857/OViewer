@@ -1,5 +1,15 @@
 # 版本管理实施验收记录
 
+## v1.14.0 正式发布（2026-11-12）
+
+- [正式 Release](https://github.com/fy142857/OViewer/releases/tag/v1.14.0) 已公开并设为最新稳定版，复用候选 `1.14.0+166` 的原始 APK、IPA。源码提交 `a581459acf32b97cabe88682b2c7c36a74b65aa8`，标签及构建提交 `c25b6e7d84d29f0c8d6f169343ed8589541fbc3e`；没有重新编译、签名或更换构建号。
+- [Android 构建](https://github.com/fy142857/OViewer/actions/runs/43158904419) 与 [iOS 构建](https://github.com/fy142857/OViewer/actions/runs/43158906755) 均首次运行成功，两端各通过 **1,449 项 Flutter 测试及 91 项脚本测试**；`test_scope.mode=run`，包含完整 64 个预读慢场景，静态分析均为 190 项诊断、无新增错误或警告。Android 原生测试与 iOS 部署声明检查通过。本次仅执行发布及文档归档，复用上述结果，没有补跑本地 Flutter 测试。
+- `main` 晋升后的[候选准备](https://github.com/fy142857/OViewer/actions/runs/43166661329) 成功复用候选 166。[只读发布校验](https://github.com/fy142857/OViewer/actions/runs/43166700168) 和[正式发布](https://github.com/fy142857/OViewer/actions/runs/43166818306) 均成功，校验候选来源、分支包含关系、版本与构建号递增、实际包内版本、正式证书、文件大小及 SHA-256；发布工作流上传后再次下载附件验证。发布保护脚本 91 项测试通过。
+- 公开附件为 `OViewer.apk`（30,973,399 字节）、`OViewer.ipa`（27,016,447 字节）、`release-manifest.json` 和 `SHA256SUMS.txt`。发布后已核对最新版本标记、标签、四个附件、GitHub 文件摘要、manifest 与校验清单一致。
+- APK SHA-256：`77176d8bc751d6fa84eaa3d5a662149273cfdb14210c0ed7d5ec6874d07f1fd9`；IPA SHA-256：`8510a4586d50fe723a92b307f5279035381cc02e8e150bc0ffb13e0826167572`。Android 正式证书仍为 `a30360a24fda76486fc152cb9e2e8cc5e7578c42c46d6aa430f3ae35adfa34e4`。
+- 开发阶段普通 Debug 包的 VOG-AL10 安装及交互验收见[悬浮返回按钮验证记录](FLOATING_BACK.md#验证记录)。本次未新增真机安装或正式 APK 覆盖升级验收；iOS 为未签名 IPA，键盘路径尚未作 iOS 真机验证。仓库没有 v1.14.0 Milestone，未修改其他版本的 Milestone。
+- 已归档更新日志；收尾文档提交完整同步到本地及远端 `dev`、`main`，正式标签仍固定于上述候选构建提交。
+
 ## v1.13.1 正式发布（2026-11-11）
 
 - [正式 Release](https://github.com/fy142857/OViewer/releases/tag/v1.13.1) 已公开并设为最新稳定版，复用候选 `1.13.1+165` 的原始 APK、IPA。源码提交 `a0328712cfa7f6d020c6da6caffb10010569bef3`，标签及构建提交 `2a0d6102f57eb90680641992f008c060dfa11550`；没有重新编译、签名或更换构建号。
