@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_it/get_it.dart';
 import 'widgets/daily_check_in_host.dart';
+import 'widgets/floating_back_host.dart';
 import 'widgets/favorites_session_host.dart';
 import 'core/router/app_router.dart';
 import 'core/network/network_preparation.dart';
@@ -103,6 +104,8 @@ class OViewerApp extends StatelessWidget {
                       return MaterialApp(
                         title: kDebugMode ? 'OViewer Debug' : 'OViewer',
                         navigatorKey: navigatorKey,
+                        builder: (context, child) => FloatingBackHost(
+                            navigatorKey: navigatorKey, child: child!),
                         debugShowCheckedModeBanner: false,
                         theme: AppTheme.light,
                         darkTheme: AppTheme.dark,

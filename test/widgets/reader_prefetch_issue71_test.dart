@@ -27,6 +27,7 @@ import 'package:oviewer/repositories/gallery_repository.dart';
 import 'package:oviewer/repositories/history_repository.dart';
 import 'package:oviewer/repositories/settings_repository.dart';
 import 'package:oviewer/screens/reader/reader_screen.dart';
+import 'package:oviewer/widgets/floating_back_host.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
@@ -291,9 +292,13 @@ void main() {
 
       await HttpOverrides.runZoned(() async {
         try {
+          final navigator = GlobalKey<NavigatorState>();
           await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
               value: settingsBloc,
               child: MaterialApp(
+                  navigatorKey: navigator,
+                  builder: (_, child) =>
+                      FloatingBackHost(navigatorKey: navigator, child: child!),
                   home: ReaderScreen(
                       gid: 42, token: 'token', initialPage: start))));
           await advance();
@@ -316,6 +321,34 @@ void main() {
           expect(htmlPages.length, htmlPages.toSet().length);
           debugPrint('issue71 $scenario HTML=$htmlPages imageGET=$imagePages');
           final initialWindow = bloc.state.preloadWindow;
+          final ball = find.byKey(const ValueKey('floating-back-button'));
+          expect(ball, findsOneWidget);
+          final beforeDrag = tester.getTopLeft(ball);
+          final htmlBeforeDrag = [...htmlPages],
+              imagesBeforeDrag = [...imagePages];
+          final drag = await tester.startGesture(tester.getCenter(ball));
+          await drag.moveBy(const Offset(-90, -70));
+          await tester.pump();
+          await drag.moveBy(const Offset(-40, -30));
+          await tester.pump();
+          expect(tester.getTopLeft(ball), isNot(beforeDrag));
+          expect(tester.element(content).read<ReaderBloc>(), same(bloc));
+          expect(bloc.state.currentPage, start);
+          expect(bloc.state.preloadWindow.targets, initialWindow.targets);
+          expect(htmlPages, htmlBeforeDrag);
+          expect(imagePages, imagesBeforeDrag);
+          await drag.cancel();
+          await tester.pump();
+          savedSettings = savedSettings.copyWith(
+              floatingBack:
+                  savedSettings.floatingBack.copyWith(size: 64, x: .9, y: .8));
+          settingsChanges.add(savedSettings);
+          await tester.pump();
+          expect(tester.element(content).read<ReaderBloc>(), same(bloc));
+          expect(bloc.state.currentPage, start);
+          expect(bloc.state.preloadWindow.targets, initialWindow.targets);
+          expect(htmlPages, htmlBeforeDrag);
+          expect(imagePages, imagesBeforeDrag);
           if (!cache && mode != 2) {
             expect(initialWindow.visible, contains(imagePages.first),
                 reason: 'Visible image IO starts before background image IO');

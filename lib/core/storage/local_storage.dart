@@ -1,4 +1,5 @@
 import '../../models/reader_page_layout.dart';
+import '../../models/floating_back_settings.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,6 +21,28 @@ class LocalStorage {
   SharedPreferences get prefs {
     assert(_initialized, 'LocalStorage not initialized. Call init() first.');
     return _prefs;
+  }
+
+  FloatingBackSettings getFloatingBack() {
+    final value = _prefs.get('floating_back');
+    if (value is! String) return const FloatingBackSettings();
+    try {
+      return FloatingBackSettings.fromJson(jsonDecode(value));
+    } on FormatException {
+      return const FloatingBackSettings();
+    }
+  }
+
+  Future<void> setFloatingBack(FloatingBackSettings value) async {
+    if (!value.isValid) throw ArgumentError.value(value, 'floatingBack');
+    try {
+      if (!await _prefs.setString('floating_back', jsonEncode(value.toJson()))) {
+        throw StateError('Could not save floating back settings');
+      }
+    } catch (_) {
+      await _prefs.reload();
+      rethrow;
+    }
   }
 
   int _offlineLimit(String key, int maximum, int fallback) {

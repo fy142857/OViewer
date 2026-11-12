@@ -1,9 +1,11 @@
 import '../../models/reader_page_layout.dart';
+import '../../models/floating_back_settings.dart';
 import 'package:equatable/equatable.dart';
 
 const _sentinel = Object();
 
 class SettingsState extends Equatable {
+  final FloatingBackSettings floatingBack;
   final int themeMode; // 0=system, 1=light, 2=dark
   final ReaderPageTransition pageTransition;
   final bool savingPageTransition;
@@ -28,6 +30,7 @@ class SettingsState extends Equatable {
   final String locale;
 
   const SettingsState({
+    this.floatingBack = const FloatingBackSettings(),
     this.themeMode = 0,
     this.readingMode = 0,
     this.preloadCount = 1,
@@ -52,6 +55,7 @@ class SettingsState extends Equatable {
   });
 
   SettingsState copyWith({
+    FloatingBackSettings? floatingBack,
     int? themeMode,
     int? readingMode,
     int? preloadCount,
@@ -75,6 +79,7 @@ class SettingsState extends Equatable {
     String? locale,
   }) {
     return SettingsState(
+      floatingBack: floatingBack ?? this.floatingBack,
       themeMode: themeMode ?? this.themeMode,
       readingMode: readingMode ?? this.readingMode,
       preloadCount: preloadCount ?? this.preloadCount,
@@ -110,6 +115,7 @@ class SettingsState extends Equatable {
 
   @override
   List<Object?> get props => [
+        floatingBack,
         themeMode,
         readingMode,
         preloadCount,

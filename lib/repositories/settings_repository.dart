@@ -1,10 +1,14 @@
 import '../models/reader_page_layout.dart';
+import '../models/floating_back_settings.dart';
 import '../core/storage/local_storage.dart';
 
 class SettingsRepository {
   final LocalStorage _storage;
 
   SettingsRepository(this._storage);
+
+  FloatingBackSettings getFloatingBack() => _storage.getFloatingBack();
+  Future<void> setFloatingBack(FloatingBackSettings value) => _storage.setFloatingBack(value);
 
   int getOfflineParallelGalleries() => _storage.getOfflineParallelGalleries();
   int getOfflineParallelPages() => _storage.getOfflineParallelPages();

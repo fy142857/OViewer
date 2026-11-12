@@ -1,4 +1,5 @@
 import 'package:oviewer/models/reader_page_layout.dart';
+import 'package:oviewer/models/floating_back_settings.dart';
 import 'package:oviewer/core/network/image_cache_scope.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
@@ -66,6 +67,7 @@ void main() {
       final favorites = MockFavorites();
       when(() => favorites.getLocalFavoriteGids()).thenAnswer((_) async => {});
       final settings = MockSettings();
+      when(() => settings.getFloatingBack()).thenReturn(const FloatingBackSettings());
       when(() => settings.getUseExHentai()).thenReturn(false);
       when(() => settings.getAutoProxy()).thenReturn(false);
       when(() => settings.getProxy()).thenReturn(null);

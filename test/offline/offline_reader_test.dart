@@ -27,6 +27,9 @@ import 'package:oviewer/core/storage/offline_entry_read.dart';
 import 'package:oviewer/core/storage/reader_index_cache.dart';
 import 'package:oviewer/core/storage/reader_reentry_cache.dart';
 import 'package:oviewer/core/router/app_router.dart';
+import 'package:oviewer/core/router/reader_route.dart';
+import 'package:oviewer/widgets/floating_back_host.dart';
+import 'package:flutter/services.dart';
 import 'package:oviewer/core/router/route_observer.dart';
 import 'package:oviewer/models/gallery_source.dart';
 import 'package:oviewer/models/offline_book.dart';
@@ -176,6 +179,69 @@ void main() {
         .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
   });
   for (final mode in [0, 1, 2]) {
+    for (final layout in ReaderPageLayout.values) {
+      testWidgets(
+          'floating back stays available and exits fullscreen offline reader $mode $layout',
+          (tester) async {
+        when(() => settings.getReadingMode()).thenReturn(mode);
+        when(() => settings.getReaderPageLayout()).thenReturn(layout);
+        when(() => settingsBloc.state).thenReturn(
+            SettingsState(readingMode: mode, pageLayout: layout, locale: 'en'));
+        final nav = GlobalKey<NavigatorState>();
+        final messenger = tester.binding.defaultBinaryMessenger;
+        messenger.setMockMethodCallHandler(
+            SystemChannels.platform, (_) async => null);
+        addTearDown(() =>
+            messenger.setMockMethodCallHandler(SystemChannels.platform, null));
+        await tester.runAsync(() async {
+          final first = book.pages.first;
+          final bytes = await repository.files
+              .read(first.relativePath!, first.bytes, first.sha256!);
+          final second = await repository.files
+              .write(book.id, 1, Stream.value(bytes), current: () => true);
+          await repository.savePage(book.id, 1, second, current: () => true);
+          book = (await repository.get(book.id))!;
+          await tester.pumpWidget(BlocProvider<SettingsBloc>.value(
+              value: settingsBloc,
+              child: MaterialApp(
+                  navigatorKey: nav,
+                  navigatorObservers: [appRouteObserver],
+                  builder: (_, child) =>
+                      FloatingBackHost(navigatorKey: nav, child: child!),
+                  home: const Scaffold(body: Text('Return destination')))));
+          unawaited(nav.currentState!.push(ReaderRoute<void>(
+              builder: (_) =>
+                  ReaderScreen(gid: 42, token: 'abc', offlineBook: book))));
+          await tester.pump();
+        });
+        await settleOffline(tester);
+        final ball = find.byKey(const ValueKey('floating-back-button'));
+        expect(ball, findsOneWidget);
+        final content = find
+            .byType(mode == 2 ? ScrollablePositionedList : PhotoViewGallery);
+        final bloc = tester.element(content).read<ReaderBloc>();
+        final page = bloc.state.currentPage;
+        final gesture = await tester.startGesture(tester.getCenter(ball));
+        await gesture.moveBy(const Offset(-80, -70));
+        await tester.pump();
+        await gesture.moveBy(const Offset(-40, -30));
+        await tester.pump();
+        expect(tester.element(content).read<ReaderBloc>(), same(bloc));
+        expect(bloc.state.currentPage, page);
+        await gesture.cancel();
+        await tester.pump();
+        verifyZeroInteractions(gallery);
+        await tester.tap(ball);
+        await settleOffline(tester);
+        expect(find.text('Return destination'), findsOneWidget);
+        expect(find.byType(ReaderScreen), findsNothing);
+        expect(bloc.isClosed, true);
+        expect(
+            find.byKey(const ValueKey('floating-back-button')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
     testWidgets(
         'offline mode $mode decodes local pages without any gallery requests',
         (tester) async {

@@ -48,6 +48,17 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
             vpnActive: network.result.vpnActive));
     });
     on<LoadSettings>(_onLoad);
+    on<UpdateFloatingBack>((event, emit) async {
+      try {
+        final value = state.floatingBack.copyWith(
+            enabled: event.enabled, size: event.size, x: event.x, y: event.y);
+        await _repository.setFloatingBack(value);
+        emit(state.copyWith(floatingBack: value));
+        event.completer.complete();
+      } catch (error, stack) {
+        event.completer.completeError(error, stack);
+      }
+    }, transformer: (events, mapper) => events.asyncExpand(mapper));
     on<UpdateThemeMode>(_onTheme);
     on<UpdateReadingMode>(_onReading);
     on<UpdateReaderPreloadCount>((event, emit) async {
@@ -117,6 +128,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
 
   static SettingsState readSaved(SettingsRepository repository) =>
       SettingsState(
+        floatingBack: repository.getFloatingBack(),
         themeMode: repository.getThemeMode(),
         readingMode: repository.getReadingMode(),
         preloadCount: repository.getReaderPreloadCount(),

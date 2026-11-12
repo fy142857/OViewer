@@ -38,6 +38,8 @@ class MainActivity: FlutterActivity() {
     }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/floating_back")
+            .setMethodCallHandler(FloatingBackKeyboardBridge(this))
         readerVolumeChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "oviewer/reader_volume_keys")
         readerVolumeChannel?.setMethodCallHandler { call, result ->
             if (call.method == "setEnabled") {
@@ -102,7 +104,7 @@ class MainActivity: FlutterActivity() {
         readerVolumeChannel?.setMethodCallHandler(null)
         readerVolumeChannel = null
         flutterEngine?.let { engine ->
-            for (name in listOf("oviewer/release_link", "oviewer/account_registration", "oviewer/automatic_login_check", "oviewer/sponsor", "oviewer/page_image_export")) {
+            for (name in listOf("oviewer/floating_back", "oviewer/release_link", "oviewer/account_registration", "oviewer/automatic_login_check", "oviewer/sponsor", "oviewer/page_image_export")) {
                 MethodChannel(engine.dartExecutor.binaryMessenger, name).setMethodCallHandler(null)
             }
         }

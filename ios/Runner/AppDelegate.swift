@@ -14,6 +14,15 @@ import UserNotifications
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    if let registrar = registrar(forPlugin: "OViewerFloatingBack") {
+      FlutterMethodChannel(name: "oviewer/floating_back", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { [weak self] call, result in
+          guard call.method == "hideKeyboard" else { result(FlutterMethodNotImplemented); return }
+          // End editing in the whole application window, including WKWebView.
+          self?.window?.endEditing(true)
+          result(nil)
+        }
+    }
     if let registrar = registrar(forPlugin: "OViewerOfflineFiles") {
       FlutterMethodChannel(name: "oviewer/offline_files", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { call, result in

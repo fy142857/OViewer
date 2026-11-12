@@ -71,6 +71,7 @@ Pull down to refresh history, even when the list is empty or shorter than the sc
 - Choose a Chinese or English interface.
 - Use a light or dark theme, or follow the system setting.
 - Set your default reading mode, configure a proxy, and clear the image cache.
+- A draggable floating back button is enabled by default, including in fullscreen reading. Tap to dismiss the keyboard first, then go back; tapping on Home stays in the app. Settings → Appearance lets you disable it or adjust its size. Its position and size persist across restarts.
 - Tap Check for updates under Settings → About. Android shows the version, APK size, and the latest release's Added/Changed notes; Update now downloads and verifies the APK before opening the system installer for confirmation. iOS keeps its existing confirmation and browser redirect. The Android dialog also links to the release page.
 - Hiding Android download progress or leaving Settings keeps the task running in the app process. Cancelled or interrupted partial downloads restart from the beginning; complete packages can be reused. See the [in-app update guide](IN_APP_UPDATE.md).
 - A purple “Update available” reminder persists beside Check for updates after detection, including after cancellation or an app restart. It clears when the installed version reaches or exceeds the latest detected release.

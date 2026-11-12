@@ -1,6 +1,7 @@
 import '../../models/reader_page_layout.dart';
 import '../../widgets/reader_transition_setting.dart';
 import '../../widgets/reader_volume_setting.dart';
+import '../../widgets/floating_back_setting.dart';
 import '../../widgets/reader_preload_setting.dart';
 import '../../widgets/site_mode_tile.dart';
 import '../../widgets/offline_settings_panel.dart';
@@ -80,6 +81,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
               ),
+
+              const FloatingBackSetting(),
 
               // ---- Site ----
               _sectionHeader(s.site),

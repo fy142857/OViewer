@@ -6,6 +6,11 @@ import '../../blocs/settings/settings_bloc.dart';
 /// Simple map-based localization. Supports zh (Chinese) and en (English).
 /// Usage: `S.of(context).settings`
 class S {
+  String get floatingBack => _zh ? '悬浮返回按钮' : 'Floating back button';
+  String get floatingBackHint => _zh ? '拖动调整位置，点击返回；首页不会退出应用' : 'Drag to move, tap to go back. Stays in the app on Home.';
+  String get floatingBackSize => _zh ? '按钮大小' : 'Button size';
+  String get floatingBackAction => _zh ? '返回（可拖动）' : 'Back (draggable)';
+  String get floatingBackSaveFailed => _zh ? '悬浮按钮设置保存失败，请重试' : 'Could not save floating button settings. Please retry.';
   String get copied => _zh ? '已复制' : 'Copied';
   String get offlineCache => _zh ? '离线缓存' : 'Offline cache';
   String get offlineParallelGalleries =>

@@ -10,6 +10,18 @@ abstract class SettingsEvent extends Equatable {
 
 class LoadSettings extends SettingsEvent {}
 
+/// A patch, merged when dequeued, so concurrent position/size saves do not
+/// overwrite one another with an old snapshot of the other fields.
+class UpdateFloatingBack extends SettingsEvent {
+  final bool? enabled;
+  final double? size, x, y;
+  final Completer<void> completer;
+  const UpdateFloatingBack(this.completer,
+      {this.enabled, this.size, this.x, this.y});
+  @override
+  List<Object?> get props => [enabled, size, x, y, completer];
+}
+
 class NetworkPreparationChanged extends SettingsEvent {}
 
 class UpdateThemeMode extends SettingsEvent {
