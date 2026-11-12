@@ -1,0 +1,27 @@
+// Optional convenience for Xcode users after flutter pub get. The runner script
+// always passes its verified Flutter 3.16.0 root explicitly to xcodebuild.
+#include? "../Flutter/Generated.xcconfig"
+
+IPHONEOS_DEPLOYMENT_TARGET = 12.0
+SDKROOT = iphonesimulator
+SUPPORTED_PLATFORMS = iphonesimulator
+SUPPORTS_MACCATALYST = NO
+// Local simulator signing provides the test host's own Keychain entitlement;
+// no Apple Development certificate, Team, or provisioning profile is used.
+CODE_SIGNING_ALLOWED = YES
+CODE_SIGNING_REQUIRED = NO
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+PROVISIONING_PROFILE_SPECIFIER =
+ENABLE_BITCODE = NO
+CLANG_ENABLE_MODULES = YES
+SWIFT_VERSION = 5.0
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+ENABLE_TESTABILITY = YES
+ONLY_ACTIVE_ARCH = YES
+TARGETED_DEVICE_FAMILY = 1,2
+FLUTTER_VALIDATION_FRAMEWORKS = $(BUILT_PRODUCTS_DIR)/UploadValidationFlutter
+FRAMEWORK_SEARCH_PATHS = $(inherited) "$(FLUTTER_VALIDATION_FRAMEWORKS)"
+SWIFT_INCLUDE_PATHS = $(inherited) "$(BUILT_PRODUCTS_DIR)"
+ENABLE_USER_SCRIPT_SANDBOXING = NO

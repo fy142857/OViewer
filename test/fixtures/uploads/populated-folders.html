@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<title>E-Hentai Galleries - The Free Hentai Doujinshi, Manga and Image Gallery System</title>
+<link href="https://e-hentai.org/z/0376/g.css" rel="stylesheet" type="text/css"/>
+<style type="text/css">
+body{font-size:9pt}a{text-decoration:none}div#o{margin:auto;width:500px}div#o p{padding-top:10px}p#e{color:red;font-weight:bold;margin-top:10px;text-align:center}table#t{padding-top:10px;margin:auto}table#t td{text-align:left}th#h2{width:80px}th#h3{width:40px}td.r{text-align:right !important;padding-right:15px}input{font-size:9pt !important}select{font-size:9pt !important}
+</style>
+<meta content="With close to a million absolutely free hentai doujinshi, manga, cosplay and CG galleries, E-Hentai Galleries is the world's largest free Hentai archive." name="description"/>
+<meta content="RTA-5042-1996-1400-1577-RTA" name="RATING"/>
+<meta content="[REDACTED]" name="juicyads-site-verification"/>
+<link href="https://e-hentai.org/rss/ehg.xml" rel="alternate" title="E-Hentai Galleries Content Feed" type="application/atom+xml"/>
+<link href="https://e-hentai.org/rss/ehtracker.xml" rel="alternate" title="EHTracker Torrent Feed" type="application/atom+xml"/>
+<link href="https://ehgt.org/g/opensearchdescription.xml" rel="search" title="E-Hentai Galleries Search" type="application/opensearchdescription+xml"/>
+</head>
+<body>
+<script type="text/javascript">
+function popUp(URL,w,h) {
+	window.open(URL,"_pu"+(Math.random()+"").replace(/0\./,""),"toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width="+w+",height="+h+",left="+((screen.width-w)/2)+",top="+((screen.height-h)/2));
+	return false;
+}
+</script><div class="nosel" id="nb"><div><a href="https://e-hentai.org/">Front<span class="nbw"> Page</span></a></div><div><a href="https://e-hentai.org/watched">Watched</a></div><div><a href="https://e-hentai.org/popular">Popular</a></div><div><a href="https://e-hentai.org/torrents.php">Torrents</a></div><div><a href="https://e-hentai.org/favorites.php">Fav<span class="nbw">orite</span>s</a></div><div><a href="https://e-hentai.org/home.php"><span class="nbw">My </span>Home</a></div><div><a href="https://upld.e-hentai.org/manage"><span class="nbw">My </span>Uploads</a></div><div><a href="https://e-hentai.org/toplist.php">Toplists</a></div><div><a href="https://e-hentai.org/bounty.php">Bounties</a></div><div><a href="https://e-hentai.org/news.php">News</a></div><div class="nbw"><a href="https://forums.e-hentai.org/">Forums</a></div><div class="nbw"><a href="https://ehwiki.org/">Wiki</a></div><div class="nbw"><a href="https://hentaiverse.org/" onclick="popUp('https://hentaiverse.org/',1250,720); return false">HentaiVerse</a></div></div><div id="lb"><div>[<a href="https://upld.e-hentai.org/manage">Gallery List</a>]</div><div>[<a href="https://upld.e-hentai.org/managefolders" style="font-weight:bold">Manage Folders</a>]</div><div>[<a href="https://upld.e-hentai.org/managegallery?act=new">Create New Gallery</a>]</div></div><div id="o">
+<form action="https://upld.e-hentai.org/managefolders" id="folderform" method="post">
+<input id="do_autosort" name="do_autosort" type="hidden" value=""/>
+<input id="do_delete" name="do_delete" type="hidden" value=""/>
+<input id="do_save" name="do_save" type="hidden" value=""/>
+<table id="t">
+<tr>
+<th>Folder Name</th>
+<th id="h2">Display Order</th>
+<th id="h3"></th>
+</tr>
+<tr>
+<td style="text-align:right; padding-right:15px"><input maxlength="50" name="fn1" size="50" type="text" value="Fixture upload verification"/></td>
+<td><select name="fs1" style="width:80px; font-size:8pt"><option selected="selected">1</option></select></td>
+<td style="padding-top:3px">[<a href="#" onclick="if( confirm('Are you sure you wish to delete the folder OViewer issue83 verification? Any remaining galleries in this folder will be moved to Unsorted.') ) { folder_delete(1); } return false">Delete</a>]</td>
+</tr>
+<tr>
+<td class="r"><input maxlength="50" name="fname" placeholder="New folder name" size="50" type="text" value=""/></td>
+<td colspan="2"><input onclick="folder_save(); return false" style="width:130px" type="submit" value="Create Folder"/></td>
+</tr>
+<tr>
+<td class="r"><input onclick="if( confirm('Are you sure you wish to sort your folders automatically? Doing this will undo the current custom sort order.') ) { folder_autosort(); } return false" type="submit" value="Save and Auto-Reorder"/></td>
+<td colspan="2"><input onclick="folder_save(); return false" style="width:130px" type="submit" value="Save Changes"/></td>
+</tr>
+</table>
+</form>
+</div>
+<script type="text/javascript">
+function folder_delete(fid) {
+	document.getElementById("do_delete").value=fid;
+	folder_submit();
+}
+
+function folder_autosort() {
+	document.getElementById("do_autosort").value=1;
+	document.getElementById("do_save").value=1;
+	folder_submit();
+}
+
+function folder_save() {
+	document.getElementById("do_save").value=1;
+	folder_submit();
+}
+
+function folder_submit() {
+	document.getElementById("folderform").submit();
+}
+</script></body></html>

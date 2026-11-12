@@ -31,6 +31,7 @@ import 'repositories/history_repository.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/settings_repository.dart';
 import 'core/services/offline_download_coordinator.dart';
+import 'features/uploads/platform/upload_navigation.dart';
 
 class OViewerApp extends StatelessWidget {
   final SettingsState? initialSettings;
@@ -99,6 +100,12 @@ class OViewerApp extends StatelessWidget {
                           sl<OfflinePlatform>().attachNavigator(() =>
                               navigatorKey.currentState
                                   ?.pushNamed('/downloads'));
+                        });
+                      }
+                      if (sl.isRegistered<UploadNavigation>()) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          sl<UploadNavigation>().attach(() =>
+                              navigatorKey.currentState?.pushNamed(AppRouter.uploads, arguments: {'tab': 1}));
                         });
                       }
                       return MaterialApp(

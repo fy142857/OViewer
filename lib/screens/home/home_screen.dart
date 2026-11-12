@@ -760,6 +760,14 @@ class _HomeScreenState extends State<HomeScreen>
               Navigator.pushNamed(context, '/downloads');
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.upload),
+            title: Text(s.uploads),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/uploads');
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.settings),

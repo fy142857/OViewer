@@ -11,6 +11,7 @@ import '../../screens/favorites/favorites_screen.dart';
 import '../../screens/history/history_screen.dart';
 import '../../screens/login/login_screen.dart';
 import '../../screens/download/download_screen.dart';
+import '../../features/uploads/presentation/upload_home_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/my_tags_screen.dart';
 import '../../screens/thumbnail_preview/thumbnail_preview_screen.dart';
@@ -24,6 +25,7 @@ class AppRouter {
   static const String history = '/history';
   static const String login = '/login';
   static const String downloads = '/downloads';
+  static const String uploads = '/uploads';
   static const String settings = '/settings';
   static const String myTags = '/my_tags';
   static const String thumbnailPreview = '/thumbnail_preview';
@@ -84,6 +86,11 @@ class AppRouter {
 
       case downloads:
         return AppPageRoute(builder: (_) => const DownloadScreen());
+
+      case uploads:
+        final arguments = routeSettings.arguments;
+        final tab = arguments is Map && arguments['tab'] == 1 ? 1 : 0;
+        return AppPageRoute(builder: (_) => UploadHomeScreen(initialTab: tab));
 
       case settings:
         return AppPageRoute(builder: (_) => const SettingsScreen());

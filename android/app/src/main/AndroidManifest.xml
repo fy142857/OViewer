@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.oviewer.oviewer">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
@@ -10,6 +12,10 @@
     <queries>
         <package android:name="com.tencent.mm"/>
         <package android:name="com.eg.android.AlipayGphone"/>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT"/>
+            <data android:mimeType="*/*"/>
+        </intent>
     </queries>
     <application
         android:label="${appLabel}"
@@ -24,6 +30,11 @@
         <service android:name=".ApkDownloadService" android:exported="false"
             android:foregroundServiceType="dataSync" android:stopWithTask="false" />
         <receiver android:name=".ApkUpdateCancelReceiver" android:exported="false" />
+        <service android:name=".UploadTransferService" android:exported="false"
+            android:foregroundServiceType="dataSync" android:stopWithTask="false" />
+        <service android:name=".UploadTransferJobService" android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <receiver android:name=".UploadTransferPauseReceiver" android:exported="false" />
         <provider
             android:name=".UpdateFileProvider"
             android:authorities="${applicationId}.apk_updates"

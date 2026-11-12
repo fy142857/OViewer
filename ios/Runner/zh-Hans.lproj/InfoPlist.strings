@@ -1,1 +1,4 @@
 "NSPhotoLibraryAddUsageDescription" = "将您选择的页面图片和赞助码保存到系统相册。";
+"NSPhotoLibraryUsageDescription" = "选择要导入画廊上传草稿的图片，仅处理您选中的项目。";
+"NSCameraUsageDescription" = "仅在您主动选择通过官方网站拍摄附件时使用相机，应用不会自动拍摄。";
+"NSMicrophoneUsageDescription" = "仅在您主动选择录制视频时使用麦克风，应用不会自动录音。";

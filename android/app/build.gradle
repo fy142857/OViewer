@@ -65,12 +65,14 @@ android {
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
+        androidTest.assets.srcDirs += '../../test/fixtures/uploads'
     }
 
     defaultConfig {
         applicationId "com.oviewer.oviewer"
         minSdkVersion 21
         targetSdkVersion 35
+        testInstrumentationRunner "com.oviewer.oviewer.UploadTransferInstrumentation"
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         manifestPlaceholders.appLabel = 'OViewer'

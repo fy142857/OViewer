@@ -1,56 +1,50 @@
 package com.oviewer.oviewer
 
 import android.app.Activity
-import android.net.Uri
-import androidx.webkit.ProxyConfig
-import androidx.webkit.ProxyController
-import androidx.webkit.WebViewFeature
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import java.util.concurrent.Executor
+import java.util.UUID
 
 /** Temporarily aligns the existing login browser with the app's selected route. */
-class AutomaticLoginCheck(private val activity: Activity) : MethodChannel.MethodCallHandler {
+class AutomaticLoginCheck(private val activity: Activity,
+    private val lease: BrowserProxyLease = BrowserProxyLease.shared) : MethodChannel.MethodCallHandler {
     private var active: Long? = null
-    private var proxyApplied = false
     private var closing = false
-    private val main = Executor { task -> activity.runOnUiThread(task) }
+    private val instance = UUID.randomUUID().toString()
+    private fun owner(id: Long) = "login:$instance:$id"
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         val id = call.argument<Number>("id")?.toLong()
         if (id == null) { result.success(false); return }
         when (call.method) {
             "begin" -> begin(id, call.argument("proxy"), result)
-            "close" -> if (id == active) dispose { result.success(null) } else result.success(null)
+            "close" -> if (id == active) dispose { success ->
+                if (success) result.success(null)
+                else result.error("proxy_cleanup", "The browser network route could not be restored.", null)
+            } else result.success(null)
             else -> result.notImplemented()
         }
     }
     private fun begin(id: Long, proxy: String?, result: MethodChannel.Result) {
         if (active != null || closing) { result.success(false); return }
         active = id
-        if (proxy.isNullOrEmpty()) { result.success(true); return }
-        try {
-            if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
-                active = null; result.success(false); return
+        activity.runOnUiThread {
+            lease.acquire(owner(id), proxy) { ready ->
+                if (!ready && !lease.heldBy(owner(id)) && active == id) active = null
+                result.success(ready && active == id && !closing)
             }
-            val uri = Uri.parse(if (proxy.contains("://")) proxy else "http://$proxy")
-            if (uri.host.isNullOrEmpty() || uri.port !in 1..65535 || uri.userInfo != null ||
-                uri.query != null || uri.fragment != null || uri.scheme !in setOf("http", "https", "socks5")) {
-                active = null; result.success(false); return
-            }
-            // Match NetworkProxy's HTTP CONNECT policy, without a DIRECT fallback.
-            val address = "http://${uri.encodedAuthority}"
-            proxyApplied = true
-            ProxyController.getInstance().setProxyOverride(
-                ProxyConfig.Builder().addProxyRule(address).build(), main) { result.success(active == id) }
-        } catch (_: Exception) { dispose { result.success(false) } }
+        }
     }
-    fun dispose(done: () -> Unit = {}) {
-        active = null
+    fun dispose(done: (Boolean) -> Unit = {}) {
+        val id = active
+        if (id == null) { closing = false; done(true); return }
         closing = true
-        if (proxyApplied) {
-            proxyApplied = false
-            ProxyController.getInstance().clearProxyOverride(main) { closing = false; done() }
-        } else { closing = false; done() }
+        activity.runOnUiThread {
+            lease.release(owner(id)) { success ->
+                if (success && active == id) active = null
+                closing = !success
+                done(success)
+            }
+        }
     }
 }

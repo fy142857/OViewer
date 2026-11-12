@@ -35,6 +35,8 @@ import 'core/services/apk_update_platform.dart';
 import 'core/storage/offline_files.dart';
 import 'core/network/offline_download_network.dart';
 import 'repositories/offline_repository.dart';
+import 'features/uploads/upload_services.dart';
+import 'features/uploads/platform/upload_navigation.dart';
 
 final sl = GetIt.instance;
 
@@ -49,6 +51,12 @@ Future<void> _initDependencies(
   await cookieManager.init();
   sl.registerSingleton<LocalStorage>(localStorage);
   sl.registerSingleton<CookieManager>(cookieManager);
+  sl.registerLazySingleton<UploadServices>(() => UploadServices(cookieManager),
+      dispose: (services) => services.dispose());
+  sl.registerSingleton<UploadNavigation>(UploadNavigation(),
+      dispose: (navigation) => navigation.dispose());
+  cookieManager.invalidateBackgroundAuthentication =
+      () => sl<UploadServices>().invalidateSession();
   AppConstants.useExHentai = localStorage.getUseExHentai();
 
   // Core - Image cache (must be before any image loading)

@@ -9,6 +9,10 @@ const authenticationCookieNames = {
   'sk',
 };
 
+bool isUploadSessionCookie(String name, String host) =>
+    name == 'PHPSESSID' &&
+    host.toLowerCase().replaceFirst(RegExp(r'^\.'), '') == 'upld.e-hentai.org';
+
 bool isAccountCookieHost(String host) => RegExp(
       r'^(?:[a-z0-9-]+\.)*(?:e-hentai|exhentai)\.org$',
     ).hasMatch(host.toLowerCase().replaceFirst(RegExp(r'^\.'), ''));
@@ -23,7 +27,8 @@ class NativeAuthCookies {
         final domain = cookie.domain;
         if (domain == null ||
             !isAccountCookieHost(domain) ||
-            !authenticationCookieNames.contains(cookie.name)) continue;
+            !(authenticationCookieNames.contains(cookie.name) ||
+                isUploadSessionCookie(cookie.name, domain))) continue;
         await manager.deleteCookie(
             url: Uri.https(
                 domain.replaceFirst(RegExp(r'^\.'), ''), cookie.path ?? '/'),
@@ -35,7 +40,8 @@ class NativeAuthCookies {
       if (remaining.any((c) =>
           c.domain != null &&
           isAccountCookieHost(c.domain!) &&
-          authenticationCookieNames.contains(c.name))) {
+          (authenticationCookieNames.contains(c.name) ||
+              isUploadSessionCookie(c.name, c.domain!)))) {
         throw StateError('Browser authentication cleanup incomplete');
       }
       return;
@@ -43,15 +49,29 @@ class NativeAuthCookies {
 
     // Android's native getCookie API omits domain/path attributes. Expire both
     // host-only and shared-domain variants at the site's authentication scopes.
-    const hosts = ['e-hentai.org', 'exhentai.org', 'forums.e-hentai.org'];
-    const paths = ['/', '/index.php', '/mytags', '/uconfig.php'];
+    const hosts = [
+      'e-hentai.org',
+      'exhentai.org',
+      'forums.e-hentai.org',
+      'upld.e-hentai.org'
+    ];
+    const paths = [
+      '/',
+      '/index.php',
+      '/mytags',
+      '/uconfig.php',
+      '/manage',
+      '/managegallery',
+      '/managefolders',
+      '/api'
+    ];
     for (final host in hosts) {
       final parent =
           host.endsWith('e-hentai.org') ? 'e-hentai.org' : 'exhentai.org';
       for (final path in paths) {
         final url = Uri.https(host, path);
         final names = (await manager.getCookies(url: url))
-            .where((c) => authenticationCookieNames.contains(c.name))
+            .where((c) => authenticationCookieNames.contains(c.name) || isUploadSessionCookie(c.name, host))
             .map((c) => c.name)
             .toSet();
         for (final name in names) {
@@ -73,7 +93,7 @@ class NativeAuthCookies {
     for (final host in hosts) {
       for (final path in paths) {
         if ((await manager.getCookies(url: Uri.https(host, path)))
-            .any((c) => authenticationCookieNames.contains(c.name))) {
+            .any((c) => authenticationCookieNames.contains(c.name) || isUploadSessionCookie(c.name, host))) {
           throw StateError('Browser authentication cleanup incomplete');
         }
       }

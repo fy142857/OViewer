@@ -7,6 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B83000000000000000000032 /* UploadImageConversion.swift in Runner Sources */ = {isa = PBXBuildFile; fileRef = B83000000000000000000031; };
+		B83000000000000000000033 /* UploadImageConversion.swift in Validation Sources */ = {isa = PBXBuildFile; fileRef = B83000000000000000000031; };
+		B8300000000000000000001A /* UploadValidationAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83000000000000000000019; };
+		B83000000000000000000020 /* UploadFileImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8300000000000000000001F; };
+		B83000000000000000000022 /* UploadTransferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83000000000000000000021; };
+		B83000000000000000000024 /* UploadTransferGalleryVerifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83000000000000000000023; };
+		B83000000000000000000026 /* uploaded.html in Resources */ = {isa = PBXBuildFile; fileRef = B83000000000000000000025; };
+		B83000000000000000000028 /* Flutter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B83000000000000000000027; };
+		B83000000000000000000029 /* Flutter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B83000000000000000000027; };
+		B8300000000000000000002A /* Flutter.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B83000000000000000000027; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B8300000000000000000002B /* UploadFileImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000002; };
+		B8300000000000000000002C /* UploadTransferModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000102; };
+		B8300000000000000000002D /* UploadTransferStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000202; };
+		B8300000000000000000002E /* UploadTransferRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000302; };
+		B8300000000000000000002F /* UploadTransferGalleryVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000402; };
 		A90000000000000000000003 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000004 /* InfoPlist.strings */; };
 		A90000000000000000000001 /* PageImageExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* PageImageExporter.swift */; };
 		B483A441327A461E90554981 /* LoginWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B483A441327A461E90554980 /* LoginWebView.swift */; };
@@ -16,9 +31,29 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		A83000000000000000000001 /* UploadFileImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000002 /* UploadFileImporter.swift */; };
+		A83000000000000000000101 /* UploadTransferModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000102 /* UploadTransferModels.swift */; };
+		A83000000000000000000201 /* UploadTransferStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000202 /* UploadTransferStore.swift */; };
+		A83000000000000000000301 /* UploadTransferRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000302 /* UploadTransferRuntime.swift */; };
+		A83000000000000000000401 /* UploadTransferGalleryVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83000000000000000000402 /* UploadTransferGalleryVerifier.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		B83000000000000000000015 /* UploadValidationHost proxy */ = {isa = PBXContainerItemProxy; containerPortal = 97C146E61CF9000F007C117D; proxyType = 1; remoteGlobalIDString = B83000000000000000000001; remoteInfo = UploadValidationHost; };
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
+		B83000000000000000000010 /* Embed validation Flutter */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			name = "Embed validation Flutter";
+			files = (
+				B8300000000000000000002A,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -32,6 +67,20 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B83000000000000000000031 /* UploadImageConversion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadImageConversion.swift; sourceTree = "<group>"; };
+		B83000000000000000000030 /* UploadValidationHost.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UploadValidationHost.entitlements; sourceTree = "<group>"; };
+		B83000000000000000000003 /* UploadValidationHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UploadValidationHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B83000000000000000000004 /* UploadValidationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UploadValidationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B83000000000000000000019 /* UploadValidationAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadValidationAppDelegate.swift; sourceTree = "<group>"; };
+		B8300000000000000000001B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B8300000000000000000001C /* UploadValidationCommon.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = UploadValidationCommon.xcconfig; sourceTree = "<group>"; };
+		B8300000000000000000001D /* UploadValidationHost.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = UploadValidationHost.xcconfig; sourceTree = "<group>"; };
+		B8300000000000000000001E /* UploadValidationTests.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = UploadValidationTests.xcconfig; sourceTree = "<group>"; };
+		B8300000000000000000001F /* UploadFileImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadFileImporterTests.swift; sourceTree = "<group>"; };
+		B83000000000000000000021 /* UploadTransferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadTransferTests.swift; sourceTree = "<group>"; };
+		B83000000000000000000023 /* UploadTransferGalleryVerifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadTransferGalleryVerifierTests.swift; sourceTree = "<group>"; };
+		B83000000000000000000025 /* uploaded.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = uploaded.html; path = ../test/fixtures/uploads/uploaded.html; sourceTree = SOURCE_ROOT; };
+		B83000000000000000000027 /* Flutter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Flutter.framework; path = UploadValidationFlutter/Flutter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000005 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		A90000000000000000000006 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		A90000000000000000000002 /* PageImageExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageImageExporter.swift; sourceTree = "<group>"; };
@@ -49,9 +98,30 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A83000000000000000000002 /* UploadFileImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadFileImporter.swift; sourceTree = "<group>"; };
+		A83000000000000000000102 /* UploadTransferModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadTransferModels.swift; sourceTree = "<group>"; };
+		A83000000000000000000202 /* UploadTransferStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadTransferStore.swift; sourceTree = "<group>"; };
+		A83000000000000000000302 /* UploadTransferRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadTransferRuntime.swift; sourceTree = "<group>"; };
+		A83000000000000000000402 /* UploadTransferGalleryVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadTransferGalleryVerifier.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		B8300000000000000000000E /* UploadValidationHost Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B83000000000000000000028,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B83000000000000000000013 /* UploadValidationTests Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B83000000000000000000029,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EB1CF9000F007C117D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -62,6 +132,31 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B83000000000000000000017 /* UploadValidationHost */ = {
+			isa = PBXGroup;
+			children = (
+				B83000000000000000000019,
+				B8300000000000000000001B,
+				B8300000000000000000001C,
+				B8300000000000000000001D,
+				B83000000000000000000030 /* UploadValidationHost.entitlements */,
+				B83000000000000000000027 /* Flutter.framework */,
+			);
+			path = UploadValidationHost;
+			sourceTree = "<group>";
+		};
+		B83000000000000000000018 /* RunnerTests */ = {
+			isa = PBXGroup;
+			children = (
+				B8300000000000000000001F,
+				B83000000000000000000021,
+				B83000000000000000000023,
+				B8300000000000000000001E,
+				B83000000000000000000025,
+			);
+			path = RunnerTests;
+			sourceTree = "<group>";
+		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
 			isa = PBXGroup;
 			children = (
@@ -78,6 +173,8 @@
 			children = (
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
+				B83000000000000000000017 /* UploadValidationHost */,
+				B83000000000000000000018 /* RunnerTests */,
 				97C146EF1CF9000F007C117D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -86,6 +183,8 @@
 			isa = PBXGroup;
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
+				B83000000000000000000003 /* UploadValidationHost.app */,
+				B83000000000000000000004 /* UploadValidationTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,7 +199,13 @@
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
+				B83000000000000000000031 /* UploadImageConversion.swift */,
 				B483A441327A461E90554980 /* LoginWebView.swift */,
+				A83000000000000000000402 /* UploadTransferGalleryVerifier.swift */,
+				A83000000000000000000302 /* UploadTransferRuntime.swift */,
+				A83000000000000000000202 /* UploadTransferStore.swift */,
+				A83000000000000000000102 /* UploadTransferModels.swift */,
+				A83000000000000000000002 /* UploadFileImporter.swift */,
 				A90000000000000000000002 /* PageImageExporter.swift */,
 				A90000000000000000000004 /* InfoPlist.strings */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
@@ -111,6 +216,38 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		B83000000000000000000001 /* UploadValidationHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B83000000000000000000005;
+			buildPhases = (
+				B83000000000000000000011,
+				B8300000000000000000000D,
+				B8300000000000000000000E,
+				B8300000000000000000000F,
+				B83000000000000000000010,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = UploadValidationHost;
+			productName = UploadValidationHost;
+			productReference = B83000000000000000000003;
+			productType = "com.apple.product-type.application";
+		};
+		B83000000000000000000002 /* UploadValidationTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B83000000000000000000006;
+			buildPhases = (
+				B83000000000000000000012,
+				B83000000000000000000013,
+				B83000000000000000000014,
+			);
+			buildRules = ();
+			dependencies = (B83000000000000000000016,);
+			name = UploadValidationTests;
+			productName = UploadValidationTests;
+			productReference = B83000000000000000000004;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		97C146ED1CF9000F007C117D /* Runner */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
@@ -141,6 +278,8 @@
 				LastUpgradeCheck = 1430;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
+					B83000000000000000000001 = {CreatedOnToolsVersion = 16.0; };
+					B83000000000000000000002 = {CreatedOnToolsVersion = 16.0; TestTargetID = B83000000000000000000001; };
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
@@ -162,11 +301,29 @@
 			projectRoot = "";
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
+				B83000000000000000000001 /* UploadValidationHost */,
+				B83000000000000000000002 /* UploadValidationTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		B8300000000000000000000F /* UploadValidationHost Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B83000000000000000000014 /* UploadValidationTests Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B83000000000000000000026,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EC1CF9000F007C117D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -182,6 +339,18 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		B83000000000000000000011 /* Prepare validation Flutter framework */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = ("$(SRCROOT)/../scripts/prepare_upload_ios_framework.py", "$(FLUTTER_ROOT)/version", "$(FLUTTER_ROOT)/bin/cache/artifacts/engine/ios/Flutter.xcframework",);
+			name = "Prepare validation Flutter framework";
+			outputPaths = ("$(BUILT_PRODUCTS_DIR)/UploadValidationFlutter/Flutter.framework",);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "python3 \"$SRCROOT/../scripts/prepare_upload_ios_framework.py\"";
+		};
 		3B06AD1E1E4923F5004D2608 /* Thin Binary */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -216,18 +385,52 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		B8300000000000000000000D /* UploadValidationHost Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B8300000000000000000001A,
+				B8300000000000000000002B,
+				B8300000000000000000002C,
+				B8300000000000000000002D,
+				B8300000000000000000002E,
+				B8300000000000000000002F,
+				B83000000000000000000033 /* UploadImageConversion.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B83000000000000000000012 /* UploadValidationTests Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B83000000000000000000020,
+				B83000000000000000000022,
+				B83000000000000000000024,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EA1CF9000F007C117D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A90000000000000000000001 /* PageImageExporter.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
+				B83000000000000000000032 /* UploadImageConversion.swift in Sources */,
 				B483A441327A461E90554981 /* LoginWebView.swift in Sources */,
+				A83000000000000000000401 /* UploadTransferGalleryVerifier.swift in Sources */,
+				A83000000000000000000301 /* UploadTransferRuntime.swift in Sources */,
+				A83000000000000000000201 /* UploadTransferStore.swift in Sources */,
+				A83000000000000000000101 /* UploadTransferModels.swift in Sources */,
+				A83000000000000000000001 /* UploadFileImporter.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B83000000000000000000016 /* UploadValidationHost dependency */ = {isa = PBXTargetDependency; target = B83000000000000000000001; targetProxy = B83000000000000000000015; };
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		A90000000000000000000004 /* InfoPlist.strings */ = {isa = PBXVariantGroup; children = (A90000000000000000000005 /* en */, A90000000000000000000006 /* zh-Hans */,); name = InfoPlist.strings; sourceTree = "<group>"; };
@@ -250,6 +453,66 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		B83000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8300000000000000000001D;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+			};
+			name = Debug;
+		};
+		B83000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8300000000000000000001D;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+			};
+			name = Release;
+		};
+		B83000000000000000000009 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8300000000000000000001D;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+			};
+			name = Profile;
+		};
+		B8300000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8300000000000000000001E;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+			};
+			name = Debug;
+		};
+		B8300000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8300000000000000000001E;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+			};
+			name = Release;
+		};
+		B8300000000000000000000C /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8300000000000000000001E;
+			buildSettings = {
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = iphonesimulator;
+				SUPPORTED_PLATFORMS = iphonesimulator;
+			};
+			name = Profile;
+		};
 		249021D3217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -474,6 +737,18 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		B83000000000000000000005 /* Upload validation configurations */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (B83000000000000000000007, B83000000000000000000008, B83000000000000000000009,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B83000000000000000000006 /* Upload validation configurations */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (B8300000000000000000000A, B8300000000000000000000B, B8300000000000000000000C,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		97C146E91CF9000F007C117D /* Build configuration list for PBXProject "Runner" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

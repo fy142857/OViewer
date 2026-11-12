@@ -295,6 +295,7 @@ class S {
   String get favorites => _zh ? '收藏' : 'Favorites';
   String get history => _zh ? '历史' : 'History';
   String get downloads => _zh ? '下载' : 'Downloads';
+  String get uploads => _zh ? '上传' : 'Uploads';
   String get settings => _zh ? '设置' : 'Settings';
 
   // ---- Home History Tab ----

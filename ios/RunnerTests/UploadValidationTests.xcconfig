@@ -1,0 +1,8 @@
+#include "../UploadValidationHost/UploadValidationCommon.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = com.oviewer.oviewer.uploadvalidation.tests
+PRODUCT_NAME = $(TARGET_NAME)
+GENERATE_INFOPLIST_FILE = YES
+TEST_HOST = $(BUILT_PRODUCTS_DIR)/UploadValidationHost.app/UploadValidationHost
+BUNDLE_LOADER = $(TEST_HOST)
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @loader_path/Frameworks

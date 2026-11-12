@@ -1,5 +1,6 @@
 package com.oviewer.oviewer
 
+import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.os.Build
@@ -17,6 +18,17 @@ class OViewerApplication : Application() {
     private var engine: FlutterEngine? = null
     private var channel: MethodChannel? = null
     private var imageCacheChannel: MethodChannel? = null
+    private var uploadFilesChannel: MethodChannel? = null
+    private var uploadNavigationChannel: MethodChannel? = null
+    private var uploadLinksChannel: MethodChannel? = null
+    private var uploadConversionChannel: MethodChannel? = null
+    private var uploadConversion: UploadImageConversion? = null
+    private var uploadWebProxy: UploadWebProxyBridge? = null
+    private var uploadWebProxyChannel: MethodChannel? = null
+    var uploadImporter: UploadFileImporter? = null
+        private set
+    private var pendingUploads = false
+    private var uploadsReady = false
     private var host = WeakReference<MainActivity>(null)
     private val handler = Handler(Looper.getMainLooper())
     private val workOwners = mutableSetOf<String>()
@@ -38,6 +50,32 @@ class OViewerApplication : Application() {
         engine?.let { return it }
         val created = FlutterEngine(this)
         engine = created
+        uploadImporter = UploadFileImporter(this, onActiveChanged = { active ->
+            if (active) retainWork("upload-import") else releaseWork("upload-import")
+        })
+        uploadFilesChannel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/upload_files")
+            .also { it.setMethodCallHandler(uploadImporter) }
+        uploadConversion = UploadImageConversion(this, onActiveChanged = { active ->
+            if (active) retainWork("upload-conversion") else releaseWork("upload-conversion")
+        })
+        uploadConversionChannel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/upload_conversion")
+            .also { it.setMethodCallHandler(uploadConversion) }
+        uploadWebProxy = UploadWebProxyBridge(onActiveChanged = { active ->
+            if (active) retainWork("upload-webview") else releaseWork("upload-webview")
+        })
+        uploadWebProxyChannel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/upload_web_proxy")
+            .also { it.setMethodCallHandler(uploadWebProxy) }
+        UploadTransferRuntime.get(this).bind(created.dartExecutor.binaryMessenger) { foregroundActivity() }
+        uploadLinksChannel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/upload_links")
+            .also { it.setMethodCallHandler(UploadLinkOpener { foregroundActivity() }) }
+        uploadNavigationChannel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/upload_navigation")
+            .also { bridge -> bridge.setMethodCallHandler { call, result ->
+                if (call.method == "ready") {
+                    uploadsReady = true
+                    val pending = pendingUploads; pendingUploads = false
+                    result.success(pending)
+                } else result.notImplemented()
+            } }
         imageCacheChannel = MethodChannel(created.dartExecutor.binaryMessenger, "oviewer/image_cache").also {
             it.setMethodCallHandler(ImageCacheWorkBridge(this))
         }
@@ -85,8 +123,12 @@ class OViewerApplication : Application() {
         return created
     }
 
-    fun attach(activity: MainActivity) { host = WeakReference(activity) }
+    fun attach(activity: MainActivity) {
+        host = WeakReference(activity)
+        uploadImporter?.attach(activity)
+    }
     fun detach(activity: MainActivity) {
+        uploadImporter?.detach(activity)
         if (host.get() === activity) { host.clear(); foreground = false; installer?.detach() }
         releaseIfIdle()
     }
@@ -96,6 +138,13 @@ class OViewerApplication : Application() {
         pendingOpen = true
         if (dartReady) { pendingOpen = false; channel?.invokeMethod("openDownloads", null) }
     }
+    fun openUploads() {
+        pendingUploads = true
+        if (uploadsReady) {
+            pendingUploads = false
+            uploadNavigationChannel?.invokeMethod("open", null)
+        }
+    }
     private fun releaseIfIdle() {
         // Allow Activity recreation and the final Dart platform reply to settle.
         handler.postDelayed({
@@ -104,6 +153,16 @@ class OViewerApplication : Application() {
                 channel = null
                 imageCacheChannel?.setMethodCallHandler(null)
                 imageCacheChannel = null
+                uploadImporter?.dispose(); uploadImporter = null
+                uploadFilesChannel?.setMethodCallHandler(null); uploadFilesChannel = null
+                uploadConversionChannel?.setMethodCallHandler(null); uploadConversionChannel = null
+                uploadConversion?.dispose(); uploadConversion = null
+                uploadWebProxy?.dispose(); uploadWebProxy = null
+                uploadWebProxyChannel?.setMethodCallHandler(null); uploadWebProxyChannel = null
+                uploadLinksChannel?.setMethodCallHandler(null); uploadLinksChannel = null
+                uploadNavigationChannel?.setMethodCallHandler(null); uploadNavigationChannel = null
+                uploadsReady = false
+                UploadTransferRuntime.get(this).detach()
                 updates?.dispose(); updates = null
                 installer?.dispose(); installer = null
                 engine?.destroy()
@@ -112,7 +171,7 @@ class OViewerApplication : Application() {
             }
         }, 1000)
     }
-    fun requestNotifications(activity: MainActivity) {
+    fun requestNotifications(activity: Activity) {
         if (Build.VERSION.SDK_INT < 33 ||
             activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
         val preferences = getSharedPreferences("offline_service", MODE_PRIVATE)

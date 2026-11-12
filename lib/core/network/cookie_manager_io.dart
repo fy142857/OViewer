@@ -19,6 +19,11 @@ class CookieManager {
   int _sessionRevision = 0;
   int? get sessionRevision => _sessionRevision;
   void Function()? onSessionChanged;
+
+  /// OS-owned authenticated transfers must be invalidated before login/logout
+  /// can report completion. Run outside the cookie write queue to avoid waiting
+  /// on a cancelled request whose cookie interceptor is itself queued here.
+  Future<void> Function()? invalidateBackgroundAuthentication;
   static final _log = Logger();
   late final PersistCookieJar _cookieJar;
   bool _initialized = false;
@@ -106,7 +111,10 @@ class CookieManager {
   Future<void> _syncToWebView(Uri uri, int revision) async {
     _requireCurrent(revision);
     if (uri.scheme != 'https' ||
-        (uri.host != 'e-hentai.org' && uri.host != 'exhentai.org')) {
+        uri.userInfo.isNotEmpty ||
+        uri.port != 443 ||
+        !{'e-hentai.org', 'exhentai.org', 'upld.e-hentai.org', 'forums.e-hentai.org'}
+            .contains(uri.host)) {
       throw ArgumentError.value(uri, 'uri', 'Expected an E-Hentai site URL');
     }
 
@@ -116,7 +124,7 @@ class CookieManager {
       // Keep WebView-owned preferences (such as uconfig) intact. Only copy
       // authentication cookies that apply to this exact destination site.
       if (!_isAuthenticationCookie(cookie.name) ||
-          (uri.host == 'e-hentai.org' &&
+          (uri.host != 'exhentai.org' &&
               cookie.name == AppConstants.cookieIgneous)) {
         continue;
       }
@@ -175,6 +183,21 @@ class CookieManager {
         (_current(revision) && _acceptAuthentication)));
   }
 
+  /// Uploads are always on the EH upload origin, even while the reader is in
+  /// EX mode. Do not use the reader/CDN helper, which may merge EX credentials.
+  Future<String> getUploadCookieHeader() {
+    final revision = _sessionRevision;
+    return _serial(() async {
+      _requireCurrent(revision);
+      if (!_acceptAuthentication) throw StateError('Upload authentication unavailable');
+      final cookies = await _cookieJar.loadForRequest(
+          Uri.https('upld.e-hentai.org', '/managegallery'));
+      _requireCurrent(revision);
+      if (!_hasPair(cookies)) throw StateError('Upload authentication unavailable');
+      return _toCookieHeader(cookies.where((cookie) => cookie.name != AppConstants.cookieIgneous));
+    });
+  }
+
   Future<void> applyRequestHeaders(
     Uri uri,
     Map<String, String> headers,
@@ -204,42 +227,48 @@ class CookieManager {
     if (_logoutPending) return Future.error(const LogoutCleanupException());
     final revision = ++_sessionRevision;
     final imageSession = _beginImageSession();
+    _acceptAuthentication = false;
     onSessionChanged?.call();
     ReaderIndexCache.shared.clear();
-    return _serial(() async {
-      void check() {
-        _requireCurrent(revision);
-        if (isCurrent?.call() == false) {
-          throw StateError('Authentication operation cancelled');
+    return Future<void>.sync(() async {
+      await invalidateBackgroundAuthentication?.call();
+      await _serial(() async {
+        void check() {
+          _requireCurrent(revision);
+          if (isCurrent?.call() == false) {
+            throw StateError('Authentication operation cancelled');
+          }
         }
-      }
 
-      try {
-        check();
-        _requireCurrent(revision);
-        await _persistImageSession(imageSession);
-        _requireCurrent(revision);
-        await _saveLoginCookies(
-            memberId: memberId,
-            passHash: passHash,
-            igneous: igneous,
-            revision: revision,
-            check: check);
-        check();
-        _requireCurrent(revision);
-        _acceptAuthentication = true;
-        ImageCacheScope.setSession(imageSession);
-        onCommitted?.call();
-      } catch (_) {
-        // Roll back only this account attempt. A later login/logout owns its
-        // own revision and must never be cleared by an old completion.
-        if (isCurrent != null && _current(revision)) {
-          _acceptAuthentication = false;
-          await _removeJarAuthentication();
+        try {
+          check();
+          _requireCurrent(revision);
+          await _persistImageSession(imageSession);
+          _requireCurrent(revision);
+          await _removeUploadSessionCookies();
+          _requireCurrent(revision);
+          await _saveLoginCookies(
+              memberId: memberId,
+              passHash: passHash,
+              igneous: igneous,
+              revision: revision,
+              check: check);
+          check();
+          _requireCurrent(revision);
+          _acceptAuthentication = true;
           ImageCacheScope.setSession(imageSession);
+          onCommitted?.call();
+        } catch (_) {
+          // Roll back only this account attempt. A later login/logout owns its
+          // own revision and must never be cleared by an old completion.
+          if (isCurrent != null && _current(revision)) {
+            _acceptAuthentication = false;
+            await _removeJarAuthentication();
+            ImageCacheScope.setSession(imageSession);
+          }
+          rethrow;
         }
-        rethrow;
-      }
+      });
     });
   }
 
@@ -364,17 +393,20 @@ class CookieManager {
     _acceptAuthentication = false;
     ReaderIndexCache.shared.clear();
     late Future<void> task;
-    task = _serial(() async {
+    task = Future<void>.sync(() async {
       try {
-        await _persistImageSession(imageSession);
         await _logoutMarker.parent.create(recursive: true);
         await _logoutMarker.writeAsString('pending', flush: true);
-        await _removeJarAuthentication();
-        await _clearBrowserAuthentication();
-        await _logoutMarker.delete();
-        _logoutPending = false;
-        ImageCacheScope.setSession(imageSession);
-        _log.i('Authentication cookies cleared');
+        await invalidateBackgroundAuthentication?.call();
+        await _serial(() async {
+          await _persistImageSession(imageSession);
+          await _removeJarAuthentication();
+          await _clearBrowserAuthentication();
+          await _logoutMarker.delete();
+          _logoutPending = false;
+          ImageCacheScope.setSession(imageSession);
+          _log.i('Authentication cookies cleared');
+        });
       } catch (error, stack) {
         _log.w('Authentication cleanup failed (${error.runtimeType})',
             stackTrace: stack);
@@ -406,7 +438,8 @@ class CookieManager {
     for (final entry in _cookieJar.domainCookies.entries) {
       if (!isAccountCookieHost(entry.key)) continue;
       for (final cookies in entry.value.values) {
-        cookies.removeWhere((name, _) => _isAuthenticationCookie(name));
+        cookies.removeWhere((name, _) => _isAuthenticationCookie(name) ||
+            isUploadSessionCookie(name, entry.key));
       }
     }
     await _cookieJar.storage
@@ -417,10 +450,36 @@ class CookieManager {
       // Host maps loaded by cookie_jar retain a lazy cast over JSON maps.
       for (final cookies in paths.cast<String, dynamic>().values) {
         (cookies as Map)
-            .removeWhere((name, _) => _isAuthenticationCookie(name as String));
+            .removeWhere((name, _) => _isAuthenticationCookie(name as String) ||
+                isUploadSessionCookie(name, host));
       }
       await _cookieJar.storage
           .write(host, jsonEncode(paths.cast<String, dynamic>()));
+    }
+  }
+
+  Future<void> _removeUploadSessionCookies() async {
+    const host = 'upld.e-hentai.org';
+    await _cookieJar.forceInit();
+    await _cookieJar.loadForRequest(Uri.https(host, '/'));
+    var domainsChanged = false;
+    for (final entry in _cookieJar.domainCookies.entries) {
+      for (final values in entry.value.values) {
+        if (isUploadSessionCookie('PHPSESSID', entry.key) && values.remove('PHPSESSID') != null) {
+          domainsChanged = true;
+        }
+      }
+    }
+    if (domainsChanged) {
+      await _cookieJar.storage.write('.domains', jsonEncode(_cookieJar.domainCookies));
+    }
+    final paths = _cookieJar.hostCookies[host];
+    var hostChanged = false;
+    if (paths != null) {
+      for (final values in paths.cast<String, dynamic>().values) {
+        if ((values as Map).remove('PHPSESSID') != null) hostChanged = true;
+      }
+      if (hostChanged) await _cookieJar.storage.write(host, jsonEncode(paths.cast<String, dynamic>()));
     }
   }
 
@@ -476,7 +535,8 @@ class _SessionCookieInterceptor extends dio_cookie.CookieManager {
       return header
           .split(';')
           .map((c) => c.trim())
-          .where((c) => !authenticationCookieNames.contains(c.split('=').first))
+          .where((c) => !authenticationCookieNames.contains(c.split('=').first) &&
+              !isUploadSessionCookie(c.split('=').first, options.uri.host))
           .join('; ');
     });
   }
@@ -494,8 +554,9 @@ class _SessionCookieInterceptor extends dio_cookie.CookieManager {
                 values
                     .expand(
                         (value) => value.split(RegExp(r'(?<=)(,)(?=[^;]+?=)')))
-                    .where((value) => !authenticationCookieNames
-                        .contains(value.split('=').first.trim()))
+                        .where((value) => !authenticationCookieNames
+                            .contains(value.split('=').first.trim()) &&
+                            !isUploadSessionCookie(value.split('=').first.trim(), response.realUri.host))
                     .toList());
           }
         }

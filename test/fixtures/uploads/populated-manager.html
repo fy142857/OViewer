@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<body>
+<div id="lb"><div>[<a href="https://upld.e-hentai.org/manage">Gallery List</a>]</div><div>[<a href="https://upld.e-hentai.org/managefolders">Manage Folders</a>]</div><div>[<a href="https://upld.e-hentai.org/managegallery?act=new">Create New Gallery</a>]</div></div><div id="m"><form action="https://upld.e-hentai.org/manage" method="post">
+<div class="s">
+<div class="h">
+<div class="l">Unpublished Galleries</div>
+<div class="r">[<a href="#" onclick="toggle_hidden_all('u'); return false">Collapse Open Folders</a>]</div>
+<div class="c"></div>
+</div>
+<table class="mt" id="gtableu">
+<tr>
+<th class="h1">Gallery Name <a href="https://upld.e-hentai.org/manage?ss=n&amp;sd=a"><img alt="A" class="u" src="https://ehgt.org/g/menu_down.gif"/></a> <a href="https://upld.e-hentai.org/manage?ss=n&amp;sd=d"><img alt="D" class="u" src="https://ehgt.org/g/menu_up.gif"/></a></th>
+<th class="h2">Date Added <a href="https://upld.e-hentai.org/manage?ss=d&amp;sd=a"><img alt="A" class="s" src="https://ehgt.org/g/menu_down.gif"/></a> <a href="https://upld.e-hentai.org/manage?ss=d&amp;sd=d"><img alt="D" class="u" src="https://ehgt.org/g/menu_up.gif"/></a></th>
+<th class="h3">Files</th>
+<th class="h4">Public Category</th>
+<th class="h5">Available Actions</th>
+<th class="h6"></th>
+</tr>
+<tr class="gtr" id="frow_u_1">
+<td class="l" colspan="4"><a class="fview_u" href="#" id="ft_u_1" onclick="toggle_view('u',1, true); return false">[-]</a>  <strong>1</strong>  <span>Fixture upload verification</span></td>
+<td class="r" colspan="2"><span id="grs1_u_1" onclick="toggle_all_in_folder('u',1,'checked')">+ All</span> <span id="grs2_u_1" onclick="toggle_all_in_folder('u',1,false)">- All</span></td>
+</tr>
+<tr>
+<td class="gtc1"><a href="https://upld.e-hentai.org/managegallery?ulgid=12345">Fixture upload verification 2026-11-12</a></td>
+<td class="gtc2">2026-11-12 09:34</td>
+<td class="gtc3">8</td>
+<td class="gtc4">Non-H</td>
+<td class="gtc5">[<a href="https://upld.e-hentai.org/managegallery?ulgid=12345">Manage</a>]  [<a href="https://upld.e-hentai.org/managegallery?ulgid=12345&amp;act=delete">Delete</a>]  [<a href="https://upld.e-hentai.org/managegallery?ulgid=12345&amp;act=publish">Publish</a>]</td>
+<td class="gtc6"><input class="check_u1" id="fu12345" name="modify_unpublish[]" type="checkbox" value="12345"/></td>
+</tr>
+</table>
+</div>
+<table id="t">
+<tr><td>Set public category for selected galleries: <select name="publiccat"><option selected="selected" value="2">Doujinshi</option><option value="3">Manga</option><option value="4">Artist CG</option><option value="5">Game CG</option><option value="10">Western</option><option value="9">Non-H</option><option value="6">Image Set</option><option value="7">Cosplay</option><option value="1">Misc</option><option value="0">(Private / Unlisted)</option></select> <input name="categorize" type="submit" value="Go"/></td></tr>
+<tr><td>Move selected galleries to folder: <select name="folderid"><option value="1">Fixture upload verification</option><option selected="selected" value="0">Unsorted</option></select> <input name="folderize" type="submit" value="Go"/></td></tr>
+</table>
+
+</form>
+
+</div></body></html><script>var apiuid = 101; var apikey = "fixture-api-key"; var ss = "d"; var sd = "a";</script>

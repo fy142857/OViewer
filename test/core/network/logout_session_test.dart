@@ -73,6 +73,96 @@ void main() {
       manager.saveLoginCookies(
           memberId: member, passHash: 'test-hash', igneous: 'test-igneous');
 
+  Future<void> seedUploadPhpSession() async {
+    final disk = jar();
+    await disk.saveFromResponse(Uri.https('e-hentai.org', '/'), [
+      Cookie('ipb_member_id', 'account-a')..domain = '.e-hentai.org',
+      Cookie('ipb_pass_hash', 'test-hash')..domain = '.e-hentai.org',
+    ]);
+    await disk.saveFromResponse(Uri.https('upld.e-hentai.org', '/manage'), [
+      Cookie('PHPSESSID', 'upload-session')..path = '/',
+      Cookie('uconfig', 'keep-upload-preferences')..path = '/',
+    ]);
+    await disk.saveFromResponse(Uri.https('other.e-hentai.org', '/'), [
+      Cookie('PHPSESSID', 'unrelated-session')..path = '/',
+    ]);
+  }
+
+  for (final change in ['logout', 'account']) {
+    test('$change clears only the upload PHP session, retaining unrelated PHP and preferences', () async {
+      await seedUploadPhpSession();
+      final session = await manager();
+      expect(await session.getUploadCookieHeader(), contains('PHPSESSID=upload-session'));
+      if (change == 'logout') { await session.clearCookies(); }
+      else { await login(session, 'account-b'); }
+      final upload = await jar().loadForRequest(Uri.https('upld.e-hentai.org', '/manage'));
+      expect(upload.any((c) => c.name == 'PHPSESSID'), isFalse);
+      expect(upload.singleWhere((c) => c.name == 'uconfig').value, 'keep-upload-preferences');
+      final other = await jar().loadForRequest(Uri.https('other.e-hentai.org', '/'));
+      expect(other.singleWhere((c) => c.name == 'PHPSESSID').value, 'unrelated-session');
+    });
+  }
+
+  test('anonymous upload response cannot bootstrap a PHP upload session', () async {
+    final adapter = DelayedAdapter();
+    final session = AdapterCookieManager(adapter);
+    await session.init();
+    final dio = Dio(); session.configureDio(dio);
+    final request = dio.get<String>('https://upld.e-hentai.org/manage');
+    await adapter.started.future;
+    adapter.response.complete(ResponseBody.fromString('login required', 200,
+        headers: {'set-cookie': ['PHPSESSID=late-upload-session; Path=/']}));
+    await request;
+    final cookies = await jar().loadForRequest(Uri.https('upld.e-hentai.org', '/manage'));
+    expect(cookies.any((c) => c.name == 'PHPSESSID'), isFalse);
+    dio.close();
+  });
+
+  test('logout waits for native authentication invalidation and keeps retry marker on failure', () async {
+    final session = await manager();
+    await login(session);
+    final entered = Completer<void>();
+    final finish = Completer<void>();
+    session.invalidateBackgroundAuthentication = () {
+      entered.complete();
+      return finish.future;
+    };
+    var completed = false;
+    final logout = session.clearCookies().then((_) => completed = true);
+    final assertion = expectLater(logout, throwsA(isA<LogoutCleanupException>()));
+    await entered.future;
+    expect(completed, isFalse);
+    expect(await File('${directory.path}/.cookies/logout-pending').exists(), isTrue);
+    finish.completeError(StateError('native unavailable'));
+    await assertion;
+    expect(await File('${directory.path}/.cookies/logout-pending').exists(), isTrue);
+    session.invalidateBackgroundAuthentication = () async {};
+    await session.clearCookies();
+    expect(await File('${directory.path}/.cookies/logout-pending').exists(), isFalse);
+    expect(await session.hasLoginCookies(), isFalse);
+  });
+
+  test('a new login cannot commit before old native authentication is invalidated', () async {
+    final session = await manager();
+    await login(session);
+    final entered = Completer<void>();
+    final finish = Completer<void>();
+    session.invalidateBackgroundAuthentication = () {
+      entered.complete();
+      return finish.future;
+    };
+    var committed = false;
+    final saving = session.saveLoginCookies(memberId: 'account-b', passHash: 'hash-b',
+        onCommitted: () => committed = true);
+    await entered.future;
+    expect(committed, isFalse);
+    expect(await session.getMemberId(), isNull);
+    finish.complete();
+    await saving;
+    expect(committed, isTrue);
+    expect(await session.getMemberId(), 'account-b');
+  });
+
   test(
       'logout deletes all persisted authentication paths but preserves preferences and other hosts',
       () async {

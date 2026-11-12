@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oviewer/core/network/cookie_manager.dart' as app;
+import 'package:oviewer/core/constants/app_constants.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -180,11 +181,55 @@ void main() {
       'http://exhentai.org/mytags',
       'https://example.org/mytags',
       'https://exhentai.org.example.org/mytags',
+      'https://user@upld.e-hentai.org/manage',
+      'https://upld.e-hentai.org:8443/manage',
+      'https://random.e-hentai.org/manage',
     ]) {
       await expectLater(
           manager.syncToWebView(Uri.parse(url)), throwsArgumentError);
     }
     expect(nativeCalls, isEmpty);
+  });
+
+  test('upload manager receives only EH authentication, not EX or preferences',
+      () async {
+    final manager = await managerWithBothSiteSessions();
+    final uri = Uri.https('upld.e-hentai.org', '/manage');
+    await manager.syncToWebView(uri);
+    final cookies = {
+      for (final call in nativeCalls)
+        call.arguments['name'] as String:
+            Map<String, dynamic>.from(call.arguments as Map)
+    };
+    expect(cookies.keys, unorderedEquals(['ipb_member_id', 'ipb_pass_hash']));
+    for (final cookie in cookies.values) {
+      expect(cookie['domain'], '.e-hentai.org');
+      expect(cookie['url'], uri.toString());
+      expect(cookie['value'], startsWith('e-hentai.org-'));
+    }
+  });
+
+  test('native uploads never merge the reader EX session into EH headers', () async {
+    final manager = await managerWithBothSiteSessions();
+    final previous = AppConstants.useExHentai;
+    try {
+      AppConstants.useExHentai = true;
+      final header = await manager.getUploadCookieHeader();
+      expect(header, contains('ipb_member_id=e-hentai.org-member'));
+      expect(header, contains('ipb_pass_hash=e-hentai.org-hash'));
+      expect(header, contains('uconfig=app-preferences'));
+      expect(header, isNot(contains('exhentai.org-')));
+      expect(header, isNot(contains('igneous=')));
+      expect(header, isNot(contains('sk='))); // The fixture's sk is /mytags-only.
+    } finally {
+      AppConstants.useExHentai = previous;
+    }
+  });
+
+  test('native upload header refuses a session without an authentication pair', () async {
+    final manager = app.CookieManager();
+    await manager.init();
+    await expectLater(manager.getUploadCookieHeader(), throwsStateError);
   });
 
   test('an empty app session does not erase native WebView cookies', () async {

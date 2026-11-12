@@ -3,9 +3,11 @@
     <cloud-backup>
         <exclude domain="root" path="app_flutter/offline/" />
         <exclude domain="root" path="app_flutter/downloads/" />
+        <exclude domain="root" path="app_flutter/uploads/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="root" path="app_flutter/offline/" />
         <exclude domain="root" path="app_flutter/downloads/" />
+        <exclude domain="root" path="app_flutter/uploads/" />
     </device-transfer>
 </data-extraction-rules>

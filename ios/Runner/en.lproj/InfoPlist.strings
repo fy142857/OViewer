@@ -1,1 +1,4 @@
 "NSPhotoLibraryAddUsageDescription" = "Save the page images and support codes you choose to your photo library.";
+"NSPhotoLibraryUsageDescription" = "Select the images you want to import into your gallery upload draft.";
+"NSCameraUsageDescription" = "Use the camera only when you choose to capture a file in the official website. Nothing is captured automatically.";
+"NSMicrophoneUsageDescription" = "Use the microphone only when you choose to record a video in the system file picker. Nothing is recorded automatically.";

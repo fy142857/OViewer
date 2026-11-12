@@ -26,6 +26,7 @@ class MainActivity: FlutterActivity() {
         runtime.attach(this)
         if (intent?.action == OfflineDownloadService.OPEN) runtime.openDownloads()
         if (intent?.action == ApkDownloadService.OPEN) runtime.updates?.open(intent)
+        if (intent?.action == UploadTransferRuntime.OPEN) runtime.openUploads()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             // Keep the same window bounds when the reader toggles system bars.
             // DEFAULT excludes the cutout only in fullscreen on some devices,
@@ -78,11 +79,17 @@ class MainActivity: FlutterActivity() {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (runtime.uploadImporter?.onActivityResult(requestCode, resultCode, data) != true) {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent.action == OfflineDownloadService.OPEN) runtime.openDownloads()
         if (intent.action == ApkDownloadService.OPEN) runtime.updates?.open(intent)
+        if (intent.action == UploadTransferRuntime.OPEN) runtime.openUploads()
     }
     override fun onResume() { super.onResume(); runtime.setForeground(this, true) }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {

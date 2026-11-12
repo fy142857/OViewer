@@ -6,6 +6,9 @@ import UserNotifications
 @objc class AppDelegate: FlutterAppDelegate {
   private let pageExporter = PageImageExporter()
   private let sponsorNotifications = SponsorNotifications()
+  private let uploadImporter = UploadFileImporter()
+  private let uploadTransfers = UploadTransferRuntime()
+  private let uploadConversion = UploadImageConversion()
   private lazy var sponsorExporter = PageImageExporter(allowConcurrent: true,
       onSaved: { [weak self] message in self?.sponsorNotifications.show(message) })
 
@@ -14,6 +17,42 @@ import UserNotifications
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    if let registrar = registrar(forPlugin: "OViewerUploads") {
+      FlutterMethodChannel(name: "oviewer/upload_conversion", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { [weak self] call, result in
+          guard let self = self else { result(FlutterError(code: "closed", message: "Conversion unavailable", details: nil)); return }
+          self.uploadConversion.handle(call, result: result)
+        }
+      FlutterMethodChannel(name: "oviewer/upload_files", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { [weak self] call, result in
+          guard let self = self else { result(FlutterError(code: "closed", message: "Upload importer unavailable", details: nil)); return }
+          self.uploadImporter.presenter = self.window?.rootViewController
+          self.uploadImporter.handle(call, result: result)
+        }
+      FlutterMethodChannel(name: "oviewer/upload_transport", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { [weak self] call, result in
+          guard let self = self else { result(FlutterError(code: "closed", message: "Upload transport unavailable", details: nil)); return }
+          self.uploadTransfers.handle(call, result: result)
+        }
+      FlutterMethodChannel(name: "oviewer/upload_navigation", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { call, result in
+          if call.method == "ready" { result(false) } else { result(FlutterMethodNotImplemented) }
+        }
+      FlutterMethodChannel(name: "oviewer/upload_links", binaryMessenger: registrar.messenger())
+        .setMethodCallHandler { call, result in
+          guard call.method == "open" else { result(FlutterMethodNotImplemented); return }
+          guard let value = call.arguments as? String,
+                let url = URL(string: value),
+                let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                parts.scheme == "https", parts.user == nil, parts.password == nil,
+                parts.port == nil || parts.port == 443,
+                let host = parts.host,
+                ["upld.e-hentai.org", "e-hentai.org", "exhentai.org", "ehwiki.org",
+                 "forums.e-hentai.org", "developer.android.com", "developer.apple.com"].contains(host)
+          else { result(false); return }
+          UIApplication.shared.open(url, options: [:]) { result($0) }
+        }
+    }
     if let registrar = registrar(forPlugin: "OViewerFloatingBack") {
       FlutterMethodChannel(name: "oviewer/floating_back", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { [weak self] call, result in
@@ -103,5 +142,13 @@ import UserNotifications
         }
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  override func application(_ application: UIApplication,
+      handleEventsForBackgroundURLSession identifier: String,
+      completionHandler: @escaping () -> Void) {
+    if uploadTransfers.handleEvents(identifier: identifier, completion: completionHandler) { return }
+    super.application(application, handleEventsForBackgroundURLSession: identifier,
+        completionHandler: completionHandler)
   }
 }
