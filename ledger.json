@@ -9894,8 +9894,33 @@
         }
       ],
       "version": "1.13.1"
+    },
+    {
+      "base_tag": "v1.13.1",
+      "branch": "dev",
+      "build_number": 166,
+      "build_sha": "c25b6e7d84d29f0c8d6f169343ed8589541fbc3e",
+      "candidate_id": "1.14.0+166",
+      "fingerprint": "19515253a6d13aa17a32f424d6fda3eed6a62f694b96e96a677bff5a015a43dc",
+      "notes": "### 新增\n\n- 新增应用内悬浮返回按钮，默认开启，覆盖全屏阅读等应用页面；支持自由拖动、跨页面和重启后记住位置，以及设置中的开关和大小滑杆。点击优先收起键盘，再关闭弹层或返回上一页，首页不退出应用（#90）。\n\n### 修复\n\n### 变更\n\n### 已知限制",
+      "schema": 1,
+      "source_sha": "a581459acf32b97cabe88682b2c7c36a74b65aa8",
+      "stage": "reserved",
+      "summary": [
+        {
+          "change_kind": "feature",
+          "classification_reason": "首次提供全应用悬浮返回按钮、自由拖动、位置记忆及开关和大小设置，属于新增独立功能。",
+          "classification_source": "commit-trailers",
+          "original_type": "feat",
+          "sha": "a581459acf32b97cabe88682b2c7c36a74b65aa8",
+          "subject": "feat(navigation): add persistent draggable back button",
+          "type": "feat",
+          "version_impact": "minor"
+        }
+      ],
+      "version": "1.14.0"
     }
   ],
-  "last_build_number": 165,
+  "last_build_number": 166,
   "schema": 1
 }
